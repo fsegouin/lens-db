@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { lenses, systems } from "@/db/schema";
-import { asc, eq, and, gte, lte, ilike, sql } from "drizzle-orm";
+import { asc, desc, eq, and, gte, lte, ilike, sql } from "drizzle-orm";
 import { unstable_cache } from "next/cache";
 import LensList from "@/components/LensList";
 
@@ -42,6 +42,8 @@ type SearchParams = Promise<{
   minAperture?: string;
   maxAperture?: string;
   year?: string;
+  sort?: string;
+  order?: string;
 }>;
 
 const PAGE_SIZE = 50;
@@ -112,6 +114,20 @@ export default async function LensesPage({
 
     const where = conditions.length > 0 ? and(...conditions) : undefined;
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const sortColumns: Record<string, any> = {
+      name: lenses.name,
+      brand: lenses.brand,
+      system: systems.name,
+      focalLength: lenses.focalLengthMin,
+      aperture: lenses.apertureMin,
+      year: lenses.yearIntroduced,
+      weight: lenses.weightG,
+      rating: lenses.averageRating,
+    };
+    const sortCol = sortColumns[params.sort || ""] || lenses.name;
+    const orderFn = params.order === "desc" ? desc : asc;
+
     // When filtering by system, we need a join for the WHERE clause
     const needsSystemJoin = !!params.system;
 
@@ -132,7 +148,7 @@ export default async function LensesPage({
       .from(lenses)
       .leftJoin(systems, eq(lenses.systemId, systems.id))
       .where(where)
-      .orderBy(asc(lenses.name))
+      .orderBy(orderFn(sortCol))
       .limit(PAGE_SIZE)
       .offset(0);
   } catch {
