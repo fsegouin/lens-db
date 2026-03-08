@@ -6,13 +6,6 @@ import { eq, asc } from "drizzle-orm";
 
 export const revalidate = 86400;
 
-export async function generateStaticParams() {
-  const allCollections = await db
-    .select({ slug: collections.slug })
-    .from(collections);
-  return allCollections.map((c) => ({ slug: c.slug }));
-}
-
 export async function generateMetadata({
   params,
 }: {

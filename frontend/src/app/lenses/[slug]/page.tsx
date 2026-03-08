@@ -10,13 +10,6 @@ import { getImages } from "@/lib/images";
 
 export const revalidate = 86400;
 
-export async function generateStaticParams() {
-  const allLenses = await db
-    .select({ slug: lenses.slug })
-    .from(lenses);
-  return allLenses.map((l) => ({ slug: l.slug }));
-}
-
 export async function generateMetadata({
   params,
 }: {
