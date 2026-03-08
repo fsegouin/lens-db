@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { db } from "@/db";
 import { collections, lensCollections } from "@/db/schema";
-import { asc, eq, sql } from "drizzle-orm";
+import { asc, eq, gt, sql } from "drizzle-orm";
 
 export const revalidate = 604800;
 
@@ -31,6 +31,7 @@ export default async function CollectionsPage() {
       .from(collections)
       .leftJoin(lensCollections, eq(collections.id, lensCollections.collectionId))
       .groupBy(collections.id)
+      .having(gt(sql`count(${lensCollections.lensId})`, 0))
       .orderBy(asc(collections.name));
     allCollections = rows;
   } catch {
