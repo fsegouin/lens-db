@@ -46,6 +46,8 @@ export default function LensList({
   const minAperture = searchParams.get("minAperture") || "";
   const maxAperture = searchParams.get("maxAperture") || "";
   const year = searchParams.get("year") || "";
+  const sort = searchParams.get("sort") || "";
+  const order = searchParams.get("order") || "";
 
   // Form state
   const [formQ, setFormQ] = useState(q);
@@ -90,10 +92,12 @@ export default function LensList({
       if (minAperture) params.set("minAperture", minAperture);
       if (maxAperture) params.set("maxAperture", maxAperture);
       if (year) params.set("year", year);
+      if (sort) params.set("sort", sort);
+      if (order) params.set("order", order);
       params.set("cursor", String(cursor));
       return `/api/lenses?${params.toString()}`;
     },
-    [q, brand, system, type, minFocal, maxFocal, minAperture, maxAperture, year]
+    [q, brand, system, type, minFocal, maxFocal, minAperture, maxAperture, year, sort, order]
   );
 
   const loadMore = useCallback(async () => {
@@ -132,7 +136,7 @@ export default function LensList({
 
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  function applyFilters(overrides: { q?: string; brand?: string; system?: string; type?: string; minFocal?: string; maxFocal?: string; minAperture?: string; maxAperture?: string; year?: string } = {}) {
+  function applyFilters(overrides: { q?: string; brand?: string; system?: string; type?: string; minFocal?: string; maxFocal?: string; minAperture?: string; maxAperture?: string; year?: string; sort?: string; order?: string } = {}) {
     const params = new URLSearchParams();
     const qVal = overrides?.q ?? formQ;
     const brandVal = overrides?.brand ?? formBrand;
@@ -143,6 +147,8 @@ export default function LensList({
     const minApertureVal = overrides?.minAperture ?? formMinAperture;
     const maxApertureVal = overrides?.maxAperture ?? formMaxAperture;
     const yearVal = overrides?.year ?? formYear;
+    const sortVal = overrides?.sort ?? sort;
+    const orderVal = overrides?.order ?? order;
     if (qVal) params.set("q", qVal);
     if (brandVal) params.set("brand", brandVal);
     if (systemVal) params.set("system", systemVal);
@@ -152,6 +158,8 @@ export default function LensList({
     if (minApertureVal) params.set("minAperture", minApertureVal);
     if (maxApertureVal) params.set("maxAperture", maxApertureVal);
     if (yearVal) params.set("year", yearVal);
+    if (sortVal) params.set("sort", sortVal);
+    if (orderVal) params.set("order", orderVal);
     const qs = params.toString();
     router.push(qs ? `/lenses?${qs}` : "/lenses");
   }
@@ -159,6 +167,19 @@ export default function LensList({
   function handleFilter(e: React.FormEvent) {
     e.preventDefault();
     applyFilters();
+  }
+
+  function handleSort(column: string) {
+    if (sort === column) {
+      applyFilters({ sort: column, order: order === "asc" ? "desc" : "asc" });
+    } else {
+      applyFilters({ sort: column, order: "asc" });
+    }
+  }
+
+  function sortIndicator(column: string) {
+    if (sort !== column) return "";
+    return order === "desc" ? " \u2193" : " \u2191";
   }
 
   function handleSearchChange(value: string) {
@@ -263,15 +284,25 @@ export default function LensList({
           <table className="w-full text-left text-sm">
             <thead className="border-b border-zinc-200 text-zinc-500 dark:border-zinc-800">
               <tr>
-                <th className="pb-3 pr-4 font-medium">Name</th>
-                <th className="pb-3 pr-4 font-medium">Brand</th>
-                <th className="pb-3 pr-4 font-medium">System</th>
-                <th className="pb-3 pr-4 font-medium">Focal Length</th>
-                <th className="pb-3 pr-4 font-medium">Aperture</th>
-                <th className="pb-3 pr-4 font-medium">Type</th>
-                <th className="pb-3 pr-4 font-medium">Year</th>
-                <th className="pb-3 pr-4 font-medium">Weight</th>
-                <th className="pb-3 font-medium">Rating</th>
+                {[
+                  { key: "name", label: "Name" },
+                  { key: "brand", label: "Brand" },
+                  { key: "system", label: "System" },
+                  { key: "focalLength", label: "Focal Length" },
+                  { key: "aperture", label: "Aperture" },
+                  { key: "type", label: "Type", sortable: false },
+                  { key: "year", label: "Year" },
+                  { key: "weight", label: "Weight" },
+                  { key: "rating", label: "Rating" },
+                ].map((col, i, arr) => (
+                  <th
+                    key={col.key}
+                    className={`pb-3 font-medium ${i < arr.length - 1 ? "pr-4" : ""} ${col.sortable !== false ? "cursor-pointer select-none hover:text-zinc-900 dark:hover:text-zinc-100" : ""}`}
+                    onClick={col.sortable !== false ? () => handleSort(col.key) : undefined}
+                  >
+                    {col.label}{sortIndicator(col.key)}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">

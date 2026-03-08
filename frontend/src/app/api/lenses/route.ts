@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { lenses, systems } from "@/db/schema";
-import { asc, eq, and, gte, lte, sql } from "drizzle-orm";
+import { asc, desc, eq, and, gte, lte, sql } from "drizzle-orm";
 import { getClientIP, rateLimitedResponse } from "@/lib/api-utils";
 import { rateLimiters } from "@/lib/rate-limit";
 
@@ -23,6 +23,8 @@ export async function GET(request: NextRequest) {
   const minAperture = searchParams.get("minAperture") || undefined;
   const maxAperture = searchParams.get("maxAperture") || undefined;
   const year = searchParams.get("year") || undefined;
+  const sort = searchParams.get("sort") || undefined;
+  const order = searchParams.get("order") || undefined;
   const rawCursor = parseInt(searchParams.get("cursor") || "0");
   const cursor = Math.min(
     Math.max(Number.isFinite(rawCursor) ? rawCursor : 0, 0),
@@ -85,6 +87,20 @@ export async function GET(request: NextRequest) {
 
     const where = conditions.length > 0 ? and(...conditions) : undefined;
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const sortColumns: Record<string, any> = {
+      name: lenses.name,
+      brand: lenses.brand,
+      system: systems.name,
+      focalLength: lenses.focalLengthMin,
+      aperture: lenses.apertureMin,
+      year: lenses.yearIntroduced,
+      weight: lenses.weightG,
+      rating: lenses.averageRating,
+    };
+    const sortCol = sortColumns[sort || ""] || lenses.name;
+    const orderFn = order === "desc" ? desc : asc;
+
     const needsSystemJoin = !!system;
 
     const [countResult] = needsSystemJoin
@@ -104,7 +120,7 @@ export async function GET(request: NextRequest) {
       .from(lenses)
       .leftJoin(systems, eq(lenses.systemId, systems.id))
       .where(where)
-      .orderBy(asc(lenses.name))
+      .orderBy(orderFn(sortCol))
       .limit(PAGE_SIZE)
       .offset(cursor);
 
