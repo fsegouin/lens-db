@@ -24,20 +24,15 @@ export default async function SearchPage({
   let cameraResults: (typeof cameras.$inferSelect)[] = [];
   let systemResults: (typeof systems.$inferSelect)[] = [];
 
-  if (query) {
+  if (query && query.length >= 2) {
     try {
-      const pattern = `%${query}%`;
+      const pattern = `%${query.slice(0, 100)}%`;
 
       [lensResults, cameraResults, systemResults] = await Promise.all([
         db
           .select()
           .from(lenses)
-          .where(
-            or(
-              ilike(lenses.name, pattern),
-              sql`${lenses.specs}::text ILIKE ${pattern}`
-            )
-          )
+          .where(ilike(lenses.name, pattern))
           .limit(20),
         db
           .select()

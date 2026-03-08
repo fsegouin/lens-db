@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { db } from "@/db";
-import { collections } from "@/db/schema";
-import { asc } from "drizzle-orm";
+import { collections, lensCollections } from "@/db/schema";
+import { asc, eq, sql } from "drizzle-orm";
+
+export const revalidate = 86400;
 
 export const metadata = {
   title: "Collections | Lens DB",
@@ -9,13 +11,28 @@ export const metadata = {
 };
 
 export default async function CollectionsPage() {
-  let allCollections: (typeof collections.$inferSelect)[] = [];
+  let allCollections: {
+    id: number;
+    name: string;
+    slug: string;
+    description: string | null;
+    lensCount: number;
+  }[] = [];
 
   try {
-    allCollections = await db
-      .select()
+    const rows = await db
+      .select({
+        id: collections.id,
+        name: collections.name,
+        slug: collections.slug,
+        description: collections.description,
+        lensCount: sql<number>`count(${lensCollections.lensId})::integer`,
+      })
       .from(collections)
+      .leftJoin(lensCollections, eq(collections.id, lensCollections.collectionId))
+      .groupBy(collections.id)
       .orderBy(asc(collections.name));
+    allCollections = rows;
   } catch {
     // DB not connected
   }
@@ -48,26 +65,22 @@ export default async function CollectionsPage() {
                   {collection.description}
                 </p>
               )}
+              <p className="mt-2 text-xs text-zinc-400">
+                {collection.lensCount}{" "}
+                {collection.lensCount === 1 ? "lens" : "lenses"}
+              </p>
             </Link>
           ))}
         </div>
       ) : (
         <div className="rounded-xl border border-dashed border-zinc-300 p-12 text-center dark:border-zinc-700">
           <p className="text-zinc-500">
-            No collections yet. Collections will be populated from scraped data.
+            No collections yet. Run the scraper with{" "}
+            <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-800">
+              --categories collection
+            </code>{" "}
+            to fetch and import collection data.
           </p>
-          <div className="mt-4 text-sm text-zinc-400">
-            <p>Expected collections include:</p>
-            <ul className="mt-2 space-y-1">
-              <li>Holy Trinities</li>
-              <li>Ultra-fast Lenses</li>
-              <li>Pancake Lenses</li>
-              <li>Mirror/Reflex Lenses</li>
-              <li>Macro Lenses (1:1)</li>
-              <li>Soft Focus Lenses</li>
-              <li>Historically Significant Lenses</li>
-            </ul>
-          </div>
         </div>
       )}
     </div>

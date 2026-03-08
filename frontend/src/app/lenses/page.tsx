@@ -1,7 +1,31 @@
-import Link from "next/link";
 import { db } from "@/db";
 import { lenses, systems } from "@/db/schema";
 import { asc, eq, and, gte, lte, ilike, sql } from "drizzle-orm";
+import { unstable_cache } from "next/cache";
+import LensList from "@/components/LensList";
+
+const getCachedDropdownData = unstable_cache(
+  async () => {
+    const [brandRows, systemRows] = await Promise.all([
+      db
+        .selectDistinct({ brand: lenses.brand })
+        .from(lenses)
+        .orderBy(asc(lenses.brand)),
+      db
+        .select({ name: systems.name, slug: systems.slug })
+        .from(systems)
+        .orderBy(asc(systems.name)),
+    ]);
+    return {
+      brands: brandRows
+        .map((r) => r.brand)
+        .filter((b): b is string => b != null),
+      systems: systemRows,
+    };
+  },
+  ["lenses-dropdown-data"],
+  { revalidate: 86400 }
+);
 
 export const metadata = {
   title: "Lenses | Lens DB",
@@ -11,10 +35,12 @@ export const metadata = {
 type SearchParams = Promise<{
   system?: string;
   type?: string;
+  brand?: string;
   q?: string;
   minFocal?: string;
   maxFocal?: string;
-  page?: string;
+  aperture?: string;
+  year?: string;
 }>;
 
 const PAGE_SIZE = 50;
@@ -25,20 +51,40 @@ export default async function LensesPage({
   searchParams: SearchParams;
 }) {
   const params = await searchParams;
-  const page = Math.max(1, parseInt(params.page || "1"));
-  const offset = (page - 1) * PAGE_SIZE;
 
-  let allLenses: {
+  let initialItems: {
     lens: typeof lenses.$inferSelect;
     system: typeof systems.$inferSelect | null;
   }[] = [];
   let total = 0;
+  let brands: string[] = [];
+  let systemList: { name: string; slug: string }[] = [];
 
   try {
+    // Fetch cached dropdown data (brands + systems)
+    const dropdownData = await getCachedDropdownData();
+    brands = dropdownData.brands;
+    systemList = dropdownData.systems;
+
     const conditions = [];
 
     if (params.q) {
-      conditions.push(ilike(lenses.name, `%${params.q}%`));
+      const words = params.q.trim().split(/\s+/).filter(Boolean);
+      for (const word of words) {
+        const clean = word.replace(/[^a-zA-Z0-9.]/g, "");
+        const escaped = clean.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const startsWithDigit = /^\d/.test(clean);
+        const pattern = startsWithDigit ? `\\m${escaped}` : escaped;
+        conditions.push(
+          sql`regexp_replace(${lenses.name}, '[^a-zA-Z0-9. ]', '', 'g') ~* ${pattern}`
+        );
+      }
+    }
+    if (params.brand) {
+      conditions.push(eq(lenses.brand, params.brand));
+    }
+    if (params.system) {
+      conditions.push(eq(systems.slug, params.system));
     }
     if (params.type === "zoom") {
       conditions.push(eq(lenses.isZoom, true));
@@ -53,28 +99,43 @@ export default async function LensesPage({
     if (params.maxFocal) {
       conditions.push(lte(lenses.focalLengthMax, parseFloat(params.maxFocal)));
     }
+    if (params.aperture) {
+      conditions.push(eq(lenses.apertureMin, parseFloat(params.aperture)));
+    }
+    if (params.year) {
+      conditions.push(eq(lenses.yearIntroduced, parseInt(params.year)));
+    }
 
     const where = conditions.length > 0 ? and(...conditions) : undefined;
 
-    const [countResult] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(lenses)
-      .where(where);
+    // When filtering by system, we need a join for the WHERE clause
+    const needsSystemJoin = !!params.system;
+
+    const [countResult] = needsSystemJoin
+      ? await db
+          .select({ count: sql<number>`count(*)` })
+          .from(lenses)
+          .leftJoin(systems, eq(lenses.systemId, systems.id))
+          .where(where)
+      : await db
+          .select({ count: sql<number>`count(*)` })
+          .from(lenses)
+          .where(where);
     total = Number(countResult.count);
 
-    allLenses = await db
+    initialItems = await db
       .select({ lens: lenses, system: systems })
       .from(lenses)
       .leftJoin(systems, eq(lenses.systemId, systems.id))
       .where(where)
       .orderBy(asc(lenses.name))
       .limit(PAGE_SIZE)
-      .offset(offset);
+      .offset(0);
   } catch {
     // DB not connected
   }
 
-  const totalPages = Math.ceil(total / PAGE_SIZE);
+  const nextCursor = PAGE_SIZE < total ? PAGE_SIZE : null;
 
   return (
     <div className="space-y-8">
@@ -83,151 +144,19 @@ export default async function LensesPage({
           Lenses
         </h1>
         <p className="mt-2 text-zinc-600 dark:text-zinc-400">
-          {total > 0 ? `${total} lenses found` : "Search and filter 7,400+ camera lenses"}
+          {total > 0
+            ? `${total} lenses found`
+            : "Search and filter 7,400+ camera lenses"}
         </p>
       </div>
 
-      {/* Filters */}
-      <form className="flex flex-wrap gap-3" method="GET">
-        <input
-          type="text"
-          name="q"
-          placeholder="Search lenses..."
-          defaultValue={params.q}
-          className="rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-        />
-        <select
-          name="type"
-          defaultValue={params.type}
-          className="rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-        >
-          <option value="">All types</option>
-          <option value="prime">Prime</option>
-          <option value="zoom">Zoom</option>
-          <option value="macro">Macro</option>
-        </select>
-        <input
-          type="number"
-          name="minFocal"
-          placeholder="Min focal (mm)"
-          defaultValue={params.minFocal}
-          className="w-36 rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-        />
-        <input
-          type="number"
-          name="maxFocal"
-          placeholder="Max focal (mm)"
-          defaultValue={params.maxFocal}
-          className="w-36 rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-        />
-        <button
-          type="submit"
-          className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900"
-        >
-          Filter
-        </button>
-      </form>
-
-      {/* Results */}
-      {allLenses.length > 0 ? (
-        <>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-zinc-200 text-zinc-500 dark:border-zinc-800">
-                <tr>
-                  <th className="pb-3 pr-4 font-medium">Name</th>
-                  <th className="pb-3 pr-4 font-medium">System</th>
-                  <th className="pb-3 pr-4 font-medium">Focal Length</th>
-                  <th className="pb-3 pr-4 font-medium">Aperture</th>
-                  <th className="pb-3 pr-4 font-medium">Type</th>
-                  <th className="pb-3 font-medium">Weight</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                {allLenses.map(({ lens, system }) => (
-                  <tr
-                    key={lens.id}
-                    className="transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900"
-                  >
-                    <td className="py-3 pr-4">
-                      <Link
-                        href={`/lenses/${lens.slug}`}
-                        className="font-medium text-zinc-900 hover:underline dark:text-zinc-100"
-                      >
-                        {lens.name}
-                      </Link>
-                    </td>
-                    <td className="py-3 pr-4 text-zinc-500">
-                      {system?.name || "—"}
-                    </td>
-                    <td className="py-3 pr-4 text-zinc-600 dark:text-zinc-400">
-                      {lens.focalLengthMin
-                        ? lens.focalLengthMin === lens.focalLengthMax
-                          ? `${lens.focalLengthMin}mm`
-                          : `${lens.focalLengthMin}-${lens.focalLengthMax}mm`
-                        : "—"}
-                    </td>
-                    <td className="py-3 pr-4 text-zinc-600 dark:text-zinc-400">
-                      {lens.apertureMin ? `f/${lens.apertureMin}` : "—"}
-                    </td>
-                    <td className="py-3 pr-4">
-                      {lens.isZoom && (
-                        <span className="rounded bg-blue-100 px-2 py-0.5 text-xs text-blue-700 dark:bg-blue-900 dark:text-blue-300">
-                          Zoom
-                        </span>
-                      )}
-                      {lens.isPrime && (
-                        <span className="rounded bg-green-100 px-2 py-0.5 text-xs text-green-700 dark:bg-green-900 dark:text-green-300">
-                          Prime
-                        </span>
-                      )}
-                      {lens.isMacro && (
-                        <span className="ml-1 rounded bg-purple-100 px-2 py-0.5 text-xs text-purple-700 dark:bg-purple-900 dark:text-purple-300">
-                          Macro
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-3 text-zinc-600 dark:text-zinc-400">
-                      {lens.weightG ? `${lens.weightG}g` : "—"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2">
-              {page > 1 && (
-                <Link
-                  href={`/lenses?${new URLSearchParams({ ...params, page: String(page - 1) })}`}
-                  className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-50 dark:border-zinc-700"
-                >
-                  Previous
-                </Link>
-              )}
-              <span className="text-sm text-zinc-500">
-                Page {page} of {totalPages}
-              </span>
-              {page < totalPages && (
-                <Link
-                  href={`/lenses?${new URLSearchParams({ ...params, page: String(page + 1) })}`}
-                  className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-50 dark:border-zinc-700"
-                >
-                  Next
-                </Link>
-              )}
-            </div>
-          )}
-        </>
-      ) : (
-        <div className="rounded-xl border border-dashed border-zinc-300 p-12 text-center dark:border-zinc-700">
-          <p className="text-zinc-500">
-            No lenses found. Run the scraper to populate the database.
-          </p>
-        </div>
-      )}
+      <LensList
+        initialItems={initialItems}
+        initialTotal={total}
+        initialNextCursor={nextCursor}
+        brands={brands}
+        systems={systemList}
+      />
     </div>
   );
 }
