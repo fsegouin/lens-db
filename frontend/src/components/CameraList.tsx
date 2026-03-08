@@ -110,29 +110,62 @@ export default function CameraList({
       />
 
       {items.length > 0 ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {items.map(({ camera, system }) => (
-            <Link
-              key={camera.id}
-              href={`/cameras/${camera.slug}`}
-              className="rounded-lg border border-zinc-200 p-4 transition-all hover:border-zinc-400 hover:shadow-sm dark:border-zinc-800 dark:hover:border-zinc-600"
-            >
-              <h2 className="font-semibold text-zinc-900 dark:text-zinc-100">
-                {camera.name}
-              </h2>
-              {system && (
-                <p className="mt-1 text-sm text-zinc-500">{system.name}</p>
-              )}
-              <div className="mt-2 flex flex-wrap gap-2 text-xs text-zinc-500">
-                {camera.sensorSize && <span>{camera.sensorSize}</span>}
-                {camera.megapixels && <span>{camera.megapixels}MP</span>}
-                {camera.yearIntroduced && (
-                  <span>{camera.yearIntroduced}</span>
-                )}
-                {camera.weightG && <span>{camera.weightG}g</span>}
-              </div>
-            </Link>
-          ))}
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead className="border-b border-zinc-200 text-zinc-500 dark:border-zinc-800">
+              <tr>
+                <th className="pb-3 pr-4 font-medium">Name</th>
+                <th className="pb-3 pr-4 font-medium">System</th>
+                <th className="pb-3 pr-4 font-medium">Type</th>
+                <th className="pb-3 pr-4 font-medium">Dimensions</th>
+                <th className="pb-3 pr-4 font-medium">Speeds</th>
+                <th className="pb-3 pr-4 font-medium">Imaging Sensor</th>
+                <th className="pb-3 pr-4 font-medium">Crop Factor</th>
+                <th className="pb-3 font-medium">Exposure Modes</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+              {items.map(({ camera, system }) => {
+                const specs = (camera.specs ?? {}) as Record<string, string>;
+                return (
+                  <tr
+                    key={camera.id}
+                    className="transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900"
+                  >
+                    <td className="py-3 pr-4">
+                      <Link
+                        href={`/cameras/${camera.slug}`}
+                        className="font-medium text-zinc-900 hover:underline dark:text-zinc-100"
+                      >
+                        {camera.name}
+                      </Link>
+                    </td>
+                    <td className="py-3 pr-4 text-zinc-500">
+                      {system?.name ?? "\u2014"}
+                    </td>
+                    <td className="py-3 pr-4 text-zinc-600 dark:text-zinc-400">
+                      {specs["Type"] ?? "\u2014"}
+                    </td>
+                    <td className="py-3 pr-4 text-zinc-600 dark:text-zinc-400">
+                      {specs["Dimensions"] ?? "\u2014"}
+                    </td>
+                    <td className="py-3 pr-4 text-zinc-600 dark:text-zinc-400">
+                      {specs["Speeds"] ?? "\u2014"}
+                    </td>
+                    <td className="py-3 pr-4 text-zinc-600 dark:text-zinc-400">
+                      {specs["Imaging sensor"] ?? "\u2014"}
+                    </td>
+                    <td className="py-3 pr-4 text-zinc-600 dark:text-zinc-400">
+                      {specs["Crop factor"] ?? "\u2014"}
+                    </td>
+                    <td className="py-3 text-zinc-600 dark:text-zinc-400">
+                      {specs["Exposure modes"] ?? "\u2014"}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       ) : (
         <div className="rounded-xl border border-dashed border-zinc-300 p-12 text-center dark:border-zinc-700">
