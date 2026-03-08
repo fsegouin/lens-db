@@ -117,7 +117,7 @@ export default async function LensDetailPage({
       {lens.description && (
         <div>
           <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">
-            {lens.description}
+            {lens.description.replace(/\.([A-Z])/g, ". $1")}
           </p>
         </div>
       )}
