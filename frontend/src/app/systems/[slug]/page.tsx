@@ -5,7 +5,7 @@ import { systems, lenses, cameras } from "@/db/schema";
 import { eq, asc } from "drizzle-orm";
 import ViewTracker from "@/components/ViewTracker";
 
-export const revalidate = 86400;
+export const revalidate = 604800;
 
 export async function generateMetadata({
   params,

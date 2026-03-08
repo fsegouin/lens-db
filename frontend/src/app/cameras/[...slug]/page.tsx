@@ -7,7 +7,7 @@ import ViewTracker from "@/components/ViewTracker";
 import ImageGallery from "@/components/ImageGallery";
 import { getImages } from "@/lib/images";
 
-export const revalidate = 86400;
+export const revalidate = 604800;
 
 export async function generateMetadata({
   params,

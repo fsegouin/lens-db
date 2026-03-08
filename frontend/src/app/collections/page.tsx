@@ -3,7 +3,7 @@ import { db } from "@/db";
 import { collections, lensCollections } from "@/db/schema";
 import { asc, eq, sql } from "drizzle-orm";
 
-export const revalidate = 86400;
+export const revalidate = 604800;
 
 export const metadata = {
   title: "Collections | Lens DB",

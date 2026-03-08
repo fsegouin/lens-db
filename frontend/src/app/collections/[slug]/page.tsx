@@ -4,7 +4,7 @@ import { db } from "@/db";
 import { collections, lensCollections, lenses, systems } from "@/db/schema";
 import { eq, asc } from "drizzle-orm";
 
-export const revalidate = 86400;
+export const revalidate = 604800;
 
 export async function generateMetadata({
   params,

@@ -3,7 +3,7 @@ import { db } from "@/db";
 import { lenses, systems, lensComparisons } from "@/db/schema";
 import { desc, eq, gt, sql } from "drizzle-orm";
 
-export const revalidate = 86400;
+export const revalidate = 604800;
 
 const sections = [
   {

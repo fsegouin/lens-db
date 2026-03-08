@@ -3,7 +3,7 @@ import { db } from "@/db";
 import { systems } from "@/db/schema";
 import { asc } from "drizzle-orm";
 
-export const revalidate = 86400;
+export const revalidate = 604800;
 
 export const metadata = {
   title: "Camera Systems | Lens DB",
