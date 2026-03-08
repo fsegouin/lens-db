@@ -24,7 +24,7 @@ const getCachedDropdownData = unstable_cache(
     };
   },
   ["lenses-dropdown-data"],
-  { revalidate: 86400 }
+  { revalidate: 604800 }
 );
 
 export const metadata = {
