@@ -42,6 +42,9 @@ type SearchParams = Promise<{
   minAperture?: string;
   maxAperture?: string;
   year?: string;
+  lensType?: string;
+  era?: string;
+  productionStatus?: string;
   sort?: string;
   order?: string;
 }>;
@@ -110,6 +113,15 @@ export default async function LensesPage({
     }
     if (params.year) {
       conditions.push(eq(lenses.yearIntroduced, parseInt(params.year)));
+    }
+    if (params.lensType) {
+      conditions.push(eq(lenses.lensType, params.lensType));
+    }
+    if (params.era) {
+      conditions.push(eq(lenses.era, params.era));
+    }
+    if (params.productionStatus) {
+      conditions.push(eq(lenses.productionStatus, params.productionStatus));
     }
 
     const where = conditions.length > 0 ? and(...conditions) : undefined;

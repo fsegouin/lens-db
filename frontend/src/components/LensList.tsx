@@ -46,6 +46,9 @@ export default function LensList({
   const minAperture = searchParams.get("minAperture") || "";
   const maxAperture = searchParams.get("maxAperture") || "";
   const year = searchParams.get("year") || "";
+  const lensType = searchParams.get("lensType") || "";
+  const era = searchParams.get("era") || "";
+  const productionStatus = searchParams.get("productionStatus") || "";
   const sort = searchParams.get("sort") || "";
   const order = searchParams.get("order") || "";
 
@@ -92,12 +95,15 @@ export default function LensList({
       if (minAperture) params.set("minAperture", minAperture);
       if (maxAperture) params.set("maxAperture", maxAperture);
       if (year) params.set("year", year);
+      if (lensType) params.set("lensType", lensType);
+      if (era) params.set("era", era);
+      if (productionStatus) params.set("productionStatus", productionStatus);
       if (sort) params.set("sort", sort);
       if (order) params.set("order", order);
       params.set("cursor", String(cursor));
       return `/api/lenses?${params.toString()}`;
     },
-    [q, brand, system, type, minFocal, maxFocal, minAperture, maxAperture, year, sort, order]
+    [q, brand, system, type, minFocal, maxFocal, minAperture, maxAperture, year, lensType, era, productionStatus, sort, order]
   );
 
   const loadMore = useCallback(async () => {
@@ -136,7 +142,7 @@ export default function LensList({
 
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  function applyFilters(overrides: { q?: string; brand?: string; system?: string; type?: string; minFocal?: string; maxFocal?: string; minAperture?: string; maxAperture?: string; year?: string; sort?: string; order?: string } = {}) {
+  function applyFilters(overrides: { q?: string; brand?: string; system?: string; type?: string; minFocal?: string; maxFocal?: string; minAperture?: string; maxAperture?: string; year?: string; lensType?: string; era?: string; productionStatus?: string; sort?: string; order?: string } = {}) {
     const params = new URLSearchParams();
     const qVal = overrides?.q ?? formQ;
     const brandVal = overrides?.brand ?? formBrand;
@@ -147,6 +153,9 @@ export default function LensList({
     const minApertureVal = overrides?.minAperture ?? formMinAperture;
     const maxApertureVal = overrides?.maxAperture ?? formMaxAperture;
     const yearVal = overrides?.year ?? formYear;
+    const lensTypeVal = overrides?.lensType ?? lensType;
+    const eraVal = overrides?.era ?? era;
+    const productionStatusVal = overrides?.productionStatus ?? productionStatus;
     const sortVal = overrides?.sort ?? sort;
     const orderVal = overrides?.order ?? order;
     if (qVal) params.set("q", qVal);
@@ -158,6 +167,9 @@ export default function LensList({
     if (minApertureVal) params.set("minAperture", minApertureVal);
     if (maxApertureVal) params.set("maxAperture", maxApertureVal);
     if (yearVal) params.set("year", yearVal);
+    if (lensTypeVal) params.set("lensType", lensTypeVal);
+    if (eraVal) params.set("era", eraVal);
+    if (productionStatusVal) params.set("productionStatus", productionStatusVal);
     if (sortVal) params.set("sort", sortVal);
     if (orderVal) params.set("order", orderVal);
     const qs = params.toString();
@@ -315,7 +327,7 @@ export default function LensList({
                   <td className="py-3 pr-4 text-zinc-500">
                     {lens.brand ? (
                       <button
-                        onClick={() => applyFilters({ brand: lens.brand!, system: "", q: "", type: "", minFocal: "", maxFocal: "", minAperture: "", maxAperture: "", year: "" })}
+                        onClick={() => applyFilters({ brand: lens.brand!, system: "", q: "", type: "", minFocal: "", maxFocal: "", minAperture: "", maxAperture: "", year: "", lensType: "", era: "", productionStatus: "" })}
                         className="hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
                       >
                         {lens.brand}
@@ -325,7 +337,7 @@ export default function LensList({
                   <td className="py-3 pr-4 text-zinc-500">
                     {system ? (
                       <button
-                        onClick={() => applyFilters({ system: system.slug, brand: "", q: "", type: "", minFocal: "", maxFocal: "", minAperture: "", maxAperture: "", year: "" })}
+                        onClick={() => applyFilters({ system: system.slug, brand: "", q: "", type: "", minFocal: "", maxFocal: "", minAperture: "", maxAperture: "", year: "", lensType: "", era: "", productionStatus: "" })}
                         className="hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
                       >
                         {system.name}
@@ -335,7 +347,7 @@ export default function LensList({
                   <td className="py-3 pr-4 text-zinc-600 dark:text-zinc-400">
                     {lens.focalLengthMin ? (
                       <button
-                        onClick={() => applyFilters({ minFocal: String(lens.focalLengthMin), maxFocal: String(lens.focalLengthMax), brand: "", system: "", q: "", type: "", minAperture: "", maxAperture: "", year: "" })}
+                        onClick={() => applyFilters({ minFocal: String(lens.focalLengthMin), maxFocal: String(lens.focalLengthMax), brand: "", system: "", q: "", type: "", minAperture: "", maxAperture: "", year: "", lensType: "", era: "", productionStatus: "" })}
                         className="hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
                       >
                         {lens.focalLengthMin === lens.focalLengthMax
@@ -357,7 +369,7 @@ export default function LensList({
                   <td className="py-3 pr-4">
                     {lens.isZoom && (
                       <button
-                        onClick={() => applyFilters({ type: "zoom", brand: "", system: "", q: "", minFocal: "", maxFocal: "", minAperture: "", maxAperture: "", year: "" })}
+                        onClick={() => applyFilters({ type: "zoom", brand: "", system: "", q: "", minFocal: "", maxFocal: "", minAperture: "", maxAperture: "", year: "", lensType: "", era: "", productionStatus: "" })}
                         className="rounded bg-blue-100 px-2 py-0.5 text-xs text-blue-700 hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-300 dark:hover:bg-blue-800"
                       >
                         Zoom
@@ -365,7 +377,7 @@ export default function LensList({
                     )}
                     {lens.isPrime && (
                       <button
-                        onClick={() => applyFilters({ type: "prime", brand: "", system: "", q: "", minFocal: "", maxFocal: "", minAperture: "", maxAperture: "", year: "" })}
+                        onClick={() => applyFilters({ type: "prime", brand: "", system: "", q: "", minFocal: "", maxFocal: "", minAperture: "", maxAperture: "", year: "", lensType: "", era: "", productionStatus: "" })}
                         className="rounded bg-green-100 px-2 py-0.5 text-xs text-green-700 hover:bg-green-200 dark:bg-green-900 dark:text-green-300 dark:hover:bg-green-800"
                       >
                         Prime
@@ -373,7 +385,7 @@ export default function LensList({
                     )}
                     {lens.isMacro && (
                       <button
-                        onClick={() => applyFilters({ type: "macro", brand: "", system: "", q: "", minFocal: "", maxFocal: "", minAperture: "", maxAperture: "", year: "" })}
+                        onClick={() => applyFilters({ type: "macro", brand: "", system: "", q: "", minFocal: "", maxFocal: "", minAperture: "", maxAperture: "", year: "", lensType: "", era: "", productionStatus: "" })}
                         className="ml-1 rounded bg-purple-100 px-2 py-0.5 text-xs text-purple-700 hover:bg-purple-200 dark:bg-purple-900 dark:text-purple-300 dark:hover:bg-purple-800"
                       >
                         Macro

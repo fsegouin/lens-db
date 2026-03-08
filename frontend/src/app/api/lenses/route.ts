@@ -23,6 +23,9 @@ export async function GET(request: NextRequest) {
   const minAperture = searchParams.get("minAperture") || undefined;
   const maxAperture = searchParams.get("maxAperture") || undefined;
   const year = searchParams.get("year") || undefined;
+  const lensType = searchParams.get("lensType") || undefined;
+  const era = searchParams.get("era") || undefined;
+  const productionStatus = searchParams.get("productionStatus") || undefined;
   const sort = searchParams.get("sort") || undefined;
   const order = searchParams.get("order") || undefined;
   const rawCursor = parseInt(searchParams.get("cursor") || "0");
@@ -83,6 +86,15 @@ export async function GET(request: NextRequest) {
     if (year) {
       const val = parseInt(year);
       if (Number.isFinite(val)) conditions.push(eq(lenses.yearIntroduced, val));
+    }
+    if (lensType) {
+      conditions.push(eq(lenses.lensType, lensType));
+    }
+    if (era) {
+      conditions.push(eq(lenses.era, era));
+    }
+    if (productionStatus) {
+      conditions.push(eq(lenses.productionStatus, productionStatus));
     }
 
     const where = conditions.length > 0 ? and(...conditions) : undefined;
