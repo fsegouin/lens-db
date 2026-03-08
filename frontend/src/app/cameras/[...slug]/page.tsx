@@ -115,8 +115,8 @@ export default async function CameraDetailPage({
         </table>
       </div>
 
-      {/* Raw specs */}
-      {Object.keys(specs).length > 0 && (
+      {/* Raw specs (dev only) */}
+      {process.env.NODE_ENV === "development" && Object.keys(specs).length > 0 && (
         <details className="group">
           <summary className="cursor-pointer text-sm font-medium text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-400">
             Raw specs JSON ({Object.keys(specs).length} fields)
