@@ -101,7 +101,7 @@ export default async function LensDetailPage({
           )}
           {lens.lensType && (
             <Link
-              href={`/lenses?q=${encodeURIComponent(lens.lensType)}`}
+              href={`/lenses?lensType=${encodeURIComponent(lens.lensType)}`}
               className="rounded bg-green-50 px-2 py-0.5 text-green-700 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-300 dark:hover:bg-green-900/50"
             >
               {lens.lensType}
@@ -109,7 +109,7 @@ export default async function LensDetailPage({
           )}
           {lens.era && (
             <Link
-              href={`/lenses?q=${encodeURIComponent(lens.era)}`}
+              href={`/lenses?era=${encodeURIComponent(lens.era)}`}
               className="rounded bg-amber-50 px-2 py-0.5 text-amber-700 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-300 dark:hover:bg-amber-900/50"
             >
               {lens.era}
@@ -117,7 +117,7 @@ export default async function LensDetailPage({
           )}
           {lens.productionStatus && (
             <Link
-              href={`/lenses?q=${encodeURIComponent(lens.productionStatus)}`}
+              href={`/lenses?productionStatus=${encodeURIComponent(lens.productionStatus)}`}
               className="rounded bg-purple-50 px-2 py-0.5 text-purple-700 hover:bg-purple-100 dark:bg-purple-900/30 dark:text-purple-300 dark:hover:bg-purple-900/50"
             >
               {lens.productionStatus}
