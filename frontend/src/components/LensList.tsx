@@ -164,9 +164,9 @@ export default function LensList({
     router.push(qs ? `/lenses?${qs}` : "/lenses");
   }
 
-  function handleFilter(e: React.FormEvent) {
-    e.preventDefault();
-    applyFilters();
+  function debouncedApply(overrides: Parameters<typeof applyFilters>[0]) {
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => applyFilters(overrides), 400);
   }
 
   function handleSort(column: string) {
@@ -184,14 +184,13 @@ export default function LensList({
 
   function handleSearchChange(value: string) {
     setFormQ(value);
-    clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => applyFilters({ q: value }), 400);
+    debouncedApply({ q: value });
   }
 
   return (
     <>
       {/* Filters */}
-      <form className="flex flex-wrap gap-3" onSubmit={handleFilter}>
+      <div className="flex flex-wrap gap-3">
         <input
           type="text"
           placeholder="Search lenses..."
@@ -237,14 +236,14 @@ export default function LensList({
           type="number"
           placeholder="Min focal (mm)"
           value={formMinFocal}
-          onChange={(e) => setFormMinFocal(e.target.value)}
+          onChange={(e) => { setFormMinFocal(e.target.value); debouncedApply({ minFocal: e.target.value }); }}
           className="w-36 rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
         />
         <input
           type="number"
           placeholder="Max focal (mm)"
           value={formMaxFocal}
-          onChange={(e) => setFormMaxFocal(e.target.value)}
+          onChange={(e) => { setFormMaxFocal(e.target.value); debouncedApply({ maxFocal: e.target.value }); }}
           className="w-36 rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
         />
         <input
@@ -252,7 +251,7 @@ export default function LensList({
           step="0.1"
           placeholder="Min aperture"
           value={formMinAperture}
-          onChange={(e) => setFormMinAperture(e.target.value)}
+          onChange={(e) => { setFormMinAperture(e.target.value); debouncedApply({ minAperture: e.target.value }); }}
           className="w-36 rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
         />
         <input
@@ -260,23 +259,17 @@ export default function LensList({
           step="0.1"
           placeholder="Max aperture"
           value={formMaxAperture}
-          onChange={(e) => setFormMaxAperture(e.target.value)}
+          onChange={(e) => { setFormMaxAperture(e.target.value); debouncedApply({ maxAperture: e.target.value }); }}
           className="w-36 rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
         />
         <input
           type="number"
           placeholder="Year"
           value={formYear}
-          onChange={(e) => setFormYear(e.target.value)}
+          onChange={(e) => { setFormYear(e.target.value); debouncedApply({ year: e.target.value }); }}
           className="w-28 rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
         />
-        <button
-          type="submit"
-          className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900"
-        >
-          Filter
-        </button>
-      </form>
+      </div>
 
       {/* Results */}
       {items.length > 0 ? (

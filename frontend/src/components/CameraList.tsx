@@ -86,31 +86,28 @@ export default function CameraList({
     return () => observer.disconnect();
   }, [loadMore]);
 
-  function handleSearch(e: React.FormEvent) {
-    e.preventDefault();
-    const params = new URLSearchParams();
-    if (formQ) params.set("q", formQ);
-    const qs = params.toString();
-    router.push(qs ? `/cameras?${qs}` : "/cameras");
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  function handleSearchChange(value: string) {
+    setFormQ(value);
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      const params = new URLSearchParams();
+      if (value) params.set("q", value);
+      const qs = params.toString();
+      router.push(qs ? `/cameras?${qs}` : "/cameras");
+    }, 400);
   }
 
   return (
     <>
-      <form className="flex flex-wrap gap-3" onSubmit={handleSearch}>
-        <input
-          type="text"
-          placeholder="Search cameras..."
-          value={formQ}
-          onChange={(e) => setFormQ(e.target.value)}
-          className="rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-        />
-        <button
-          type="submit"
-          className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900"
-        >
-          Search
-        </button>
-      </form>
+      <input
+        type="text"
+        placeholder="Search cameras..."
+        value={formQ}
+        onChange={(e) => handleSearchChange(e.target.value)}
+        className="rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+      />
 
       {items.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
