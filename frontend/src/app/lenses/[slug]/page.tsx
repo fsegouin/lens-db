@@ -84,29 +84,44 @@ export default async function LensDetailPage({
         </h1>
         <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
           {lens.brand && (
-            <span className="rounded bg-zinc-100 px-2 py-0.5 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
+            <Link
+              href={`/lenses?brand=${encodeURIComponent(lens.brand)}`}
+              className="rounded bg-zinc-100 px-2 py-0.5 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+            >
               {lens.brand}
-            </span>
+            </Link>
           )}
           {system && (
-            <span className="rounded bg-blue-50 px-2 py-0.5 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+            <Link
+              href={`/lenses?system=${encodeURIComponent(system.slug)}`}
+              className="rounded bg-blue-50 px-2 py-0.5 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/50"
+            >
               {system.name}
-            </span>
+            </Link>
           )}
           {lens.lensType && (
-            <span className="rounded bg-green-50 px-2 py-0.5 text-green-700 dark:bg-green-900/30 dark:text-green-300">
+            <Link
+              href={`/lenses?q=${encodeURIComponent(lens.lensType)}`}
+              className="rounded bg-green-50 px-2 py-0.5 text-green-700 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-300 dark:hover:bg-green-900/50"
+            >
               {lens.lensType}
-            </span>
+            </Link>
           )}
           {lens.era && (
-            <span className="rounded bg-amber-50 px-2 py-0.5 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+            <Link
+              href={`/lenses?q=${encodeURIComponent(lens.era)}`}
+              className="rounded bg-amber-50 px-2 py-0.5 text-amber-700 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-300 dark:hover:bg-amber-900/50"
+            >
               {lens.era}
-            </span>
+            </Link>
           )}
           {lens.productionStatus && (
-            <span className="rounded bg-purple-50 px-2 py-0.5 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
+            <Link
+              href={`/lenses?q=${encodeURIComponent(lens.productionStatus)}`}
+              className="rounded bg-purple-50 px-2 py-0.5 text-purple-700 hover:bg-purple-100 dark:bg-purple-900/30 dark:text-purple-300 dark:hover:bg-purple-900/50"
+            >
               {lens.productionStatus}
-            </span>
+            </Link>
           )}
           {(lens.viewCount ?? 0) > 0 && (
             <span className="text-sm text-zinc-400">
