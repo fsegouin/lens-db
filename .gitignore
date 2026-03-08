@@ -1,0 +1,10 @@
+node_modules/
+.env
+.env.local
+scraper/pages/
+scraper/urls.json
+scraper/data.json
+scraper/.progress.json
+__pycache__/
+*.pyc
+.next/
