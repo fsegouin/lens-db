@@ -39,7 +39,8 @@ type SearchParams = Promise<{
   q?: string;
   minFocal?: string;
   maxFocal?: string;
-  aperture?: string;
+  minAperture?: string;
+  maxAperture?: string;
   year?: string;
 }>;
 
@@ -99,8 +100,11 @@ export default async function LensesPage({
     if (params.maxFocal) {
       conditions.push(lte(lenses.focalLengthMax, parseFloat(params.maxFocal)));
     }
-    if (params.aperture) {
-      conditions.push(eq(lenses.apertureMin, parseFloat(params.aperture)));
+    if (params.minAperture) {
+      conditions.push(gte(lenses.apertureMin, parseFloat(params.minAperture)));
+    }
+    if (params.maxAperture) {
+      conditions.push(lte(lenses.apertureMin, parseFloat(params.maxAperture)));
     }
     if (params.year) {
       conditions.push(eq(lenses.yearIntroduced, parseInt(params.year)));

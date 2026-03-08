@@ -20,7 +20,8 @@ export async function GET(request: NextRequest) {
   const type = searchParams.get("type") || undefined;
   const minFocal = searchParams.get("minFocal") || undefined;
   const maxFocal = searchParams.get("maxFocal") || undefined;
-  const aperture = searchParams.get("aperture") || undefined;
+  const minAperture = searchParams.get("minAperture") || undefined;
+  const maxAperture = searchParams.get("maxAperture") || undefined;
   const year = searchParams.get("year") || undefined;
   const rawCursor = parseInt(searchParams.get("cursor") || "0");
   const cursor = Math.min(
@@ -69,9 +70,13 @@ export async function GET(request: NextRequest) {
       const val = parseFloat(maxFocal);
       if (Number.isFinite(val)) conditions.push(lte(lenses.focalLengthMax, val));
     }
-    if (aperture) {
-      const val = parseFloat(aperture);
-      if (Number.isFinite(val)) conditions.push(eq(lenses.apertureMin, val));
+    if (minAperture) {
+      const val = parseFloat(minAperture);
+      if (Number.isFinite(val)) conditions.push(gte(lenses.apertureMin, val));
+    }
+    if (maxAperture) {
+      const val = parseFloat(maxAperture);
+      if (Number.isFinite(val)) conditions.push(lte(lenses.apertureMin, val));
     }
     if (year) {
       const val = parseInt(year);
