@@ -791,8 +791,16 @@ def import_collections(conn, collections_data: list[dict]):
                 if cur.rowcount > 0:
                     linked += 1
 
+    # Delete collections with no lenses
+    with conn.cursor() as cur:
+        cur.execute(
+            """DELETE FROM collections
+               WHERE id NOT IN (SELECT DISTINCT collection_id FROM lens_collections)"""
+        )
+        empty_count = cur.rowcount
+
     conn.commit()
-    print(f"  Collections done: {imported} imported, {linked} lens links created", flush=True)
+    print(f"  Collections done: {imported} imported, {linked} lens links created, {empty_count} empty deleted", flush=True)
 
 
 def main():
