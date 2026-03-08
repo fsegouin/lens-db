@@ -7,13 +7,6 @@ import ViewTracker from "@/components/ViewTracker";
 
 export const revalidate = 86400;
 
-export async function generateStaticParams() {
-  const allSystems = await db
-    .select({ slug: systems.slug })
-    .from(systems);
-  return allSystems.map((s) => ({ slug: s.slug }));
-}
-
 export async function generateMetadata({
   params,
 }: {
