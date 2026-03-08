@@ -2,6 +2,7 @@ import Link from "next/link";
 import { db } from "@/db";
 import { lenses, cameras, systems } from "@/db/schema";
 import { ilike, or, sql } from "drizzle-orm";
+import SearchInput from "@/components/SearchInput";
 
 export const metadata = {
   title: "Search | Lens DB",
@@ -71,22 +72,7 @@ export default async function SearchPage({
         </p>
       </div>
 
-      <form method="GET" className="flex gap-3">
-        <input
-          type="text"
-          name="q"
-          placeholder="Search for lenses, cameras, systems..."
-          defaultValue={query}
-          className="flex-1 rounded-lg border border-zinc-300 px-4 py-3 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-          autoFocus
-        />
-        <button
-          type="submit"
-          className="rounded-lg bg-zinc-900 px-6 py-3 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900"
-        >
-          Search
-        </button>
-      </form>
+      <SearchInput defaultValue={query} />
 
       {query && !hasResults && (
         <p className="text-center text-zinc-500">
