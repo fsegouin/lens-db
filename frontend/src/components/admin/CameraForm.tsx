@@ -18,6 +18,7 @@ interface CameraData {
   yearIntroduced?: number | null;
   bodyType?: string | null;
   weightG?: number | null;
+  verified?: boolean | null;
   specs?: unknown;
   images?: unknown;
 }
@@ -57,6 +58,7 @@ export default function CameraForm({ camera, systems }: CameraFormProps) {
   const [yearIntroduced, setYearIntroduced] = useState(camera?.yearIntroduced?.toString() ?? "");
   const [bodyType, setBodyType] = useState(camera?.bodyType ?? "");
   const [weightG, setWeightG] = useState(camera?.weightG?.toString() ?? "");
+  const [verified, setVerified] = useState(camera?.verified ?? true);
   const [specsEntries, setSpecsEntries] = useState<[string, string][]>(() => {
     if (!camera?.specs || typeof camera.specs !== "object") return [];
     return Object.entries(camera.specs as Record<string, string>).map(
@@ -110,6 +112,7 @@ export default function CameraForm({ camera, systems }: CameraFormProps) {
       yearIntroduced: yearIntroduced ? Number(yearIntroduced) : null,
       bodyType: bodyType || null,
       weightG: weightG ? Number(weightG) : null,
+      verified,
       specs: parsedSpecs,
       images: parsedImages,
     };
@@ -301,6 +304,19 @@ export default function CameraForm({ camera, systems }: CameraFormProps) {
             />
           </div>
         </div>
+      </section>
+
+      {/* Review */}
+      <section className="space-y-4">
+        <h3 className={sectionClass}>Review</h3>
+        <label className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+          <input
+            type="checkbox"
+            checked={verified}
+            onChange={(e) => setVerified(e.target.checked)}
+          />
+          Verified
+        </label>
       </section>
 
       {/* Specs */}

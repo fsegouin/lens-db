@@ -44,6 +44,7 @@ export async function GET(
       isPrime: lenses.isPrime,
       hasStabilization: lenses.hasStabilization,
       hasAutofocus: lenses.hasAutofocus,
+      verified: lenses.verified,
       specs: lenses.specs,
       images: lenses.images,
       createdAt: lenses.createdAt,
@@ -80,7 +81,7 @@ export async function PUT(
     "lensElements", "lensGroups", "diaphragmBlades",
     "yearIntroduced", "yearDiscontinued",
     "isZoom", "isMacro", "isPrime", "hasStabilization", "hasAutofocus",
-    "specs", "images",
+    "verified", "specs", "images",
   ];
 
   for (const field of fields) {

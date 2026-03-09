@@ -10,17 +10,36 @@ interface Column {
   render?: (value: unknown, row: Record<string, unknown>) => React.ReactNode;
 }
 
+interface FilterOption {
+  label: string;
+  value: string;
+}
+
+interface FilterConfig {
+  key: string;
+  label: string;
+  options: FilterOption[];
+}
+
 interface AdminTableProps {
   title: string;
   apiPath: string;         // e.g. "/api/admin/lenses"
   editPath: string;        // e.g. "/admin/lenses"
   columns: Column[];
   newHref: string;         // e.g. "/admin/lenses/new"
+  filters?: FilterConfig[];
 }
 
 const PAGE_SIZE = 50;
 
-export default function AdminTable({ title, apiPath, editPath, columns, newHref }: AdminTableProps) {
+export default function AdminTable({
+  title,
+  apiPath,
+  editPath,
+  columns,
+  newHref,
+  filters = [],
+}: AdminTableProps) {
   const [items, setItems] = useState<Record<string, unknown>[]>([]);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState("");
@@ -29,6 +48,9 @@ export default function AdminTable({ title, apiPath, editPath, columns, newHref 
   const [loading, setLoading] = useState(true);
   const [sort, setSort] = useState("");
   const [order, setOrder] = useState<"asc" | "desc">("asc");
+  const [filterValues, setFilterValues] = useState<Record<string, string>>(
+    () => Object.fromEntries(filters.map((filter) => [filter.key, ""]))
+  );
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Debounce search input (400ms)
@@ -52,6 +74,9 @@ export default function AdminTable({ title, apiPath, editPath, columns, newHref 
       params.set("sort", sort);
       params.set("order", order);
     }
+    for (const [key, value] of Object.entries(filterValues)) {
+      if (value) params.set(key, value);
+    }
     try {
       const res = await fetch(`${apiPath}?${params}`);
       if (!res.ok) {
@@ -71,7 +96,7 @@ export default function AdminTable({ title, apiPath, editPath, columns, newHref 
     } finally {
       setLoading(false);
     }
-  }, [apiPath, debouncedSearch, page, sort, order]);
+  }, [apiPath, debouncedSearch, filterValues, page, sort, order]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -105,13 +130,37 @@ export default function AdminTable({ title, apiPath, editPath, columns, newHref 
           </Link>
         </div>
 
-        <input
-          type="text"
-          placeholder="Search..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full max-w-sm rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-        />
+        <div className="flex flex-wrap gap-3">
+          <input
+            type="text"
+            placeholder="Search..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full max-w-sm rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+          />
+          {filters.map((filter) => (
+            <label key={filter.key} className="flex flex-col gap-1 text-sm text-zinc-500">
+              <span>{filter.label}</span>
+              <select
+                value={filterValues[filter.key] ?? ""}
+                onChange={(e) => {
+                  setFilterValues((current) => ({
+                    ...current,
+                    [filter.key]: e.target.value,
+                  }));
+                  setPage(0);
+                }}
+                className="rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+              >
+                {filter.options.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ))}
+        </div>
 
         <div className="text-sm text-zinc-500">{total.toLocaleString()} results</div>
       </div>
