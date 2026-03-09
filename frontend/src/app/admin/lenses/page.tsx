@@ -1,6 +1,6 @@
-import AdminTable from "@/components/admin/AdminTable";
+"use client";
 
-export const dynamic = "force-dynamic";
+import AdminTable from "@/components/admin/AdminTable";
 
 const columns = [
   { key: "name", label: "Name" },
