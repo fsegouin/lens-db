@@ -1,6 +1,6 @@
-# Lens DB
+# The Lens DB
 
-Lens DB is a camera and lens database project built from archived `lens-db.com` data and extended with a modern web frontend, admin tooling, and data-cleanup scripts.
+The Lens DB is a camera and lens database project built from archived `lens-db.com` data and extended with a modern web frontend, admin tooling, and data-cleanup scripts.
 
 ## Repo Layout
 
@@ -45,7 +45,7 @@ Required environment variables include:
 
 ## Scraper
 
-The scraper lives in [`scraper/`](scraper/) and is used to rebuild or extend the dataset from archived Lens DB pages.
+The scraper lives in [`scraper/`](scraper/) and is used to rebuild or extend the dataset from archived The Lens DB pages.
 
 ### Basic Flow
 
