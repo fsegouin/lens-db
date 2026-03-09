@@ -7,6 +7,7 @@ import { formatDescription } from "@/lib/format-description";
 import ViewTracker from "@/components/ViewTracker";
 import RatingWidget from "@/components/RatingWidget";
 import ImageGallery from "@/components/ImageGallery";
+import ReportIssueButton from "@/components/ReportIssueButton";
 import { getImages } from "@/lib/images";
 
 export const revalidate = 604800;
@@ -204,6 +205,7 @@ export default async function LensDetailPage({
       )}
 
       <ViewTracker type="lens" id={lens.id} />
+      <ReportIssueButton entityType="lens" entityId={lens.id} entityName={lens.name} />
     </div>
   );
 }
