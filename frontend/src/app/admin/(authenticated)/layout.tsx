@@ -11,6 +11,7 @@ const adminNav = [
   { href: "/admin/cameras", label: "Cameras" },
   { href: "/admin/systems", label: "Systems" },
   { href: "/admin/collections", label: "Collections" },
+  { href: "/admin/series", label: "Series" },
   { href: "/admin/compatibility", label: "Compatibility" },
 ];
 
