@@ -117,6 +117,8 @@ export default function CameraList({
                 <th className="pb-3 pr-4 font-medium">Name</th>
                 <th className="pb-3 pr-4 font-medium">System</th>
                 <th className="pb-3 pr-4 font-medium">Type</th>
+                <th className="pb-3 pr-4 font-medium">Model</th>
+                <th className="pb-3 pr-4 font-medium">Film Type</th>
                 <th className="pb-3 pr-4 font-medium">Dimensions</th>
                 <th className="pb-3 pr-4 font-medium">Speeds</th>
                 <th className="pb-3 pr-4 font-medium">Imaging Sensor</th>
@@ -147,13 +149,19 @@ export default function CameraList({
                       {specs["Type"] ?? "\u2014"}
                     </td>
                     <td className="py-3 pr-4 text-zinc-600 dark:text-zinc-400">
+                      {specs["Model"] ?? "\u2014"}
+                    </td>
+                    <td className="py-3 pr-4 text-zinc-600 dark:text-zinc-400">
+                      {specs["Film type"] ?? "\u2014"}
+                    </td>
+                    <td className="py-3 pr-4 text-zinc-600 dark:text-zinc-400">
                       {specs["Dimensions"] ?? "\u2014"}
                     </td>
                     <td className="py-3 pr-4 text-zinc-600 dark:text-zinc-400">
                       {specs["Speeds"] ?? "\u2014"}
                     </td>
                     <td className="py-3 pr-4 text-zinc-600 dark:text-zinc-400">
-                      {specs["Imaging sensor"] ?? "\u2014"}
+                      {specs["Imaging sensor"] || specs["Imaging plane"] || "\u2014"}
                     </td>
                     <td className="py-3 pr-4 text-zinc-600 dark:text-zinc-400">
                       {specs["Crop factor"] ?? "\u2014"}
