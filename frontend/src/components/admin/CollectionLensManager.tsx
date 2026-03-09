@@ -24,8 +24,6 @@ export default function CollectionLensManager({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  const currentIds = new Set(currentLenses.map((l) => l.id));
-
   const searchLenses = useCallback(
     async (q: string) => {
       if (!q.trim()) {
@@ -37,10 +35,10 @@ export default function CollectionLensManager({
       try {
         const res = await fetch(`/api/admin/lenses?q=${encodeURIComponent(q)}`);
         const data = await res.json();
-        // Filter out lenses already in the collection
+        const ids = new Set(currentLenses.map((l) => l.id));
         setSearchResults(
           (data.items || []).filter(
-            (lens: LensItem) => !currentIds.has(lens.id)
+            (lens: LensItem) => !ids.has(lens.id)
           )
         );
       } catch {
@@ -49,7 +47,7 @@ export default function CollectionLensManager({
         setSearching(false);
       }
     },
-    [currentIds]
+    [currentLenses]
   );
 
   async function syncLenses(updatedLenses: LensItem[]) {
