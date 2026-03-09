@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { collections, lensCollections } from "@/db/schema";
 import { requireAdminAPI } from "@/lib/admin-auth";
-import { and, asc, sql, eq } from "drizzle-orm";
+import { and, asc, desc, sql, eq } from "drizzle-orm";
 import { buildNameSearch } from "@/lib/search";
 
 const PAGE_SIZE = 50;
@@ -15,9 +15,19 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const q = searchParams.get("q");
   const cursor = parseInt(searchParams.get("cursor") || "0", 10);
+  const sortParam = searchParams.get("sort");
+  const orderParam = searchParams.get("order");
 
   const conditions = q ? buildNameSearch(collections.name, q) : [];
   const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+  const direction = orderParam === "desc" ? desc : asc;
+  const lensCountExpr = sql<number>`count(${lensCollections.lensId})`;
+  const orderByMap: Record<string, ReturnType<typeof asc>> = {
+    name: direction(collections.name),
+    lensCount: direction(lensCountExpr),
+  };
+  const orderBy = (sortParam && orderByMap[sortParam]) || asc(collections.name);
 
   const [items, countResult] = await Promise.all([
     db
@@ -26,13 +36,13 @@ export async function GET(request: NextRequest) {
         name: collections.name,
         slug: collections.slug,
         description: collections.description,
-        lensCount: sql<number>`count(${lensCollections.lensId})`,
+        lensCount: lensCountExpr,
       })
       .from(collections)
       .leftJoin(lensCollections, eq(collections.id, lensCollections.collectionId))
       .where(where)
       .groupBy(collections.id)
-      .orderBy(asc(collections.name))
+      .orderBy(orderBy)
       .limit(PAGE_SIZE)
       .offset(cursor),
     db

@@ -4,6 +4,7 @@ import { systems } from "@/db/schema";
 import { requireAdminAPI } from "@/lib/admin-auth";
 import { and, or, asc, sql } from "drizzle-orm";
 import { buildNameSearch } from "@/lib/search";
+import { buildOrderBy } from "@/lib/admin-sort";
 
 const PAGE_SIZE = 50;
 
@@ -15,6 +16,8 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const q = searchParams.get("q");
   const cursor = parseInt(searchParams.get("cursor") || "0", 10);
+  const sortParam = searchParams.get("sort");
+  const orderParam = searchParams.get("order");
 
   const nameConditions = q ? buildNameSearch(systems.name, q) : [];
   const mfrConditions = q ? buildNameSearch(systems.manufacturer, q) : [];
@@ -24,6 +27,13 @@ export async function GET(request: NextRequest) {
         mfrConditions.length > 0 ? and(...mfrConditions) : undefined
       )
     : undefined;
+
+  const sortMap = {
+    name: systems.name,
+    manufacturer: systems.manufacturer,
+    mountType: systems.mountType,
+  };
+  const orderBy = buildOrderBy(sortParam, orderParam, sortMap, systems.name);
 
   const [items, countResult] = await Promise.all([
     db
@@ -37,7 +47,7 @@ export async function GET(request: NextRequest) {
       })
       .from(systems)
       .where(where)
-      .orderBy(asc(systems.name))
+      .orderBy(orderBy)
       .limit(PAGE_SIZE)
       .offset(cursor),
     db

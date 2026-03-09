@@ -33,7 +33,7 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-white dark:bg-zinc-950">
       <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-4">
         <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">Admin Login</h1>
         {error && <p className="text-sm text-red-600">{error}</p>}
