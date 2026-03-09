@@ -15,6 +15,7 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = request.nextUrl;
   const q = searchParams.get("q") || undefined;
+  const slug = searchParams.get("slug") || undefined;
   const brand = searchParams.get("brand") || undefined;
   const system = searchParams.get("system") || undefined;
   const type = searchParams.get("type") || undefined;
@@ -53,6 +54,9 @@ export async function GET(request: NextRequest) {
           sql`regexp_replace(${lenses.name}, '[^a-zA-Z0-9. ]', '', 'g') ~* ${pattern}`
         );
       }
+    }
+    if (slug) {
+      conditions.push(eq(lenses.slug, slug));
     }
     if (brand) {
       conditions.push(eq(lenses.brand, brand));
