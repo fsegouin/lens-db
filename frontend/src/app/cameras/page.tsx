@@ -48,11 +48,11 @@ const getCachedDropdownData = unstable_cache(
     };
   },
   ["cameras-dropdown-data"],
-  { revalidate: 604800 }
+  { revalidate: 86400 }
 );
 
 export const metadata = {
-  title: "Cameras | Lens DB",
+  title: "Cameras | The Lens DB",
   description: "Browse camera bodies by system and specifications.",
 };
 
