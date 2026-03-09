@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/db";
 import { lenses, systems } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { formatDescription } from "@/lib/format-description";
 import ViewTracker from "@/components/ViewTracker";
 import RatingWidget from "@/components/RatingWidget";
 import ImageGallery from "@/components/ImageGallery";
@@ -132,10 +133,12 @@ export default async function LensDetailPage({
       </div>
 
       {lens.description && (
-        <div>
-          <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">
-            {lens.description.replace(/\.([A-Z])/g, ". $1")}
-          </p>
+        <div className="space-y-3">
+          {formatDescription(lens.description).map((paragraph, i) => (
+            <p key={i} className="text-zinc-600 dark:text-zinc-400 leading-relaxed">
+              {paragraph}
+            </p>
+          ))}
         </div>
       )}
 
@@ -158,7 +161,15 @@ export default async function LensDetailPage({
                     {label}
                   </td>
                   <td className="py-2 text-zinc-900 dark:text-zinc-100">
-                    {String(value)}
+                    {label === "Teleconverters" && typeof value === "string" && value.includes(";") ? (
+                      <ul className="list-none space-y-1">
+                        {value.split(";").map((item, i) => (
+                          <li key={i}>{item.trim()}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      String(value)
+                    )}
                   </td>
                 </tr>
               ))}

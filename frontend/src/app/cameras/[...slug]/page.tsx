@@ -6,6 +6,7 @@ import { eq } from "drizzle-orm";
 import ViewTracker from "@/components/ViewTracker";
 import ImageGallery from "@/components/ImageGallery";
 import { getImages } from "@/lib/images";
+import { formatDescription } from "@/lib/format-description";
 
 export const revalidate = 604800;
 
@@ -83,10 +84,12 @@ export default async function CameraDetailPage({
       </div>
 
       {camera.description && (
-        <div>
-          <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">
-            {camera.description}
-          </p>
+        <div className="space-y-3">
+          {formatDescription(camera.description).map((paragraph, i) => (
+            <p key={i} className="text-zinc-600 dark:text-zinc-400 leading-relaxed">
+              {paragraph}
+            </p>
+          ))}
         </div>
       )}
 
