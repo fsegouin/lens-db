@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { db } from "@/db";
 import { lenses, cameras, systems } from "@/db/schema";
-import { ilike, or, sql } from "drizzle-orm";
+import { and, or } from "drizzle-orm";
 import SearchInput from "@/components/SearchInput";
+import { buildNameSearch } from "@/lib/search";
 
 export const metadata = {
   title: "Search | Lens DB",
@@ -27,29 +28,30 @@ export default async function SearchPage({
 
   if (query && query.length >= 2) {
     try {
-      const pattern = `%${query.slice(0, 100)}%`;
+      const lensWhere = buildNameSearch(lenses.name, query);
+      const cameraWhere = buildNameSearch(cameras.name, query);
+      const systemNameWhere = buildNameSearch(systems.name, query);
+      const systemMfrWhere = buildNameSearch(systems.manufacturer, query);
 
       [lensResults, cameraResults, systemResults] = await Promise.all([
-        db
-          .select()
-          .from(lenses)
-          .where(ilike(lenses.name, pattern))
-          .limit(20),
-        db
-          .select()
-          .from(cameras)
-          .where(ilike(cameras.name, pattern))
-          .limit(20),
-        db
-          .select()
-          .from(systems)
-          .where(
-            or(
-              ilike(systems.name, pattern),
-              ilike(systems.manufacturer, pattern)
-            )
-          )
-          .limit(20),
+        lensWhere.length > 0
+          ? db.select().from(lenses).where(and(...lensWhere)).limit(20)
+          : [],
+        cameraWhere.length > 0
+          ? db.select().from(cameras).where(and(...cameraWhere)).limit(20)
+          : [],
+        systemNameWhere.length > 0 || systemMfrWhere.length > 0
+          ? db
+              .select()
+              .from(systems)
+              .where(
+                or(
+                  systemNameWhere.length > 0 ? and(...systemNameWhere) : undefined,
+                  systemMfrWhere.length > 0 ? and(...systemMfrWhere) : undefined
+                )
+              )
+              .limit(20)
+          : [],
       ]);
     } catch {
       // DB not connected

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Analytics } from "@vercel/analytics/next";
+import HeaderSearch from "@/components/HeaderSearch";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -15,7 +16,6 @@ const navLinks = [
   { href: "/lenses", label: "Lenses" },
   { href: "/cameras", label: "Cameras" },
   { href: "/collections", label: "Collections" },
-  { href: "/search", label: "Search" },
 ];
 
 export default function RootLayout({
@@ -36,7 +36,7 @@ export default function RootLayout({
             >
               LENS-DB
             </Link>
-            <nav className="hidden gap-1 sm:flex">
+            <nav className="hidden items-center gap-1 sm:flex">
               {navLinks.map((link) => (
                 <Link
                   key={link.href}
@@ -46,6 +46,7 @@ export default function RootLayout({
                   {link.label}
                 </Link>
               ))}
+              <HeaderSearch />
             </nav>
           </div>
         </header>
