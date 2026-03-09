@@ -2,6 +2,9 @@ import Link from "next/link";
 import { db } from "@/db";
 import { lenses, systems } from "@/db/schema";
 import { desc, eq, gt, sql } from "drizzle-orm";
+import { Aperture, Camera, Layers, BookOpen, Star } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { PageTransition } from "@/components/page-transition";
 
 export const revalidate = 604800;
 
@@ -12,6 +15,7 @@ const sections = [
       "Browse 130+ camera systems organized by manufacturer and mount type.",
     href: "/systems",
     count: "130+",
+    icon: Layers,
   },
   {
     title: "Lenses",
@@ -19,6 +23,7 @@ const sections = [
       "Search and filter 7,400+ autofocus and manual focus interchangeable lenses.",
     href: "/lenses",
     count: "7,400+",
+    icon: Aperture,
   },
   {
     title: "Cameras",
@@ -26,6 +31,7 @@ const sections = [
       "Explore camera bodies across SLR, mirrorless, rangefinder, and medium format.",
     href: "/cameras",
     count: "1,000+",
+    icon: Camera,
   },
   {
     title: "Collections",
@@ -33,6 +39,7 @@ const sections = [
       "Curated thematic lists: holy trinities, pancake lenses, ultra-fast primes, and more.",
     href: "/collections",
     count: "50+",
+    icon: BookOpen,
   },
 ];
 
@@ -62,132 +69,126 @@ export default async function Home() {
   `).then(r => r.rows).catch(() => []);
 
   return (
-    <div className="space-y-16">
-      {/* Hero */}
-      <section className="space-y-4 pt-8 text-center">
-        <h1 className="text-4xl font-bold tracking-tight text-zinc-900 sm:text-5xl dark:text-zinc-100">
-          The Camera Lens Database
-        </h1>
-        <p className="mx-auto max-w-2xl text-lg text-zinc-600 dark:text-zinc-400">
-          Comprehensive database of camera lenses and bodies with
-          specifications, compatibility information, and expert recommendations
-          for every genre of photography.
-        </p>
-        <div className="flex justify-center gap-4 pt-4">
-          <Link
-            href="/lenses"
-            className="rounded-lg bg-zinc-900 px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
-          >
-            Browse Lenses
-          </Link>
-          <Link
-            href="/compare"
-            className="rounded-lg border border-zinc-300 px-6 py-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
-          >
-            Compare
-          </Link>
-          <Link
-            href="/search"
-            className="rounded-lg border border-zinc-300 px-6 py-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
-          >
-            Advanced Search
-          </Link>
-        </div>
-      </section>
-
-      {/* Section Cards */}
-      <section className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        {sections.map((section) => (
-          <Link
-            key={section.href}
-            href={section.href}
-            className="group rounded-xl border border-zinc-200 p-6 transition-all hover:border-zinc-400 hover:shadow-md dark:border-zinc-800 dark:hover:border-zinc-600"
-          >
-            <div className="mb-2 text-2xl font-bold text-zinc-900 dark:text-zinc-100">
-              {section.count}
-            </div>
-            <h2 className="mb-1 text-lg font-semibold text-zinc-800 group-hover:text-zinc-900 dark:text-zinc-200 dark:group-hover:text-white">
-              {section.title}
-            </h2>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">
-              {section.description}
+    <PageTransition>
+      <div className="space-y-16">
+        {/* Hero */}
+        <div className="rounded-2xl bg-gradient-to-b from-muted/50 to-transparent -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 pt-8 pb-12">
+          <section className="space-y-4 text-center">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+              The Camera Lens Database
+            </h1>
+            <p className="mx-auto max-w-2xl text-lg text-zinc-600 dark:text-zinc-400">
+              Comprehensive database of camera lenses and bodies with
+              specifications, compatibility information, and expert recommendations
+              for every genre of photography.
             </p>
-          </Link>
-        ))}
-      </section>
+            <div className="flex justify-center gap-4 pt-4">
+              <Link href="/lenses" className="inline-flex h-8 items-center justify-center rounded-lg bg-primary px-2.5 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/80">Browse Lenses</Link>
+              <Link href="/lenses/compare" className="inline-flex h-8 items-center justify-center rounded-lg border border-border bg-background px-2.5 text-sm font-medium transition-all hover:bg-muted">Compare Lenses</Link>
+              <Link href="/search" className="inline-flex h-8 items-center justify-center rounded-lg border border-border bg-background px-2.5 text-sm font-medium transition-all hover:bg-muted">Advanced Search</Link>
+            </div>
+          </section>
+        </div>
 
-      {/* Most Popular Lenses */}
-      {popularLenses.length > 0 && (
-        <section className="space-y-4">
-          <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
-            Most Popular Lenses
-          </h2>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-            {popularLenses.map(({ lens, system }) => (
-              <Link
-                key={lens.id}
-                href={`/lenses/${lens.slug}`}
-                className="group rounded-lg border border-zinc-200 p-4 transition-all hover:border-zinc-400 hover:shadow-sm dark:border-zinc-800 dark:hover:border-zinc-600"
-              >
-                <p className="text-sm font-medium text-zinc-900 group-hover:underline dark:text-zinc-100">
-                  {lens.name}
-                </p>
-                <div className="mt-1 flex items-center justify-between">
-                  <span className="text-xs text-zinc-500">
-                    {system?.name || lens.brand || ""}
-                  </span>
-                  <span className="text-xs text-zinc-400">
-                    {lens.viewCount?.toLocaleString()} views
-                  </span>
-                </div>
-                {lens.averageRating != null && (
-                  <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
-                    {lens.averageRating.toFixed(1)}/10
-                  </p>
-                )}
-              </Link>
-            ))}
-          </div>
+        {/* Section Cards */}
+        <section className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {sections.map((section) => (
+            <Link
+              key={section.href}
+              href={section.href}
+              className="group rounded-xl border border-zinc-200 p-6 transition-all hover:border-zinc-400 hover:shadow-md dark:border-zinc-800 dark:hover:border-zinc-600"
+            >
+              <section.icon className="h-6 w-6 text-muted-foreground mb-3" />
+              <div className="mb-2 text-2xl font-bold text-zinc-900 dark:text-zinc-100">
+                {section.count}
+              </div>
+              <h2 className="mb-1 text-lg font-semibold text-zinc-800 group-hover:text-zinc-900 dark:text-zinc-200 dark:group-hover:text-white">
+                {section.title}
+              </h2>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                {section.description}
+              </p>
+            </Link>
+          ))}
         </section>
-      )}
 
-      {/* Most Compared */}
-      {topComparisons.length > 0 && (
-        <section className="space-y-4">
+        {/* Most Popular Lenses */}
+        {popularLenses.length > 0 && (
+          <section className="space-y-4">
+            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
+              Most Popular Lenses
+            </h2>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              {popularLenses.map(({ lens, system }, i) => (
+                <Link
+                  key={lens.id}
+                  href={`/lenses/${lens.slug}`}
+                  className="group rounded-lg border border-zinc-200 p-4 transition-all hover:border-zinc-400 hover:shadow-sm dark:border-zinc-800 dark:hover:border-zinc-600"
+                >
+                  <div className="flex items-start gap-2">
+                    <span className="text-3xl font-bold text-muted-foreground/20">#{i + 1}</span>
+                    <p className="text-sm font-medium text-zinc-900 group-hover:underline dark:text-zinc-100">
+                      {lens.name}
+                    </p>
+                  </div>
+                  <div className="mt-1 flex items-center justify-between">
+                    <span className="text-xs text-zinc-500">
+                      {system?.name || lens.brand || ""}
+                    </span>
+                    <span className="text-xs text-zinc-400">
+                      {lens.viewCount?.toLocaleString()} views
+                    </span>
+                  </div>
+                  {lens.averageRating != null && (
+                    <p className="mt-1 flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
+                      <Star className="h-3 w-3 fill-amber-500 text-amber-500" />
+                      <span>{lens.averageRating.toFixed(1)}/10</span>
+                    </p>
+                  )}
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Most Compared */}
+        {topComparisons.length > 0 && (
+          <section className="space-y-4">
+            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
+              Most Compared
+            </h2>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {(topComparisons as Array<{view_count: number; item1_name: string; item1_slug: string; item2_name: string; item2_slug: string; type: string}>).map((c, i) => (
+                <Link
+                  key={i}
+                  href={`/compare?type=${c.type}&item1=${c.item1_slug}&item2=${c.item2_slug}`}
+                  className="flex items-center justify-between rounded-lg border border-zinc-200 p-4 transition-all hover:border-zinc-400 hover:shadow-sm dark:border-zinc-800 dark:hover:border-zinc-600"
+                >
+                  <div className="flex-1 text-sm">
+                    <span className="font-medium text-zinc-900 dark:text-zinc-100">{c.item1_name}</span>
+                    <Badge variant="secondary" className="mx-2">vs</Badge>
+                    <span className="font-medium text-zinc-900 dark:text-zinc-100">{c.item2_name}</span>
+                  </div>
+                  <span className="text-xs text-zinc-400">{c.view_count}x compared</span>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* About */}
+        <section className="mx-auto max-w-3xl border-t border-border pt-8 text-center">
           <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
-            Most Compared
+            About This Project
           </h2>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {(topComparisons as Array<{view_count: number; item1_name: string; item1_slug: string; item2_name: string; item2_slug: string; type: string}>).map((c, i) => (
-              <Link
-                key={i}
-                href={`/compare?type=${c.type}&item1=${c.item1_slug}&item2=${c.item2_slug}`}
-                className="flex items-center justify-between rounded-lg border border-zinc-200 p-4 transition-all hover:border-zinc-400 hover:shadow-sm dark:border-zinc-800 dark:hover:border-zinc-600"
-              >
-                <div className="flex-1 text-sm">
-                  <span className="font-medium text-zinc-900 dark:text-zinc-100">{c.item1_name}</span>
-                  <span className="mx-2 text-zinc-400">vs</span>
-                  <span className="font-medium text-zinc-900 dark:text-zinc-100">{c.item2_name}</span>
-                </div>
-                <span className="text-xs text-zinc-400">{c.view_count}x compared</span>
-              </Link>
-            ))}
-          </div>
+          <p className="mt-4 text-zinc-600 dark:text-zinc-400">
+            This is a recreation of the lens-db.com database, originally created
+            in 2012. The original site contained data from 8,400+ manufacturer
+            booklets, catalogs, and datasheets. This project aims to preserve and
+            continue that work as a community resource.
+          </p>
         </section>
-      )}
-
-      {/* About */}
-      <section className="mx-auto max-w-3xl space-y-4 text-center">
-        <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
-          About This Project
-        </h2>
-        <p className="text-zinc-600 dark:text-zinc-400">
-          This is a recreation of the lens-db.com database, originally created
-          in 2012. The original site contained data from 8,400+ manufacturer
-          booklets, catalogs, and datasheets. This project aims to preserve and
-          continue that work as a community resource.
-        </p>
-      </section>
-    </div>
+      </div>
+    </PageTransition>
   );
 }
