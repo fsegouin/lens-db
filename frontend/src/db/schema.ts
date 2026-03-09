@@ -121,6 +121,27 @@ export const lensCollections = pgTable(
   (table) => [primaryKey({ columns: [table.lensId, table.collectionId] })]
 );
 
+export const lensSeries = pgTable("lens_series", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  slug: text("slug").notNull().unique(),
+  description: text("description"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+});
+
+export const lensSeriesMemberships = pgTable(
+  "lens_series_memberships",
+  {
+    lensId: integer("lens_id")
+      .notNull()
+      .references(() => lenses.id, { onDelete: "cascade" }),
+    seriesId: integer("series_id")
+      .notNull()
+      .references(() => lensSeries.id, { onDelete: "cascade" }),
+  },
+  (table) => [primaryKey({ columns: [table.lensId, table.seriesId] })]
+);
+
 export const lensCompatibility = pgTable(
   "lens_compatibility",
   {
