@@ -1,7 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Analytics } from "@vercel/analytics/next";
+import { GeistSans } from "geist/font/sans";
+import { GeistMono } from "geist/font/mono";
 import HeaderSearch from "@/components/HeaderSearch";
+import { HeaderNav } from "@/components/header-nav";
+import { MobileNav } from "@/components/mobile-nav";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { ThemeProvider } from "@/components/theme-provider";
+import { Separator } from "@/components/ui/separator";
+import { Toaster } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -10,58 +19,50 @@ export const metadata: Metadata = {
     "Comprehensive database of camera lenses and bodies with specs, compatibility, and expert recommendations.",
 };
 
-const navLinks = [
-  { href: "/", label: "Home" },
-  { href: "/systems", label: "Systems" },
-  { href: "/lenses", label: "Lenses" },
-  { href: "/cameras", label: "Cameras" },
-  { href: "/collections", label: "Collections" },
-];
-
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
-        className="antialiased"
+        className={`${GeistSans.variable} ${GeistMono.variable} font-sans antialiased`}
       >
-        <header className="sticky top-0 z-50 border-b border-zinc-200 bg-white/80 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/80">
-          <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-            <Link
-              href="/"
-              className="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100"
-            >
-              LENS-DB
-            </Link>
-            <nav className="hidden items-center gap-1 sm:flex">
-              {navLinks.map((link) => (
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <TooltipProvider>
+            <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
+              <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
                 <Link
-                  key={link.href}
-                  href={link.href}
-                  className="rounded-md px-3 py-2 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+                  href="/"
+                  className="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100"
                 >
-                  {link.label}
+                  LENS-DB
                 </Link>
-              ))}
-              <HeaderSearch />
-            </nav>
-          </div>
-        </header>
-        <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-          {children}
-        </main>
-        <footer className="border-t border-zinc-200 dark:border-zinc-800">
-          <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-            <p className="text-center text-sm text-zinc-500">
-              Lens DB &mdash; A community-driven camera lens database.
-              Originally inspired by lens-db.com (2012&ndash;2025).
-            </p>
-          </div>
-        </footer>
+                <HeaderNav />
+                <div className="flex items-center gap-1">
+                  <HeaderSearch />
+                  <ThemeToggle />
+                  <MobileNav />
+                </div>
+              </div>
+            </header>
+            <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+              {children}
+            </main>
+            <Separator />
+            <footer>
+              <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+                <p className="text-center text-sm text-zinc-500">
+                  Lens DB &mdash; A community-driven camera lens database.
+                  Originally inspired by lens-db.com (2012&ndash;2025).
+                </p>
+              </div>
+            </footer>
+          </TooltipProvider>
+        </ThemeProvider>
         <Analytics />
+        <Toaster />
       </body>
     </html>
   );
