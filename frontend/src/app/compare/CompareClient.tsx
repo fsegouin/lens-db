@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowUpDown, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { formatMagnification } from "@/lib/format-magnification";
@@ -121,6 +121,25 @@ const LENS_SPEC_ROWS: { label: string; getValue: (l: Lens) => string }[] = [
   },
 ];
 
+function capitalizeFirstLetter(value: string) {
+  return value.replace(/^([a-z])/, (match) => match.toUpperCase());
+}
+
+function formatCellValue(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed || trimmed === "\u2014") return trimmed;
+  const separator = trimmed.includes(";") ? /;\s*/ : /,\s+/;
+  const parts = trimmed.split(separator).map((p) => p.trim()).filter(Boolean);
+  if (parts.length <= 1) return capitalizeFirstLetter(trimmed);
+  return (
+    <ul className="space-y-1">
+      {parts.map((item, i) => (
+        <li key={i}>{capitalizeFirstLetter(item)}</li>
+      ))}
+    </ul>
+  );
+}
+
 function cameraSpec(c: Camera, ...keys: string[]): string {
   const specs = (c.specs || {}) as Record<string, string>;
   for (const k of keys) {
@@ -172,25 +191,29 @@ function ItemSearch({
       }
 
       try {
-        const items: SearchResultItem[] = [];
+        const [lensData, cameraData] = await Promise.all([
+          (!lockedType || lockedType === "lens")
+            ? fetch(`/api/lenses?q=${encodeURIComponent(q)}&cursor=0`).then(r => r.json())
+            : { items: [] },
+          (!lockedType || lockedType === "camera")
+            ? fetch(`/api/cameras?q=${encodeURIComponent(q)}&cursor=0`).then(r => r.json())
+            : { items: [] },
+        ]);
 
-        if (!lockedType || lockedType === "lens") {
-          const res = await fetch(`/api/lenses?q=${encodeURIComponent(q)}&cursor=0`);
-          const data = await res.json();
-          for (const item of data.items || []) {
-            items.push({ type: "lens", lens: item.lens, system: item.system });
-          }
-        }
+        const lenses: SearchResultItem[] = (lensData.items || []).map(
+          (item: { lens: Lens; system: { name: string } | null }) => ({ type: "lens" as const, lens: item.lens, system: item.system })
+        );
+        const cameras: SearchResultItem[] = (cameraData.items || []).map(
+          (item: { camera: Camera; system: { name: string } | null }) => ({ type: "camera" as const, camera: item.camera, system: item.system })
+        );
 
-        if (!lockedType || lockedType === "camera") {
-          const res = await fetch(`/api/cameras?q=${encodeURIComponent(q)}&cursor=0`);
-          const data = await res.json();
-          for (const item of data.items || []) {
-            items.push({ type: "camera", camera: item.camera, system: item.system });
-          }
-        }
+        // Show up to 10 of each type, giving remaining slots to the other type
+        const maxPerType = 10;
+        const lensSlice = lenses.slice(0, maxPerType);
+        const cameraSlice = cameras.slice(0, maxPerType);
+        const items: SearchResultItem[] = [...lensSlice, ...cameraSlice].slice(0, 20);
 
-        setResults(items.slice(0, 20));
+        setResults(items);
       } catch {
         setResults([]);
       }
@@ -250,8 +273,10 @@ function ItemSearch({
               <CommandEmpty>
                 {query.length < 2 ? "Type at least 2 characters" : "No results found."}
               </CommandEmpty>
-              <CommandGroup>
-                {results.map((item) => {
+              {(() => {
+                const lensResults = results.filter((r) => r.type === "lens");
+                const cameraResults = results.filter((r) => r.type === "camera");
+                const renderItem = (item: SearchResultItem) => {
                   const isLens = item.type === "lens";
                   const data = isLens ? item.lens : item.camera;
                   return (
@@ -266,11 +291,25 @@ function ItemSearch({
                       }}
                     >
                       <span>{data.name}</span>
-                      <span className="ml-2 text-xs text-muted-foreground">{item.system?.name || (isLens ? "Lens" : "Camera")}</span>
+                      <span className="ml-2 text-xs text-muted-foreground">{item.system?.name}</span>
                     </CommandItem>
                   );
-                })}
-              </CommandGroup>
+                };
+                return (
+                  <>
+                    {lensResults.length > 0 && (
+                      <CommandGroup heading="Lenses">
+                        {lensResults.map(renderItem)}
+                      </CommandGroup>
+                    )}
+                    {cameraResults.length > 0 && (
+                      <CommandGroup heading="Cameras">
+                        {cameraResults.map(renderItem)}
+                      </CommandGroup>
+                    )}
+                  </>
+                );
+              })()}
             </CommandList>
           </Command>
         </PopoverContent>
@@ -283,15 +322,37 @@ export default function CompareClient() {
   const [item1, setItem1] = useState<SelectedItem | null>(null);
   const [item2, setItem2] = useState<SelectedItem | null>(null);
   const trackedRef = useRef<string | null>(null);
+  const router = useRouter();
   const searchParams = useSearchParams();
   const rawType = searchParams.get("type");
   const urlType: ItemType | null =
     rawType === "lens" || rawType === "camera" ? rawType : null;
   const lockedType: ItemType | null = item1?.type || item2?.type || urlType;
 
+  const initRef = useRef(false);
+
+  // Sync URL as items are selected/cleared
   useEffect(() => {
+    if (!initRef.current) return; // skip until init load completes
+    const params = new URLSearchParams();
+    const type = item1?.type || item2?.type;
+    if (type) params.set("type", type);
+    if (item1) params.set("item1", item1.data.slug);
+    if (item2) params.set("item2", item2.data.slug);
+    const qs = params.toString();
+    const newUrl = qs ? `/compare?${qs}` : "/compare";
+    router.replace(newUrl, { scroll: false });
+  }, [item1, item2, router]);
+  useEffect(() => {
+    if (initRef.current) return;
     const slug1 = searchParams.get("item1") || searchParams.get("lens1");
     const slug2 = searchParams.get("item2") || searchParams.get("lens2");
+    if (!slug1 && !slug2) {
+      initRef.current = true;
+      return;
+    }
+    if (!urlType) return;
+    initRef.current = true;
 
     async function fetchBySlug<T>(kind: ItemType, slug: string): Promise<T | null> {
       try {
@@ -305,20 +366,17 @@ export default function CompareClient() {
       }
     }
 
-    if (slug1 && !item1 && (urlType === "lens" || urlType === "camera")) {
-      fetchBySlug(urlType, slug1).then((data) => {
-        if (!data) return;
-        setItem1(urlType === "lens" ? { type: "lens", data: data as Lens } : { type: "camera", data: data as Camera });
-      });
-    }
+    const toSelected = (data: unknown): SelectedItem =>
+      urlType === "lens" ? { type: "lens", data: data as Lens } : { type: "camera", data: data as Camera };
 
-    if (slug2 && !item2 && (urlType === "lens" || urlType === "camera")) {
-      fetchBySlug(urlType, slug2).then((data) => {
-        if (!data) return;
-        setItem2(urlType === "lens" ? { type: "lens", data: data as Lens } : { type: "camera", data: data as Camera });
-      });
-    }
-  }, [searchParams, item1, item2, urlType]);
+    Promise.all([
+      slug1 ? fetchBySlug(urlType, slug1) : null,
+      slug2 ? fetchBySlug(urlType, slug2) : null,
+    ]).then(([data1, data2]) => {
+      if (data1) setItem1(toSelected(data1));
+      if (data2) setItem2(toSelected(data2));
+    });
+  }, [searchParams, urlType]);
 
   useEffect(() => {
     if (!item1 || !item2) return;
@@ -327,16 +385,14 @@ export default function CompareClient() {
       return;
     }
 
-    if (item1.type !== "lens") return;
-
-    const key = `${Math.min(item1.data.id, item2.data.id)}-${Math.max(item1.data.id, item2.data.id)}`;
+    const key = `${item1.type}-${Math.min(item1.data.id, item2.data.id)}-${Math.max(item1.data.id, item2.data.id)}`;
     if (trackedRef.current === key) return;
     trackedRef.current = key;
 
     fetch("/api/comparisons", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ lensId1: item1.data.id, lensId2: item2.data.id }),
+      body: JSON.stringify({ type: item1.type, id1: item1.data.id, id2: item2.data.id }),
     }).catch(() => {
       toast.error("Could not record comparison");
     });
@@ -365,7 +421,7 @@ export default function CompareClient() {
       </div>
 
       {item1 && item2 && item1.type === item2.type ? (
-        <div className="overflow-x-auto rounded-lg border border-border">
+        <div className="rounded-lg border border-border">
           <Table>
             <TableHeader>
               <TableRow>
@@ -388,8 +444,8 @@ export default function CompareClient() {
                 return (
                   <TableRow key={label} className={isDiff ? "bg-amber-50/50 dark:bg-amber-950/20" : ""}>
                     <TableCell className="font-medium text-zinc-500 dark:text-zinc-400">{label}</TableCell>
-                    <TableCell className={isDiff ? "border-l-2 border-amber-400 font-semibold" : ""}>{v1}</TableCell>
-                    <TableCell className={isDiff ? "border-l-2 border-amber-400 font-semibold" : ""}>{v2}</TableCell>
+                    <TableCell className={isDiff ? "border-l-2 border-amber-400 font-semibold" : ""}>{formatCellValue(v1)}</TableCell>
+                    <TableCell className={isDiff ? "border-l-2 border-amber-400 font-semibold" : ""}>{formatCellValue(v2)}</TableCell>
                   </TableRow>
                 );
               })}
