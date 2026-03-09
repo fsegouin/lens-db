@@ -1,4 +1,6 @@
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { NextResponse } from "next/server";
 
 const SESSION_COOKIE = "admin_session";
 const SESSION_TTL = 24 * 60 * 60 * 1000; // 24 hours
@@ -58,4 +60,18 @@ export function sessionCookieOptions(token: string) {
     path: "/",
     maxAge: SESSION_TTL / 1000,
   };
+}
+
+export async function requireAdmin(): Promise<void> {
+  const token = await getSessionToken();
+  if (!token || !validateSession(token)) {
+    redirect("/admin/login");
+  }
+}
+
+export function requireAdminAPI(token: string | undefined): NextResponse | null {
+  if (!token || !validateSession(token)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  return null;
 }
