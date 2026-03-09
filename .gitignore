@@ -10,3 +10,4 @@ scraper/.progress.json
 __pycache__/
 *.pyc
 .next/
+/docs/plans/
