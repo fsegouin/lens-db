@@ -5,6 +5,7 @@ import { cameras, systems } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import ViewTracker from "@/components/ViewTracker";
 import ImageGallery from "@/components/ImageGallery";
+import ReportIssueButton from "@/components/ReportIssueButton";
 import { getImages } from "@/lib/images";
 import { formatDescription } from "@/lib/format-description";
 
@@ -49,10 +50,19 @@ export default async function CameraDetailPage({
 
   const specRows: [string, string | number | null | undefined][] = [
     ["System", system?.name],
-    ["Sensor Type", camera.sensorType],
-    ["Sensor Size", camera.sensorSize],
+    ["Type", specs["Type"]],
+    ["Model", specs["Model"]],
+    ["Film Type", specs["Film type"]],
+    ["Imaging Sensor", specs["Imaging sensor"] || specs["Imaging plane"]],
+    ["Sensor Size", camera.sensorSize || specs["Maximum format"]],
     ["Megapixels", camera.megapixels ? `${camera.megapixels} MP` : null],
     ["Resolution", camera.resolution],
+    ["Crop Factor", specs["Crop factor"]],
+    ["Image Stabilization", specs["Sensor-shift image stabilization"]],
+    ["Speeds", specs["Speeds"]],
+    ["Exposure Modes", specs["Exposure modes"]],
+    ["Exposure Metering", specs["Exposure metering"]],
+    ["Dimensions", specs["Dimensions"]],
     ["Year Introduced", camera.yearIntroduced],
     ["Weight", camera.weightG ? `${camera.weightG}g` : null],
     ["Body Type", camera.bodyType],
@@ -145,6 +155,7 @@ export default async function CameraDetailPage({
       )}
 
       <ViewTracker type="camera" id={camera.id} />
+      <ReportIssueButton entityType="camera" entityId={camera.id} entityName={camera.name} />
     </div>
   );
 }

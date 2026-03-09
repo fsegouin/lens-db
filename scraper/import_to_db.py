@@ -683,7 +683,8 @@ def import_cameras(conn, cameras: list[dict], system_cache: dict[str, int]):
         resolution = specs.get("Resolution")
         megapixels = None
 
-        imaging = specs.get("Imaging plane", "")
+        # Check multiple spec keys for sensor type (different cameras use different keys)
+        imaging = specs.get("Imaging plane", "") or specs.get("Imaging sensor", "")
         if "CMOS" in imaging:
             sensor_type = "CMOS"
         elif "CCD" in imaging:
@@ -721,6 +722,9 @@ def import_cameras(conn, cameras: list[dict], system_cache: dict[str, int]):
                         specs = EXCLUDED.specs,
                         images = EXCLUDED.images,
                         system_id = COALESCE(EXCLUDED.system_id, cameras.system_id),
+                        sensor_type = COALESCE(EXCLUDED.sensor_type, cameras.sensor_type),
+                        sensor_size = COALESCE(EXCLUDED.sensor_size, cameras.sensor_size),
+                        resolution = COALESCE(EXCLUDED.resolution, cameras.resolution),
                         megapixels = COALESCE(EXCLUDED.megapixels, cameras.megapixels),
                         year_introduced = COALESCE(EXCLUDED.year_introduced, cameras.year_introduced)
                     """,
