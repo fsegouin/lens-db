@@ -33,6 +33,7 @@ interface LensData {
   isPrime?: boolean | null;
   hasStabilization?: boolean | null;
   hasAutofocus?: boolean | null;
+  verified?: boolean | null;
   specs?: unknown;
   images?: unknown;
 }
@@ -120,6 +121,7 @@ export default function LensForm({ lens, systems, tags }: LensFormProps) {
   const [hasAutofocus, setHasAutofocus] = useState(
     lens?.hasAutofocus ?? false
   );
+  const [verified, setVerified] = useState(lens?.verified ?? true);
 
   const [specsEntries, setSpecsEntries] = useState<[string, string][]>(() => {
     if (!lens?.specs || typeof lens.specs !== "object") return [];
@@ -201,6 +203,7 @@ export default function LensForm({ lens, systems, tags }: LensFormProps) {
       isPrime,
       hasStabilization,
       hasAutofocus,
+      verified,
       specs: parsedSpecs,
       images: parsedImages,
     };
@@ -504,6 +507,7 @@ export default function LensForm({ lens, systems, tags }: LensFormProps) {
             { label: "Prime", value: isPrime, set: setIsPrime },
             { label: "Stabilization", value: hasStabilization, set: setHasStabilization },
             { label: "Autofocus", value: hasAutofocus, set: setHasAutofocus },
+            { label: "Verified", value: verified, set: setVerified },
           ].map((flag) => (
             <label key={flag.label} className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300">
               <input

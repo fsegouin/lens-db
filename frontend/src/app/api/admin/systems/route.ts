@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { systems } from "@/db/schema";
 import { requireAdminAPI } from "@/lib/admin-auth";
-import { and, or, asc, sql } from "drizzle-orm";
+import { and, or, sql } from "drizzle-orm";
 import { buildNameSearch } from "@/lib/search";
 import { buildOrderBy } from "@/lib/admin-sort";
 
