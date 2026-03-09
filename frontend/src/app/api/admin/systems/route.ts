@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { systems } from "@/db/schema";
 import { requireAdminAPI } from "@/lib/admin-auth";
-import { ilike, or, asc, sql } from "drizzle-orm";
+import { and, or, asc, sql } from "drizzle-orm";
+import { buildNameSearch } from "@/lib/search";
 
 const PAGE_SIZE = 50;
 
@@ -15,8 +16,13 @@ export async function GET(request: NextRequest) {
   const q = searchParams.get("q");
   const cursor = parseInt(searchParams.get("cursor") || "0", 10);
 
+  const nameConditions = q ? buildNameSearch(systems.name, q) : [];
+  const mfrConditions = q ? buildNameSearch(systems.manufacturer, q) : [];
   const where = q
-    ? or(ilike(systems.name, `%${q}%`), ilike(systems.manufacturer, `%${q}%`))
+    ? or(
+        nameConditions.length > 0 ? and(...nameConditions) : undefined,
+        mfrConditions.length > 0 ? and(...mfrConditions) : undefined
+      )
     : undefined;
 
   const [items, countResult] = await Promise.all([

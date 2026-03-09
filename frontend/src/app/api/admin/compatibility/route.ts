@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { lensCompatibility, lenses, cameras } from "@/db/schema";
 import { requireAdminAPI } from "@/lib/admin-auth";
-import { ilike, or, asc, sql, eq, and } from "drizzle-orm";
+import { or, asc, sql, eq, and } from "drizzle-orm";
+import { buildNameSearch } from "@/lib/search";
 
 const PAGE_SIZE = 50;
 
@@ -15,8 +16,13 @@ export async function GET(request: NextRequest) {
   const q = searchParams.get("q");
   const cursor = parseInt(searchParams.get("cursor") || "0", 10);
 
+  const lensConditions = q ? buildNameSearch(lenses.name, q) : [];
+  const cameraConditions = q ? buildNameSearch(cameras.name, q) : [];
   const where = q
-    ? or(ilike(lenses.name, `%${q}%`), ilike(cameras.name, `%${q}%`))
+    ? or(
+        lensConditions.length > 0 ? and(...lensConditions) : undefined,
+        cameraConditions.length > 0 ? and(...cameraConditions) : undefined
+      )
     : undefined;
 
   const [items, countResult] = await Promise.all([

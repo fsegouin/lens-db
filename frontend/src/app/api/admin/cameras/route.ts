@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { cameras, systems } from "@/db/schema";
 import { requireAdminAPI } from "@/lib/admin-auth";
-import { ilike, asc, sql, eq } from "drizzle-orm";
+import { and, asc, sql, eq } from "drizzle-orm";
+import { buildNameSearch } from "@/lib/search";
 
 const PAGE_SIZE = 50;
 
@@ -15,7 +16,8 @@ export async function GET(request: NextRequest) {
   const q = searchParams.get("q");
   const cursor = parseInt(searchParams.get("cursor") || "0", 10);
 
-  const where = q ? ilike(cameras.name, `%${q}%`) : undefined;
+  const conditions = q ? buildNameSearch(cameras.name, q) : [];
+  const where = conditions.length > 0 ? and(...conditions) : undefined;
 
   const [items, countResult] = await Promise.all([
     db
