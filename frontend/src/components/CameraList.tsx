@@ -411,7 +411,7 @@ export default function CameraList({
       ) : (
         <div className="rounded-xl border border-dashed border-zinc-300 p-12 text-center dark:border-zinc-700">
           <p className="text-zinc-500">
-            No cameras found. Run the scraper to populate the database.
+            No cameras found.
           </p>
         </div>
       )}
