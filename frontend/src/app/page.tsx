@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { db } from "@/db";
-import { lenses, systems, lensComparisons } from "@/db/schema";
+import { lenses, systems } from "@/db/schema";
 import { desc, eq, gt, sql } from "drizzle-orm";
 
 export const revalidate = 604800;
@@ -51,8 +51,9 @@ export default async function Home() {
   const topComparisons = await db.execute(sql`
     SELECT
       c.view_count,
-      l1.name as lens1_name, l1.slug as lens1_slug,
-      l2.name as lens2_name, l2.slug as lens2_slug
+      l1.name as item1_name, l1.slug as item1_slug,
+      l2.name as item2_name, l2.slug as item2_slug,
+      'lens' as type
     FROM lens_comparisons c
     JOIN lenses l1 ON c.lens_id_1 = l1.id
     JOIN lenses l2 ON c.lens_id_2 = l2.id
@@ -80,10 +81,10 @@ export default async function Home() {
             Browse Lenses
           </Link>
           <Link
-            href="/lenses/compare"
+            href="/compare"
             className="rounded-lg border border-zinc-300 px-6 py-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
           >
-            Compare Lenses
+            Compare
           </Link>
           <Link
             href="/search"
@@ -157,16 +158,16 @@ export default async function Home() {
             Most Compared
           </h2>
           <div className="grid gap-3 sm:grid-cols-2">
-            {(topComparisons as Array<{view_count: number; lens1_name: string; lens1_slug: string; lens2_name: string; lens2_slug: string}>).map((c, i) => (
+            {(topComparisons as Array<{view_count: number; item1_name: string; item1_slug: string; item2_name: string; item2_slug: string; type: string}>).map((c, i) => (
               <Link
                 key={i}
-                href={`/lenses/compare?lens1=${c.lens1_slug}&lens2=${c.lens2_slug}`}
+                href={`/compare?type=${c.type}&item1=${c.item1_slug}&item2=${c.item2_slug}`}
                 className="flex items-center justify-between rounded-lg border border-zinc-200 p-4 transition-all hover:border-zinc-400 hover:shadow-sm dark:border-zinc-800 dark:hover:border-zinc-600"
               >
                 <div className="flex-1 text-sm">
-                  <span className="font-medium text-zinc-900 dark:text-zinc-100">{c.lens1_name}</span>
+                  <span className="font-medium text-zinc-900 dark:text-zinc-100">{c.item1_name}</span>
                   <span className="mx-2 text-zinc-400">vs</span>
-                  <span className="font-medium text-zinc-900 dark:text-zinc-100">{c.lens2_name}</span>
+                  <span className="font-medium text-zinc-900 dark:text-zinc-100">{c.item2_name}</span>
                 </div>
                 <span className="text-xs text-zinc-400">{c.view_count}x compared</span>
               </Link>
@@ -182,9 +183,9 @@ export default async function Home() {
         </h2>
         <p className="text-zinc-600 dark:text-zinc-400">
           This is a recreation of the lens-db.com database, originally created
-          by Evgenii Artemov in 2012. The original site contained data from
-          8,400+ manufacturer booklets, catalogs, and datasheets. This project
-          aims to preserve and continue that work as a community resource.
+          in 2012. The original site contained data from 8,400+ manufacturer
+          booklets, catalogs, and datasheets. This project aims to preserve and
+          continue that work as a community resource.
         </p>
       </section>
     </div>
