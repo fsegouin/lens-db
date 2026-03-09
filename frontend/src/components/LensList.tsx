@@ -11,9 +11,12 @@ import { ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { ScrollToTop } from "@/components/scroll-to-top";
 
+type SeriesInfo = { name: string; slug: string };
+
 type LensRow = {
   lens: typeof lenses.$inferSelect;
   system: typeof systems.$inferSelect | null;
+  series: SeriesInfo[];
 };
 
 type SystemOption = { name: string; slug: string };
@@ -24,6 +27,7 @@ type Props = {
   initialNextCursor: number | null;
   brands: string[];
   systems: SystemOption[];
+  seriesOptions: SeriesInfo[];
 };
 
 export default function LensList({
@@ -32,6 +36,7 @@ export default function LensList({
   initialNextCursor,
   brands,
   systems: systemOptions,
+  seriesOptions,
 }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -54,6 +59,7 @@ export default function LensList({
   const lensType = searchParams.get("lensType") || "";
   const era = searchParams.get("era") || "";
   const productionStatus = searchParams.get("productionStatus") || "";
+  const series = searchParams.get("series") || "";
   const sort = searchParams.get("sort") || "";
   const order = searchParams.get("order") || "";
 
@@ -111,12 +117,13 @@ export default function LensList({
       if (lensType) params.set("lensType", lensType);
       if (era) params.set("era", era);
       if (productionStatus) params.set("productionStatus", productionStatus);
+      if (series) params.set("series", series);
       if (sort) params.set("sort", sort);
       if (order) params.set("order", order);
       params.set("cursor", String(cursor));
       return `/api/lenses?${params.toString()}`;
     },
-    [q, brand, system, type, minFocal, maxFocal, minAperture, maxAperture, year, lensType, era, productionStatus, sort, order]
+    [q, brand, system, type, minFocal, maxFocal, minAperture, maxAperture, year, lensType, era, productionStatus, series, sort, order]
   );
 
   const loadMore = useCallback(async () => {
@@ -154,7 +161,7 @@ export default function LensList({
 
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  function applyFilters(overrides: { q?: string; brand?: string; system?: string; type?: string; minFocal?: string; maxFocal?: string; minAperture?: string; maxAperture?: string; year?: string; lensType?: string; era?: string; productionStatus?: string; sort?: string; order?: string } = {}) {
+  function applyFilters(overrides: { q?: string; brand?: string; system?: string; type?: string; minFocal?: string; maxFocal?: string; minAperture?: string; maxAperture?: string; year?: string; lensType?: string; era?: string; productionStatus?: string; series?: string; sort?: string; order?: string } = {}) {
     const params = new URLSearchParams();
     const qVal = overrides?.q ?? formQ;
     const brandVal = overrides?.brand ?? formBrand;
@@ -168,6 +175,7 @@ export default function LensList({
     const lensTypeVal = overrides?.lensType ?? lensType;
     const eraVal = overrides?.era ?? era;
     const productionStatusVal = overrides?.productionStatus ?? productionStatus;
+    const seriesVal = overrides?.series ?? series;
     const sortVal = overrides?.sort ?? sort;
     const orderVal = overrides?.order ?? order;
     if (qVal) params.set("q", qVal);
@@ -182,6 +190,7 @@ export default function LensList({
     if (lensTypeVal) params.set("lensType", lensTypeVal);
     if (eraVal) params.set("era", eraVal);
     if (productionStatusVal) params.set("productionStatus", productionStatusVal);
+    if (seriesVal) params.set("series", seriesVal);
     if (sortVal) params.set("sort", sortVal);
     if (orderVal) params.set("order", orderVal);
     const qs = params.toString();
@@ -257,14 +266,40 @@ export default function LensList({
           <label className="sr-only" htmlFor="lens-type">Type</label>
           <select
             id="lens-type"
-            value={formType}
-            onChange={(e) => { setFormType(e.target.value); applyFilters({ type: e.target.value }); }}
+            value={lensType === "teleconverter" ? "teleconverter" : formType}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (val === "teleconverter") {
+                setFormType("");
+                applyFilters({ type: "", lensType: "teleconverter" });
+              } else {
+                setFormType(val);
+                applyFilters({ type: val, lensType: "" });
+              }
+            }}
             className="filter-select h-10 rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
           >
             <option value="">All types</option>
             <option value="prime">Prime</option>
             <option value="zoom">Zoom</option>
             <option value="macro">Macro</option>
+            <option value="teleconverter">Teleconverter</option>
+          </select>
+        </div>
+        <div>
+          <label className="sr-only" htmlFor="lens-series">Series</label>
+          <select
+            id="lens-series"
+            value={series}
+            onChange={(e) => applyFilters({ series: e.target.value })}
+            className="filter-select h-10 rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+          >
+            <option value="">All series</option>
+            {seriesOptions.map((s) => (
+              <option key={s.slug} value={s.slug}>
+                {s.name}
+              </option>
+            ))}
           </select>
         </div>
         <div>
@@ -272,7 +307,7 @@ export default function LensList({
           <Input
             id="lens-min-focal"
             type="number"
-            placeholder="Min focal (mm)"
+            placeholder="From (mm)"
             value={formMinFocal}
             onChange={(e) => { setFormMinFocal(e.target.value); debouncedApply({ minFocal: e.target.value }); }}
             className="h-10 w-36"
@@ -283,7 +318,7 @@ export default function LensList({
           <Input
             id="lens-max-focal"
             type="number"
-            placeholder="Max focal (mm)"
+            placeholder="To (mm)"
             value={formMaxFocal}
             onChange={(e) => { setFormMaxFocal(e.target.value); debouncedApply({ maxFocal: e.target.value }); }}
             className="h-10 w-36"
@@ -338,6 +373,7 @@ export default function LensList({
                 { key: "focalLength", label: "Focal Length" },
                 { key: "aperture", label: "Aperture" },
                 { key: "type", label: "Type", sortable: false, className: "w-20" },
+                { key: "series", label: "Series", sortable: false },
                 { key: "year", label: "Year" },
                 { key: "weight", label: "Weight" },
                 { key: "rating", label: "Rating" },
@@ -379,7 +415,7 @@ export default function LensList({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {items.map(({ lens, system }) => (
+            {items.map(({ lens, system, series: lensSeries }) => (
               <TableRow key={lens.id}>
                 <TableCell className="max-w-[22rem] whitespace-normal">
                   <Link
@@ -388,6 +424,11 @@ export default function LensList({
                   >
                     {lens.name}
                   </Link>
+                  {!lens.verified && (
+                    <Badge variant="outline" className="ml-2 text-amber-600 border-amber-300 dark:text-amber-400 dark:border-amber-700">
+                      Unverified
+                    </Badge>
+                  )}
                 </TableCell>
                 <TableCell className="text-zinc-500">
                   {lens.brand ? (
@@ -436,8 +477,8 @@ export default function LensList({
                   {lens.isZoom && (
                     <Badge
                       variant="zoom"
-                      className="cursor-pointer"
-                      onClick={() => applyFilters({ type: "zoom", brand: "", system: "", q: "", minFocal: "", maxFocal: "", minAperture: "", maxAperture: "", year: "", lensType: "", era: "", productionStatus: "" })}
+                      className="min-w-[3.25rem] cursor-pointer justify-center"
+                      onClick={() => applyFilters({ type: "zoom", brand: "", system: "", q: "", minFocal: "", maxFocal: "", minAperture: "", maxAperture: "", year: "", lensType: "", era: "", productionStatus: "", series: "" })}
                     >
                       Zoom
                     </Badge>
@@ -445,8 +486,8 @@ export default function LensList({
                   {lens.isPrime && (
                     <Badge
                       variant="prime"
-                      className="cursor-pointer"
-                      onClick={() => applyFilters({ type: "prime", brand: "", system: "", q: "", minFocal: "", maxFocal: "", minAperture: "", maxAperture: "", year: "", lensType: "", era: "", productionStatus: "" })}
+                      className="min-w-[3.25rem] cursor-pointer justify-center"
+                      onClick={() => applyFilters({ type: "prime", brand: "", system: "", q: "", minFocal: "", maxFocal: "", minAperture: "", maxAperture: "", year: "", lensType: "", era: "", productionStatus: "", series: "" })}
                     >
                       Prime
                     </Badge>
@@ -454,13 +495,38 @@ export default function LensList({
                   {lens.isMacro && (
                     <Badge
                       variant="macro"
-                      className="cursor-pointer"
-                      onClick={() => applyFilters({ type: "macro", brand: "", system: "", q: "", minFocal: "", maxFocal: "", minAperture: "", maxAperture: "", year: "", lensType: "", era: "", productionStatus: "" })}
+                      className="min-w-[3.25rem] cursor-pointer justify-center"
+                      onClick={() => applyFilters({ type: "macro", brand: "", system: "", q: "", minFocal: "", maxFocal: "", minAperture: "", maxAperture: "", year: "", lensType: "", era: "", productionStatus: "", series: "" })}
                     >
                       Macro
                     </Badge>
                   )}
+                  {lens.lensType === "teleconverter" && (
+                    <Badge
+                      variant="teleconverter"
+                      className="min-w-[3.25rem] cursor-pointer justify-center"
+                      onClick={() => applyFilters({ type: "", lensType: "teleconverter", brand: "", system: "", q: "", minFocal: "", maxFocal: "", minAperture: "", maxAperture: "", year: "", era: "", productionStatus: "", series: "" })}
+                    >
+                      TC
+                    </Badge>
+                  )}
                   </div>
+                </TableCell>
+                <TableCell>
+                  {lensSeries.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {lensSeries.map((s) => (
+                        <Badge
+                          key={s.slug}
+                          variant="series"
+                          className="cursor-pointer"
+                          onClick={() => applyFilters({ series: s.slug, brand: "", system: "", q: "", type: "", minFocal: "", maxFocal: "", minAperture: "", maxAperture: "", year: "", lensType: "", era: "", productionStatus: "" })}
+                        >
+                          {s.name}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
                 </TableCell>
                 <TableCell className="text-zinc-600 dark:text-zinc-400">
                   {lens.yearIntroduced ? (
@@ -484,10 +550,10 @@ export default function LensList({
                 </TableCell>
               </TableRow>
             ))}
-            {loading && <TableSkeleton columns={9} rows={3} />}
+            {loading && <TableSkeleton columns={10} rows={3} />}
             {nextCursor !== null && (
               <TableRow>
-                <TableCell colSpan={9} className="p-0">
+                <TableCell colSpan={10} className="p-0">
                   <div ref={sentinelRef} className="h-px w-full" />
                 </TableCell>
               </TableRow>
