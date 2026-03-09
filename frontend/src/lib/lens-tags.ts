@@ -3,7 +3,13 @@ import { lenses } from "@/db/schema";
 import { sql } from "drizzle-orm";
 
 export async function getDistinctLensTags() {
-  const [lensTypes, eras, productionStatuses] = await Promise.all([
+  const [brands, lensTypes, eras, productionStatuses] = await Promise.all([
+    db
+      .selectDistinct({ value: lenses.brand })
+      .from(lenses)
+      .where(sql`${lenses.brand} IS NOT NULL AND ${lenses.brand} != ''`)
+      .orderBy(lenses.brand)
+      .then((rows) => rows.map((r) => r.value!)),
     db
       .selectDistinct({ value: lenses.lensType })
       .from(lenses)
@@ -24,5 +30,5 @@ export async function getDistinctLensTags() {
       .then((rows) => rows.map((r) => r.value!)),
   ]);
 
-  return { lensTypes, eras, productionStatuses };
+  return { brands, lensTypes, eras, productionStatuses };
 }
