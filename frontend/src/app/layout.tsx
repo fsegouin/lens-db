@@ -14,7 +14,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Lens DB - Camera Lens Database",
+  title: "The Lens DB - Camera Lens Database",
   description:
     "Comprehensive database of camera lenses and bodies with specs, compatibility, and expert recommendations.",
 };
@@ -37,7 +37,7 @@ export default function RootLayout({
                   href="/"
                   className="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100"
                 >
-                  LENS-DB
+                  THE LENS DB
                 </Link>
                 <HeaderNav />
                 <div className="flex items-center gap-1">
@@ -54,7 +54,7 @@ export default function RootLayout({
             <footer>
               <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
                 <p className="text-center text-sm text-zinc-500">
-                  Lens DB &mdash; A community-driven camera lens database.
+                  The Lens DB &mdash; A community-driven camera lens database.
                   Originally inspired by lens-db.com (2012&ndash;2025).
                 </p>
               </div>

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { cameras, lenses, systems } from "@/db/schema";
 import ViewTracker from "@/components/ViewTracker";
@@ -17,7 +17,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-export const revalidate = 604800;
+export const revalidate = 86400;
 
 export async function generateMetadata({
   params,
@@ -32,7 +32,7 @@ export async function generateMetadata({
     .limit(1);
 
   return {
-    title: result ? `${result.system.name} | Lens DB` : "System Not Found",
+    title: result ? `${result.system.name} | The Lens DB` : "System Not Found",
   };
 }
 
@@ -57,7 +57,7 @@ export default async function SystemDetailPage({
     .select()
     .from(lenses)
     .where(eq(lenses.systemId, system.id))
-    .orderBy(asc(lenses.name))
+    .orderBy(asc(sql`regexp_replace(${lenses.name}, '\\d+(\\.\\d+)?mm.*$', '')`), asc(lenses.focalLengthMin), asc(lenses.apertureMin))
     .limit(500);
 
   const systemCameras = await db
@@ -158,7 +158,8 @@ export default async function SystemDetailPage({
                 <TableHeader>
                   <TableRow>
                     <TableHead scope="col">Name</TableHead>
-                    <TableHead scope="col">Sensor</TableHead>
+                    <TableHead scope="col">Sensor Type</TableHead>
+                    <TableHead scope="col">Sensor Size</TableHead>
                     <TableHead scope="col">Megapixels</TableHead>
                     <TableHead scope="col">Year</TableHead>
                   </TableRow>
@@ -175,7 +176,10 @@ export default async function SystemDetailPage({
                         </Link>
                       </TableCell>
                       <TableCell className="text-zinc-500">
-                        {camera.sensorType || camera.sensorSize || "\u2014"}
+                        {camera.sensorType || "\u2014"}
+                      </TableCell>
+                      <TableCell className="text-zinc-500">
+                        {camera.sensorSize || "\u2014"}
                       </TableCell>
                       <TableCell className="text-zinc-600 dark:text-zinc-400">
                         {camera.megapixels ? `${camera.megapixels} MP` : "\u2014"}

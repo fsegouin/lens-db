@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { buildNameSearch } from "@/lib/search";
 
 export const metadata = {
-  title: "Search | Lens DB",
+  title: "Search | The Lens DB",
   description: "Search across all lenses, cameras, and systems.",
 };
 

@@ -4,7 +4,7 @@ import CompareClient from "./CompareClient";
 import { PageTransition } from "@/components/page-transition";
 
 export const metadata: Metadata = {
-  title: "Compare | Lens DB",
+  title: "Compare | The Lens DB",
   description: "Compare lenses or cameras side by side.",
 };
 

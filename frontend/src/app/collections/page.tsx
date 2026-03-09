@@ -5,10 +5,10 @@ import { collections, lensCollections } from "@/db/schema";
 import { PageTransition } from "@/components/page-transition";
 import { Badge } from "@/components/ui/badge";
 
-export const revalidate = 604800;
+export const revalidate = 86400;
 
 export const metadata = {
-  title: "Collections | Lens DB",
+  title: "Collections | The Lens DB",
   description: "Curated thematic lens collections.",
 };
 
