@@ -64,6 +64,8 @@ export const lenses = pgTable(
     // Full specs and images as JSON
     specs: jsonb("specs").default({}),
     images: jsonb("images").default([]),
+    verified: boolean("verified").default(true).notNull(),
+    submittedByIp: text("submitted_by_ip"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   },
   (table) => [
@@ -93,8 +95,12 @@ export const cameras = pgTable(
     bodyType: text("body_type"),
     weightG: real("weight_g"),
     viewCount: integer("view_count").default(0),
+    averageRating: real("average_rating"),
+    ratingCount: integer("rating_count").default(0),
     specs: jsonb("specs").default({}),
     images: jsonb("images").default([]),
+    verified: boolean("verified").default(true).notNull(),
+    submittedByIp: text("submitted_by_ip"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   },
   (table) => [index("idx_cameras_system").on(table.systemId)]
@@ -172,6 +178,24 @@ export const lensRatings = pgTable(
     unique("uq_lens_ratings_lens_ip").on(table.lensId, table.ipHash),
     index("idx_lens_ratings_lens").on(table.lensId),
     check("chk_rating_range", sql`${table.rating} >= 1 AND ${table.rating} <= 10`),
+  ]
+);
+
+export const cameraRatings = pgTable(
+  "camera_ratings",
+  {
+    id: serial("id").primaryKey(),
+    cameraId: integer("camera_id")
+      .notNull()
+      .references(() => cameras.id, { onDelete: "cascade" }),
+    ipHash: text("ip_hash").notNull(),
+    rating: integer("rating").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  },
+  (table) => [
+    unique("uq_camera_ratings_camera_ip").on(table.cameraId, table.ipHash),
+    index("idx_camera_ratings_camera").on(table.cameraId),
+    check("chk_camera_rating_range", sql`${table.rating} >= 1 AND ${table.rating} <= 10`),
   ]
 );
 
