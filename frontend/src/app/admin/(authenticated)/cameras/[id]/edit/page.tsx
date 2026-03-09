@@ -3,6 +3,7 @@ import { cameras, systems } from "@/db/schema";
 import { eq, asc } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import CameraForm from "@/components/admin/CameraForm";
+import EditPageWithReport from "@/components/admin/EditPageWithReport";
 
 export const dynamic = "force-dynamic";
 
@@ -28,9 +29,8 @@ export default async function EditCameraPage({
   if (!camera) notFound();
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">Edit Camera</h1>
+    <EditPageWithReport title="Edit Camera">
       <CameraForm camera={camera} systems={allSystems} />
-    </div>
+    </EditPageWithReport>
   );
 }

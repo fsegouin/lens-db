@@ -3,7 +3,9 @@ import { lenses, systems } from "@/db/schema";
 import { eq, asc } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import LensForm from "@/components/admin/LensForm";
+import EditPageWithReport from "@/components/admin/EditPageWithReport";
 import { requireAdmin } from "@/lib/admin-auth";
+import { getDistinctLensTags } from "@/lib/lens-tags";
 
 export const dynamic = "force-dynamic";
 
@@ -23,17 +25,17 @@ export default async function EditLensPage({
 
   if (!lens) notFound();
 
-  const allSystems = await db
-    .select({ id: systems.id, name: systems.name })
-    .from(systems)
-    .orderBy(asc(systems.name));
+  const [allSystems, tags] = await Promise.all([
+    db
+      .select({ id: systems.id, name: systems.name })
+      .from(systems)
+      .orderBy(asc(systems.name)),
+    getDistinctLensTags(),
+  ]);
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
-        Edit Lens
-      </h1>
-      <LensForm lens={lens} systems={allSystems} />
-    </div>
+    <EditPageWithReport title="Edit Lens">
+      <LensForm lens={lens} systems={allSystems} tags={tags} />
+    </EditPageWithReport>
   );
 }

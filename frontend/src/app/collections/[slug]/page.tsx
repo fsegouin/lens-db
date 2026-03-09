@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/db";
 import { collections, lensCollections, lenses, systems } from "@/db/schema";
 import { eq, asc } from "drizzle-orm";
+import ReportIssueButton from "@/components/ReportIssueButton";
 
 export const revalidate = 604800;
 
@@ -132,6 +133,7 @@ export default async function CollectionDetailPage({
           </p>
         </div>
       )}
+      <ReportIssueButton entityType="collection" entityId={collection.id} entityName={collection.name} />
     </div>
   );
 }
