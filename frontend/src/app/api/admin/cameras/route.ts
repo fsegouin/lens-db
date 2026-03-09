@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { cameras, systems } from "@/db/schema";
 import { requireAdminAPI } from "@/lib/admin-auth";
-import { and, asc, sql, eq } from "drizzle-orm";
+import { and, or, asc, sql, eq } from "drizzle-orm";
 import { buildNameSearch } from "@/lib/search";
 import { buildOrderBy } from "@/lib/admin-sort";
 
@@ -19,7 +19,17 @@ export async function GET(request: NextRequest) {
   const sortParam = searchParams.get("sort");
   const orderParam = searchParams.get("order");
 
-  const conditions = q ? buildNameSearch(cameras.name, q) : [];
+  const nameConditions = q ? buildNameSearch(cameras.name, q) : [];
+  const aliasConditions = q ? buildNameSearch(cameras.alias, q) : [];
+  const conditions =
+    nameConditions.length > 0 || aliasConditions.length > 0
+      ? [
+          or(
+            nameConditions.length > 0 ? and(...nameConditions) : undefined,
+            aliasConditions.length > 0 ? and(...aliasConditions) : undefined
+          )!,
+        ]
+      : [];
   const where = conditions.length > 0 ? and(...conditions) : undefined;
 
   const sortMap = {
@@ -68,7 +78,7 @@ export async function POST(request: NextRequest) {
 
   const body = await request.json();
   const {
-    name, slug, url, systemId, description,
+    name, slug, url, systemId, description, alias,
     sensorType, sensorSize, megapixels, resolution,
     yearIntroduced, bodyType, weightG, specs, images,
   } = body;
@@ -88,6 +98,7 @@ export async function POST(request: NextRequest) {
       url: url || null,
       systemId: systemId || null,
       description: description || null,
+      alias: alias || null,
       sensorType: sensorType || null,
       sensorSize: sensorSize || null,
       megapixels: megapixels != null ? Number(megapixels) : null,

@@ -33,9 +33,23 @@ CREATE TABLE "issue_reports" (
 	"entity_type" text NOT NULL,
 	"entity_id" integer NOT NULL,
 	"entity_name" text NOT NULL,
+	"entity_slug" text,
 	"message" text NOT NULL,
+	"field_name" text,
+	"old_value" text,
+	"suggested_value" text,
+	"ip_address" text,
+	"country" text,
 	"status" text DEFAULT 'pending' NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now()
+);
+--> statement-breakpoint
+CREATE TABLE "blocked_ips" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"ip_address" text NOT NULL,
+	"reason" text,
+	"created_at" timestamp with time zone DEFAULT now(),
+	CONSTRAINT "blocked_ips_ip_address_unique" UNIQUE("ip_address")
 );
 --> statement-breakpoint
 CREATE TABLE "lens_collections" (

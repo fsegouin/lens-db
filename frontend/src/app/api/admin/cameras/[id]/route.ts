@@ -37,7 +37,7 @@ export async function PUT(
   const { id } = await params;
   const body = await request.json();
   const {
-    name, slug, url, systemId, description,
+    name, slug, url, systemId, description, alias,
     sensorType, sensorSize, megapixels, resolution,
     yearIntroduced, bodyType, weightG, specs, images,
   } = body;
@@ -48,6 +48,7 @@ export async function PUT(
   if (url !== undefined) updates.url = url || null;
   if (systemId !== undefined) updates.systemId = systemId || null;
   if (description !== undefined) updates.description = description || null;
+  if (alias !== undefined) updates.alias = alias || null;
   if (sensorType !== undefined) updates.sensorType = sensorType || null;
   if (sensorSize !== undefined) updates.sensorSize = sensorSize || null;
   if (megapixels !== undefined) updates.megapixels = megapixels != null ? Number(megapixels) : null;

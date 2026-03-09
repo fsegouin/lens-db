@@ -17,7 +17,8 @@ export async function GET(request: NextRequest) {
   }
 
   const lensWhere = buildNameSearch(lenses.name, q);
-  const cameraWhere = buildNameSearch(cameras.name, q);
+  const cameraNameWhere = buildNameSearch(cameras.name, q);
+  const cameraAliasWhere = buildNameSearch(cameras.alias, q);
   const systemNameWhere = buildNameSearch(systems.name, q);
   const systemMfrWhere = buildNameSearch(systems.manufacturer, q);
   const collectionWhere = buildNameSearch(collections.name, q);
@@ -31,11 +32,16 @@ export async function GET(request: NextRequest) {
             .where(and(...lensWhere))
             .limit(5)
         : [],
-      cameraWhere.length > 0
+      cameraNameWhere.length > 0 || cameraAliasWhere.length > 0
         ? db
             .select({ id: cameras.id, name: cameras.name, slug: cameras.slug })
             .from(cameras)
-            .where(and(...cameraWhere))
+            .where(
+              or(
+                cameraNameWhere.length > 0 ? and(...cameraNameWhere) : undefined,
+                cameraAliasWhere.length > 0 ? and(...cameraAliasWhere) : undefined
+              )
+            )
             .limit(5)
         : [],
       systemNameWhere.length > 0 || systemMfrWhere.length > 0
