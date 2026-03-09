@@ -1,4 +1,5 @@
 import { Metadata } from "next";
+import { Suspense } from "react";
 import CompareClient from "./CompareClient";
 
 export const metadata: Metadata = {
@@ -16,7 +17,9 @@ export default function ComparePage() {
           Select two lenses to compare their specifications side by side.
         </p>
       </div>
-      <CompareClient />
+      <Suspense>
+        <CompareClient />
+      </Suspense>
     </div>
   );
 }
