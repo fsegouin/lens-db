@@ -10,33 +10,88 @@ type CameraRow = {
   system: typeof systems.$inferSelect | null;
 };
 
+type SystemOption = { name: string; slug: string };
+
 type Props = {
   initialItems: CameraRow[];
   initialTotal: number;
   initialNextCursor: number | null;
+  systems?: SystemOption[];
+  types?: string[];
+  models?: string[];
+  filmTypes?: string[];
+  sensorTypes?: string[];
+  cropFactors?: string[];
+};
+
+type FilterOverrides = {
+  q?: string;
+  system?: string;
+  type?: string;
+  model?: string;
+  filmType?: string;
+  sensorType?: string;
+  cropFactor?: string;
+  year?: string;
+  sort?: string;
+  order?: string;
 };
 
 export default function CameraList({
   initialItems,
   initialTotal,
   initialNextCursor,
+  systems: systemOptions = [],
+  types = [],
+  models = [],
+  filmTypes = [],
+  sensorTypes = [],
+  cropFactors = [],
 }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
   const [items, setItems] = useState<CameraRow[]>(initialItems);
   const [nextCursor, setNextCursor] = useState<number | null>(initialNextCursor);
-  const [total, setTotal] = useState(initialTotal);
+  const [, setTotal] = useState(initialTotal);
   const [loading, setLoading] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
+  // Current filter values from URL
   const q = searchParams.get("q") || "";
-  const [formQ, setFormQ] = useState(q);
+  const system = searchParams.get("system") || "";
+  const type = searchParams.get("type") || "";
+  const model = searchParams.get("model") || "";
+  const filmType = searchParams.get("filmType") || "";
+  const sensorType = searchParams.get("sensorType") || "";
+  const cropFactor = searchParams.get("cropFactor") || "";
+  const year = searchParams.get("year") || "";
+  const sort = searchParams.get("sort") || "";
+  const order = searchParams.get("order") || "";
 
+  // Form state
+  const [formQ, setFormQ] = useState(q);
+  const [formSystem, setFormSystem] = useState(system);
+  const [formType, setFormType] = useState(type);
+  const [formModel, setFormModel] = useState(model);
+  const [formFilmType, setFormFilmType] = useState(filmType);
+  const [formSensorType, setFormSensorType] = useState(sensorType);
+  const [formCropFactor, setFormCropFactor] = useState(cropFactor);
+  const [formYear, setFormYear] = useState(year);
+
+  // Sync form state when URL params change (back/forward navigation)
   useEffect(() => {
     setFormQ(q);
-  }, [q]);
+    setFormSystem(system);
+    setFormType(type);
+    setFormModel(model);
+    setFormFilmType(filmType);
+    setFormSensorType(sensorType);
+    setFormCropFactor(cropFactor);
+    setFormYear(year);
+  }, [q, system, type, model, filmType, sensorType, cropFactor, year]);
 
+  // Reset list when initial data changes (filters applied via server component)
   useEffect(() => {
     setItems(initialItems);
     setNextCursor(initialNextCursor);
@@ -47,10 +102,19 @@ export default function CameraList({
     (cursor: number) => {
       const params = new URLSearchParams();
       if (q) params.set("q", q);
+      if (system) params.set("system", system);
+      if (type) params.set("type", type);
+      if (model) params.set("model", model);
+      if (filmType) params.set("filmType", filmType);
+      if (sensorType) params.set("sensorType", sensorType);
+      if (cropFactor) params.set("cropFactor", cropFactor);
+      if (year) params.set("year", year);
+      if (sort) params.set("sort", sort);
+      if (order) params.set("order", order);
       params.set("cursor", String(cursor));
       return `/api/cameras?${params.toString()}`;
     },
-    [q]
+    [q, system, type, model, filmType, sensorType, cropFactor, year, sort, order]
   );
 
   const loadMore = useCallback(async () => {
@@ -69,6 +133,7 @@ export default function CameraList({
     }
   }, [loading, nextCursor, buildApiUrl]);
 
+  // IntersectionObserver for infinite scroll
   useEffect(() => {
     const sentinel = sentinelRef.current;
     if (!sentinel) return;
@@ -88,46 +153,168 @@ export default function CameraList({
 
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
+  function applyFilters(overrides: FilterOverrides = {}) {
+    const params = new URLSearchParams();
+    const qVal = overrides.q ?? formQ;
+    const systemVal = overrides.system ?? formSystem;
+    const typeVal = overrides.type ?? formType;
+    const modelVal = overrides.model ?? formModel;
+    const filmTypeVal = overrides.filmType ?? formFilmType;
+    const sensorTypeVal = overrides.sensorType ?? formSensorType;
+    const cropFactorVal = overrides.cropFactor ?? formCropFactor;
+    const yearVal = overrides.year ?? formYear;
+    const sortVal = overrides.sort ?? sort;
+    const orderVal = overrides.order ?? order;
+    if (qVal) params.set("q", qVal);
+    if (systemVal) params.set("system", systemVal);
+    if (typeVal) params.set("type", typeVal);
+    if (modelVal) params.set("model", modelVal);
+    if (filmTypeVal) params.set("filmType", filmTypeVal);
+    if (sensorTypeVal) params.set("sensorType", sensorTypeVal);
+    if (cropFactorVal) params.set("cropFactor", cropFactorVal);
+    if (yearVal) params.set("year", yearVal);
+    if (sortVal) params.set("sort", sortVal);
+    if (orderVal) params.set("order", orderVal);
+    const qs = params.toString();
+    router.push(qs ? `/cameras?${qs}` : "/cameras");
+  }
+
+  function debouncedApply(overrides: FilterOverrides) {
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => applyFilters(overrides), 400);
+  }
+
+  function handleSort(column: string) {
+    if (sort === column) {
+      applyFilters({ sort: column, order: order === "asc" ? "desc" : "asc" });
+    } else {
+      applyFilters({ sort: column, order: "asc" });
+    }
+  }
+
+  function sortIndicator(column: string) {
+    if (sort !== column) return "";
+    return order === "desc" ? " \u2193" : " \u2191";
+  }
+
   function handleSearchChange(value: string) {
     setFormQ(value);
-    clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      const params = new URLSearchParams();
-      if (value) params.set("q", value);
-      const qs = params.toString();
-      router.push(qs ? `/cameras?${qs}` : "/cameras");
-    }, 400);
+    debouncedApply({ q: value });
   }
+
+  const clearAll: FilterOverrides = { q: "", system: "", type: "", model: "", filmType: "", sensorType: "", cropFactor: "", year: "" };
 
   return (
     <>
-      <input
-        type="text"
-        placeholder="Search cameras..."
-        value={formQ}
-        onChange={(e) => handleSearchChange(e.target.value)}
-        className="rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-      />
+      {/* Filters */}
+      <div className="flex flex-wrap gap-3">
+        <input
+          type="text"
+          placeholder="Search cameras..."
+          value={formQ}
+          onChange={(e) => handleSearchChange(e.target.value)}
+          className="rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+        />
+        <select
+          value={formSystem}
+          onChange={(e) => { setFormSystem(e.target.value); applyFilters({ system: e.target.value }); }}
+          className="filter-select rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+        >
+          <option value="">All systems</option>
+          {systemOptions.map((s) => (
+            <option key={s.slug} value={s.slug}>
+              {s.name}
+            </option>
+          ))}
+        </select>
+        <select
+          value={formType}
+          onChange={(e) => { setFormType(e.target.value); applyFilters({ type: e.target.value }); }}
+          className="filter-select rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+        >
+          <option value="">All types</option>
+          {types.map((t) => (
+            <option key={t} value={t}>{t}</option>
+          ))}
+        </select>
+        <select
+          value={formModel}
+          onChange={(e) => { setFormModel(e.target.value); applyFilters({ model: e.target.value }); }}
+          className="filter-select rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+        >
+          <option value="">All models</option>
+          {models.map((m) => (
+            <option key={m} value={m}>{m}</option>
+          ))}
+        </select>
+        <select
+          value={formFilmType}
+          onChange={(e) => { setFormFilmType(e.target.value); applyFilters({ filmType: e.target.value }); }}
+          className="filter-select rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+        >
+          <option value="">All film types</option>
+          {filmTypes.map((f) => (
+            <option key={f} value={f}>{f}</option>
+          ))}
+        </select>
+        <select
+          value={formSensorType}
+          onChange={(e) => { setFormSensorType(e.target.value); applyFilters({ sensorType: e.target.value }); }}
+          className="filter-select rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+        >
+          <option value="">All sensors</option>
+          {sensorTypes.map((s) => (
+            <option key={s} value={s}>{s}</option>
+          ))}
+        </select>
+        <select
+          value={formCropFactor}
+          onChange={(e) => { setFormCropFactor(e.target.value); applyFilters({ cropFactor: e.target.value }); }}
+          className="filter-select rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+        >
+          <option value="">All crop factors</option>
+          {cropFactors.map((c) => (
+            <option key={c} value={c}>{c}</option>
+          ))}
+        </select>
+        <input
+          type="number"
+          placeholder="Year"
+          value={formYear}
+          onChange={(e) => { setFormYear(e.target.value); debouncedApply({ year: e.target.value }); }}
+          className="w-28 rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+        />
+      </div>
 
+      {/* Results */}
       {items.length > 0 ? (
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-zinc-200 text-zinc-500 dark:border-zinc-800">
               <tr>
-                <th className="pb-3 pr-4 font-medium">Name</th>
-                <th className="pb-3 pr-4 font-medium">System</th>
-                <th className="pb-3 pr-4 font-medium">Type</th>
-                <th className="pb-3 pr-4 font-medium">Model</th>
-                <th className="pb-3 pr-4 font-medium">Film Type</th>
-                <th className="pb-3 pr-4 font-medium">Dimensions</th>
-                <th className="pb-3 pr-4 font-medium">Speeds</th>
-                <th className="pb-3 pr-4 font-medium">Imaging Sensor</th>
-                <th className="pb-3 pr-4 font-medium">Crop Factor</th>
-                <th className="pb-3 font-medium">Exposure Modes</th>
+                {[
+                  { key: "name", label: "Name" },
+                  { key: "system", label: "System" },
+                  { key: "type", label: "Type", sortable: false },
+                  { key: "model", label: "Model", sortable: false },
+                  { key: "filmType", label: "Film Type", sortable: false },
+                  { key: "imagingSensor", label: "Imaging Sensor", sortable: false },
+                  { key: "cropFactor", label: "Crop Factor", sortable: false },
+                  { key: "year", label: "Year" },
+                  { key: "weight", label: "Weight" },
+                ].map((col, i, arr) => (
+                  <th
+                    key={col.key}
+                    className={`pb-3 font-medium ${i < arr.length - 1 ? "pr-4" : ""} ${col.sortable !== false ? "cursor-pointer select-none hover:text-zinc-900 dark:hover:text-zinc-100" : ""}`}
+                    onClick={col.sortable !== false ? () => handleSort(col.key) : undefined}
+                  >
+                    {col.label}{sortIndicator(col.key)}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-              {items.map(({ camera, system }) => {
+              {items.map(({ camera, system: sys }) => {
                 const specs = (camera.specs ?? {}) as Record<string, string>;
                 return (
                   <tr
@@ -143,31 +330,77 @@ export default function CameraList({
                       </Link>
                     </td>
                     <td className="py-3 pr-4 text-zinc-500">
-                      {system?.name ?? "\u2014"}
+                      {sys ? (
+                        <button
+                          onClick={() => applyFilters({ ...clearAll, system: sys.slug })}
+                          className="text-left hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
+                        >
+                          {sys.name}
+                        </button>
+                      ) : "\u2014"}
                     </td>
                     <td className="py-3 pr-4 text-zinc-600 dark:text-zinc-400">
-                      {specs["Type"] ?? "\u2014"}
+                      {specs["Type"] ? (
+                        <button
+                          onClick={() => applyFilters({ ...clearAll, type: specs["Type"] })}
+                          className="text-left hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
+                        >
+                          {specs["Type"]}
+                        </button>
+                      ) : "\u2014"}
                     </td>
                     <td className="py-3 pr-4 text-zinc-600 dark:text-zinc-400">
-                      {specs["Model"] ?? "\u2014"}
+                      {specs["Model"] ? (
+                        <button
+                          onClick={() => {
+                            const prefix = specs["Model"].startsWith("Electronically controlled")
+                              ? "Electronically controlled"
+                              : specs["Model"].startsWith("Mechanical")
+                              ? "Mechanical"
+                              : specs["Model"];
+                            applyFilters({ ...clearAll, model: prefix });
+                          }}
+                          className="text-left hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
+                        >
+                          {specs["Model"]}
+                        </button>
+                      ) : "\u2014"}
                     </td>
                     <td className="py-3 pr-4 text-zinc-600 dark:text-zinc-400">
-                      {specs["Film type"] ?? "\u2014"}
-                    </td>
-                    <td className="py-3 pr-4 text-zinc-600 dark:text-zinc-400">
-                      {specs["Dimensions"] ?? "\u2014"}
-                    </td>
-                    <td className="py-3 pr-4 text-zinc-600 dark:text-zinc-400">
-                      {specs["Speeds"] ?? "\u2014"}
+                      {specs["Film type"] ? (
+                        <button
+                          onClick={() => applyFilters({ ...clearAll, filmType: specs["Film type"] })}
+                          className="text-left hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
+                        >
+                          {specs["Film type"]}
+                        </button>
+                      ) : "\u2014"}
                     </td>
                     <td className="py-3 pr-4 text-zinc-600 dark:text-zinc-400">
                       {specs["Imaging sensor"] || specs["Imaging plane"] || "\u2014"}
                     </td>
                     <td className="py-3 pr-4 text-zinc-600 dark:text-zinc-400">
-                      {specs["Crop factor"] ?? "\u2014"}
+                      {specs["Crop factor"] ? (
+                        <button
+                          onClick={() => applyFilters({ ...clearAll, cropFactor: specs["Crop factor"] })}
+                          className="text-left hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
+                        >
+                          {specs["Crop factor"]}
+                        </button>
+                      ) : "\u2014"}
+                    </td>
+                    <td className="py-3 pr-4 text-zinc-600 dark:text-zinc-400">
+                      {camera.yearIntroduced ? (
+                        <button
+                          onClick={() => applyFilters({ ...clearAll, year: String(camera.yearIntroduced) })}
+                          className="text-left hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
+                        >
+                          {camera.yearIntroduced}
+                        </button>
+                      ) : "\u2014"}
                     </td>
                     <td className="py-3 text-zinc-600 dark:text-zinc-400">
-                      {specs["Exposure modes"] ?? "\u2014"}
+                      {camera.weightG ? `${camera.weightG}g` : "\u2014"}
                     </td>
                   </tr>
                 );
@@ -183,6 +416,7 @@ export default function CameraList({
         </div>
       )}
 
+      {/* Sentinel for infinite scroll + loading indicator */}
       {nextCursor !== null && (
         <div ref={sentinelRef} className="flex justify-center py-8">
           {loading && (
