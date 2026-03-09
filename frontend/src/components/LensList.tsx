@@ -213,7 +213,7 @@ export default function LensList({
         <select
           value={formBrand}
           onChange={(e) => { setFormBrand(e.target.value); applyFilters({ brand: e.target.value }); }}
-          className="rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+          className="filter-select rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
         >
           <option value="">All brands</option>
           {brands.map((b) => (
@@ -225,7 +225,7 @@ export default function LensList({
         <select
           value={formSystem}
           onChange={(e) => { setFormSystem(e.target.value); applyFilters({ system: e.target.value }); }}
-          className="rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+          className="filter-select rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
         >
           <option value="">All systems</option>
           {systemOptions.map((s) => (
@@ -237,7 +237,7 @@ export default function LensList({
         <select
           value={formType}
           onChange={(e) => { setFormType(e.target.value); applyFilters({ type: e.target.value }); }}
-          className="rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+          className="filter-select rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
         >
           <option value="">All types</option>
           <option value="prime">Prime</option>
