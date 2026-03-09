@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import type { cameras, systems } from "@/db/schema";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 import { TableSkeleton } from "@/components/table-skeleton";
@@ -375,13 +376,18 @@ export default function CameraList({
               const specs = (camera.specs ?? {}) as Record<string, string>;
               return (
                 <TableRow key={camera.id}>
-                  <TableCell>
+                  <TableCell className="max-w-[22rem] whitespace-normal">
                     <Link
                       href={`/cameras/${camera.slug}`}
-                      className="font-medium text-zinc-900 hover:underline dark:text-zinc-100"
+                      className="block break-words leading-snug font-medium text-zinc-900 hover:underline line-clamp-2 dark:text-zinc-100"
                     >
                       {camera.name}
                     </Link>
+                    {!camera.verified && (
+                      <Badge variant="outline" className="ml-2 text-amber-600 border-amber-300 dark:text-amber-400 dark:border-amber-700">
+                        Unverified
+                      </Badge>
+                    )}
                   </TableCell>
                   <TableCell className="text-zinc-500">
                     {sys ? (
