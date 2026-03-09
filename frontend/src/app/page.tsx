@@ -105,7 +105,7 @@ export default async function Home() {
             <div className="mb-2 text-2xl font-bold text-zinc-900 dark:text-zinc-100">
               {section.count}
             </div>
-            <h2 className="mb-1 text-lg font-semibold text-zinc-800 group-hover:text-zinc-900 dark:text-zinc-200">
+            <h2 className="mb-1 text-lg font-semibold text-zinc-800 group-hover:text-zinc-900 dark:text-zinc-200 dark:group-hover:text-white">
               {section.title}
             </h2>
             <p className="text-sm text-zinc-500 dark:text-zinc-400">
