@@ -95,10 +95,10 @@ export default async function Home() {
               specifications, compatibility information, and expert recommendations
               for every genre of photography.
             </p>
-            <div className="flex justify-center gap-4 pt-4">
-              <Link href="/lenses" className="inline-flex h-8 items-center justify-center rounded-lg bg-primary px-2.5 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/80">Browse Lenses</Link>
-              <Link href="/lenses/compare" className="inline-flex h-8 items-center justify-center rounded-lg border border-border bg-background px-2.5 text-sm font-medium transition-all hover:bg-muted">Compare Lenses</Link>
-              <Link href="/search" className="inline-flex h-8 items-center justify-center rounded-lg border border-border bg-background px-2.5 text-sm font-medium transition-all hover:bg-muted">Advanced Search</Link>
+            <div className="flex flex-wrap justify-center gap-3 pt-4">
+              <Link href="/lenses" className="inline-flex h-10 items-center justify-center rounded-lg bg-primary px-5 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/80">Browse Lenses</Link>
+              <Link href="/lenses/compare" className="inline-flex h-10 items-center justify-center rounded-lg border border-border bg-background px-5 text-sm font-medium transition-all hover:bg-muted">Compare Lenses</Link>
+              <Link href="/search" className="inline-flex h-10 items-center justify-center rounded-lg border border-border bg-background px-5 text-sm font-medium transition-all hover:bg-muted">Advanced Search</Link>
             </div>
           </section>
         </div>
