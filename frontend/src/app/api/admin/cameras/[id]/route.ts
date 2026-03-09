@@ -9,7 +9,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const token = request.cookies.get("admin_session")?.value;
-  const authError = requireAdminAPI(token);
+  const authError = await requireAdminAPI(token);
   if (authError) return authError;
 
   const { id } = await params;
@@ -31,7 +31,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const token = request.cookies.get("admin_session")?.value;
-  const authError = requireAdminAPI(token);
+  const authError = await requireAdminAPI(token);
   if (authError) return authError;
 
   const { id } = await params;
@@ -76,7 +76,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const token = request.cookies.get("admin_session")?.value;
-  const authError = requireAdminAPI(token);
+  const authError = await requireAdminAPI(token);
   if (authError) return authError;
 
   const { id } = await params;
