@@ -4,6 +4,7 @@ import { cameras, systems } from "@/db/schema";
 import { requireAdminAPI } from "@/lib/admin-auth";
 import { and, asc, sql, eq } from "drizzle-orm";
 import { buildNameSearch } from "@/lib/search";
+import { buildOrderBy } from "@/lib/admin-sort";
 
 const PAGE_SIZE = 50;
 
@@ -15,9 +16,20 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const q = searchParams.get("q");
   const cursor = parseInt(searchParams.get("cursor") || "0", 10);
+  const sortParam = searchParams.get("sort");
+  const orderParam = searchParams.get("order");
 
   const conditions = q ? buildNameSearch(cameras.name, q) : [];
   const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+  const sortMap = {
+    name: cameras.name,
+    system: systems.name,
+    sensorType: cameras.sensorType,
+    megapixels: cameras.megapixels,
+    year: cameras.yearIntroduced,
+  };
+  const orderBy = buildOrderBy(sortParam, orderParam, sortMap, cameras.name);
 
   const [items, countResult] = await Promise.all([
     db
@@ -34,7 +46,7 @@ export async function GET(request: NextRequest) {
       .from(cameras)
       .leftJoin(systems, eq(cameras.systemId, systems.id))
       .where(where)
-      .orderBy(asc(cameras.name))
+      .orderBy(orderBy)
       .limit(PAGE_SIZE)
       .offset(cursor),
     db

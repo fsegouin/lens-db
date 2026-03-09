@@ -12,7 +12,7 @@ export default async function NewCameraPage() {
     .orderBy(asc(systems.name));
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 p-6">
       <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">New Camera</h1>
       <CameraForm systems={allSystems} />
     </div>

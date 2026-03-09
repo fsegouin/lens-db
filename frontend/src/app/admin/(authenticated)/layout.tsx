@@ -9,12 +9,13 @@ const adminNav = [
   { href: "/admin/systems", label: "Systems" },
   { href: "/admin/collections", label: "Collections" },
   { href: "/admin/compatibility", label: "Compatibility" },
+  { href: "/admin/reports", label: "Reports" },
 ];
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   await requireAdmin();
   return (
-    <div className="flex min-h-screen">
+    <div className="fixed inset-0 z-50 flex bg-white dark:bg-zinc-950">
       <aside className="w-56 shrink-0 border-r border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950">
         <div className="p-4">
           <Link href="/admin" className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
@@ -39,7 +40,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <LogoutButton />
         </div>
       </aside>
-      <main className="flex-1 p-6">{children}</main>
+      <main className="flex-1 overflow-y-auto">{children}</main>
     </div>
   );
 }

@@ -9,8 +9,8 @@ export default function AdminCollectionsPage() {
       apiPath="/api/admin/collections"
       editPath="/admin/collections"
       columns={[
-        { key: "name", label: "Name" },
-        { key: "lensCount", label: "Lenses" },
+        { key: "name", label: "Name", sortKey: "name" },
+        { key: "lensCount", label: "Lenses", sortKey: "lensCount" },
         { key: "description", label: "Description" },
       ]}
       newHref="/admin/collections/new"

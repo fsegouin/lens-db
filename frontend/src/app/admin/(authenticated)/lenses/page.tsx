@@ -3,12 +3,13 @@
 import AdminTable from "@/components/admin/AdminTable";
 
 const columns = [
-  { key: "name", label: "Name" },
-  { key: "brand", label: "Brand" },
-  { key: "systemName", label: "System" },
+  { key: "name", label: "Name", sortKey: "name" },
+  { key: "brand", label: "Brand", sortKey: "brand" },
+  { key: "systemName", label: "System", sortKey: "system" },
   {
     key: "focalLengthMin",
     label: "Focal Length",
+    sortKey: "focalLength",
     render: (_value: unknown, row: Record<string, unknown>) => {
       const min = row.focalLengthMin;
       const max = row.focalLengthMax;
@@ -17,7 +18,7 @@ const columns = [
       return `${min ?? max} mm`;
     },
   },
-  { key: "yearIntroduced", label: "Year" },
+  { key: "yearIntroduced", label: "Year", sortKey: "year" },
 ];
 
 export default function AdminLensesPage() {

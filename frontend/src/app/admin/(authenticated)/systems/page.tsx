@@ -9,9 +9,9 @@ export default function AdminSystemsPage() {
       apiPath="/api/admin/systems"
       editPath="/admin/systems"
       columns={[
-        { key: "name", label: "Name" },
-        { key: "manufacturer", label: "Manufacturer" },
-        { key: "mountType", label: "Mount Type" },
+        { key: "name", label: "Name", sortKey: "name" },
+        { key: "manufacturer", label: "Manufacturer", sortKey: "manufacturer" },
+        { key: "mountType", label: "Mount Type", sortKey: "mountType" },
       ]}
       newHref="/admin/systems/new"
     />
