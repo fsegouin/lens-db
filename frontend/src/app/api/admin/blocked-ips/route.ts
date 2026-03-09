@@ -16,21 +16,20 @@ export async function POST(request: NextRequest) {
 
   const ip = body.ipAddress.trim();
 
-  // Block the IP
-  await db
-    .insert(blockedIps)
-    .values({ ipAddress: ip, reason: "Blocked from admin reports panel" })
-    .onConflictDoNothing();
-
-  // Delete all pending reports from this IP
-  await db
-    .delete(issueReports)
-    .where(
-      and(
-        eq(issueReports.ipAddress, ip),
-        eq(issueReports.status, "pending")
-      )
-    );
+  await Promise.all([
+    db
+      .insert(blockedIps)
+      .values({ ipAddress: ip, reason: "Blocked from admin reports panel" })
+      .onConflictDoNothing(),
+    db
+      .delete(issueReports)
+      .where(
+        and(
+          eq(issueReports.ipAddress, ip),
+          eq(issueReports.status, "pending")
+        )
+      ),
+  ]);
 
   return NextResponse.json({ success: true });
 }
