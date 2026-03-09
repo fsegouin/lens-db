@@ -23,6 +23,7 @@
 # misc
 .DS_Store
 *.pem
+lens-db.sqlite
 
 # debug
 npm-debug.log*
@@ -43,3 +44,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# plans
+docs/plans/
