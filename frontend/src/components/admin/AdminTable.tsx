@@ -6,6 +6,7 @@ import Link from "next/link";
 interface Column {
   key: string;
   label: string;
+  sortKey?: string; // API field name for sorting; omit to disable sort on this column
   render?: (value: unknown, row: Record<string, unknown>) => React.ReactNode;
 }
 
@@ -26,6 +27,8 @@ export default function AdminTable({ title, apiPath, editPath, columns, newHref 
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [sort, setSort] = useState("");
+  const [order, setOrder] = useState<"asc" | "desc">("asc");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Debounce search input (400ms)
@@ -45,6 +48,10 @@ export default function AdminTable({ title, apiPath, editPath, columns, newHref 
     const params = new URLSearchParams();
     if (debouncedSearch) params.set("q", debouncedSearch);
     params.set("cursor", String(page * PAGE_SIZE));
+    if (sort) {
+      params.set("sort", sort);
+      params.set("order", order);
+    }
     try {
       const res = await fetch(`${apiPath}?${params}`);
       if (!res.ok) {
@@ -64,44 +71,70 @@ export default function AdminTable({ title, apiPath, editPath, columns, newHref 
     } finally {
       setLoading(false);
     }
-  }, [apiPath, debouncedSearch, page]);
+  }, [apiPath, debouncedSearch, page, sort, order]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  function handleSort(sortKey: string) {
+    if (sort === sortKey) {
+      setOrder((o) => (o === "asc" ? "desc" : "asc"));
+    } else {
+      setSort(sortKey);
+      setOrder("asc");
+    }
+    setPage(0);
+  }
+
+  function sortIndicator(sortKey: string) {
+    if (sort !== sortKey) return null;
+    return <span className="ml-1">{order === "desc" ? "\u2193" : "\u2191"}</span>;
+  }
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">{title}</h1>
-        <Link
-          href={newHref}
-          className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
-        >
-          + New
-        </Link>
+    <div>
+      <div className="space-y-4 p-6 pb-0">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">{title}</h1>
+          <Link
+            href={newHref}
+            className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
+          >
+            + New
+          </Link>
+        </div>
+
+        <input
+          type="text"
+          placeholder="Search..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full max-w-sm rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+        />
+
+        <div className="text-sm text-zinc-500">{total.toLocaleString()} results</div>
       </div>
 
-      <input
-        type="text"
-        placeholder="Search..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="w-full max-w-sm rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-      />
-
-      <div className="text-sm text-zinc-500">{total.toLocaleString()} results</div>
-
       {loading ? (
-        <p className="text-zinc-400">Loading...</p>
+        <p className="px-6 pt-4 text-zinc-400">Loading...</p>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-clip">
           <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-zinc-200 dark:border-zinc-800">
+            <thead className="sticky top-0 z-10">
+              <tr className="shadow-[inset_0_-1px_0_theme(colors.zinc.200)] dark:shadow-[inset_0_-1px_0_theme(colors.zinc.800)]">
                 {columns.map((col) => (
-                  <th key={col.key} className="px-3 py-2 text-left font-medium text-zinc-500">
+                  <th
+                    key={col.key}
+                    className={`bg-white px-9 py-2 text-left font-medium text-zinc-500 dark:bg-zinc-950 ${
+                      col.sortKey
+                        ? "cursor-pointer select-none hover:text-zinc-900 dark:hover:text-zinc-100"
+                        : ""
+                    }`}
+                    onClick={col.sortKey ? () => handleSort(col.sortKey!) : undefined}
+                  >
                     {col.label}
+                    {col.sortKey && sortIndicator(col.sortKey)}
                   </th>
                 ))}
               </tr>
@@ -110,7 +143,7 @@ export default function AdminTable({ title, apiPath, editPath, columns, newHref 
               {items.map((item) => (
                 <tr key={String(item.id)} className="hover:bg-zinc-50 dark:hover:bg-zinc-900/50">
                   {columns.map((col, i) => (
-                    <td key={col.key} className="px-3 py-2 text-zinc-700 dark:text-zinc-300">
+                    <td key={col.key} className="px-9 py-2 text-zinc-700 dark:text-zinc-300">
                       {i === 0 ? (
                         <Link
                           href={`${editPath}/${item.id}/edit`}
@@ -127,7 +160,7 @@ export default function AdminTable({ title, apiPath, editPath, columns, newHref 
               ))}
               {items.length === 0 && (
                 <tr>
-                  <td colSpan={columns.length} className="px-3 py-8 text-center text-zinc-400">
+                  <td colSpan={columns.length} className="px-9 py-8 text-center text-zinc-400">
                     No results found
                   </td>
                 </tr>
@@ -138,7 +171,7 @@ export default function AdminTable({ title, apiPath, editPath, columns, newHref 
       )}
 
       {totalPages > 1 && (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 px-6 pb-6">
           <button
             onClick={() => setPage((p) => Math.max(0, p - 1))}
             disabled={page === 0}

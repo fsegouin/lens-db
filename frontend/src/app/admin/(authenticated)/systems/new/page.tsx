@@ -1,5 +1,5 @@
 import SystemForm from "@/components/admin/SystemForm";
 
 export default function NewSystemPage() {
-  return <SystemForm />;
+  return <div className="p-6"><SystemForm /></div>;
 }
