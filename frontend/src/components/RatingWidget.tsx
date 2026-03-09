@@ -4,7 +4,14 @@ import { useCallback, useEffect, useState } from "react";
 import { motion } from "motion/react";
 import { toast } from "sonner";
 
-export default function RatingWidget({ lensId }: { lensId: number }) {
+type RatingWidgetProps =
+  | { lensId: number; cameraId?: never }
+  | { cameraId: number; lensId?: never };
+
+export default function RatingWidget(props: RatingWidgetProps) {
+  const type = props.lensId != null ? "lens" : "camera";
+  const entityId = props.lensId ?? props.cameraId!;
+
   const [avg, setAvg] = useState<number | null>(null);
   const [count, setCount] = useState(0);
   const [userRating, setUserRating] = useState<number | null>(null);
@@ -12,7 +19,7 @@ export default function RatingWidget({ lensId }: { lensId: number }) {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    fetch(`/api/ratings?lensId=${lensId}`)
+    fetch(`/api/ratings?type=${type}&entityId=${entityId}`)
       .then((r) => r.json())
       .then((data) => {
         setAvg(data.averageRating);
@@ -22,7 +29,7 @@ export default function RatingWidget({ lensId }: { lensId: number }) {
       .catch(() => {
         toast.error("Could not load ratings");
       });
-  }, [lensId]);
+  }, [type, entityId]);
 
   const submit = useCallback(
     async (rating: number) => {
@@ -32,7 +39,7 @@ export default function RatingWidget({ lensId }: { lensId: number }) {
         const res = await fetch("/api/ratings", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ lensId, rating }),
+          body: JSON.stringify({ type, entityId, rating }),
         });
 
         if (!res.ok) {
@@ -51,7 +58,7 @@ export default function RatingWidget({ lensId }: { lensId: number }) {
         setSubmitting(false);
       }
     },
-    [lensId, submitting]
+    [type, entityId, submitting]
   );
 
   const removeRating = useCallback(async () => {
@@ -61,7 +68,7 @@ export default function RatingWidget({ lensId }: { lensId: number }) {
       const res = await fetch("/api/ratings", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lensId }),
+        body: JSON.stringify({ type, entityId }),
       });
 
       if (!res.ok) {
@@ -79,7 +86,7 @@ export default function RatingWidget({ lensId }: { lensId: number }) {
     } finally {
       setSubmitting(false);
     }
-  }, [lensId, submitting]);
+  }, [type, entityId, submitting]);
 
   return (
     <div className="space-y-2">
