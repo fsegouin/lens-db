@@ -5,10 +5,10 @@ import { systems } from "@/db/schema";
 import { PageTransition } from "@/components/page-transition";
 import { Badge } from "@/components/ui/badge";
 
-export const revalidate = 604800;
+export const revalidate = 86400;
 
 export const metadata = {
-  title: "Camera Systems | Lens DB",
+  title: "Camera Systems | The Lens DB",
   description: "Browse camera systems by manufacturer and mount type.",
 };
 

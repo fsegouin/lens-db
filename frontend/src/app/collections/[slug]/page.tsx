@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { collections, lensCollections, lenses, systems } from "@/db/schema";
 import ReportIssueButton from "@/components/ReportIssueButton";
@@ -16,7 +16,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-export const revalidate = 604800;
+export const revalidate = 86400;
 
 export async function generateMetadata({
   params,
@@ -31,7 +31,7 @@ export async function generateMetadata({
     .limit(1);
 
   return {
-    title: result ? `${result.collection.name} | Lens DB` : "Collection Not Found",
+    title: result ? `${result.collection.name} | The Lens DB` : "Collection Not Found",
   };
 }
 
@@ -58,7 +58,7 @@ export default async function CollectionDetailPage({
     .innerJoin(lenses, eq(lensCollections.lensId, lenses.id))
     .leftJoin(systems, eq(lenses.systemId, systems.id))
     .where(eq(lensCollections.collectionId, collection.id))
-    .orderBy(asc(lenses.name));
+    .orderBy(asc(sql`regexp_replace(${lenses.name}, '\\d+(\\.\\d+)?mm.*$', '')`), asc(lenses.focalLengthMin), asc(lenses.apertureMin));
 
   return (
     <PageTransition>
