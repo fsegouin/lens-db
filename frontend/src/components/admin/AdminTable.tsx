@@ -33,6 +33,15 @@ export default function AdminTable({ title, apiPath, editPath, columns, newHref 
     params.set("cursor", String(page * PAGE_SIZE));
     try {
       const res = await fetch(`${apiPath}?${params}`);
+      if (!res.ok) {
+        if (res.status === 401) {
+          window.location.href = "/admin/login";
+          return;
+        }
+        setItems([]);
+        setTotal(0);
+        return;
+      }
       const data = await res.json();
       setItems(data.items || []);
       setTotal(data.total || 0);

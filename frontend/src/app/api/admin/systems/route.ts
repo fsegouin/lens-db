@@ -9,7 +9,7 @@ const PAGE_SIZE = 50;
 
 export async function GET(request: NextRequest) {
   const token = request.cookies.get("admin_session")?.value;
-  const authError = requireAdminAPI(token);
+  const authError = await requireAdminAPI(token);
   if (authError) return authError;
 
   const { searchParams } = new URL(request.url);
@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const token = request.cookies.get("admin_session")?.value;
-  const authError = requireAdminAPI(token);
+  const authError = await requireAdminAPI(token);
   if (authError) return authError;
 
   const body = await request.json();
