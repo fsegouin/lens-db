@@ -1,5 +1,6 @@
 import Link from "next/link";
 import LogoutButton from "@/components/admin/LogoutButton";
+import { requireAdmin } from "@/lib/admin-auth";
 
 const adminNav = [
   { href: "/admin", label: "Dashboard" },
@@ -10,7 +11,8 @@ const adminNav = [
   { href: "/admin/compatibility", label: "Compatibility" },
 ];
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  await requireAdmin();
   return (
     <div className="flex min-h-screen">
       <aside className="w-56 shrink-0 border-r border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950">
