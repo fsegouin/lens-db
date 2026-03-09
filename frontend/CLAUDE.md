@@ -134,7 +134,7 @@ Password-protected admin at `/admin/*` for CRUD management of all entities.
 ### Auth Flow
 - `ADMIN_PASSWORD` env var compared via SHA-256 constant-time comparison
 - Session: random token in HTTP-only cookie (`admin_session`), in-memory store with 24h TTL
-- `src/middleware.ts` redirects unauthenticated users to `/admin/login` (except login page itself)
+- `src/proxy.ts` redirects unauthenticated users to `/admin/login` (except login page itself)
 - API routes use `requireAdminAPI()` from `src/lib/admin-auth.ts`
 - Login rate limited: 5 req/60s
 
@@ -180,4 +180,5 @@ See `.env.example` for details. All env files are gitignored.
 - **Raw specs JSON**: Hidden in production on camera detail pages (dev-only debug display)
 - **Path alias**: `@/*` maps to `./src/*`
 - **Admin sessions**: in-memory store — sessions lost on Vercel cold starts (re-login required, acceptable for single-admin)
-- **Admin middleware**: `src/middleware.ts` only checks cookie existence; full session validation happens in API routes and page helpers
+- **Next.js 16 proxy (not middleware)**: In Next.js 16, `middleware.ts` is replaced by `proxy.ts`. Always use `src/proxy.ts` — never create `middleware.ts`
+- **Admin proxy**: `src/proxy.ts` only checks cookie existence; full session validation happens in API routes and page helpers

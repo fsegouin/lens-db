@@ -17,8 +17,6 @@ function useEntitySearch(apiPath: string) {
 
   useEffect(() => {
     if (!query || query.length < 1) {
-      setResults([]);
-      setShowDropdown(false);
       return;
     }
 

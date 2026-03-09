@@ -1,21 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
 
 /**
- * Proxy that runs on all API mutation requests.
+ * Proxy that runs on matched routes.
  *
+ * - Redirects unauthenticated users away from /admin/* routes.
  * - Validates the Origin header to prevent CSRF attacks on state-changing
- *   endpoints (POST, PUT, PATCH, DELETE).
+ *   API endpoints (POST, PUT, PATCH, DELETE).
  */
 export function proxy(request: NextRequest) {
-  // Only check mutating requests to API routes
+  const { pathname } = request.nextUrl;
+
+  // Protect /admin routes (except /admin/login)
+  if (pathname.startsWith("/admin") && pathname !== "/admin/login") {
+    const session = request.cookies.get("admin_session")?.value;
+    if (!session) {
+      return NextResponse.redirect(new URL("/admin/login", request.url));
+    }
+  }
+
+  // CSRF: validate Origin on mutating API requests
   if (
-    request.nextUrl.pathname.startsWith("/api/") &&
+    pathname.startsWith("/api/") &&
     ["POST", "PUT", "PATCH", "DELETE"].includes(request.method)
   ) {
     const origin = request.headers.get("origin");
     const host = request.headers.get("host");
 
-    // In production, require a matching Origin header
     if (origin && host) {
       const originHost = new URL(origin).host;
       if (originHost !== host) {
@@ -31,5 +41,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: "/api/:path*",
+  matcher: ["/admin/:path*", "/api/:path*"],
 };
