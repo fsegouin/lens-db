@@ -3,6 +3,11 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Search } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface SearchResult {
   id: number;
@@ -35,7 +40,6 @@ export default function HeaderSearch() {
   const [loading, setLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
-  const inputWrapperRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const abortRef = useRef<AbortController | null>(null);
   const router = useRouter();
@@ -67,6 +71,7 @@ export default function HeaderSearch() {
 
   function handleChange(value: string) {
     setQuery(value);
+    setResults(null);
     clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => fetchResults(value.trim()), 300);
   }
@@ -125,103 +130,96 @@ export default function HeaderSearch() {
       results.cameras.length > 0 ||
       results.systems.length > 0 ||
       results.collections.length > 0);
+  const shouldShowDropdown = query.trim().length >= 2 && (loading || results !== null);
 
   return (
-    <div ref={wrapperRef} className="relative">
-      {!open ? (
-        <button
-          onClick={handleOpen}
-          className="rounded-md p-2 text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
-          aria-label="Search"
-        >
-          <svg
-            className="h-5 w-5"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={1.5}
-            stroke="currentColor"
+    <div ref={wrapperRef} className="relative h-9 w-9">
+      <AnimatePresence mode="wait" initial={false}>
+        {open ? (
+          <motion.div
+            key="search-input"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.15 }}
+            className="absolute top-0 right-0 z-50"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"
+            <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              ref={inputRef}
+              type="text"
+              value={query}
+              onChange={(e) => handleChange(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Search lenses, cameras, systems..."
+              className="h-9 w-64 pl-9"
             />
-          </svg>
-        </button>
-      ) : (
-        <div className="relative" ref={inputWrapperRef}>
-          <svg
-            className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-zinc-400"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={1.5}
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"
-            />
-          </svg>
-          <input
-            ref={inputRef}
-            type="text"
-            value={query}
-            onChange={(e) => handleChange(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Search lenses, cameras, systems..."
-            className="w-64 rounded-lg border border-zinc-300 py-1.5 pl-9 pr-3 text-sm outline-none focus:border-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-zinc-500"
-          />
 
-          {/* Dropdown results */}
-          {query.trim().length >= 2 && (
-            <div className="absolute left-0 top-full z-50 mt-1 w-full overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
-              {loading && !results && (
-                <div className="px-4 py-3 text-sm text-zinc-400">Searching...</div>
-              )}
+            {/* Dropdown results */}
+            {shouldShowDropdown && (
+              <div className="absolute top-full right-0 z-50 mt-1 w-full overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+                {loading && !results && (
+                  <div className="space-y-2 px-4 py-3">
+                    <Skeleton className="h-3.5 w-full" />
+                    <Skeleton className="h-3.5 w-2/3" />
+                  </div>
+                )}
 
-              {results && !hasResults && (
-                <div className="px-4 py-3 text-sm text-zinc-400">
-                  No results for &ldquo;{query.trim()}&rdquo;
-                </div>
-              )}
+                {results && !hasResults && (
+                  <div className="px-4 py-3 text-sm text-zinc-400">
+                    No results for &ldquo;{query.trim()}&rdquo;
+                  </div>
+                )}
 
-              {hasResults &&
-                SECTIONS.map(({ key, label, href }) => {
-                  const items = results[key];
-                  if (items.length === 0) return null;
-                  return (
-                    <div key={key}>
-                      <div className="border-b border-zinc-100 bg-zinc-50 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-400">
-                        {label}
+                {hasResults &&
+                  SECTIONS.map(({ key, label, href }) => {
+                    const items = results[key];
+                    if (items.length === 0) return null;
+                    return (
+                      <div key={key}>
+                        <div className="border-b border-zinc-100 bg-zinc-50 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-400">
+                          {label}
+                        </div>
+                        {items.map((item) => (
+                          <Link
+                            key={item.id}
+                            href={href(item.slug)}
+                            onClick={handleClose}
+                            className="block px-4 py-2 text-sm text-zinc-700 transition-colors hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                          >
+                            {item.name}
+                          </Link>
+                        ))}
                       </div>
-                      {items.map((item) => (
-                        <Link
-                          key={item.id}
-                          href={href(item.slug)}
-                          onClick={handleClose}
-                          className="block px-4 py-2 text-sm text-zinc-700 transition-colors hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
-                        >
-                          {item.name}
-                        </Link>
-                      ))}
-                    </div>
-                  );
-                })}
+                    );
+                  })}
 
-              {hasResults && (
-                <Link
-                  href={`/search?q=${encodeURIComponent(query.trim())}`}
-                  onClick={handleClose}
-                  className="block border-t border-zinc-100 px-4 py-2 text-center text-sm font-medium text-zinc-500 transition-colors hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-800"
-                >
-                  View all results
-                </Link>
-              )}
-            </div>
-          )}
-        </div>
-      )}
+                {hasResults && (
+                  <Link
+                    href={`/search?q=${encodeURIComponent(query.trim())}`}
+                    onClick={handleClose}
+                    className="block border-t border-zinc-100 px-4 py-2 text-center text-sm font-medium text-zinc-500 transition-colors hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-800"
+                  >
+                    View all results
+                  </Link>
+                )}
+              </div>
+            )}
+          </motion.div>
+        ) : (
+          <motion.div
+            key="search-icon"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.12 }}
+          >
+            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={handleOpen} aria-label="Search">
+              <Search className="h-4 w-4" />
+            </Button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
