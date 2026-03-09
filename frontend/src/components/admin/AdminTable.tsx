@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 
 interface Column {
@@ -23,13 +23,27 @@ export default function AdminTable({ title, apiPath, editPath, columns, newHref 
   const [items, setItems] = useState<Record<string, unknown>[]>([]);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(true);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Debounce search input (400ms)
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(0);
+    }, 400);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [search]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams();
-    if (search) params.set("q", search);
+    if (debouncedSearch) params.set("q", debouncedSearch);
     params.set("cursor", String(page * PAGE_SIZE));
     try {
       const res = await fetch(`${apiPath}?${params}`);
@@ -50,12 +64,9 @@ export default function AdminTable({ title, apiPath, editPath, columns, newHref 
     } finally {
       setLoading(false);
     }
-  }, [apiPath, search, page]);
+  }, [apiPath, debouncedSearch, page]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
-
-  // Reset page when search changes
-  useEffect(() => { setPage(0); }, [search]);
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
