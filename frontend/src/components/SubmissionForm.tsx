@@ -5,7 +5,7 @@ import ComboboxInput from "@/components/admin/ComboboxInput";
 
 interface SubmissionFormProps {
   systems: { id: number; name: string }[];
-  tags: { lensTypes: string[]; eras: string[]; productionStatuses: string[] };
+  tags: { brands: string[]; lensTypes: string[]; eras: string[]; productionStatuses: string[] };
 }
 
 const inputClass =
@@ -227,15 +227,17 @@ export default function SubmissionForm({ systems, tags }: SubmissionFormProps) {
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
+                    placeholder="e.g. Canon RF 50mm F1.8 STM"
                     className={`w-full ${inputClass}`}
                   />
                 </div>
                 <div className="space-y-1">
                   <label className={labelClass}>Brand</label>
-                  <input
-                    type="text"
+                  <ComboboxInput
                     value={brand}
-                    onChange={(e) => setBrand(e.target.value)}
+                    onChange={setBrand}
+                    options={tags.brands}
+                    placeholder="e.g. Canon"
                     className={`w-full ${inputClass}`}
                   />
                 </div>
@@ -246,7 +248,7 @@ export default function SubmissionForm({ systems, tags }: SubmissionFormProps) {
                     onChange={(e) => setSystemId(e.target.value)}
                     className={`w-full ${inputClass}`}
                   >
-                    <option value="">-- None --</option>
+                    <option value="">Select a system</option>
                     {systems.map((s) => (
                       <option key={s.id} value={s.id}>
                         {s.name}
@@ -260,6 +262,7 @@ export default function SubmissionForm({ systems, tags }: SubmissionFormProps) {
                     rows={4}
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Add any useful context, history, or specs you know."
                     className={`w-full ${inputClass}`}
                   />
                 </div>
@@ -276,6 +279,7 @@ export default function SubmissionForm({ systems, tags }: SubmissionFormProps) {
                     value={lensType}
                     onChange={setLensType}
                     options={tags.lensTypes}
+                    placeholder="e.g. Standard prime"
                     className={`w-full ${inputClass}`}
                   />
                 </div>
@@ -285,6 +289,7 @@ export default function SubmissionForm({ systems, tags }: SubmissionFormProps) {
                     value={era}
                     onChange={setEra}
                     options={tags.eras}
+                    placeholder="e.g. Modern"
                     className={`w-full ${inputClass}`}
                   />
                 </div>
@@ -294,6 +299,7 @@ export default function SubmissionForm({ systems, tags }: SubmissionFormProps) {
                     value={productionStatus}
                     onChange={setProductionStatus}
                     options={tags.productionStatuses}
+                    placeholder="e.g. In production"
                     className={`w-full ${inputClass}`}
                   />
                 </div>
@@ -310,6 +316,7 @@ export default function SubmissionForm({ systems, tags }: SubmissionFormProps) {
                     type="number"
                     value={focalLengthMin}
                     onChange={(e) => setFocalLengthMin(e.target.value)}
+                    placeholder="50"
                     className={`w-full ${inputClass}`}
                   />
                 </div>
@@ -319,6 +326,7 @@ export default function SubmissionForm({ systems, tags }: SubmissionFormProps) {
                     type="number"
                     value={focalLengthMax}
                     onChange={(e) => setFocalLengthMax(e.target.value)}
+                    placeholder="70"
                     className={`w-full ${inputClass}`}
                   />
                 </div>
@@ -329,6 +337,7 @@ export default function SubmissionForm({ systems, tags }: SubmissionFormProps) {
                     step="0.1"
                     value={apertureMin}
                     onChange={(e) => setApertureMin(e.target.value)}
+                    placeholder="1.8"
                     className={`w-full ${inputClass}`}
                   />
                 </div>
@@ -339,6 +348,7 @@ export default function SubmissionForm({ systems, tags }: SubmissionFormProps) {
                     step="0.1"
                     value={apertureMax}
                     onChange={(e) => setApertureMax(e.target.value)}
+                    placeholder="16"
                     className={`w-full ${inputClass}`}
                   />
                 </div>
@@ -348,6 +358,7 @@ export default function SubmissionForm({ systems, tags }: SubmissionFormProps) {
                     type="number"
                     value={lensElements}
                     onChange={(e) => setLensElements(e.target.value)}
+                    placeholder="8"
                     className={`w-full ${inputClass}`}
                   />
                 </div>
@@ -357,6 +368,7 @@ export default function SubmissionForm({ systems, tags }: SubmissionFormProps) {
                     type="number"
                     value={lensGroups}
                     onChange={(e) => setLensGroups(e.target.value)}
+                    placeholder="6"
                     className={`w-full ${inputClass}`}
                   />
                 </div>
@@ -366,6 +378,7 @@ export default function SubmissionForm({ systems, tags }: SubmissionFormProps) {
                     type="number"
                     value={diaphragmBlades}
                     onChange={(e) => setDiaphragmBlades(e.target.value)}
+                    placeholder="9"
                     className={`w-full ${inputClass}`}
                   />
                 </div>
@@ -382,6 +395,7 @@ export default function SubmissionForm({ systems, tags }: SubmissionFormProps) {
                     type="number"
                     value={lensWeightG}
                     onChange={(e) => setLensWeightG(e.target.value)}
+                    placeholder="390"
                     className={`w-full ${inputClass}`}
                   />
                 </div>
@@ -391,6 +405,7 @@ export default function SubmissionForm({ systems, tags }: SubmissionFormProps) {
                     type="number"
                     value={filterSizeMm}
                     onChange={(e) => setFilterSizeMm(e.target.value)}
+                    placeholder="67"
                     className={`w-full ${inputClass}`}
                   />
                 </div>
@@ -401,6 +416,7 @@ export default function SubmissionForm({ systems, tags }: SubmissionFormProps) {
                     step="0.01"
                     value={minFocusDistanceM}
                     onChange={(e) => setMinFocusDistanceM(e.target.value)}
+                    placeholder="0.45"
                     className={`w-full ${inputClass}`}
                   />
                 </div>
@@ -411,6 +427,7 @@ export default function SubmissionForm({ systems, tags }: SubmissionFormProps) {
                     step="0.01"
                     value={maxMagnification}
                     onChange={(e) => setMaxMagnification(e.target.value)}
+                    placeholder="0.21"
                     className={`w-full ${inputClass}`}
                   />
                 </div>
@@ -427,6 +444,7 @@ export default function SubmissionForm({ systems, tags }: SubmissionFormProps) {
                     type="number"
                     value={lensYearIntroduced}
                     onChange={(e) => setLensYearIntroduced(e.target.value)}
+                    placeholder="2021"
                     className={`w-full ${inputClass}`}
                   />
                 </div>
@@ -436,6 +454,7 @@ export default function SubmissionForm({ systems, tags }: SubmissionFormProps) {
                     type="number"
                     value={yearDiscontinued}
                     onChange={(e) => setYearDiscontinued(e.target.value)}
+                    placeholder="Leave blank if current"
                     className={`w-full ${inputClass}`}
                   />
                 </div>
@@ -481,6 +500,7 @@ export default function SubmissionForm({ systems, tags }: SubmissionFormProps) {
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
+                    placeholder="e.g. Nikon Zf"
                     className={`w-full ${inputClass}`}
                   />
                 </div>
@@ -491,7 +511,7 @@ export default function SubmissionForm({ systems, tags }: SubmissionFormProps) {
                     onChange={(e) => setSystemId(e.target.value)}
                     className={`w-full ${inputClass}`}
                   >
-                    <option value="">-- None --</option>
+                    <option value="">Select a system</option>
                     {systems.map((s) => (
                       <option key={s.id} value={s.id}>
                         {s.name}
@@ -505,7 +525,7 @@ export default function SubmissionForm({ systems, tags }: SubmissionFormProps) {
                     type="text"
                     value={alias}
                     onChange={(e) => setAlias(e.target.value)}
-                    placeholder="e.g. alternative name"
+                    placeholder="e.g. Nikon Z f"
                     className={`w-full ${inputClass}`}
                   />
                 </div>
@@ -515,6 +535,7 @@ export default function SubmissionForm({ systems, tags }: SubmissionFormProps) {
                     type="text"
                     value={bodyType}
                     onChange={(e) => setBodyType(e.target.value)}
+                    placeholder="e.g. Mirrorless rangefinder-style"
                     className={`w-full ${inputClass}`}
                   />
                 </div>
@@ -524,6 +545,7 @@ export default function SubmissionForm({ systems, tags }: SubmissionFormProps) {
                     rows={4}
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Add any useful context, positioning, or notable features."
                     className={`w-full ${inputClass}`}
                   />
                 </div>
@@ -540,6 +562,7 @@ export default function SubmissionForm({ systems, tags }: SubmissionFormProps) {
                     type="text"
                     value={sensorType}
                     onChange={(e) => setSensorType(e.target.value)}
+                    placeholder="e.g. CMOS"
                     className={`w-full ${inputClass}`}
                   />
                 </div>
@@ -549,6 +572,7 @@ export default function SubmissionForm({ systems, tags }: SubmissionFormProps) {
                     type="text"
                     value={sensorSize}
                     onChange={(e) => setSensorSize(e.target.value)}
+                    placeholder="e.g. Full frame"
                     className={`w-full ${inputClass}`}
                   />
                 </div>
@@ -559,6 +583,7 @@ export default function SubmissionForm({ systems, tags }: SubmissionFormProps) {
                     step="0.1"
                     value={megapixels}
                     onChange={(e) => setMegapixels(e.target.value)}
+                    placeholder="24.5"
                     className={`w-full ${inputClass}`}
                   />
                 </div>
@@ -568,6 +593,7 @@ export default function SubmissionForm({ systems, tags }: SubmissionFormProps) {
                     type="text"
                     value={resolution}
                     onChange={(e) => setResolution(e.target.value)}
+                    placeholder="e.g. 6048 x 4032"
                     className={`w-full ${inputClass}`}
                   />
                 </div>
@@ -584,6 +610,7 @@ export default function SubmissionForm({ systems, tags }: SubmissionFormProps) {
                     type="number"
                     value={cameraWeightG}
                     onChange={(e) => setCameraWeightG(e.target.value)}
+                    placeholder="710"
                     className={`w-full ${inputClass}`}
                   />
                 </div>
@@ -593,6 +620,7 @@ export default function SubmissionForm({ systems, tags }: SubmissionFormProps) {
                     type="number"
                     value={cameraYearIntroduced}
                     onChange={(e) => setCameraYearIntroduced(e.target.value)}
+                    placeholder="2023"
                     className={`w-full ${inputClass}`}
                   />
                 </div>
