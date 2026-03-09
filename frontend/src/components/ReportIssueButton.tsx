@@ -53,6 +53,8 @@ export default function ReportIssueButton({
         if (res.status === 400) {
           const data = await res.json();
           setError(data.error || "Invalid report");
+        } else if (res.status === 403) {
+          setError("Submission blocked by bot protection. Please reload and try again.");
         } else {
           setError("Something went wrong. Please try again later.");
         }

@@ -143,6 +143,11 @@ export default function SubmissionForm({ systems, tags }: SubmissionFormProps) {
         return;
       }
 
+      if (res.status === 403) {
+        setError("Submission blocked by bot protection. Please reload and try again.");
+        return;
+      }
+
       const data = await res.json();
       setError(data.error || "Something went wrong");
     } catch {
