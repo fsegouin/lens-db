@@ -2,6 +2,8 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 
 export default function SearchInput({ defaultValue }: { defaultValue?: string }) {
   const router = useRouter();
@@ -20,13 +22,20 @@ export default function SearchInput({ defaultValue }: { defaultValue?: string })
   }
 
   return (
-    <input
-      type="text"
-      placeholder="Search for lenses, cameras, systems..."
-      value={value}
-      onChange={(e) => handleChange(e.target.value)}
-      className="w-full rounded-lg border border-zinc-300 px-4 py-3 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-      autoFocus
-    />
+    <div className="relative">
+      <label className="sr-only" htmlFor="search-input">
+        Search
+      </label>
+      <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+      <Input
+        id="search-input"
+        type="text"
+        placeholder="Search for lenses, cameras, systems..."
+        value={value}
+        onChange={(e) => handleChange(e.target.value)}
+        className="pl-10"
+        autoFocus
+      />
+    </div>
   );
 }

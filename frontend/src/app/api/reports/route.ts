@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { issueReports } from "@/db/schema";
+import { issueReports, blockedIps } from "@/db/schema";
+import { eq } from "drizzle-orm";
 import { getClientIP, rateLimitedResponse } from "@/lib/api-utils";
 import { createRateLimit } from "@/lib/rate-limit";
 
@@ -19,6 +20,16 @@ export async function POST(request: NextRequest) {
     dailyLimiter.limit(ip),
   ]);
   if (!burst.success || !daily.success) return rateLimitedResponse();
+
+  // Check if IP is blocked (return generic error to not reveal the block)
+  const [blocked] = await db
+    .select({ id: blockedIps.id })
+    .from(blockedIps)
+    .where(eq(blockedIps.ipAddress, ip))
+    .limit(1);
+  if (blocked) {
+    return NextResponse.json({ error: "Something went wrong" }, { status: 500 });
+  }
 
   const body = await request.json().catch(() => null);
   if (
@@ -40,11 +51,20 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const ipAddress = getClientIP(request);
+  const country = request.headers.get("x-vercel-ip-country") || null;
+
   await db.insert(issueReports).values({
     entityType: body.entityType,
     entityId: body.entityId,
     entityName: body.entityName.slice(0, 500),
+    entitySlug: typeof body.entitySlug === "string" ? body.entitySlug.slice(0, 500) : null,
     message: message.slice(0, MAX_MESSAGE_LENGTH),
+    fieldName: typeof body.fieldName === "string" ? body.fieldName.slice(0, 200) : null,
+    oldValue: typeof body.oldValue === "string" ? body.oldValue.slice(0, 1000) : null,
+    suggestedValue: typeof body.suggestedValue === "string" ? body.suggestedValue.slice(0, 1000) : null,
+    ipAddress,
+    country,
   });
 
   return NextResponse.json({ success: true }, { status: 201 });

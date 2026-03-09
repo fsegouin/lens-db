@@ -84,6 +84,7 @@ export const cameras = pgTable(
     url: text("url"),
     systemId: integer("system_id").references(() => systems.id),
     description: text("description"),
+    alias: text("alias"),
     sensorType: text("sensor_type"),
     sensorSize: text("sensor_size"),
     megapixels: real("megapixels"),
@@ -160,14 +161,27 @@ export const issueReports = pgTable(
     entityType: text("entity_type").notNull(), // "lens" | "camera" | "system" | "collection"
     entityId: integer("entity_id").notNull(),
     entityName: text("entity_name").notNull(),
+    entitySlug: text("entity_slug"),
     message: text("message").notNull(),
-    status: text("status").notNull().default("pending"), // "pending" | "reviewed" | "dismissed"
+    fieldName: text("field_name"),
+    oldValue: text("old_value"),
+    suggestedValue: text("suggested_value"),
+    ipAddress: text("ip_address"),
+    country: text("country"),
+    status: text("status").notNull().default("pending"), // "pending" | "accepted" | "dismissed"
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   },
   (table) => [
     index("idx_issue_reports_status").on(table.status),
   ]
 );
+
+export const blockedIps = pgTable("blocked_ips", {
+  id: serial("id").primaryKey(),
+  ipAddress: text("ip_address").notNull().unique(),
+  reason: text("reason"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+});
 
 export const lensComparisons = pgTable(
   "lens_comparisons",
@@ -186,5 +200,25 @@ export const lensComparisons = pgTable(
     unique("uq_lens_comparisons_pair").on(table.lensId1, table.lensId2),
     index("idx_lens_comparisons_views").on(table.viewCount),
     check("chk_lens_order", sql`${table.lensId1} < ${table.lensId2}`),
+  ]
+);
+
+export const cameraComparisons = pgTable(
+  "camera_comparisons",
+  {
+    id: serial("id").primaryKey(),
+    cameraId1: integer("camera_id_1")
+      .notNull()
+      .references(() => cameras.id, { onDelete: "cascade" }),
+    cameraId2: integer("camera_id_2")
+      .notNull()
+      .references(() => cameras.id, { onDelete: "cascade" }),
+    viewCount: integer("view_count").default(1),
+    lastComparedAt: timestamp("last_compared_at", { withTimezone: true }).defaultNow(),
+  },
+  (table) => [
+    unique("uq_camera_comparisons_pair").on(table.cameraId1, table.cameraId2),
+    index("idx_camera_comparisons_views").on(table.viewCount),
+    check("chk_camera_order", sql`${table.cameraId1} < ${table.cameraId2}`),
   ]
 );

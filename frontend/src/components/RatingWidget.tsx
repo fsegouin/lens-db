@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { motion } from "motion/react";
+import { toast } from "sonner";
 
 export default function RatingWidget({ lensId }: { lensId: number }) {
   const [avg, setAvg] = useState<number | null>(null);
@@ -17,7 +19,9 @@ export default function RatingWidget({ lensId }: { lensId: number }) {
         setCount(data.ratingCount);
         setUserRating(data.userRating);
       })
-      .catch(() => {});
+      .catch(() => {
+        toast.error("Could not load ratings");
+      });
   }, [lensId]);
 
   const submit = useCallback(
@@ -30,12 +34,19 @@ export default function RatingWidget({ lensId }: { lensId: number }) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ lensId, rating }),
         });
+
+        if (!res.ok) {
+          toast.error("Something went wrong");
+          return;
+        }
+
         const data = await res.json();
         setAvg(data.averageRating);
         setCount(data.ratingCount);
         setUserRating(rating);
+        toast.success("Rating submitted");
       } catch {
-        // ignore
+        toast.error("Something went wrong");
       } finally {
         setSubmitting(false);
       }
@@ -43,19 +54,49 @@ export default function RatingWidget({ lensId }: { lensId: number }) {
     [lensId, submitting]
   );
 
+  const removeRating = useCallback(async () => {
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/ratings", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lensId }),
+      });
+
+      if (!res.ok) {
+        toast.error("Something went wrong");
+        return;
+      }
+
+      const data = await res.json();
+      setAvg(data.averageRating);
+      setCount(data.ratingCount);
+      setUserRating(null);
+      toast.success("Rating removed");
+    } catch {
+      toast.error("Something went wrong");
+    } finally {
+      setSubmitting(false);
+    }
+  }, [lensId, submitting]);
+
   return (
     <div className="space-y-2">
-      <div className="flex items-center gap-1">
+      <div className="flex flex-wrap items-center gap-1.5">
         {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => {
           const filled = n <= (hovering ?? userRating ?? 0);
           return (
-            <button
+            <motion.button
               key={n}
+              whileHover={{ scale: 1.15 }}
+              whileTap={{ scale: 0.95 }}
               onClick={() => submit(n)}
               onMouseEnter={() => setHovering(n)}
               onMouseLeave={() => setHovering(null)}
               disabled={submitting}
-              className={`flex h-8 w-8 items-center justify-center rounded text-sm font-medium transition-colors ${
+              aria-label={`Rate ${n} out of 10`}
+              className={`flex h-10 w-10 items-center justify-center rounded text-sm font-medium transition-colors ${
                 filled
                   ? "bg-amber-500 text-white"
                   : "bg-zinc-100 text-zinc-600 hover:bg-amber-100 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-amber-900/30"
@@ -63,7 +104,7 @@ export default function RatingWidget({ lensId }: { lensId: number }) {
               title={`Rate ${n}/10`}
             >
               {n}
-            </button>
+            </motion.button>
           );
         })}
       </div>
@@ -84,27 +125,9 @@ export default function RatingWidget({ lensId }: { lensId: number }) {
               Your rating: {userRating}/10
             </span>
             <button
-              onClick={async () => {
-                if (submitting) return;
-                setSubmitting(true);
-                try {
-                  const res = await fetch("/api/ratings", {
-                    method: "DELETE",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ lensId }),
-                  });
-                  const data = await res.json();
-                  setAvg(data.averageRating);
-                  setCount(data.ratingCount);
-                  setUserRating(null);
-                } catch {
-                  // ignore
-                } finally {
-                  setSubmitting(false);
-                }
-              }}
+              onClick={removeRating}
               disabled={submitting}
-              className="ml-2 text-xs text-zinc-400 underline hover:text-zinc-600 dark:hover:text-zinc-300"
+              className="ml-2 text-xs text-zinc-400 underline hover:text-zinc-600 disabled:cursor-not-allowed dark:hover:text-zinc-300"
             >
               Remove
             </button>

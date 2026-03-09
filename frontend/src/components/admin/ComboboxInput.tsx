@@ -40,10 +40,6 @@ export default function ComboboxInput({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    setHighlightIndex(-1);
-  }, [value]);
-
   function handleKeyDown(e: React.KeyboardEvent) {
     if (!open) {
       if (e.key === "ArrowDown" || e.key === "ArrowUp") {
@@ -81,6 +77,7 @@ export default function ComboboxInput({
         value={value}
         onChange={(e) => {
           onChange(e.target.value);
+          setHighlightIndex(-1);
           setOpen(true);
         }}
         onFocus={() => setOpen(true)}
