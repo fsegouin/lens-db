@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { checkBotId } from "botid/server";
 import { db } from "@/db";
 import { lenses, cameras, blockedIps } from "@/db/schema";
 import { eq } from "drizzle-orm";
@@ -8,6 +9,11 @@ import { createRateLimit } from "@/lib/rate-limit";
 const dailyLimiter = createRateLimit(5, "24 h");
 
 export async function POST(request: NextRequest) {
+  const verification = await checkBotId();
+  if (verification.isBot) {
+    return NextResponse.json({ error: "Access denied" }, { status: 403 });
+  }
+
   const ip = getClientIP(request);
   const { success } = await dailyLimiter.limit(ip);
   if (!success) return rateLimitedResponse();

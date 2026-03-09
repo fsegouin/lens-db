@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { checkBotId } from "botid/server";
 import { db } from "@/db";
 import { issueReports, blockedIps } from "@/db/schema";
 import { eq } from "drizzle-orm";
@@ -14,6 +15,11 @@ const MIN_MESSAGE_LENGTH = 10;
 const MAX_MESSAGE_LENGTH = 2000;
 
 export async function POST(request: NextRequest) {
+  const verification = await checkBotId();
+  if (verification.isBot) {
+    return NextResponse.json({ error: "Access denied" }, { status: 403 });
+  }
+
   const ip = getClientIP(request);
   const [burst, daily] = await Promise.all([
     burstLimiter.limit(ip),
