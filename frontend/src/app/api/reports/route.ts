@@ -51,7 +51,6 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const ipAddress = getClientIP(request);
   const country = request.headers.get("x-vercel-ip-country") || null;
 
   await db.insert(issueReports).values({
@@ -63,7 +62,7 @@ export async function POST(request: NextRequest) {
     fieldName: typeof body.fieldName === "string" ? body.fieldName.slice(0, 200) : null,
     oldValue: typeof body.oldValue === "string" ? body.oldValue.slice(0, 1000) : null,
     suggestedValue: typeof body.suggestedValue === "string" ? body.suggestedValue.slice(0, 1000) : null,
-    ipAddress,
+    ipAddress: ip,
     country,
   });
 
