@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { cameras, systems } from "@/db/schema";
 import ViewTracker from "@/components/ViewTracker";
 import ImageGallery from "@/components/ImageGallery";
+import RatingWidget from "@/components/RatingWidget";
 import ReportIssueButton from "@/components/ReportIssueButton";
 import SpecsTable from "@/components/SpecsTable";
 import { getImages } from "@/lib/images";
@@ -14,7 +15,7 @@ import { PageTransition } from "@/components/page-transition";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 
-export const revalidate = 604800;
+export const revalidate = 86400;
 
 export async function generateMetadata({
   params,
@@ -30,7 +31,7 @@ export async function generateMetadata({
     .limit(1);
 
   return {
-    title: result ? `${result.camera.name} | Lens DB` : "Camera Not Found",
+    title: result ? `${result.camera.name} | The Lens DB` : "Camera Not Found",
   };
 }
 
@@ -104,6 +105,12 @@ export default async function CameraDetailPage({
           </div>
         </div>
 
+        {!camera.verified && (
+          <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-300">
+            This entry was submitted by the community and hasn't been verified yet. Information may be incomplete or inaccurate.
+          </div>
+        )}
+
         {camera.description && (
           <div className="space-y-3">
             {formatDescription(camera.description).map((paragraph, i) => (
@@ -123,6 +130,8 @@ export default async function CameraDetailPage({
             )
           }
         />
+
+        <RatingWidget cameraId={camera.id} />
 
         <div className="space-y-5">
           <div>

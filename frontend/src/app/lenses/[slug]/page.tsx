@@ -16,7 +16,7 @@ import { PageTransition } from "@/components/page-transition";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 
-export const revalidate = 604800;
+export const revalidate = 86400;
 
 export async function generateMetadata({
   params,
@@ -31,7 +31,7 @@ export async function generateMetadata({
     .limit(1);
 
   return {
-    title: result ? `${result.lens.name} | Lens DB` : "Lens Not Found",
+    title: result ? `${result.lens.name} | The Lens DB` : "Lens Not Found",
   };
 }
 
@@ -162,6 +162,12 @@ export default async function LensDetailPage({
             )}
           </div>
         </div>
+
+        {!lens.verified && (
+          <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-300">
+            This entry was submitted by the community and hasn't been verified yet. Information may be incomplete or inaccurate.
+          </div>
+        )}
 
         {lens.description && (
           <div className="space-y-3">
