@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import ComboboxInput from "./ComboboxInput";
 
 interface LensData {
   id: number;
@@ -39,6 +40,7 @@ interface LensData {
 interface LensFormProps {
   lens?: LensData;
   systems: { id: number; name: string }[];
+  tags?: { lensTypes: string[]; eras: string[]; productionStatuses: string[] };
 }
 
 const inputClass =
@@ -50,7 +52,7 @@ function generateSlug(name: string) {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
 
-export default function LensForm({ lens, systems }: LensFormProps) {
+export default function LensForm({ lens, systems, tags }: LensFormProps) {
   const router = useRouter();
   const isEdit = !!lens;
 
@@ -324,28 +326,28 @@ export default function LensForm({ lens, systems }: LensFormProps) {
         <div className="grid gap-4 sm:grid-cols-3">
           <div className="space-y-1">
             <label className={labelClass}>Lens Type</label>
-            <input
-              type="text"
+            <ComboboxInput
               value={lensType}
-              onChange={(e) => setLensType(e.target.value)}
+              onChange={setLensType}
+              options={tags?.lensTypes ?? []}
               className={`w-full ${inputClass}`}
             />
           </div>
           <div className="space-y-1">
             <label className={labelClass}>Era</label>
-            <input
-              type="text"
+            <ComboboxInput
               value={era}
-              onChange={(e) => setEra(e.target.value)}
+              onChange={setEra}
+              options={tags?.eras ?? []}
               className={`w-full ${inputClass}`}
             />
           </div>
           <div className="space-y-1">
             <label className={labelClass}>Production Status</label>
-            <input
-              type="text"
+            <ComboboxInput
               value={productionStatus}
-              onChange={(e) => setProductionStatus(e.target.value)}
+              onChange={setProductionStatus}
+              options={tags?.productionStatuses ?? []}
               className={`w-full ${inputClass}`}
             />
           </div>
