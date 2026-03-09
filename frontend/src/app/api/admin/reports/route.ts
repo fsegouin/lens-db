@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
   const [counts] = await db
     .select({
       pending: sql<number>`count(*) filter (where ${issueReports.status} = 'pending')`,
-      reviewed: sql<number>`count(*) filter (where ${issueReports.status} = 'reviewed')`,
+      accepted: sql<number>`count(*) filter (where ${issueReports.status} = 'accepted')`,
       dismissed: sql<number>`count(*) filter (where ${issueReports.status} = 'dismissed')`,
     })
     .from(issueReports);
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
     items,
     counts: {
       pending: Number(counts.pending),
-      reviewed: Number(counts.reviewed),
+      accepted: Number(counts.accepted),
       dismissed: Number(counts.dismissed),
     },
   });

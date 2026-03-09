@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { formatMagnification } from "@/lib/format-magnification";
 
 type Lens = {
   id: number;
@@ -201,8 +202,7 @@ const SPEC_ROWS: { label: string; getValue: (l: Lens) => string }[] = [
   },
   {
     label: "Max Magnification",
-    getValue: (l) =>
-      l.maxMagnification ? `${l.maxMagnification}x` : "\u2014",
+    getValue: (l) => formatMagnification(l.maxMagnification),
   },
   {
     label: "Autofocus",

@@ -1,8 +1,9 @@
 import { db } from "@/db";
 import { lenses, systems } from "@/db/schema";
-import { asc, desc, eq, and, gte, lte, ilike, sql } from "drizzle-orm";
+import { asc, desc, eq, and, gte, lte, sql } from "drizzle-orm";
 import { unstable_cache } from "next/cache";
 import LensList from "@/components/LensList";
+import { PageTransition } from "@/components/page-transition";
 
 const getCachedDropdownData = unstable_cache(
   async () => {
@@ -170,7 +171,8 @@ export default async function LensesPage({
   const nextCursor = PAGE_SIZE < total ? PAGE_SIZE : null;
 
   return (
-    <div className="space-y-8">
+    <PageTransition>
+      <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100">
           Lenses
@@ -189,6 +191,7 @@ export default async function LensesPage({
         brands={brands}
         systems={systemList}
       />
-    </div>
+      </div>
+    </PageTransition>
   );
 }

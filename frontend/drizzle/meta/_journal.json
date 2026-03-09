@@ -8,6 +8,20 @@
       "when": 1773053596477,
       "tag": "0000_omniscient_mister_sinister",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1773056013217,
+      "tag": "0001_lyrical_phantom_reporter",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1773056774965,
+      "tag": "0002_magenta_oracle",
+      "breakpoints": true
     }
   ]
 }

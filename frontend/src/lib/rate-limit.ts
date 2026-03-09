@@ -1,20 +1,26 @@
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 
-const redis = new Redis({
-  url: process.env.KV_REST_API_URL!,
-  token: process.env.KV_REST_API_TOKEN!,
-});
+const isDev = process.env.NODE_ENV === "development";
+
+const redis = isDev
+  ? null
+  : new Redis({
+      url: process.env.KV_REST_API_URL!,
+      token: process.env.KV_REST_API_TOKEN!,
+    });
+
+/** No-op limiter that always allows requests in development */
+const noopLimiter = {
+  limit: async () => ({ success: true, limit: 0, remaining: 0, reset: 0 }),
+};
 
 /**
  * Create a rate limiter backed by Upstash Redis.
- * Uses a sliding window algorithm for accurate limiting across
- * all serverless instances.
- *
- * @param maxRequests - Maximum requests allowed in the window
- * @param window - Time window (e.g. "60 s", "1 m", "1 h")
+ * Disabled in development (always allows requests).
  */
 export function createRateLimit(maxRequests: number, window: string) {
+  if (!redis) return noopLimiter;
   return new Ratelimit({
     redis,
     limiter: Ratelimit.slidingWindow(maxRequests, window as Parameters<typeof Ratelimit.slidingWindow>[1]),

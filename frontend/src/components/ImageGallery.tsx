@@ -1,7 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
 
 type ImageData = {
   src: string;
@@ -19,6 +23,16 @@ export default function ImageGallery({ images }: { images: ImageData[] }) {
 
   const safeImages = images.filter((img) => isAllowedSrc(img.src));
 
+  useEffect(() => {
+    if (lightboxIdx === null) return;
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "ArrowLeft") setLightboxIdx((prev) => prev !== null ? (prev - 1 + safeImages.length) % safeImages.length : null);
+      if (e.key === "ArrowRight") setLightboxIdx((prev) => prev !== null ? (prev + 1) % safeImages.length : null);
+    }
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [lightboxIdx, safeImages.length]);
+
   if (safeImages.length === 0) return null;
 
   return (
@@ -34,7 +48,7 @@ export default function ImageGallery({ images }: { images: ImageData[] }) {
               src={img.src}
               alt={img.alt || "Lens image"}
               fill
-              className="object-contain transition-transform group-hover:scale-105"
+              className="object-contain transition-transform duration-200 group-hover:scale-105"
               loading="lazy"
               sizes="(max-width: 640px) 50vw, 33vw"
             />
@@ -42,49 +56,51 @@ export default function ImageGallery({ images }: { images: ImageData[] }) {
         ))}
       </div>
 
-      {/* Lightbox */}
-      {lightboxIdx !== null && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
-          onClick={() => setLightboxIdx(null)}
-        >
-          <div className="relative max-h-[90vh] max-w-[90vw]" onClick={(e) => e.stopPropagation()}>
-            <Image
-              src={safeImages[lightboxIdx].src}
-              alt={safeImages[lightboxIdx].alt || "Lens image"}
-              width={1200}
-              height={900}
-              className="max-h-[85vh] max-w-full rounded-lg object-contain"
-              sizes="90vw"
-            />
-            <button
-              onClick={() => setLightboxIdx(null)}
-              className="absolute -top-3 -right-3 flex h-8 w-8 items-center justify-center rounded-full bg-white text-zinc-900 shadow-lg hover:bg-zinc-100"
-            >
-              x
-            </button>
-            {safeImages.length > 1 && (
-              <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-2">
-                <button
-                  onClick={() => setLightboxIdx((lightboxIdx - 1 + safeImages.length) % safeImages.length)}
-                  className="rounded-full bg-white/80 px-3 py-1 text-sm text-zinc-900 hover:bg-white"
-                >
-                  Prev
-                </button>
-                <span className="rounded-full bg-white/80 px-3 py-1 text-sm text-zinc-900">
-                  {lightboxIdx + 1} / {safeImages.length}
-                </span>
-                <button
-                  onClick={() => setLightboxIdx((lightboxIdx + 1) % safeImages.length)}
-                  className="rounded-full bg-white/80 px-3 py-1 text-sm text-zinc-900 hover:bg-white"
-                >
-                  Next
-                </button>
-              </div>
+      <Dialog open={lightboxIdx !== null} onOpenChange={(open) => !open && setLightboxIdx(null)}>
+        <DialogContent className="max-h-[90vh] max-w-[90vw] border-none bg-transparent p-2 shadow-none [&>button]:hidden">
+          <DialogTitle className="sr-only">Image {(lightboxIdx ?? 0) + 1} of {safeImages.length}</DialogTitle>
+          <Button
+            variant="secondary"
+            size="icon"
+            className="absolute right-2 top-2 z-10 h-11 w-11 rounded-full"
+            onClick={() => setLightboxIdx(null)}
+            aria-label="Close gallery"
+          >
+            <X className="h-5 w-5" />
+          </Button>
+          <AnimatePresence mode="wait">
+            {lightboxIdx !== null && (
+              <motion.div
+                key={lightboxIdx}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                <Image
+                  src={safeImages[lightboxIdx].src}
+                  alt={safeImages[lightboxIdx].alt || "Image"}
+                  width={1200}
+                  height={900}
+                  className="max-h-[85vh] max-w-full rounded-lg object-contain"
+                  sizes="90vw"
+                />
+              </motion.div>
             )}
-          </div>
-        </div>
-      )}
+          </AnimatePresence>
+          {safeImages.length > 1 && lightboxIdx !== null && (
+            <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-2">
+              <Button variant="secondary" size="icon" className="h-11 w-11 rounded-full" onClick={() => setLightboxIdx((lightboxIdx - 1 + safeImages.length) % safeImages.length)} aria-label="Previous image">
+                <ChevronLeft className="h-5 w-5" />
+              </Button>
+              <span className="flex items-center rounded-full bg-secondary px-3 py-1 text-sm">{lightboxIdx + 1} / {safeImages.length}</span>
+              <Button variant="secondary" size="icon" className="h-11 w-11 rounded-full" onClick={() => setLightboxIdx((lightboxIdx + 1) % safeImages.length)} aria-label="Next image">
+                <ChevronRight className="h-5 w-5" />
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
