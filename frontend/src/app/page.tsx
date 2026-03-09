@@ -6,7 +6,7 @@ import { Aperture, Camera, Layers, BookOpen, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { PageTransition } from "@/components/page-transition";
 
-export const revalidate = 604800;
+export const revalidate = 86400;
 
 const sections = [
   {
@@ -54,17 +54,30 @@ export default async function Home() {
     .limit(10)
     .catch(() => []);
 
-  // Fetch most compared pairs
+  // Fetch most compared pairs (lenses + cameras, merged by view count)
   const topComparisons = await db.execute(sql`
-    SELECT
-      c.view_count,
-      l1.name as item1_name, l1.slug as item1_slug,
-      l2.name as item2_name, l2.slug as item2_slug,
-      'lens' as type
-    FROM lens_comparisons c
-    JOIN lenses l1 ON c.lens_id_1 = l1.id
-    JOIN lenses l2 ON c.lens_id_2 = l2.id
-    ORDER BY c.view_count DESC
+    (
+      SELECT
+        c.view_count,
+        l1.name as item1_name, l1.slug as item1_slug,
+        l2.name as item2_name, l2.slug as item2_slug,
+        'lens' as type
+      FROM lens_comparisons c
+      JOIN lenses l1 ON c.lens_id_1 = l1.id
+      JOIN lenses l2 ON c.lens_id_2 = l2.id
+    )
+    UNION ALL
+    (
+      SELECT
+        c.view_count,
+        c1.name as item1_name, c1.slug as item1_slug,
+        c2.name as item2_name, c2.slug as item2_slug,
+        'camera' as type
+      FROM camera_comparisons c
+      JOIN cameras c1 ON c.camera_id_1 = c1.id
+      JOIN cameras c2 ON c.camera_id_2 = c2.id
+    )
+    ORDER BY view_count DESC
     LIMIT 10
   `).then(r => r.rows).catch(() => []);
 
@@ -186,6 +199,12 @@ export default async function Home() {
             in 2012. The original site contained data from 8,400+ manufacturer
             booklets, catalogs, and datasheets. This project aims to preserve and
             continue that work as a community resource.
+          </p>
+          <p className="mt-3 text-zinc-600 dark:text-zinc-400">
+            If you spot any inaccuracy or missing data, please use the{" "}
+            <strong className="text-zinc-700 dark:text-zinc-300">Report an Issue</strong>{" "}
+            button on any lens or camera page — your contributions help make this
+            database better for everyone.
           </p>
         </section>
       </div>
