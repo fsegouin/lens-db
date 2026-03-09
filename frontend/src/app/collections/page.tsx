@@ -76,11 +76,7 @@ export default async function CollectionsPage() {
       ) : (
         <div className="rounded-xl border border-dashed border-zinc-300 p-12 text-center dark:border-zinc-700">
           <p className="text-zinc-500">
-            No collections yet. Run the scraper with{" "}
-            <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-800">
-              --categories collection
-            </code>{" "}
-            to fetch and import collection data.
+            No collections yet.
           </p>
         </div>
       )}

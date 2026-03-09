@@ -58,11 +58,7 @@ export default async function SystemsPage() {
       ) : (
         <div className="rounded-xl border border-dashed border-zinc-300 p-12 text-center dark:border-zinc-700">
           <p className="text-zinc-500">
-            No data yet. Run the scraper and import script to populate the
-            database.
-          </p>
-          <p className="mt-2 text-sm text-zinc-400">
-            See <code>scraper/README.md</code> for instructions.
+            No data yet.
           </p>
         </div>
       )}
