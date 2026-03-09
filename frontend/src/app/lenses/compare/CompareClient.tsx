@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 type Lens = {
@@ -231,6 +232,30 @@ export default function CompareClient() {
   const [lens1, setLens1] = useState<Lens | null>(null);
   const [lens2, setLens2] = useState<Lens | null>(null);
   const trackedRef = useRef<string | null>(null);
+  const searchParams = useSearchParams();
+
+  // Load lenses from URL search params (e.g. ?lens1=slug1&lens2=slug2)
+  useEffect(() => {
+    const slug1 = searchParams.get("lens1");
+    const slug2 = searchParams.get("lens2");
+
+    async function fetchBySlug(slug: string): Promise<Lens | null> {
+      try {
+        const res = await fetch(`/api/lenses?slug=${encodeURIComponent(slug)}&cursor=0`);
+        const data = await res.json();
+        return data.items?.[0]?.lens || null;
+      } catch {
+        return null;
+      }
+    }
+
+    if (slug1 && !lens1) {
+      fetchBySlug(slug1).then((l) => l && setLens1(l));
+    }
+    if (slug2 && !lens2) {
+      fetchBySlug(slug2).then((l) => l && setLens2(l));
+    }
+  }, [searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Track comparison when both lenses selected
   useEffect(() => {
