@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { lenses, systems } from "@/db/schema";
-import { asc, desc, eq, and, gte, lte, sql } from "drizzle-orm";
+import { lenses, systems, lensSeries, lensSeriesMemberships } from "@/db/schema";
+import { asc, desc, eq, and, gte, lte, sql, inArray } from "drizzle-orm";
 import { getClientIP, rateLimitedResponse } from "@/lib/api-utils";
 import { rateLimiters } from "@/lib/rate-limit";
 
@@ -27,6 +27,7 @@ export async function GET(request: NextRequest) {
   const lensType = searchParams.get("lensType") || undefined;
   const era = searchParams.get("era") || undefined;
   const productionStatus = searchParams.get("productionStatus") || undefined;
+  const series = searchParams.get("series") || undefined;
   const sort = searchParams.get("sort") || undefined;
   const order = searchParams.get("order") || undefined;
   const rawCursor = parseInt(searchParams.get("cursor") || "0");
@@ -100,6 +101,15 @@ export async function GET(request: NextRequest) {
     if (productionStatus) {
       conditions.push(eq(lenses.productionStatus, productionStatus));
     }
+    if (series) {
+      conditions.push(
+        sql`${lenses.id} IN (
+          SELECT ${lensSeriesMemberships.lensId} FROM ${lensSeriesMemberships}
+          JOIN ${lensSeries} ON ${lensSeries.id} = ${lensSeriesMemberships.seriesId}
+          WHERE ${lensSeries.slug} = ${series}
+        )`
+      );
+    }
 
     const where = conditions.length > 0 ? and(...conditions) : undefined;
 
@@ -116,6 +126,12 @@ export async function GET(request: NextRequest) {
     };
     const sortCol = sortColumns[sort || ""] || lenses.name;
     const orderFn = order === "desc" ? desc : asc;
+    const sortByName = sortCol === lenses.name;
+    // When sorting by name, sort by the name prefix (before focal length), then focal length numerically
+    const namePrefix = sql`regexp_replace(${lenses.name}, '\\d+(\\.\\d+)?mm.*$', '')`;
+    const orderClauses = sortByName
+      ? [orderFn(namePrefix), asc(lenses.focalLengthMin), asc(lenses.apertureMin)]
+      : [orderFn(sortCol)];
 
     const needsSystemJoin = !!system;
 
@@ -136,13 +152,37 @@ export async function GET(request: NextRequest) {
       .from(lenses)
       .leftJoin(systems, eq(lenses.systemId, systems.id))
       .where(where)
-      .orderBy(orderFn(sortCol))
+      .orderBy(...orderClauses)
       .limit(PAGE_SIZE)
       .offset(cursor);
 
     const nextCursor = cursor + PAGE_SIZE < total ? cursor + PAGE_SIZE : null;
 
-    return NextResponse.json({ items, nextCursor, total });
+    // Fetch series for the returned lenses
+    const lensIds = items.map((r) => r.lens.id);
+    const seriesMap: Record<number, { name: string; slug: string }[]> = {};
+    if (lensIds.length > 0) {
+      const seriesRows = await db
+        .select({
+          lensId: lensSeriesMemberships.lensId,
+          name: lensSeries.name,
+          slug: lensSeries.slug,
+        })
+        .from(lensSeriesMemberships)
+        .innerJoin(lensSeries, eq(lensSeriesMemberships.seriesId, lensSeries.id))
+        .where(inArray(lensSeriesMemberships.lensId, lensIds));
+      for (const row of seriesRows) {
+        if (!seriesMap[row.lensId]) seriesMap[row.lensId] = [];
+        seriesMap[row.lensId].push({ name: row.name, slug: row.slug });
+      }
+    }
+
+    const itemsWithSeries = items.map((r) => ({
+      ...r,
+      series: seriesMap[r.lens.id] || [],
+    }));
+
+    return NextResponse.json({ items: itemsWithSeries, nextCursor, total });
   } catch (error) {
     console.error("GET /api/lenses error:", error);
     return NextResponse.json({ items: [], nextCursor: null, total: 0 });

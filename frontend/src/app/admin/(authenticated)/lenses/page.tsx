@@ -19,6 +19,23 @@ const columns = [
     },
   },
   { key: "yearIntroduced", label: "Year", sortKey: "year" },
+  {
+    key: "verified",
+    label: "Status",
+    render: (value: unknown) => (value === false ? "Unverified" : "Verified"),
+  },
+];
+
+const filters = [
+  {
+    key: "verified",
+    label: "Review status",
+    options: [
+      { label: "All", value: "" },
+      { label: "Verified", value: "true" },
+      { label: "Unverified", value: "false" },
+    ],
+  },
 ];
 
 export default function AdminLensesPage() {
@@ -28,6 +45,7 @@ export default function AdminLensesPage() {
       apiPath="/api/admin/lenses"
       editPath="/admin/lenses"
       columns={columns}
+      filters={filters}
       newHref="/admin/lenses/new"
     />
   );

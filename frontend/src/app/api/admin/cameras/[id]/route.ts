@@ -39,7 +39,7 @@ export async function PUT(
   const {
     name, slug, url, systemId, description, alias,
     sensorType, sensorSize, megapixels, resolution,
-    yearIntroduced, bodyType, weightG, specs, images,
+    yearIntroduced, bodyType, weightG, verified, specs, images,
   } = body;
 
   const updates: Record<string, unknown> = {};
@@ -56,6 +56,7 @@ export async function PUT(
   if (yearIntroduced !== undefined) updates.yearIntroduced = yearIntroduced != null ? Number(yearIntroduced) : null;
   if (bodyType !== undefined) updates.bodyType = bodyType || null;
   if (weightG !== undefined) updates.weightG = weightG != null ? Number(weightG) : null;
+  if (verified !== undefined) updates.verified = verified;
   if (specs !== undefined) updates.specs = specs;
   if (images !== undefined) updates.images = images;
 
