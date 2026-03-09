@@ -295,14 +295,14 @@ export default function LensList({
                   { key: "system", label: "System" },
                   { key: "focalLength", label: "Focal Length" },
                   { key: "aperture", label: "Aperture" },
-                  { key: "type", label: "Type", sortable: false },
+                  { key: "type", label: "Type", sortable: false, className: "w-20" },
                   { key: "year", label: "Year" },
                   { key: "weight", label: "Weight" },
                   { key: "rating", label: "Rating" },
                 ].map((col, i, arr) => (
                   <th
                     key={col.key}
-                    className={`pb-3 font-medium ${i < arr.length - 1 ? "pr-4" : ""} ${col.sortable !== false ? "cursor-pointer select-none hover:text-zinc-900 dark:hover:text-zinc-100" : ""}`}
+                    className={`pb-3 font-medium ${i < arr.length - 1 ? "pr-4" : ""} ${col.sortable !== false ? "cursor-pointer select-none hover:text-zinc-900 dark:hover:text-zinc-100" : ""} ${"className" in col ? col.className : ""}`}
                     onClick={col.sortable !== false ? () => handleSort(col.key) : undefined}
                   >
                     {col.label}{sortIndicator(col.key)}
@@ -328,7 +328,7 @@ export default function LensList({
                     {lens.brand ? (
                       <button
                         onClick={() => applyFilters({ brand: lens.brand!, system: "", q: "", type: "", minFocal: "", maxFocal: "", minAperture: "", maxAperture: "", year: "", lensType: "", era: "", productionStatus: "" })}
-                        className="hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
+                        className="text-left hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
                       >
                         {lens.brand}
                       </button>
@@ -338,7 +338,7 @@ export default function LensList({
                     {system ? (
                       <button
                         onClick={() => applyFilters({ system: system.slug, brand: "", q: "", type: "", minFocal: "", maxFocal: "", minAperture: "", maxAperture: "", year: "", lensType: "", era: "", productionStatus: "" })}
-                        className="hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
+                        className="text-left hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
                       >
                         {system.name}
                       </button>
@@ -348,7 +348,7 @@ export default function LensList({
                     {lens.focalLengthMin ? (
                       <button
                         onClick={() => applyFilters({ minFocal: String(lens.focalLengthMin), maxFocal: String(lens.focalLengthMax), brand: "", system: "", q: "", type: "", minAperture: "", maxAperture: "", year: "", lensType: "", era: "", productionStatus: "" })}
-                        className="hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
+                        className="text-left hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
                       >
                         {lens.focalLengthMin === lens.focalLengthMax
                           ? `${lens.focalLengthMin}mm`
@@ -360,17 +360,18 @@ export default function LensList({
                     {lens.apertureMin ? (
                       <button
                         onClick={() => applyFilters({ minAperture: String(lens.apertureMin), maxAperture: String(lens.apertureMin), brand: "", system: "", q: "", type: "", minFocal: "", maxFocal: "", year: "" })}
-                        className="hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
+                        className="text-left hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
                       >
                         f/{lens.apertureMin}
                       </button>
                     ) : "\u2014"}
                   </td>
                   <td className="py-3 pr-4">
+                    <div className="flex flex-wrap gap-1">
                     {lens.isZoom && (
                       <button
                         onClick={() => applyFilters({ type: "zoom", brand: "", system: "", q: "", minFocal: "", maxFocal: "", minAperture: "", maxAperture: "", year: "", lensType: "", era: "", productionStatus: "" })}
-                        className="rounded bg-blue-100 px-2 py-0.5 text-xs text-blue-700 hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-300 dark:hover:bg-blue-800"
+                        className="w-14 rounded bg-blue-100 py-0.5 text-center text-xs text-blue-700 hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-300 dark:hover:bg-blue-800"
                       >
                         Zoom
                       </button>
@@ -378,7 +379,7 @@ export default function LensList({
                     {lens.isPrime && (
                       <button
                         onClick={() => applyFilters({ type: "prime", brand: "", system: "", q: "", minFocal: "", maxFocal: "", minAperture: "", maxAperture: "", year: "", lensType: "", era: "", productionStatus: "" })}
-                        className="rounded bg-green-100 px-2 py-0.5 text-xs text-green-700 hover:bg-green-200 dark:bg-green-900 dark:text-green-300 dark:hover:bg-green-800"
+                        className="w-14 rounded bg-green-100 py-0.5 text-center text-xs text-green-700 hover:bg-green-200 dark:bg-green-900 dark:text-green-300 dark:hover:bg-green-800"
                       >
                         Prime
                       </button>
@@ -386,17 +387,18 @@ export default function LensList({
                     {lens.isMacro && (
                       <button
                         onClick={() => applyFilters({ type: "macro", brand: "", system: "", q: "", minFocal: "", maxFocal: "", minAperture: "", maxAperture: "", year: "", lensType: "", era: "", productionStatus: "" })}
-                        className="ml-1 rounded bg-purple-100 px-2 py-0.5 text-xs text-purple-700 hover:bg-purple-200 dark:bg-purple-900 dark:text-purple-300 dark:hover:bg-purple-800"
+                        className="w-14 rounded bg-purple-100 py-0.5 text-center text-xs text-purple-700 hover:bg-purple-200 dark:bg-purple-900 dark:text-purple-300 dark:hover:bg-purple-800"
                       >
                         Macro
                       </button>
                     )}
+                    </div>
                   </td>
                   <td className="py-3 pr-4 text-zinc-600 dark:text-zinc-400">
                     {lens.yearIntroduced ? (
                       <button
                         onClick={() => applyFilters({ year: String(lens.yearIntroduced), brand: "", system: "", q: "", type: "", minFocal: "", maxFocal: "", minAperture: "", maxAperture: "" })}
-                        className="hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
+                        className="text-left hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
                       >
                         {lens.yearIntroduced}
                       </button>
@@ -420,7 +422,7 @@ export default function LensList({
       ) : (
         <div className="rounded-xl border border-dashed border-zinc-300 p-12 text-center dark:border-zinc-700">
           <p className="text-zinc-500">
-            No lenses found. Run the scraper to populate the database.
+            No lenses found.
           </p>
         </div>
       )}
