@@ -1,13 +1,7 @@
 import { NextResponse } from "next/server";
-import { getSessionToken, deleteSession } from "@/lib/admin-auth";
 
 export async function POST() {
   try {
-    const token = await getSessionToken();
-    if (token) {
-      deleteSession(token);
-    }
-
     const response = NextResponse.json({ success: true });
     response.cookies.set({
       name: "admin_session",
