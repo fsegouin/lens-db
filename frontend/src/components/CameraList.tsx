@@ -4,6 +4,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import type { cameras, systems } from "@/db/schema";
+import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
+import { TableSkeleton } from "@/components/table-skeleton";
+import { ScrollToTop } from "@/components/scroll-to-top";
 
 type CameraRow = {
   camera: typeof cameras.$inferSelect;
@@ -192,11 +197,6 @@ export default function CameraList({
     }
   }
 
-  function sortIndicator(column: string) {
-    if (sort !== column) return "";
-    return order === "desc" ? " \u2193" : " \u2191";
-  }
-
   function handleSearchChange(value: string) {
     setFormQ(value);
     debouncedApply({ q: value });
@@ -208,206 +208,267 @@ export default function CameraList({
     <>
       {/* Filters */}
       <div className="flex flex-wrap gap-3">
-        <input
-          type="text"
-          placeholder="Search cameras..."
-          value={formQ}
-          onChange={(e) => handleSearchChange(e.target.value)}
-          className="rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-        />
-        <select
-          value={formSystem}
-          onChange={(e) => { setFormSystem(e.target.value); applyFilters({ system: e.target.value }); }}
-          className="filter-select rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-        >
-          <option value="">All systems</option>
-          {systemOptions.map((s) => (
-            <option key={s.slug} value={s.slug}>
-              {s.name}
-            </option>
-          ))}
-        </select>
-        <select
-          value={formType}
-          onChange={(e) => { setFormType(e.target.value); applyFilters({ type: e.target.value }); }}
-          className="filter-select rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-        >
-          <option value="">All types</option>
-          {types.map((t) => (
-            <option key={t} value={t}>{t}</option>
-          ))}
-        </select>
-        <select
-          value={formModel}
-          onChange={(e) => { setFormModel(e.target.value); applyFilters({ model: e.target.value }); }}
-          className="filter-select rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-        >
-          <option value="">All models</option>
-          {models.map((m) => (
-            <option key={m} value={m}>{m}</option>
-          ))}
-        </select>
-        <select
-          value={formFilmType}
-          onChange={(e) => { setFormFilmType(e.target.value); applyFilters({ filmType: e.target.value }); }}
-          className="filter-select rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-        >
-          <option value="">All film types</option>
-          {filmTypes.map((f) => (
-            <option key={f} value={f}>{f}</option>
-          ))}
-        </select>
-        <select
-          value={formSensorType}
-          onChange={(e) => { setFormSensorType(e.target.value); applyFilters({ sensorType: e.target.value }); }}
-          className="filter-select rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-        >
-          <option value="">All sensors</option>
-          {sensorTypes.map((s) => (
-            <option key={s} value={s}>{s}</option>
-          ))}
-        </select>
-        <select
-          value={formCropFactor}
-          onChange={(e) => { setFormCropFactor(e.target.value); applyFilters({ cropFactor: e.target.value }); }}
-          className="filter-select rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-        >
-          <option value="">All crop factors</option>
-          {cropFactors.map((c) => (
-            <option key={c} value={c}>{c}</option>
-          ))}
-        </select>
-        <input
-          type="number"
-          placeholder="Year"
-          value={formYear}
-          onChange={(e) => { setFormYear(e.target.value); debouncedApply({ year: e.target.value }); }}
-          className="w-28 rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-        />
+        <div>
+          <label className="sr-only" htmlFor="camera-search">Search cameras</label>
+          <Input
+            id="camera-search"
+            type="text"
+            placeholder="Search cameras..."
+            value={formQ}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            className="h-10"
+          />
+        </div>
+        <div>
+          <label className="sr-only" htmlFor="camera-system">System</label>
+          <select
+            id="camera-system"
+            value={formSystem}
+            onChange={(e) => { setFormSystem(e.target.value); applyFilters({ system: e.target.value }); }}
+            className="filter-select h-10 rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+          >
+            <option value="">All systems</option>
+            {systemOptions.map((s) => (
+              <option key={s.slug} value={s.slug}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="sr-only" htmlFor="camera-type">Type</label>
+          <select
+            id="camera-type"
+            value={formType}
+            onChange={(e) => { setFormType(e.target.value); applyFilters({ type: e.target.value }); }}
+            className="filter-select h-10 rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+          >
+            <option value="">All types</option>
+            {types.map((t) => (
+              <option key={t} value={t}>{t}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="sr-only" htmlFor="camera-model">Model</label>
+          <select
+            id="camera-model"
+            value={formModel}
+            onChange={(e) => { setFormModel(e.target.value); applyFilters({ model: e.target.value }); }}
+            className="filter-select h-10 rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+          >
+            <option value="">All models</option>
+            {models.map((m) => (
+              <option key={m} value={m}>{m}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="sr-only" htmlFor="camera-film-type">Film type</label>
+          <select
+            id="camera-film-type"
+            value={formFilmType}
+            onChange={(e) => { setFormFilmType(e.target.value); applyFilters({ filmType: e.target.value }); }}
+            className="filter-select h-10 rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+          >
+            <option value="">All film types</option>
+            {filmTypes.map((f) => (
+              <option key={f} value={f}>{f}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="sr-only" htmlFor="camera-sensor-type">Sensor type</label>
+          <select
+            id="camera-sensor-type"
+            value={formSensorType}
+            onChange={(e) => { setFormSensorType(e.target.value); applyFilters({ sensorType: e.target.value }); }}
+            className="filter-select h-10 rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+          >
+            <option value="">All sensors</option>
+            {sensorTypes.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="sr-only" htmlFor="camera-crop-factor">Crop factor</label>
+          <select
+            id="camera-crop-factor"
+            value={formCropFactor}
+            onChange={(e) => { setFormCropFactor(e.target.value); applyFilters({ cropFactor: e.target.value }); }}
+            className="filter-select h-10 rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+          >
+            <option value="">All crop factors</option>
+            {cropFactors.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="sr-only" htmlFor="camera-year">Year</label>
+          <Input
+            id="camera-year"
+            type="number"
+            placeholder="Year"
+            value={formYear}
+            onChange={(e) => { setFormYear(e.target.value); debouncedApply({ year: e.target.value }); }}
+            className="h-10 w-28"
+          />
+        </div>
       </div>
 
       {/* Results */}
       {items.length > 0 ? (
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-zinc-200 text-zinc-500 dark:border-zinc-800">
-              <tr>
-                {[
-                  { key: "name", label: "Name" },
-                  { key: "system", label: "System" },
-                  { key: "type", label: "Type", sortable: false },
-                  { key: "model", label: "Model", sortable: false },
-                  { key: "filmType", label: "Film Type", sortable: false },
-                  { key: "imagingSensor", label: "Imaging Sensor", sortable: false },
-                  { key: "cropFactor", label: "Crop Factor", sortable: false },
-                  { key: "year", label: "Year" },
-                  { key: "weight", label: "Weight" },
-                ].map((col, i, arr) => (
-                  <th
-                    key={col.key}
-                    className={`pb-3 font-medium ${i < arr.length - 1 ? "pr-4" : ""} ${col.sortable !== false ? "cursor-pointer select-none hover:text-zinc-900 dark:hover:text-zinc-100" : ""}`}
-                    onClick={col.sortable !== false ? () => handleSort(col.key) : undefined}
-                  >
-                    {col.label}{sortIndicator(col.key)}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-              {items.map(({ camera, system: sys }) => {
-                const specs = (camera.specs ?? {}) as Record<string, string>;
-                return (
-                  <tr
-                    key={camera.id}
-                    className="transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900"
-                  >
-                    <td className="py-3 pr-4">
-                      <Link
-                        href={`/cameras/${camera.slug}`}
-                        className="font-medium text-zinc-900 hover:underline dark:text-zinc-100"
+        <Table>
+          <TableHeader>
+            <TableRow>
+              {[
+                { key: "name", label: "Name" },
+                { key: "system", label: "System" },
+                { key: "type", label: "Type", sortable: false },
+                { key: "model", label: "Model", sortable: false },
+                { key: "filmType", label: "Film Type", sortable: false },
+                { key: "imagingSensor", label: "Imaging Sensor", sortable: false },
+                { key: "cropFactor", label: "Crop Factor", sortable: false },
+                { key: "year", label: "Year" },
+                { key: "weight", label: "Weight" },
+              ].map((col) => (
+                <TableHead
+                  key={col.key}
+                  scope="col"
+                  className={col.sortable !== false ? "cursor-pointer select-none hover:text-zinc-900 dark:hover:text-zinc-100" : ""}
+                  onClick={col.sortable !== false ? () => handleSort(col.key) : undefined}
+                  tabIndex={col.sortable !== false ? 0 : -1}
+                  aria-sort={
+                    col.sortable === false
+                      ? undefined
+                      : sort === col.key
+                        ? order === "desc"
+                          ? "descending"
+                          : "ascending"
+                        : "none"
+                  }
+                  onKeyDown={
+                    col.sortable !== false
+                      ? (e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            handleSort(col.key);
+                          }
+                        }
+                      : undefined
+                  }
+                >
+                  {col.label}
+                  {col.sortable !== false && (
+                    sort === col.key
+                      ? (order === "desc" ? <ChevronDown className="ml-1 inline h-3 w-3" /> : <ChevronUp className="ml-1 inline h-3 w-3" />)
+                      : <ChevronsUpDown className="ml-1 inline h-3 w-3 text-muted-foreground/50" />
+                  )}
+                </TableHead>
+              ))}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {items.map(({ camera, system: sys }) => {
+              const specs = (camera.specs ?? {}) as Record<string, string>;
+              return (
+                <TableRow key={camera.id}>
+                  <TableCell>
+                    <Link
+                      href={`/cameras/${camera.slug}`}
+                      className="font-medium text-zinc-900 hover:underline dark:text-zinc-100"
+                    >
+                      {camera.name}
+                    </Link>
+                  </TableCell>
+                  <TableCell className="text-zinc-500">
+                    {sys ? (
+                      <button
+                        onClick={() => applyFilters({ ...clearAll, system: sys.slug })}
+                        className="text-left hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
                       >
-                        {camera.name}
-                      </Link>
-                    </td>
-                    <td className="py-3 pr-4 text-zinc-500">
-                      {sys ? (
-                        <button
-                          onClick={() => applyFilters({ ...clearAll, system: sys.slug })}
-                          className="text-left hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
-                        >
-                          {sys.name}
-                        </button>
-                      ) : "\u2014"}
-                    </td>
-                    <td className="py-3 pr-4 text-zinc-600 dark:text-zinc-400">
-                      {specs["Type"] ? (
-                        <button
-                          onClick={() => applyFilters({ ...clearAll, type: specs["Type"] })}
-                          className="text-left hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
-                        >
-                          {specs["Type"]}
-                        </button>
-                      ) : "\u2014"}
-                    </td>
-                    <td className="py-3 pr-4 text-zinc-600 dark:text-zinc-400">
-                      {specs["Model"] ? (
-                        <button
-                          onClick={() => {
-                            const prefix = specs["Model"].startsWith("Electronically controlled")
-                              ? "Electronically controlled"
-                              : specs["Model"].startsWith("Mechanical")
-                              ? "Mechanical"
-                              : specs["Model"];
-                            applyFilters({ ...clearAll, model: prefix });
-                          }}
-                          className="text-left hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
-                        >
-                          {specs["Model"]}
-                        </button>
-                      ) : "\u2014"}
-                    </td>
-                    <td className="py-3 pr-4 text-zinc-600 dark:text-zinc-400">
-                      {specs["Film type"] ? (
-                        <button
-                          onClick={() => applyFilters({ ...clearAll, filmType: specs["Film type"] })}
-                          className="text-left hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
-                        >
-                          {specs["Film type"]}
-                        </button>
-                      ) : "\u2014"}
-                    </td>
-                    <td className="py-3 pr-4 text-zinc-600 dark:text-zinc-400">
-                      {specs["Imaging sensor"] || specs["Imaging plane"] || "\u2014"}
-                    </td>
-                    <td className="py-3 pr-4 text-zinc-600 dark:text-zinc-400">
-                      {specs["Crop factor"] ? (
-                        <button
-                          onClick={() => applyFilters({ ...clearAll, cropFactor: specs["Crop factor"] })}
-                          className="text-left hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
-                        >
-                          {specs["Crop factor"]}
-                        </button>
-                      ) : "\u2014"}
-                    </td>
-                    <td className="py-3 pr-4 text-zinc-600 dark:text-zinc-400">
-                      {camera.yearIntroduced ? (
-                        <button
-                          onClick={() => applyFilters({ ...clearAll, year: String(camera.yearIntroduced) })}
-                          className="text-left hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
-                        >
-                          {camera.yearIntroduced}
-                        </button>
-                      ) : "\u2014"}
-                    </td>
-                    <td className="py-3 text-zinc-600 dark:text-zinc-400">
-                      {camera.weightG ? `${camera.weightG}g` : "\u2014"}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                        {sys.name}
+                      </button>
+                    ) : "\u2014"}
+                  </TableCell>
+                  <TableCell className="text-zinc-600 dark:text-zinc-400">
+                    {specs["Type"] ? (
+                      <button
+                        onClick={() => applyFilters({ ...clearAll, type: specs["Type"] })}
+                        className="text-left hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
+                      >
+                        {specs["Type"]}
+                      </button>
+                    ) : "\u2014"}
+                  </TableCell>
+                  <TableCell className="text-zinc-600 dark:text-zinc-400">
+                    {specs["Model"] ? (
+                      <button
+                        onClick={() => {
+                          const prefix = specs["Model"].startsWith("Electronically controlled")
+                            ? "Electronically controlled"
+                            : specs["Model"].startsWith("Mechanical")
+                            ? "Mechanical"
+                            : specs["Model"];
+                          applyFilters({ ...clearAll, model: prefix });
+                        }}
+                        className="text-left hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
+                      >
+                        {specs["Model"]}
+                      </button>
+                    ) : "\u2014"}
+                  </TableCell>
+                  <TableCell className="text-zinc-600 dark:text-zinc-400">
+                    {specs["Film type"] ? (
+                      <button
+                        onClick={() => applyFilters({ ...clearAll, filmType: specs["Film type"] })}
+                        className="text-left hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
+                      >
+                        {specs["Film type"]}
+                      </button>
+                    ) : "\u2014"}
+                  </TableCell>
+                  <TableCell className="text-zinc-600 dark:text-zinc-400">
+                    {specs["Imaging sensor"] || specs["Imaging plane"] || "\u2014"}
+                  </TableCell>
+                  <TableCell className="text-zinc-600 dark:text-zinc-400">
+                    {specs["Crop factor"] ? (
+                      <button
+                        onClick={() => applyFilters({ ...clearAll, cropFactor: specs["Crop factor"] })}
+                        className="text-left hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
+                      >
+                        {specs["Crop factor"]}
+                      </button>
+                    ) : "\u2014"}
+                  </TableCell>
+                  <TableCell className="text-zinc-600 dark:text-zinc-400">
+                    {camera.yearIntroduced ? (
+                      <button
+                        onClick={() => applyFilters({ ...clearAll, year: String(camera.yearIntroduced) })}
+                        className="text-left hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
+                      >
+                        {camera.yearIntroduced}
+                      </button>
+                    ) : "\u2014"}
+                  </TableCell>
+                  <TableCell className="text-zinc-600 dark:text-zinc-400">
+                    {camera.weightG ? `${camera.weightG}g` : "\u2014"}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+            {loading && <TableSkeleton columns={9} rows={3} />}
+            {nextCursor !== null && (
+              <TableRow>
+                <TableCell colSpan={9} className="p-0">
+                  <div ref={sentinelRef} className="h-px w-full" />
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
       ) : (
         <div className="rounded-xl border border-dashed border-zinc-300 p-12 text-center dark:border-zinc-700">
           <p className="text-zinc-500">
@@ -416,14 +477,7 @@ export default function CameraList({
         </div>
       )}
 
-      {/* Sentinel for infinite scroll + loading indicator */}
-      {nextCursor !== null && (
-        <div ref={sentinelRef} className="flex justify-center py-8">
-          {loading && (
-            <p className="text-sm text-zinc-500">Loading more...</p>
-          )}
-        </div>
-      )}
+      <ScrollToTop />
     </>
   );
 }
