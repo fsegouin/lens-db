@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { systems, lenses, cameras } from "@/db/schema";
 import { eq, asc } from "drizzle-orm";
 import ViewTracker from "@/components/ViewTracker";
+import ReportIssueButton from "@/components/ReportIssueButton";
 
 export const revalidate = 604800;
 
@@ -218,6 +219,7 @@ export default async function SystemDetailPage({
       )}
 
       <ViewTracker type="system" id={system.id} />
+      <ReportIssueButton entityType="system" entityId={system.id} entityName={system.name} />
     </div>
   );
 }

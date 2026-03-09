@@ -153,6 +153,22 @@ export const lensRatings = pgTable(
   ]
 );
 
+export const issueReports = pgTable(
+  "issue_reports",
+  {
+    id: serial("id").primaryKey(),
+    entityType: text("entity_type").notNull(), // "lens" | "camera" | "system" | "collection"
+    entityId: integer("entity_id").notNull(),
+    entityName: text("entity_name").notNull(),
+    message: text("message").notNull(),
+    status: text("status").notNull().default("pending"), // "pending" | "reviewed" | "dismissed"
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  },
+  (table) => [
+    index("idx_issue_reports_status").on(table.status),
+  ]
+);
+
 export const lensComparisons = pgTable(
   "lens_comparisons",
   {

@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { systems } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import SystemForm from "@/components/admin/SystemForm";
+import EditPageWithReport from "@/components/admin/EditPageWithReport";
 
 export const dynamic = "force-dynamic";
 
@@ -20,5 +21,9 @@ export default async function EditSystemPage({
 
   if (!system) notFound();
 
-  return <SystemForm system={system} />;
+  return (
+    <EditPageWithReport title="Edit System">
+      <SystemForm system={system} />
+    </EditPageWithReport>
+  );
 }

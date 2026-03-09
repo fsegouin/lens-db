@@ -4,6 +4,7 @@ import { collections, lensCollections, lenses } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import CollectionForm from "@/components/admin/CollectionForm";
 import CollectionLensManager from "@/components/admin/CollectionLensManager";
+import EditPageWithReport from "@/components/admin/EditPageWithReport";
 
 export const dynamic = "force-dynamic";
 
@@ -32,12 +33,12 @@ export default async function EditCollectionPage({
     .where(eq(lensCollections.collectionId, parseInt(id)));
 
   return (
-    <div className="space-y-8">
+    <EditPageWithReport title="Edit Collection">
       <CollectionForm collection={collection} />
       <CollectionLensManager
         collectionId={collection.id}
         initialLenses={collectionLenses}
       />
-    </div>
+    </EditPageWithReport>
   );
 }
