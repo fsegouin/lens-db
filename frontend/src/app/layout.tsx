@@ -8,6 +8,7 @@ import { HeaderNav } from "@/components/header-nav";
 import { MobileNav } from "@/components/mobile-nav";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ThemeProvider } from "@/components/theme-provider";
+import { SearchProvider } from "@/components/search-context";
 import { Separator } from "@/components/ui/separator";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -45,22 +46,24 @@ export default function RootLayout({
       >
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <TooltipProvider>
-            <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
-              <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-                <Link
-                  href="/"
-                  className="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100"
-                >
-                  THE LENS DB
-                </Link>
-                <HeaderNav />
-                <div className="flex items-center gap-1">
-                  <HeaderSearch />
-                  <ThemeToggle />
-                  <MobileNav />
+            <SearchProvider>
+              <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
+                <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+                  <Link
+                    href="/"
+                    className="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100"
+                  >
+                    THE LENS DB
+                  </Link>
+                  <HeaderNav />
+                  <div className="flex items-center gap-1">
+                    <HeaderSearch />
+                    <ThemeToggle />
+                    <MobileNav />
+                  </div>
                 </div>
-              </div>
-            </header>
+              </header>
+            </SearchProvider>
             <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
               {children}
             </main>

@@ -49,7 +49,7 @@ export default function ImageGallery({ images }: { images: ImageData[] }) {
     return (
       <button
         onClick={() => setLightboxIdx(0)}
-        className="group relative mx-auto aspect-[4/3] w-full max-w-md overflow-hidden rounded-lg border border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900"
+        className="group relative mx-auto block aspect-[4/3] w-full max-w-md overflow-hidden rounded-lg border border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900"
       >
         <Image
           src={safeImages[0].src}
