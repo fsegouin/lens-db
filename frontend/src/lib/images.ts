@@ -13,6 +13,7 @@ export function getImages(
   dbImages: ImageData[] | null
 ): ImageData[] {
   const dirSlug = slug.replace(/\//g, "__");
+  if (dirSlug.includes("..")) return dbImages || [];
   const localDir = path.join(process.cwd(), "public", "images", type, dirSlug);
 
   try {

@@ -52,7 +52,7 @@ export async function validateSession(token: string): Promise<boolean> {
 }
 
 async function sign(data: string): Promise<string> {
-  const secret = process.env.ADMIN_PASSWORD || "";
+  const secret = process.env.SESSION_SECRET || process.env.ADMIN_PASSWORD || "";
   const encoder = new TextEncoder();
   const key = await crypto.subtle.importKey(
     "raw",

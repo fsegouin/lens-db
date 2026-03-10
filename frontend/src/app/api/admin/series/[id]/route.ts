@@ -65,6 +65,10 @@ export async function PUT(
   }
 
   if (lensIds !== undefined) {
+    if (!Array.isArray(lensIds) || !lensIds.every((id: unknown) => typeof id === "number" && Number.isInteger(id))) {
+      return NextResponse.json({ error: "lensIds must be an array of integers" }, { status: 400 });
+    }
+
     // Delete all existing memberships and insert new ones
     await db
       .delete(lensSeriesMemberships)
