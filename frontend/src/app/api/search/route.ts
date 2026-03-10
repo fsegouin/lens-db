@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
   const { success } = await rateLimiters.search.limit(ip);
   if (!success) return rateLimitedResponse();
 
-  const q = new URL(request.url).searchParams.get("q")?.trim();
+  const q = new URL(request.url).searchParams.get("q")?.trim().slice(0, 200);
   if (!q || q.length < 2) {
     return NextResponse.json({ lenses: [], cameras: [], systems: [], collections: [] });
   }

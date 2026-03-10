@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
   if (!success) return rateLimitedResponse();
 
   const { searchParams } = request.nextUrl;
-  const q = searchParams.get("q") || undefined;
+  const q = searchParams.get("q")?.slice(0, 200) || undefined;
   const system = searchParams.get("system") || undefined;
   const type = searchParams.get("type") || undefined;
   const model = searchParams.get("model") || undefined;

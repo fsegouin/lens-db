@@ -8,6 +8,21 @@ import { createRateLimit } from "@/lib/rate-limit";
 
 const dailyLimiter = createRateLimit(5, "24 h");
 
+const MAX_SPEC_KEYS = 50;
+const MAX_SPEC_VALUE_LENGTH = 500;
+
+function sanitizeSpecs(raw: unknown): Record<string, string> {
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) return {};
+  const entries = Object.entries(raw as Record<string, unknown>).slice(0, MAX_SPEC_KEYS);
+  const result: Record<string, string> = {};
+  for (const [key, value] of entries) {
+    if (typeof key !== "string" || key.length > 100) continue;
+    const strVal = typeof value === "string" ? value : typeof value === "number" ? String(value) : null;
+    if (strVal !== null) result[key] = strVal.slice(0, MAX_SPEC_VALUE_LENGTH);
+  }
+  return result;
+}
+
 export async function POST(request: NextRequest) {
   const verification = await checkBotId();
   if (verification.isBot) {
@@ -115,10 +130,7 @@ export async function POST(request: NextRequest) {
       isPrime: body.isPrime === true,
       hasStabilization: body.hasStabilization === true,
       hasAutofocus: body.hasAutofocus === true,
-      specs:
-        typeof body.specs === "object" && body.specs !== null && !Array.isArray(body.specs)
-          ? body.specs
-          : {},
+      specs: sanitizeSpecs(body.specs),
       images: [],
       verified: false,
       submittedByIp: hashedIp,
@@ -156,10 +168,7 @@ export async function POST(request: NextRequest) {
       bodyType:
         typeof body.bodyType === "string" ? body.bodyType.slice(0, 200) : null,
       weightG: typeof body.weightG === "number" ? body.weightG : null,
-      specs:
-        typeof body.specs === "object" && body.specs !== null && !Array.isArray(body.specs)
-          ? body.specs
-          : {},
+      specs: sanitizeSpecs(body.specs),
       images: [],
       verified: false,
       submittedByIp: hashedIp,
