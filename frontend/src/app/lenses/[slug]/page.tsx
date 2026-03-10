@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
 import { eq } from "drizzle-orm";
+import BackButton from "@/components/BackButton";
 import { db } from "@/db";
 import { lenses, systems } from "@/db/schema";
 import { formatDescription } from "@/lib/format-description";
@@ -118,10 +118,7 @@ export default async function LensDetailPage({
   return (
     <PageTransition>
       <div className="mx-auto max-w-3xl space-y-8">
-        <Link href="/lenses" className="inline-flex h-7 items-center gap-1 rounded-[min(var(--radius-md),12px)] px-2.5 text-[0.8rem] font-medium hover:bg-muted">
-            <ArrowLeft className="mr-1 h-4 w-4" />
-            Back to lenses
-          </Link>
+        <BackButton fallbackHref="/lenses" label="Back to lenses" />
 
         <div>
           <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100">
