@@ -59,22 +59,29 @@ export default async function CameraDetailPage({
     ["Type", specs["Type"]],
     ["Model", specs["Model"]],
     ["Film Type", specs["Film type"]],
-    ["Imaging Sensor", specs["Imaging sensor"] || specs["Imaging plane"]],
+    ["Imaging Sensor", camera.sensorType || specs["Imaging sensor"] || specs["Imaging plane"]],
     ["Sensor Size", camera.sensorSize || specs["Maximum format"]],
-    ["Megapixels", camera.megapixels ? `${camera.megapixels} MP` : null],
-    ["Resolution", camera.resolution],
+    ["Megapixels", camera.megapixels ? `${camera.megapixels} MP` : specs["Effective pixels"]],
+    ["Resolution", camera.resolution || specs["Max resolution"]],
     ["Crop Factor", specs["Crop factor"]],
+    ["ISO", specs["ISO"]],
     ["Image Stabilization", specs["Sensor-shift image stabilization"]],
   ];
 
   const bodyRows: [string, string | number | null | undefined][] = [
-    ["Speeds", specs["Speeds"]],
+    ["Lens Mount", specs["Lens mount"]],
+    ["Shutter Speeds", specs["Speeds"]],
     ["Exposure Modes", specs["Exposure modes"]],
     ["Exposure Metering", specs["Exposure metering"]],
+    ["Screen", specs["Screen size"] ? `${specs["Screen size"]} (${specs["Screen dots"] || ""})`.replace(/ \(\)$/, "") : null],
+    ["Articulated LCD", specs["Articulated LCD"]],
+    ["Storage", specs["Storage types"]],
+    ["USB", specs["USB"]],
     ["Dimensions", specs["Dimensions"]],
     ["Year Introduced", camera.yearIntroduced],
-    ["Weight", camera.weightG ? `${camera.weightG}g` : null],
-    ["Body Type", camera.bodyType],
+    ["Weight", camera.weightG ? `${camera.weightG}g` : specs["Weight"]],
+    ["Format", specs["Format"]],
+    ["GPS", specs["GPS"] && specs["GPS"] !== "None" ? specs["GPS"] : null],
   ];
 
   return (
@@ -111,16 +118,6 @@ export default async function CameraDetailPage({
           </div>
         )}
 
-        {camera.description && (
-          <div className="space-y-3">
-            {formatDescription(camera.description).map((paragraph, i) => (
-              <p key={i} className="leading-relaxed text-zinc-700 dark:text-zinc-300">
-                {paragraph}
-              </p>
-            ))}
-          </div>
-        )}
-
         <ImageGallery
           images={
             getImages(
@@ -131,12 +128,22 @@ export default async function CameraDetailPage({
           }
         />
 
+        {camera.description && (
+          <div className="space-y-3">
+            {formatDescription(camera.description).map((paragraph, i) => (
+              <p key={i} className="leading-relaxed text-zinc-700 dark:text-zinc-300">
+                {paragraph}
+              </p>
+            ))}
+          </div>
+        )}
+
         <RatingWidget cameraId={camera.id} />
 
         <div className="space-y-5">
           <div>
             <h3 className="mb-2 text-sm font-semibold tracking-wider text-muted-foreground uppercase">
-              Imaging
+              Sensor &amp; Imaging
             </h3>
             <SpecsTable
               rows={imagingRows
@@ -153,7 +160,7 @@ export default async function CameraDetailPage({
 
           <div>
             <h3 className="mb-2 text-sm font-semibold tracking-wider text-muted-foreground uppercase">
-              Body
+              Body &amp; Features
             </h3>
             <SpecsTable
               rows={bodyRows
