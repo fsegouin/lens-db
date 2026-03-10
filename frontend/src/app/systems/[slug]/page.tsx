@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import BackButton from "@/components/BackButton";
 import { asc, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { cameras, lenses, systems } from "@/db/schema";
@@ -70,10 +70,7 @@ export default async function SystemDetailPage({
   return (
     <PageTransition>
       <div className="mx-auto max-w-4xl space-y-8">
-        <Link href="/systems" className="inline-flex h-7 items-center gap-1 rounded-[min(var(--radius-md),12px)] px-2.5 text-[0.8rem] font-medium hover:bg-muted">
-            <ArrowLeft className="mr-1 h-4 w-4" />
-            Back to systems
-          </Link>
+        <BackButton fallbackHref="/systems" label="Back to systems" />
 
         <div>
           <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100">{system.name}</h1>
