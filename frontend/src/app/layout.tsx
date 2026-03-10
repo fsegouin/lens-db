@@ -17,6 +17,20 @@ export const metadata: Metadata = {
   title: "The Lens DB - Camera Lens Database",
   description:
     "Comprehensive database of camera lenses and bodies with specs, compatibility, and expert recommendations.",
+  metadataBase: new URL("https://thelensdb.com"),
+  openGraph: {
+    title: "The Lens DB - Camera Lens Database",
+    description:
+      "Comprehensive database of camera lenses and bodies with specs, compatibility, and expert recommendations.",
+    siteName: "The Lens DB",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "The Lens DB - Camera Lens Database",
+    description:
+      "Comprehensive database of camera lenses and bodies with specs, compatibility, and expert recommendations.",
+  },
 };
 
 export default function RootLayout({
