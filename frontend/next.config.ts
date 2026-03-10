@@ -41,7 +41,7 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "web.archive.org",
+        hostname: "pub-452f806914084c1384d3fafe70f6be32.r2.dev",
       },
     ],
   },
