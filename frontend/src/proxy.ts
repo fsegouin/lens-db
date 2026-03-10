@@ -26,14 +26,7 @@ export function proxy(request: NextRequest) {
     const origin = request.headers.get("origin");
     const host = request.headers.get("host");
 
-    if (!origin) {
-      return NextResponse.json(
-        { error: "Forbidden" },
-        { status: 403 }
-      );
-    }
-
-    if (host) {
+    if (origin && host) {
       const originHost = new URL(origin).host;
       if (originHost !== host) {
         return NextResponse.json(
