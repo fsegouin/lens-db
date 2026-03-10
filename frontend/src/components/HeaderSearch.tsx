@@ -142,22 +142,23 @@ export default function HeaderSearch() {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.15 }}
-            className="absolute top-0 right-0 z-50"
+            className="fixed inset-x-0 top-0 z-50 h-16 border-b border-border bg-background/80 backdrop-blur-xl px-4 sm:px-6 lg:relative lg:inset-x-auto lg:top-auto lg:h-auto lg:border-0 lg:bg-transparent lg:px-0 lg:backdrop-blur-none"
           >
-            <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              ref={inputRef}
-              type="text"
-              value={query}
-              onChange={(e) => handleChange(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Search lenses, cameras, systems..."
-              className="h-9 w-64 pl-9"
-            />
+            <div className="relative mx-auto flex h-full max-w-7xl items-center lg:block lg:h-auto">
+              <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground lg:top-1/2" />
+              <Input
+                ref={inputRef}
+                type="text"
+                value={query}
+                onChange={(e) => handleChange(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Search lenses, cameras, systems..."
+                className="h-9 w-full pl-9 lg:w-64"
+              />
 
             {/* Dropdown results */}
             {shouldShowDropdown && (
-              <div className="absolute top-full right-0 z-50 mt-1 w-full overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+              <div className="absolute top-full left-0 right-0 z-50 mt-1 max-h-[60vh] overflow-y-auto rounded-lg border border-zinc-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-900 lg:left-auto lg:w-full">
                 {loading && !results && (
                   <div className="space-y-2 px-4 py-3">
                     <Skeleton className="h-3.5 w-full" />
@@ -205,6 +206,7 @@ export default function HeaderSearch() {
                 )}
               </div>
             )}
+            </div>
           </motion.div>
         ) : (
           <motion.div
