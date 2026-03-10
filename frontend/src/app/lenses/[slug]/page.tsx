@@ -169,16 +169,6 @@ export default async function LensDetailPage({
           </div>
         )}
 
-        {lens.description && (
-          <div className="space-y-3">
-            {formatDescription(lens.description).map((paragraph, i) => (
-              <p key={i} className="leading-relaxed text-zinc-700 dark:text-zinc-300">
-                {paragraph}
-              </p>
-            ))}
-          </div>
-        )}
-
         <ImageGallery
           images={
             getImages(
@@ -188,6 +178,16 @@ export default async function LensDetailPage({
             )
           }
         />
+
+        {lens.description && (
+          <div className="space-y-3">
+            {formatDescription(lens.description).map((paragraph, i) => (
+              <p key={i} className="leading-relaxed text-zinc-700 dark:text-zinc-300">
+                {paragraph}
+              </p>
+            ))}
+          </div>
+        )}
 
         <RatingWidget lensId={lens.id} />
 
