@@ -28,6 +28,7 @@ interface AdminTableProps {
   columns: Column[];
   newHref: string;         // e.g. "/admin/lenses/new"
   filters?: FilterConfig[];
+  rowActions?: (item: Record<string, unknown>, refetch: () => void) => React.ReactNode;
 }
 
 const PAGE_SIZE = 50;
@@ -39,6 +40,7 @@ export default function AdminTable({
   columns,
   newHref,
   filters = [],
+  rowActions,
 }: AdminTableProps) {
   const [items, setItems] = useState<Record<string, unknown>[]>([]);
   const [total, setTotal] = useState(0);
@@ -186,6 +188,11 @@ export default function AdminTable({
                     {col.sortKey && sortIndicator(col.sortKey)}
                   </th>
                 ))}
+                {rowActions && (
+                  <th className="bg-white px-9 py-2 text-left font-medium text-zinc-500 dark:bg-zinc-950">
+                    Actions
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
@@ -205,11 +212,16 @@ export default function AdminTable({
                       )}
                     </td>
                   ))}
+                  {rowActions && (
+                    <td className="px-9 py-2 text-zinc-700 dark:text-zinc-300">
+                      {rowActions(item, fetchData)}
+                    </td>
+                  )}
                 </tr>
               ))}
               {items.length === 0 && (
                 <tr>
-                  <td colSpan={columns.length} className="px-9 py-8 text-center text-zinc-400">
+                  <td colSpan={columns.length + (rowActions ? 1 : 0)} className="px-9 py-8 text-center text-zinc-400">
                     No results found
                   </td>
                 </tr>
