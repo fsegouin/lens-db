@@ -22,6 +22,7 @@ export const systems = pgTable("systems", {
   mountType: text("mount_type"),
   manufacturer: text("manufacturer"),
   viewCount: integer("view_count").default(0),
+  protectionLevel: text("protection_level").default("none"), // "none" | "autoconfirmed" | "trusted" | "admin"
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
 
@@ -66,6 +67,7 @@ export const lenses = pgTable(
     images: jsonb("images").default([]),
     verified: boolean("verified").default(true).notNull(),
     submittedByIp: text("submitted_by_ip"),
+    protectionLevel: text("protection_level").default("none"), // "none" | "autoconfirmed" | "trusted" | "admin"
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   },
   (table) => [
@@ -101,6 +103,7 @@ export const cameras = pgTable(
     images: jsonb("images").default([]),
     verified: boolean("verified").default(true).notNull(),
     submittedByIp: text("submitted_by_ip"),
+    protectionLevel: text("protection_level").default("none"), // "none" | "autoconfirmed" | "trusted" | "admin"
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   },
   (table) => [index("idx_cameras_system").on(table.systemId)]
@@ -111,6 +114,7 @@ export const collections = pgTable("collections", {
   name: text("name").notNull(),
   slug: text("slug").notNull().unique(),
   description: text("description"),
+  protectionLevel: text("protection_level").default("none"), // "none" | "autoconfirmed" | "trusted" | "admin"
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
 
@@ -132,6 +136,7 @@ export const lensSeries = pgTable("lens_series", {
   name: text("name").notNull().unique(),
   slug: text("slug").notNull().unique(),
   description: text("description"),
+  protectionLevel: text("protection_level").default("none"), // "none" | "autoconfirmed" | "trusted" | "admin"
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
 
@@ -257,6 +262,33 @@ export const emailVerificationTokens = pgTable("email_verification_tokens", {
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
+
+export const revisions = pgTable(
+  "revisions",
+  {
+    id: serial("id").primaryKey(),
+    entityType: text("entity_type").notNull(), // "lens" | "camera" | "system" | "collection" | "series"
+    entityId: integer("entity_id").notNull(),
+    revisionNumber: integer("revision_number").notNull(),
+    data: jsonb("data").notNull(), // full snapshot of entity at this revision
+    summary: text("summary").notNull(), // edit summary (required)
+    changedFields: jsonb("changed_fields").default([]), // string[] of field names that changed
+    userId: integer("user_id").references(() => users.id),
+    ipHash: text("ip_hash"),
+    isRevert: boolean("is_revert").default(false),
+    revertedToRevision: integer("reverted_to_revision"),
+    isPatrolled: boolean("is_patrolled").default(false),
+    patrolledByUserId: integer("patrolled_by_user_id").references(() => users.id),
+    patrolledAt: timestamp("patrolled_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  },
+  (table) => [
+    index("idx_revisions_entity").on(table.entityType, table.entityId),
+    index("idx_revisions_user").on(table.userId),
+    index("idx_revisions_created").on(table.createdAt),
+    unique("uq_revision_number").on(table.entityType, table.entityId, table.revisionNumber),
+  ]
+);
 
 export const lensComparisons = pgTable(
   "lens_comparisons",

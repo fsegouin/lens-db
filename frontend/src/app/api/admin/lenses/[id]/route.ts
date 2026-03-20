@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { lenses, systems } from "@/db/schema";
 import { requireAdminAPI } from "@/lib/admin-auth";
+import { createRevision } from "@/lib/revisions";
 import { eq } from "drizzle-orm";
 
 export async function GET(
@@ -107,6 +108,13 @@ export async function PUT(
   if (!updated) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
+
+  await createRevision({
+    entityType: "lens",
+    entityId: parseInt(id),
+    summary: "Admin edit",
+    autoPatrol: true,
+  });
 
   return NextResponse.json(updated);
 }

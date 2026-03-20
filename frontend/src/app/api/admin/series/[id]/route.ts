@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { lensSeries, lensSeriesMemberships, lenses } from "@/db/schema";
 import { requireAdminAPI } from "@/lib/admin-auth";
+import { createRevision } from "@/lib/revisions";
 import { eq } from "drizzle-orm";
 
 export async function GET(
@@ -83,6 +84,13 @@ export async function PUT(
       );
     }
   }
+
+  await createRevision({
+    entityType: "series",
+    entityId: numericId,
+    summary: "Admin edit",
+    autoPatrol: true,
+  });
 
   return NextResponse.json(updated);
 }
