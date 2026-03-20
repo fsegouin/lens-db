@@ -43,6 +43,13 @@
       "when": 1773079276636,
       "tag": "0005_little_sabretooth",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1773994998991,
+      "tag": "0006_lyrical_aqueduct",
+      "breakpoints": true
     }
   ]
 }

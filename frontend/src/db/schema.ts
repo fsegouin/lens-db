@@ -228,6 +228,36 @@ export const blockedIps = pgTable("blocked_ips", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
 
+export const users = pgTable(
+  "users",
+  {
+    id: serial("id").primaryKey(),
+    email: text("email").notNull().unique(),
+    passwordHash: text("password_hash").notNull(),
+    displayName: text("display_name").notNull().unique(),
+    role: text("role").notNull().default("user"), // "user" | "trusted" | "admin"
+    editCount: integer("edit_count").default(0),
+    emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
+    isBanned: boolean("is_banned").default(false),
+    banReason: text("ban_reason"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  },
+  (table) => [
+    index("idx_users_email").on(table.email),
+    index("idx_users_role").on(table.role),
+  ]
+);
+
+export const emailVerificationTokens = pgTable("email_verification_tokens", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  token: text("token").notNull().unique(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+});
+
 export const lensComparisons = pgTable(
   "lens_comparisons",
   {
