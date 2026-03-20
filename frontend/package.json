@@ -6,7 +6,8 @@
   "scripts": {
     "preinstall": "npx only-allow pnpm",
     "dev": "next dev",
-    "build": "next build",
+    "db:migrate": "drizzle-kit migrate",
+    "build": "pnpm db:migrate && next build",
     "start": "next start",
     "lint": "eslint"
   },
