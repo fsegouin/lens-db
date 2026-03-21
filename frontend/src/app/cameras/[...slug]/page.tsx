@@ -7,12 +7,14 @@ import ViewTracker from "@/components/ViewTracker";
 import ImageGallery from "@/components/ImageGallery";
 import RatingWidget from "@/components/RatingWidget";
 import ReportIssueButton from "@/components/ReportIssueButton";
+import EditButton from "@/components/EditButton";
 import SpecsTable from "@/components/SpecsTable";
 import { getImages } from "@/lib/images";
 import { formatDescription } from "@/lib/format-description";
 import { PageTransition } from "@/components/page-transition";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { getCurrentUser } from "@/lib/user-auth";
 
 export const revalidate = 86400;
 
@@ -52,6 +54,7 @@ export default async function CameraDetailPage({
   if (!result) notFound();
 
   const { camera, system } = result;
+  const currentUser = await getCurrentUser();
   const specs = (camera.specs ?? {}) as Record<string, string>;
 
   const imagingRows: [string, string | number | null | undefined][] = [
@@ -195,13 +198,48 @@ export default async function CameraDetailPage({
           </p>
         )}
 
+        <div className="flex items-center justify-between">
+          <EditButton
+            entityType="camera"
+            entityId={camera.id}
+            entitySlug={camera.slug}
+            isLoggedIn={!!currentUser}
+            currentValues={{
+              name: camera.name,
+              url: camera.url,
+              description: camera.description,
+              alias: camera.alias,
+              sensorType: camera.sensorType,
+              sensorSize: camera.sensorSize,
+              megapixels: camera.megapixels,
+              resolution: camera.resolution,
+              yearIntroduced: camera.yearIntroduced,
+              bodyType: camera.bodyType,
+              weightG: camera.weightG,
+            }}
+            fields={[
+              { name: "name", label: "Name", type: "text" },
+              { name: "alias", label: "Also known as", type: "text" },
+              { name: "description", label: "Description", type: "textarea" },
+              { name: "sensorType", label: "Sensor Type", type: "text" },
+              { name: "sensorSize", label: "Sensor Size", type: "text" },
+              { name: "megapixels", label: "Megapixels", type: "number" },
+              { name: "resolution", label: "Resolution", type: "text" },
+              { name: "yearIntroduced", label: "Year Introduced", type: "number" },
+              { name: "bodyType", label: "Body Type", type: "text" },
+              { name: "weightG", label: "Weight (g)", type: "number" },
+              { name: "url", label: "Source URL", type: "text" },
+            ]}
+          />
+          <ReportIssueButton
+            entityType="camera"
+            entityId={camera.id}
+            entityName={camera.name}
+            entitySlug={camera.slug}
+          />
+        </div>
+
         <ViewTracker type="camera" id={camera.id} />
-        <ReportIssueButton
-          entityType="camera"
-          entityId={camera.id}
-          entityName={camera.name}
-          entitySlug={camera.slug}
-        />
       </div>
     </PageTransition>
   );

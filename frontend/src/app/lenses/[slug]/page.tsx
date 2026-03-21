@@ -11,10 +11,12 @@ import ViewTracker from "@/components/ViewTracker";
 import RatingWidget from "@/components/RatingWidget";
 import ImageGallery from "@/components/ImageGallery";
 import ReportIssueButton from "@/components/ReportIssueButton";
+import EditButton from "@/components/EditButton";
 import SpecsTable from "@/components/SpecsTable";
 import { PageTransition } from "@/components/page-transition";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { getCurrentUser } from "@/lib/user-auth";
 
 export const revalidate = 86400;
 
@@ -52,6 +54,7 @@ export default async function LensDetailPage({
   if (!result) notFound();
 
   const { lens, system } = result;
+  const currentUser = await getCurrentUser();
   const specs = (lens.specs ?? {}) as Record<string, string>;
   const mountFromSpecs =
     specs["Mount"] ??
@@ -247,13 +250,68 @@ export default async function LensDetailPage({
           </p>
         )}
 
+        <div className="flex items-center justify-between">
+          <EditButton
+            entityType="lens"
+            entityId={lens.id}
+            entitySlug={lens.slug}
+            isLoggedIn={!!currentUser}
+            currentValues={{
+              name: lens.name,
+              url: lens.url,
+              brand: lens.brand,
+              description: lens.description,
+              lensType: lens.lensType,
+              era: lens.era,
+              productionStatus: lens.productionStatus,
+              focalLengthMin: lens.focalLengthMin,
+              focalLengthMax: lens.focalLengthMax,
+              apertureMin: lens.apertureMin,
+              apertureMax: lens.apertureMax,
+              weightG: lens.weightG,
+              filterSizeMm: lens.filterSizeMm,
+              minFocusDistanceM: lens.minFocusDistanceM,
+              maxMagnification: lens.maxMagnification,
+              lensElements: lens.lensElements,
+              lensGroups: lens.lensGroups,
+              diaphragmBlades: lens.diaphragmBlades,
+              yearIntroduced: lens.yearIntroduced,
+              yearDiscontinued: lens.yearDiscontinued,
+              hasAutofocus: lens.hasAutofocus,
+              hasStabilization: lens.hasStabilization,
+            }}
+            fields={[
+              { name: "name", label: "Name", type: "text" },
+              { name: "brand", label: "Brand", type: "text" },
+              { name: "description", label: "Description", type: "textarea" },
+              { name: "lensType", label: "Lens Type", type: "text" },
+              { name: "focalLengthMin", label: "Focal Length Min (mm)", type: "number" },
+              { name: "focalLengthMax", label: "Focal Length Max (mm)", type: "number" },
+              { name: "apertureMin", label: "Max Aperture (f/)", type: "number" },
+              { name: "apertureMax", label: "Min Aperture (f/)", type: "number" },
+              { name: "weightG", label: "Weight (g)", type: "number" },
+              { name: "filterSizeMm", label: "Filter Size (mm)", type: "number" },
+              { name: "minFocusDistanceM", label: "Min Focus Distance (m)", type: "number" },
+              { name: "maxMagnification", label: "Max Magnification", type: "number" },
+              { name: "lensElements", label: "Lens Elements", type: "number" },
+              { name: "lensGroups", label: "Lens Groups", type: "number" },
+              { name: "diaphragmBlades", label: "Diaphragm Blades", type: "number" },
+              { name: "yearIntroduced", label: "Year Introduced", type: "number" },
+              { name: "yearDiscontinued", label: "Year Discontinued", type: "number" },
+              { name: "hasAutofocus", label: "Has Autofocus", type: "boolean" },
+              { name: "hasStabilization", label: "Has Stabilization", type: "boolean" },
+              { name: "url", label: "Source URL", type: "text" },
+            ]}
+          />
+          <ReportIssueButton
+            entityType="lens"
+            entityId={lens.id}
+            entityName={lens.name}
+            entitySlug={lens.slug}
+          />
+        </div>
+
         <ViewTracker type="lens" id={lens.id} />
-        <ReportIssueButton
-          entityType="lens"
-          entityId={lens.id}
-          entityName={lens.name}
-          entitySlug={lens.slug}
-        />
       </div>
     </PageTransition>
   );
