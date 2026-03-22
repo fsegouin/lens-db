@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 
 type PendingEdit = {
@@ -38,6 +39,7 @@ function formatValue(value: unknown): string {
 }
 
 export default function PendingEditsPage() {
+  const router = useRouter();
   const [edits, setEdits] = useState<PendingEdit[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -69,6 +71,7 @@ export default function PendingEditsPage() {
       });
       if (res.ok) {
         fetchData();
+        router.refresh();
       }
     } finally {
       setActionLoading(null);

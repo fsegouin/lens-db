@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
@@ -33,6 +34,7 @@ function entityHref(type: string, id: number): string {
 }
 
 export default function RecentChangesPage() {
+  const router = useRouter();
   const [revisions, setRevisions] = useState<Revision[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -68,6 +70,7 @@ export default function RecentChangesPage() {
       });
       if (res.ok) {
         fetchData();
+        router.refresh();
       }
     } finally {
       setActionLoading(null);

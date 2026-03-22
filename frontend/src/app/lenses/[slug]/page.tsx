@@ -281,12 +281,17 @@ export default async function LensDetailPage({
               yearDiscontinued: lens.yearDiscontinued,
               hasAutofocus: lens.hasAutofocus,
               hasStabilization: lens.hasStabilization,
+              isZoom: lens.isZoom,
+              isMacro: lens.isMacro,
+              isPrime: lens.isPrime,
             }}
             fields={[
               { name: "name", label: "Name", type: "text" },
               { name: "brand", label: "Brand", type: "text" },
               { name: "description", label: "Description", type: "textarea" },
               { name: "lensType", label: "Lens Type", type: "text" },
+              { name: "era", label: "Era", type: "text" },
+              { name: "productionStatus", label: "Production Status", type: "text" },
               { name: "focalLengthMin", label: "Focal Length Min (mm)", type: "number" },
               { name: "focalLengthMax", label: "Focal Length Max (mm)", type: "number" },
               { name: "apertureMin", label: "Max Aperture (f/)", type: "number" },
@@ -302,6 +307,9 @@ export default async function LensDetailPage({
               { name: "yearDiscontinued", label: "Year Discontinued", type: "number" },
               { name: "hasAutofocus", label: "Has Autofocus", type: "boolean" },
               { name: "hasStabilization", label: "Has Stabilization", type: "boolean" },
+              { name: "isZoom", label: "Zoom", type: "boolean" },
+              { name: "isMacro", label: "Macro", type: "boolean" },
+              { name: "isPrime", label: "Prime", type: "boolean" },
               { name: "url", label: "Source URL", type: "text" },
             ]}
           />
