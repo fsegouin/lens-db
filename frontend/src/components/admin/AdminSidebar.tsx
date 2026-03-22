@@ -6,10 +6,11 @@ import LogoutButton from "./LogoutButton";
 
 interface AdminSidebarProps {
   pendingCount: number;
+  unpatrolledCount?: number;
   navItems: { href: string; label: string }[];
 }
 
-export default function AdminSidebar({ pendingCount, navItems }: AdminSidebarProps) {
+export default function AdminSidebar({ pendingCount, unpatrolledCount = 0, navItems }: AdminSidebarProps) {
   const [open, setOpen] = useState(false);
 
   // Close on escape key
@@ -77,16 +78,27 @@ export default function AdminSidebar({ pendingCount, navItems }: AdminSidebarPro
           </button>
         </div>
         <nav className="space-y-1 px-2">
-          {navItems.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              onClick={close}
-              className="block rounded-md px-3 py-2 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-200 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
-            >
-              {link.label}
-            </Link>
-          ))}
+          {navItems.map((link) => {
+            const badge =
+              link.href === "/admin/recent-changes" && unpatrolledCount > 0
+                ? unpatrolledCount
+                : null;
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                onClick={close}
+                className="flex items-center justify-between rounded-md px-3 py-2 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-200 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+              >
+                {link.label}
+                {badge && (
+                  <span className="inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-700 dark:bg-amber-900 dark:text-amber-300">
+                    {badge}
+                  </span>
+                )}
+              </Link>
+            );
+          })}
           <Link
             href="/admin/reports"
             onClick={close}
