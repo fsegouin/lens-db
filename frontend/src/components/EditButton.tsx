@@ -44,6 +44,7 @@ export default function EditButton({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
 
   function handleOpen(isOpen: boolean) {
     if (isOpen) {
@@ -108,10 +109,15 @@ export default function EditButton({
       }
 
       setSuccess(true);
+      setSuccessMessage(
+        data.pending
+          ? "Your edit has been submitted for review. An admin will approve it shortly."
+          : "Your changes have been saved. Thank you for contributing!"
+      );
       setTimeout(() => {
         setOpen(false);
-        router.refresh();
-      }, 1500);
+        if (!data.pending) router.refresh();
+      }, 2000);
     } catch {
       setError("Network error. Please try again.");
     } finally {
@@ -152,7 +158,7 @@ export default function EditButton({
             <DialogHeader>
               <DialogTitle>Edit submitted</DialogTitle>
               <DialogDescription>
-                Your changes have been saved. Thank you for contributing!
+                {successMessage}
               </DialogDescription>
             </DialogHeader>
           ) : (

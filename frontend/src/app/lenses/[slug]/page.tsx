@@ -10,7 +10,6 @@ import { getImages } from "@/lib/images";
 import ViewTracker from "@/components/ViewTracker";
 import RatingWidget from "@/components/RatingWidget";
 import ImageGallery from "@/components/ImageGallery";
-import ReportIssueButton from "@/components/ReportIssueButton";
 import EditButton from "@/components/EditButton";
 import FlagDuplicateButton from "@/components/FlagDuplicateButton";
 import SpecsTable from "@/components/SpecsTable";
@@ -211,10 +210,6 @@ export default async function LensDetailPage({
               rows={opticalRows
                 .filter(([, value]) => value != null && value !== "")
                 .map(([label, value]) => [label, String(value)])}
-              entityType="lens"
-              entityId={lens.id}
-              entityName={lens.name}
-              entitySlug={lens.slug}
             />
           </div>
 
@@ -228,10 +223,6 @@ export default async function LensDetailPage({
               rows={physicalRows
                 .filter(([, value]) => value != null && value !== "")
                 .map(([label, value]) => [label, String(value)])}
-              entityType="lens"
-              entityId={lens.id}
-              entityName={lens.name}
-              entitySlug={lens.slug}
             />
           </div>
         </div>
@@ -320,12 +311,6 @@ export default async function LensDetailPage({
               entityId={lens.id}
               entityName={lens.name}
               isLoggedIn={!!currentUser}
-            />
-            <ReportIssueButton
-              entityType="lens"
-              entityId={lens.id}
-              entityName={lens.name}
-              entitySlug={lens.slug}
             />
           </div>
         </div>

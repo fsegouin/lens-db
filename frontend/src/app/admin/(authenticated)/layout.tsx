@@ -1,7 +1,7 @@
 import { requireAdmin } from "@/lib/admin-auth";
 import { db } from "@/db";
-import { issueReports, revisions } from "@/db/schema";
-import { sql, eq, and } from "drizzle-orm";
+import { pendingEdits, revisions } from "@/db/schema";
+import { sql, eq } from "drizzle-orm";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 
 const adminNav = [
@@ -13,6 +13,7 @@ const adminNav = [
   { href: "/admin/series", label: "Series" },
   { href: "/admin/compatibility", label: "Compatibility" },
   { href: "/admin/recent-changes", label: "Recent Changes" },
+  { href: "/admin/pending-edits", label: "Pending Edits" },
   { href: "/admin/users", label: "Users" },
   { href: "/admin/duplicates", label: "Duplicates" },
 ];
@@ -20,11 +21,11 @@ const adminNav = [
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   await requireAdmin();
 
-  const [[{ count: reportCount }], [{ count: unpatrolledCount }]] = await Promise.all([
+  const [[{ count: pendingEditCount }], [{ count: unpatrolledCount }]] = await Promise.all([
     db
       .select({ count: sql<number>`count(*)` })
-      .from(issueReports)
-      .where(eq(issueReports.status, "pending")),
+      .from(pendingEdits)
+      .where(eq(pendingEdits.status, "pending")),
     db
       .select({ count: sql<number>`count(*)` })
       .from(revisions)
@@ -34,7 +35,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <div className="fixed inset-0 z-50 flex bg-white dark:bg-zinc-950">
       <AdminSidebar
-        pendingCount={Number(reportCount)}
+        pendingEditCount={Number(pendingEditCount)}
         unpatrolledCount={Number(unpatrolledCount)}
         navItems={adminNav}
       />

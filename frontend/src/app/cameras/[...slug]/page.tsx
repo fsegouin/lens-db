@@ -6,7 +6,6 @@ import { cameras, systems } from "@/db/schema";
 import ViewTracker from "@/components/ViewTracker";
 import ImageGallery from "@/components/ImageGallery";
 import RatingWidget from "@/components/RatingWidget";
-import ReportIssueButton from "@/components/ReportIssueButton";
 import EditButton from "@/components/EditButton";
 import FlagDuplicateButton from "@/components/FlagDuplicateButton";
 import SpecsTable from "@/components/SpecsTable";
@@ -160,10 +159,6 @@ export default async function CameraDetailPage({
               rows={imagingRows
                 .filter(([, value]) => value != null && value !== "")
                 .map(([label, value]) => [label, String(value)])}
-              entityType="camera"
-              entityId={camera.id}
-              entityName={camera.name}
-              entitySlug={camera.slug}
             />
           </div>
 
@@ -177,10 +172,6 @@ export default async function CameraDetailPage({
               rows={bodyRows
                 .filter(([, value]) => value != null && value !== "")
                 .map(([label, value]) => [label, String(value)])}
-              entityType="camera"
-              entityId={camera.id}
-              entityName={camera.name}
-              entitySlug={camera.slug}
             />
           </div>
         </div>
@@ -249,12 +240,6 @@ export default async function CameraDetailPage({
               entityId={camera.id}
               entityName={camera.name}
               isLoggedIn={!!currentUser}
-            />
-            <ReportIssueButton
-              entityType="camera"
-              entityId={camera.id}
-              entityName={camera.name}
-              entitySlug={camera.slug}
             />
           </div>
         </div>
