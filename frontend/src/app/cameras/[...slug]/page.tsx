@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import BackButton from "@/components/BackButton";
 import { db } from "@/db";
@@ -55,6 +55,17 @@ export default async function CameraDetailPage({
   if (!result) notFound();
 
   const { camera, system } = result;
+
+  // Redirect if this entity was merged into another
+  if (camera.mergedIntoId) {
+    const [target] = await db
+      .select({ slug: cameras.slug })
+      .from(cameras)
+      .where(eq(cameras.id, camera.mergedIntoId))
+      .limit(1);
+    if (target) redirect(`/cameras/${target.slug}`);
+  }
+
   const currentUser = await getCurrentUser();
   const specs = (camera.specs ?? {}) as Record<string, string>;
 

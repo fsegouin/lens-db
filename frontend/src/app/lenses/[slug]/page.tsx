@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import BackButton from "@/components/BackButton";
 import { db } from "@/db";
@@ -55,6 +55,16 @@ export default async function LensDetailPage({
   if (!result) notFound();
 
   const { lens, system } = result;
+
+  // Redirect if this entity was merged into another
+  if (lens.mergedIntoId) {
+    const [target] = await db
+      .select({ slug: lenses.slug })
+      .from(lenses)
+      .where(eq(lenses.id, lens.mergedIntoId))
+      .limit(1);
+    if (target) redirect(`/lenses/${target.slug}`);
+  }
   const currentUser = await getCurrentUser();
   const specs = (lens.specs ?? {}) as Record<string, string>;
   const mountFromSpecs =
