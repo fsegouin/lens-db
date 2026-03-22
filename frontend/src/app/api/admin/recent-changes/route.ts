@@ -5,7 +5,7 @@ import { requireAdminAPI } from "@/lib/admin-auth";
 import { eq, desc, and, sql } from "drizzle-orm";
 
 export async function GET(request: NextRequest) {
-  const token = request.cookies.get("admin_session")?.value;
+  const token = request.cookies.get("user_session")?.value;
   const authError = await requireAdminAPI(token);
   if (authError) return authError;
 

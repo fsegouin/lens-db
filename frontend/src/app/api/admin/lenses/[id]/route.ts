@@ -9,7 +9,7 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const token = request.cookies.get("admin_session")?.value;
+  const token = request.cookies.get("user_session")?.value;
   const authError = await requireAdminAPI(token);
   if (authError) return authError;
 
@@ -66,7 +66,7 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const token = request.cookies.get("admin_session")?.value;
+  const token = request.cookies.get("user_session")?.value;
   const authError = await requireAdminAPI(token);
   if (authError) return authError;
 
@@ -123,7 +123,7 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const token = request.cookies.get("admin_session")?.value;
+  const token = request.cookies.get("user_session")?.value;
   const authError = await requireAdminAPI(token);
   if (authError) return authError;
 
