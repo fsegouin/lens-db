@@ -8,6 +8,7 @@ import ImageGallery from "@/components/ImageGallery";
 import RatingWidget from "@/components/RatingWidget";
 import ReportIssueButton from "@/components/ReportIssueButton";
 import EditButton from "@/components/EditButton";
+import FlagDuplicateButton from "@/components/FlagDuplicateButton";
 import SpecsTable from "@/components/SpecsTable";
 import { getImages } from "@/lib/images";
 import { formatDescription } from "@/lib/format-description";
@@ -231,12 +232,20 @@ export default async function CameraDetailPage({
               { name: "url", label: "Source URL", type: "text" },
             ]}
           />
-          <ReportIssueButton
-            entityType="camera"
-            entityId={camera.id}
-            entityName={camera.name}
-            entitySlug={camera.slug}
-          />
+          <div className="flex items-center gap-2">
+            <FlagDuplicateButton
+              entityType="camera"
+              entityId={camera.id}
+              entityName={camera.name}
+              isLoggedIn={!!currentUser}
+            />
+            <ReportIssueButton
+              entityType="camera"
+              entityId={camera.id}
+              entityName={camera.name}
+              entitySlug={camera.slug}
+            />
+          </div>
         </div>
 
         <ViewTracker type="camera" id={camera.id} />

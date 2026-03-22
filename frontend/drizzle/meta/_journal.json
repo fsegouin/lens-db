@@ -57,6 +57,13 @@
       "when": 1774020619601,
       "tag": "0007_square_thunderbolt_ross",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1774158512384,
+      "tag": "0008_orange_proemial_gods",
+      "breakpoints": true
     }
   ]
 }

@@ -68,6 +68,7 @@ export const lenses = pgTable(
     verified: boolean("verified").default(true).notNull(),
     submittedByIp: text("submitted_by_ip"),
     protectionLevel: text("protection_level").default("none"), // "none" | "autoconfirmed" | "trusted" | "admin"
+    mergedIntoId: integer("merged_into_id"), // self-referencing: if set, this entity was merged into another
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   },
   (table) => [
@@ -104,6 +105,7 @@ export const cameras = pgTable(
     verified: boolean("verified").default(true).notNull(),
     submittedByIp: text("submitted_by_ip"),
     protectionLevel: text("protection_level").default("none"), // "none" | "autoconfirmed" | "trusted" | "admin"
+    mergedIntoId: integer("merged_into_id"), // self-referencing: if set, this entity was merged into another
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   },
   (table) => [index("idx_cameras_system").on(table.systemId)]
@@ -288,6 +290,24 @@ export const revisions = pgTable(
     index("idx_revisions_created").on(table.createdAt),
     unique("uq_revision_number").on(table.entityType, table.entityId, table.revisionNumber),
   ]
+);
+
+export const duplicateFlags = pgTable(
+  "duplicate_flags",
+  {
+    id: serial("id").primaryKey(),
+    sourceEntityType: text("source_entity_type").notNull(), // "lens" | "camera"
+    sourceEntityId: integer("source_entity_id").notNull(),
+    targetEntityType: text("target_entity_type").notNull(),
+    targetEntityId: integer("target_entity_id").notNull(),
+    reason: text("reason"),
+    flaggedByUserId: integer("flagged_by_user_id").references(() => users.id),
+    status: text("status").notNull().default("pending"), // "pending" | "confirmed" | "dismissed"
+    resolvedByUserId: integer("resolved_by_user_id").references(() => users.id),
+    resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  },
+  (table) => [index("idx_duplicate_flags_status").on(table.status)]
 );
 
 export const lensComparisons = pgTable(
