@@ -3,6 +3,7 @@
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { useUser } from "@/components/user-context";
 
 function LoginForm() {
   const [email, setEmail] = useState("");
@@ -12,6 +13,7 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { refresh: refreshUser } = useUser();
   const verified = searchParams.get("verified") === "true";
   const tokenError = searchParams.get("error");
 
@@ -28,8 +30,8 @@ function LoginForm() {
       });
       const data = await res.json();
       if (res.ok) {
+        await refreshUser();
         router.push("/");
-        router.refresh();
       } else {
         setError(data.error || "Login failed");
         setErrorCode(data.code || "");
