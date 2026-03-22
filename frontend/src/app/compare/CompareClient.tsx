@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowUpDown, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { formatMagnification } from "@/lib/format-magnification";
+import { useEntitySearch, type EntityType } from "@/hooks/use-entity-search";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -178,54 +179,14 @@ function ItemSearch({
   selected: SelectedItem | null;
   onSelect: (item: SelectedItem | null) => void;
 }) {
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState<SearchResultItem[]>([]);
   const [open, setOpen] = useState(false);
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  const search = useCallback(
-    async (q: string) => {
-      if (q.length < 2) {
-        setResults([]);
-        return;
-      }
-
-      try {
-        const [lensData, cameraData] = await Promise.all([
-          (!lockedType || lockedType === "lens")
-            ? fetch(`/api/lenses?q=${encodeURIComponent(q)}&cursor=0`).then(r => r.json())
-            : { items: [] },
-          (!lockedType || lockedType === "camera")
-            ? fetch(`/api/cameras?q=${encodeURIComponent(q)}&cursor=0`).then(r => r.json())
-            : { items: [] },
-        ]);
-
-        const lenses: SearchResultItem[] = (lensData.items || []).map(
-          (item: { lens: Lens; system: { name: string } | null }) => ({ type: "lens" as const, lens: item.lens, system: item.system })
-        );
-        const cameras: SearchResultItem[] = (cameraData.items || []).map(
-          (item: { camera: Camera; system: { name: string } | null }) => ({ type: "camera" as const, camera: item.camera, system: item.system })
-        );
-
-        // Show up to 10 of each type, giving remaining slots to the other type
-        const maxPerType = 10;
-        const lensSlice = lenses.slice(0, maxPerType);
-        const cameraSlice = cameras.slice(0, maxPerType);
-        const items: SearchResultItem[] = [...lensSlice, ...cameraSlice].slice(0, 20);
-
-        setResults(items);
-      } catch {
-        setResults([]);
-      }
-    },
+  const types = useMemo<EntityType[]>(
+    () => lockedType ? [lockedType] : ["lens", "camera"],
     [lockedType]
   );
 
-  function handleQuery(value: string) {
-    setQuery(value);
-    clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => search(value), 300);
-  }
+  const { query, results, handleQueryChange, reset } = useEntitySearch({ types });
 
   if (selected) {
     return (
@@ -241,8 +202,7 @@ function ItemSearch({
             size="sm"
             onClick={() => {
               onSelect(null);
-              setQuery("");
-              setResults([]);
+              reset();
             }}
           >
             Change
@@ -267,7 +227,7 @@ function ItemSearch({
             <CommandInput
               placeholder={placeholder}
               value={query}
-              onValueChange={handleQuery}
+              onValueChange={handleQueryChange}
             />
             <CommandList>
               <CommandEmpty>
@@ -276,35 +236,44 @@ function ItemSearch({
               {(() => {
                 const lensResults = results.filter((r) => r.type === "lens");
                 const cameraResults = results.filter((r) => r.type === "camera");
-                const renderItem = (item: SearchResultItem) => {
-                  const isLens = item.type === "lens";
-                  const data = isLens ? item.lens : item.camera;
-                  return (
-                    <CommandItem
-                      key={`${item.type}-${data.id}`}
-                      value={`${item.type}-${data.id}-${data.name}`}
-                      onSelect={() => {
-                        onSelect(isLens ? { type: "lens", data: item.lens } : { type: "camera", data: item.camera });
-                        setOpen(false);
-                        setQuery("");
-                        setResults([]);
-                      }}
-                    >
-                      <span>{data.name}</span>
-                      <span className="ml-2 text-xs text-muted-foreground">{item.system?.name}</span>
-                    </CommandItem>
-                  );
-                };
                 return (
                   <>
                     {lensResults.length > 0 && (
                       <CommandGroup heading="Lenses">
-                        {lensResults.map(renderItem)}
+                        {lensResults.map((item) => (
+                          <CommandItem
+                            key={`lens-${item.id}`}
+                            value={`lens-${item.id}-${item.name}`}
+                            onSelect={() => {
+                              const raw = item.raw as { lens: Lens; system: { name: string } | null };
+                              onSelect({ type: "lens", data: raw.lens });
+                              setOpen(false);
+                              reset();
+                            }}
+                          >
+                            <span>{item.name}</span>
+                            <span className="ml-2 text-xs text-muted-foreground">{item.systemName}</span>
+                          </CommandItem>
+                        ))}
                       </CommandGroup>
                     )}
                     {cameraResults.length > 0 && (
                       <CommandGroup heading="Cameras">
-                        {cameraResults.map(renderItem)}
+                        {cameraResults.map((item) => (
+                          <CommandItem
+                            key={`camera-${item.id}`}
+                            value={`camera-${item.id}-${item.name}`}
+                            onSelect={() => {
+                              const raw = item.raw as { camera: Camera; system: { name: string } | null };
+                              onSelect({ type: "camera", data: raw.camera });
+                              setOpen(false);
+                              reset();
+                            }}
+                          >
+                            <span>{item.name}</span>
+                            <span className="ml-2 text-xs text-muted-foreground">{item.systemName}</span>
+                          </CommandItem>
+                        ))}
                       </CommandGroup>
                     )}
                   </>
