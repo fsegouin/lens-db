@@ -142,7 +142,7 @@ export default function FlagDuplicateButton({
                 <Input
                   value={searchQuery}
                   onChange={(e) => handleSearch(e.target.value)}
-                  placeholder={`Search ${entityType}s...`}
+                  placeholder={`Search ${entityType === "lens" ? "lenses" : `${entityType}s`}...`}
                 />
                 {searchResults.length > 0 && (
                   <div className="mt-1 max-h-40 overflow-y-auto rounded border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
