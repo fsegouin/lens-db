@@ -149,7 +149,9 @@ export default function FlagDuplicateButton({
                     {searchResults.map((item) => (
                       <button
                         key={item.id}
-                        onClick={() => {
+                        type="button"
+                        onPointerDown={(e) => {
+                          e.preventDefault();
                           setTargetId(String(item.id));
                           setSearchQuery(item.name);
                           setSearchResults([]);
