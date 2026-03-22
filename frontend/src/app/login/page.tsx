@@ -8,6 +8,7 @@ function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [errorCode, setErrorCode] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -17,6 +18,7 @@ function LoginForm() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    setErrorCode("");
     setLoading(true);
     try {
       const res = await fetch("/api/auth/login", {
@@ -30,6 +32,7 @@ function LoginForm() {
         router.refresh();
       } else {
         setError(data.error || "Login failed");
+        setErrorCode(data.code || "");
       }
     } catch {
       setError("Network error");
@@ -54,7 +57,16 @@ function LoginForm() {
             Invalid or expired verification link.
           </p>
         )}
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && errorCode === "EMAIL_NOT_VERIFIED" ? (
+          <div className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
+            <p className="font-medium">Email not verified</p>
+            <p className="mt-1">
+              Check your inbox for a verification link. The link expires in 24 hours.
+            </p>
+          </div>
+        ) : error ? (
+          <p className="text-sm text-red-600">{error}</p>
+        ) : null}
         <div className="space-y-2">
           <label htmlFor="email" className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
             Email
