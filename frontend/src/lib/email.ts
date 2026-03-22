@@ -21,7 +21,7 @@ export async function sendVerificationEmail(
   const fromEmail = process.env.RESEND_FROM_EMAIL || "The Lens DB <noreply@thelensdb.com>";
   const verifyUrl = `${appUrl}/api/auth/verify-email?token=${token}`;
 
-  await getResend().emails.send({
+  const { error } = await getResend().emails.send({
     from: fromEmail,
     to: email,
     subject: "Verify your email — The Lens DB",
@@ -46,4 +46,9 @@ export async function sendVerificationEmail(
       </div>
     `,
   });
+
+  if (error) {
+    console.error(`[email] Failed to send verification email to ${email}:`, JSON.stringify(error));
+    throw new Error(`Resend API error: ${error.message}`);
+  }
 }
