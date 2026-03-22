@@ -1,7 +1,16 @@
 "use client";
 
 import { useState } from "react";
+import { ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import {
   Dialog,
   DialogContent,
@@ -11,8 +20,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
+import { useEntitySearch } from "@/hooks/use-entity-search";
 
 export default function FlagDuplicateButton({
   entityType,
@@ -26,40 +36,21 @@ export default function FlagDuplicateButton({
   isLoggedIn: boolean;
 }) {
   const [open, setOpen] = useState(false);
-  const [targetId, setTargetId] = useState("");
+  const [popoverOpen, setPopoverOpen] = useState(false);
+  const [targetId, setTargetId] = useState<number | null>(null);
+  const [targetName, setTargetName] = useState("");
   const [reason, setReason] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<Array<{ id: number; name: string }>>([]);
-  const [searching, setSearching] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  async function handleSearch(query: string) {
-    setSearchQuery(query);
-    if (query.length < 2) {
-      setSearchResults([]);
-      return;
-    }
-    setSearching(true);
-    try {
-      const endpoint = entityType === "lens" ? "/api/lenses" : "/api/cameras";
-      const res = await fetch(`${endpoint}?search=${encodeURIComponent(query)}&limit=10`);
-      const data = await res.json();
-      setSearchResults(
-        (data.items || [])
-          .filter((item: { id: number }) => item.id !== entityId)
-          .map((item: { id: number; name: string }) => ({
-            id: item.id,
-            name: item.name,
-          }))
-      );
-    } catch {
-      // ignore
-    } finally {
-      setSearching(false);
-    }
-  }
+  const { query, results, handleQueryChange, reset: resetSearch } = useEntitySearch({
+    types: [entityType],
+    excludeId: entityId,
+    maxResults: 10,
+  });
+
+  const placeholder = `Search ${entityType === "lens" ? "lenses" : "cameras"}...`;
 
   async function handleSubmit() {
     if (!targetId) {
@@ -78,7 +69,7 @@ export default function FlagDuplicateButton({
           sourceEntityType: entityType,
           sourceEntityId: entityId,
           targetEntityType: entityType,
-          targetEntityId: parseInt(targetId, 10),
+          targetEntityId: targetId,
           reason,
         }),
       });
@@ -98,10 +89,10 @@ export default function FlagDuplicateButton({
 
   function handleOpen(isOpen: boolean) {
     if (isOpen) {
-      setTargetId("");
+      setTargetId(null);
+      setTargetName("");
       setReason("");
-      setSearchQuery("");
-      setSearchResults([]);
+      resetSearch();
       setError(null);
       setSuccess(false);
     }
@@ -139,33 +130,47 @@ export default function FlagDuplicateButton({
                 <label className="mb-1 block text-xs font-medium text-muted-foreground">
                   Search for the duplicate target
                 </label>
-                <Input
-                  value={searchQuery}
-                  onChange={(e) => handleSearch(e.target.value)}
-                  placeholder={`Search ${entityType === "lens" ? "lenses" : `${entityType}s`}...`}
-                />
-                {searchResults.length > 0 && (
-                  <div className="mt-1 max-h-40 overflow-y-auto rounded border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
-                    {searchResults.map((item) => (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onPointerDown={(e) => {
-                          e.preventDefault();
-                          setTargetId(String(item.id));
-                          setSearchQuery(item.name);
-                          setSearchResults([]);
-                        }}
-                        className="block w-full px-3 py-1.5 text-left text-sm text-zinc-900 hover:bg-zinc-100 dark:text-zinc-100 dark:hover:bg-zinc-800"
-                      >
-                        {item.name}
-                      </button>
-                    ))}
-                  </div>
-                )}
-                {searching && (
-                  <p className="mt-1 text-xs text-muted-foreground">Searching...</p>
-                )}
+                <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+                  <PopoverTrigger render={<Button variant="outline" className="w-full justify-between" />}>
+                    {targetName || placeholder}
+                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[var(--anchor-width)] p-0" align="start">
+                    <Command shouldFilter={false}>
+                      <CommandInput
+                        placeholder={placeholder}
+                        value={query}
+                        onValueChange={handleQueryChange}
+                      />
+                      <CommandList>
+                        <CommandEmpty>
+                          {query.length < 2 ? "Type at least 2 characters" : "No results found."}
+                        </CommandEmpty>
+                        {results.length > 0 && (
+                          <CommandGroup heading={entityType === "lens" ? "Lenses" : "Cameras"}>
+                            {results.map((item) => (
+                              <CommandItem
+                                key={item.id}
+                                value={`${item.type}-${item.id}-${item.name}`}
+                                onSelect={() => {
+                                  setTargetId(item.id);
+                                  setTargetName(item.name);
+                                  setPopoverOpen(false);
+                                  resetSearch();
+                                }}
+                              >
+                                <span>{item.name}</span>
+                                {item.systemName && (
+                                  <span className="ml-2 text-xs text-muted-foreground">{item.systemName}</span>
+                                )}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        )}
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
 
               <div>
