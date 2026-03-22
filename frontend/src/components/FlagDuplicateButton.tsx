@@ -154,7 +154,7 @@ export default function FlagDuplicateButton({
                           setSearchQuery(item.name);
                           setSearchResults([]);
                         }}
-                        className="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                        className="block w-full px-3 py-1.5 text-left text-sm text-zinc-900 hover:bg-zinc-100 dark:text-zinc-100 dark:hover:bg-zinc-800"
                       >
                         {item.name}
                       </button>
