@@ -14,6 +14,7 @@ const adminNav = [
   { href: "/admin/compatibility", label: "Compatibility" },
   { href: "/admin/recent-changes", label: "Recent Changes" },
   { href: "/admin/users", label: "Users" },
+  { href: "/admin/duplicates", label: "Duplicates" },
 ];
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {

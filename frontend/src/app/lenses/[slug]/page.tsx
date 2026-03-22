@@ -12,6 +12,7 @@ import RatingWidget from "@/components/RatingWidget";
 import ImageGallery from "@/components/ImageGallery";
 import ReportIssueButton from "@/components/ReportIssueButton";
 import EditButton from "@/components/EditButton";
+import FlagDuplicateButton from "@/components/FlagDuplicateButton";
 import SpecsTable from "@/components/SpecsTable";
 import { PageTransition } from "@/components/page-transition";
 import { Badge } from "@/components/ui/badge";
@@ -303,12 +304,20 @@ export default async function LensDetailPage({
               { name: "url", label: "Source URL", type: "text" },
             ]}
           />
-          <ReportIssueButton
-            entityType="lens"
-            entityId={lens.id}
-            entityName={lens.name}
-            entitySlug={lens.slug}
-          />
+          <div className="flex items-center gap-2">
+            <FlagDuplicateButton
+              entityType="lens"
+              entityId={lens.id}
+              entityName={lens.name}
+              isLoggedIn={!!currentUser}
+            />
+            <ReportIssueButton
+              entityType="lens"
+              entityId={lens.id}
+              entityName={lens.name}
+              entitySlug={lens.slug}
+            />
+          </div>
         </div>
 
         <ViewTracker type="lens" id={lens.id} />
