@@ -30,6 +30,7 @@ export async function POST(request: NextRequest) {
         id: users.id,
         passwordHash: users.passwordHash,
         displayName: users.displayName,
+        emailVerifiedAt: users.emailVerifiedAt,
         isBanned: users.isBanned,
         banReason: users.banReason,
       })
@@ -51,6 +52,13 @@ export async function POST(request: NextRequest) {
     const valid = await verifyPassword(password, user.passwordHash);
     if (!valid) {
       return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
+    }
+
+    if (!user.emailVerifiedAt) {
+      return NextResponse.json(
+        { error: "Please verify your email before signing in. Check your inbox for a verification link.", code: "EMAIL_NOT_VERIFIED" },
+        { status: 403 }
+      );
     }
 
     const sessionToken = await createUserSession(user.id);
