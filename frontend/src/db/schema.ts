@@ -292,6 +292,30 @@ export const revisions = pgTable(
   ]
 );
 
+export const pendingEdits = pgTable(
+  "pending_edits",
+  {
+    id: serial("id").primaryKey(),
+    entityType: text("entity_type").notNull(), // "lens" | "camera" | "system" | "collection" | "series"
+    entityId: integer("entity_id").notNull(),
+    changes: jsonb("changes").notNull(), // Record<string, unknown> — only the changed fields
+    summary: text("summary").notNull(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    ipHash: text("ip_hash"),
+    status: text("status").notNull().default("pending"), // "pending" | "approved" | "rejected"
+    reviewedByUserId: integer("reviewed_by_user_id").references(() => users.id),
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+    rejectReason: text("reject_reason"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  },
+  (table) => [
+    index("idx_pending_edits_status").on(table.status),
+    index("idx_pending_edits_user").on(table.userId),
+  ]
+);
+
 export const duplicateFlags = pgTable(
   "duplicate_flags",
   {

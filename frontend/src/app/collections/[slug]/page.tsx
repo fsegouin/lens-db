@@ -4,7 +4,6 @@ import BackButton from "@/components/BackButton";
 import { asc, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { collections, lensCollections, lenses, systems } from "@/db/schema";
-import ReportIssueButton from "@/components/ReportIssueButton";
 import { PageTransition } from "@/components/page-transition";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -137,12 +136,6 @@ export default async function CollectionDetailPage({
           </div>
         )}
 
-        <ReportIssueButton
-          entityType="collection"
-          entityId={collection.id}
-          entityName={collection.name}
-          entitySlug={collection.slug}
-        />
       </div>
     </PageTransition>
   );

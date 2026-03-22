@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { blockedIps, issueReports } from "@/db/schema";
+import { blockedIps } from "@/db/schema";
 import { requireAdminAPI } from "@/lib/admin-auth";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 export async function POST(request: NextRequest) {
   const token = request.cookies.get("user_session")?.value;
@@ -16,20 +16,10 @@ export async function POST(request: NextRequest) {
 
   const ip = body.ipAddress.trim();
 
-  await Promise.all([
-    db
-      .insert(blockedIps)
-      .values({ ipAddress: ip, reason: "Blocked from admin reports panel" })
-      .onConflictDoNothing(),
-    db
-      .delete(issueReports)
-      .where(
-        and(
-          eq(issueReports.ipAddress, ip),
-          eq(issueReports.status, "pending")
-        )
-      ),
-  ]);
+  await db
+    .insert(blockedIps)
+    .values({ ipAddress: ip, reason: "Blocked from admin panel" })
+    .onConflictDoNothing();
 
   return NextResponse.json({ success: true });
 }

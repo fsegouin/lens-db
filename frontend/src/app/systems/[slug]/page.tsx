@@ -5,7 +5,6 @@ import { asc, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { cameras, lenses, systems } from "@/db/schema";
 import ViewTracker from "@/components/ViewTracker";
-import ReportIssueButton from "@/components/ReportIssueButton";
 import { PageTransition } from "@/components/page-transition";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -193,12 +192,6 @@ export default async function SystemDetailPage({
         )}
 
         <ViewTracker type="system" id={system.id} />
-        <ReportIssueButton
-          entityType="system"
-          entityId={system.id}
-          entityName={system.name}
-          entitySlug={system.slug}
-        />
       </div>
     </PageTransition>
   );

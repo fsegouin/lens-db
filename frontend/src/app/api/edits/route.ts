@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { lenses, cameras, systems, collections, lensSeries } from "@/db/schema";
+import { lenses, cameras, systems, collections, lensSeries, pendingEdits } from "@/db/schema";
 import { requireUserAPI } from "@/lib/user-auth";
-import { createRevision, snapshotEntity, type EntityType } from "@/lib/revisions";
-import { validateEdit } from "@/lib/edit-validation";
+import { createRevision, type EntityType } from "@/lib/revisions";
+import { validateEdit, getUserTier } from "@/lib/edit-validation";
 import { getClientIP, hashIP } from "@/lib/api-utils";
 import { eq } from "drizzle-orm";
 
@@ -135,11 +135,35 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: validationError }, { status: 403 });
   }
 
-  // Apply the update
+  const ipHash = await hashIP(getClientIP(request));
+  const userTier = getUserTier(user);
+  const canAutoApply = userTier !== "none";
+
+  if (!canAutoApply) {
+    // Queue the edit for admin review
+    const [pending] = await db
+      .insert(pendingEdits)
+      .values({
+        entityType: type,
+        entityId,
+        changes: updates,
+        summary: summary.trim(),
+        userId: user.id,
+        ipHash,
+      })
+      .returning({ id: pendingEdits.id });
+
+    return NextResponse.json({
+      success: true,
+      pending: true,
+      pendingEditId: pending.id,
+      message: "Your edit has been submitted for review. An admin will approve it shortly.",
+    });
+  }
+
+  // Apply the update immediately for autoconfirmed/trusted/admin users
   await db.update(table).set(updates).where(eq(table.id, entityId));
 
-  // Create revision
-  const ipHash = await hashIP(getClientIP(request));
   const isAdmin = user.role === "admin";
   const isTrusted = user.role === "trusted";
 
@@ -154,6 +178,7 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({
     success: true,
+    pending: false,
     revisionId: revision.id,
     revisionNumber: revision.revisionNumber,
   });

@@ -5,12 +5,12 @@ import Link from "next/link";
 import LogoutButton from "./LogoutButton";
 
 interface AdminSidebarProps {
-  pendingCount: number;
+  pendingEditCount: number;
   unpatrolledCount?: number;
   navItems: { href: string; label: string }[];
 }
 
-export default function AdminSidebar({ pendingCount, unpatrolledCount = 0, navItems }: AdminSidebarProps) {
+export default function AdminSidebar({ pendingEditCount, unpatrolledCount = 0, navItems }: AdminSidebarProps) {
   const [open, setOpen] = useState(false);
 
   // Close on escape key
@@ -26,6 +26,12 @@ export default function AdminSidebar({ pendingCount, unpatrolledCount = 0, navIt
 
   function close() {
     setOpen(false);
+  }
+
+  function getBadge(href: string): number | null {
+    if (href === "/admin/recent-changes" && unpatrolledCount > 0) return unpatrolledCount;
+    if (href === "/admin/pending-edits" && pendingEditCount > 0) return pendingEditCount;
+    return null;
   }
 
   return (
@@ -79,10 +85,7 @@ export default function AdminSidebar({ pendingCount, unpatrolledCount = 0, navIt
         </div>
         <nav className="space-y-1 px-2">
           {navItems.map((link) => {
-            const badge =
-              link.href === "/admin/recent-changes" && unpatrolledCount > 0
-                ? unpatrolledCount
-                : null;
+            const badge = getBadge(link.href);
             return (
               <Link
                 key={link.href}
@@ -99,18 +102,6 @@ export default function AdminSidebar({ pendingCount, unpatrolledCount = 0, navIt
               </Link>
             );
           })}
-          <Link
-            href="/admin/reports"
-            onClick={close}
-            className="flex items-center justify-between rounded-md px-3 py-2 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-200 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
-          >
-            Reports
-            {pendingCount > 0 && (
-              <span className="inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-700 dark:bg-amber-900 dark:text-amber-300">
-                {pendingCount}
-              </span>
-            )}
-          </Link>
         </nav>
         <div className="p-4">
           <LogoutButton />
