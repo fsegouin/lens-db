@@ -19,6 +19,7 @@ const entityTables = {
 const editableFields: Record<EntityType, string[]> = {
   lens: [
     "name", "url", "brand", "description", "lensType", "era", "productionStatus",
+    "systemId",
     "focalLengthMin", "focalLengthMax", "apertureMin", "apertureMax",
     "weightG", "filterSizeMm", "minFocusDistanceM", "maxMagnification",
     "lensElements", "lensGroups", "diaphragmBlades",
@@ -27,6 +28,7 @@ const editableFields: Record<EntityType, string[]> = {
   ],
   camera: [
     "name", "url", "description", "alias",
+    "systemId",
     "sensorType", "sensorSize", "megapixels", "resolution",
     "yearIntroduced", "bodyType", "weightG",
   ],
@@ -46,6 +48,7 @@ const textFieldSets: Record<EntityType, string[]> = {
 
 // Numeric fields that need Number() coercion
 const numericFields = new Set([
+  "systemId",
   "focalLengthMin", "focalLengthMax", "apertureMin", "apertureMax",
   "weightG", "filterSizeMm", "minFocusDistanceM", "maxMagnification",
   "lensElements", "lensGroups", "diaphragmBlades",

@@ -66,6 +66,7 @@ export default async function CameraDetailPage({
   }
 
   const currentUser = await getCurrentUser();
+  const allSystems = await db.select({ id: systems.id, name: systems.name }).from(systems).orderBy(systems.name);
   const specs = (camera.specs ?? {}) as Record<string, string>;
 
   const imagingRows: [string, string | number | null | undefined][] = [
@@ -212,6 +213,7 @@ export default async function CameraDetailPage({
               url: camera.url,
               description: camera.description,
               alias: camera.alias,
+              systemId: camera.systemId,
               sensorType: camera.sensorType,
               sensorSize: camera.sensorSize,
               megapixels: camera.megapixels,
@@ -224,6 +226,7 @@ export default async function CameraDetailPage({
               { name: "name", label: "Name", type: "text" },
               { name: "alias", label: "Also known as", type: "text" },
               { name: "description", label: "Description", type: "textarea" },
+              { name: "systemId", label: "Mount System", type: "select", options: allSystems.map((s) => ({ value: s.id, label: s.name })) },
               { name: "sensorType", label: "Sensor Type", type: "text" },
               { name: "sensorSize", label: "Sensor Size", type: "text" },
               { name: "megapixels", label: "Megapixels", type: "number" },
