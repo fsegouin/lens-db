@@ -19,7 +19,8 @@ import Link from "next/link";
 type FieldConfig = {
   name: string;
   label: string;
-  type: "text" | "number" | "textarea" | "boolean";
+  type: "text" | "number" | "textarea" | "boolean" | "select";
+  options?: { value: string | number; label: string }[];
 };
 
 export default function EditButton({
@@ -177,7 +178,25 @@ export default function EditButton({
                     <label className="mb-1 block text-xs font-medium text-muted-foreground">
                       {field.label}
                     </label>
-                    {field.type === "textarea" ? (
+                    {field.type === "select" ? (
+                      <select
+                        value={String(values[field.name] ?? "")}
+                        onChange={(e) =>
+                          setValues((v) => ({
+                            ...v,
+                            [field.name]: e.target.value ? Number(e.target.value) : null,
+                          }))
+                        }
+                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                      >
+                        <option value="">None</option>
+                        {field.options?.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                    ) : field.type === "textarea" ? (
                       <Textarea
                         value={String(values[field.name] ?? "")}
                         onChange={(e) =>

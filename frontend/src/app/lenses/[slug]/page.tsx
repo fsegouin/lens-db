@@ -65,6 +65,7 @@ export default async function LensDetailPage({
     if (target) redirect(`/lenses/${target.slug}`);
   }
   const currentUser = await getCurrentUser();
+  const allSystems = await db.select({ id: systems.id, name: systems.name }).from(systems).orderBy(systems.name);
   const specs = (lens.specs ?? {}) as Record<string, string>;
   const mountFromSpecs =
     specs["Mount"] ??
@@ -263,6 +264,7 @@ export default async function LensDetailPage({
               url: lens.url,
               brand: lens.brand,
               description: lens.description,
+              systemId: lens.systemId,
               lensType: lens.lensType,
               era: lens.era,
               productionStatus: lens.productionStatus,
@@ -289,6 +291,7 @@ export default async function LensDetailPage({
               { name: "name", label: "Name", type: "text" },
               { name: "brand", label: "Brand", type: "text" },
               { name: "description", label: "Description", type: "textarea" },
+              { name: "systemId", label: "Mount System", type: "select", options: allSystems.map((s) => ({ value: s.id, label: s.name })) },
               { name: "lensType", label: "Lens Type", type: "text" },
               { name: "era", label: "Era", type: "text" },
               { name: "productionStatus", label: "Production Status", type: "text" },
