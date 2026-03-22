@@ -79,10 +79,12 @@ export async function POST(request: NextRequest) {
       expiresAt,
     });
 
-    // Send verification email (fire and forget — don't block registration)
-    sendVerificationEmail(normalizedEmail, token).catch((err) =>
-      console.error("Failed to send verification email:", err)
-    );
+    // Send verification email — await to ensure errors are logged before function exits
+    try {
+      await sendVerificationEmail(normalizedEmail, token);
+    } catch (err) {
+      console.error(`[register] Failed to send verification email to ${normalizedEmail}:`, err);
+    }
 
     // Create session
     const sessionToken = await createUserSession(newUser.id);
