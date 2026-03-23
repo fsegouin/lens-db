@@ -1,6 +1,6 @@
 import { requireAdmin } from "@/lib/admin-auth";
 import { db } from "@/db";
-import { pendingEdits, revisions } from "@/db/schema";
+import { pendingEdits, revisions, duplicateFlags } from "@/db/schema";
 import { sql, eq } from "drizzle-orm";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 
@@ -21,7 +21,7 @@ const adminNav = [
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   await requireAdmin();
 
-  const [[{ count: pendingEditCount }], [{ count: unpatrolledCount }]] = await Promise.all([
+  const [[{ count: pendingEditCount }], [{ count: unpatrolledCount }], [{ count: pendingDuplicateCount }]] = await Promise.all([
     db
       .select({ count: sql<number>`count(*)` })
       .from(pendingEdits)
@@ -30,6 +30,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       .select({ count: sql<number>`count(*)` })
       .from(revisions)
       .where(eq(revisions.isPatrolled, false)),
+    db
+      .select({ count: sql<number>`count(*)` })
+      .from(duplicateFlags)
+      .where(eq(duplicateFlags.status, "pending")),
   ]);
 
   return (
@@ -37,6 +41,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <AdminSidebar
         pendingEditCount={Number(pendingEditCount)}
         unpatrolledCount={Number(unpatrolledCount)}
+        pendingDuplicateCount={Number(pendingDuplicateCount)}
         navItems={adminNav}
       />
       <main className="flex-1 overflow-y-auto pt-12 md:pt-0">{children}</main>

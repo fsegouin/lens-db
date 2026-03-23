@@ -82,7 +82,38 @@ export async function POST(
   // Approve: apply the changes to the entity
   const entityType = edit.entityType as EntityType;
   const table = entityTables[entityType];
-  const changes = edit.changes as Record<string, unknown>;
+  const rawChanges = edit.changes as Record<string, unknown>;
+
+  // Re-validate changes against the allowed field list (defense in depth)
+  const allowedFields: Record<string, string[]> = {
+    lens: [
+      "name", "url", "brand", "description", "lensType", "era", "productionStatus",
+      "systemId",
+      "focalLengthMin", "focalLengthMax", "apertureMin", "apertureMax",
+      "weightG", "filterSizeMm", "minFocusDistanceM", "maxMagnification",
+      "lensElements", "lensGroups", "diaphragmBlades",
+      "yearIntroduced", "yearDiscontinued",
+      "isZoom", "isMacro", "isPrime", "hasStabilization", "hasAutofocus",
+    ],
+    camera: [
+      "name", "url", "description", "alias",
+      "systemId",
+      "sensorType", "sensorSize", "megapixels", "resolution",
+      "yearIntroduced", "bodyType", "weightG",
+    ],
+    system: ["name", "manufacturer", "mountType", "description"],
+    collection: ["name", "description"],
+    series: ["name", "description"],
+  };
+  const allowed = new Set(allowedFields[entityType] ?? []);
+  const changes: Record<string, unknown> = {};
+  for (const [key, val] of Object.entries(rawChanges)) {
+    if (allowed.has(key)) changes[key] = val;
+  }
+
+  if (Object.keys(changes).length === 0) {
+    return NextResponse.json({ error: "No valid changes in this edit" }, { status: 400 });
+  }
 
   // Verify entity still exists
   const [entity] = await db

@@ -79,8 +79,12 @@ function hexToBytes(hex: string): Uint8Array {
 // Stateless — no server-side session store needed.
 
 async function sign(data: string): Promise<string> {
-  const secret =
-    process.env.SESSION_SECRET || process.env.ADMIN_PASSWORD || "";
+  const secret = process.env.SESSION_SECRET;
+  if (!secret) {
+    throw new Error(
+      "SESSION_SECRET environment variable is required for session signing"
+    );
+  }
   const encoder = new TextEncoder();
   const key = await crypto.subtle.importKey(
     "raw",

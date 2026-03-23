@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { revisions } from "@/db/schema";
 import { requireAdminAPI } from "@/lib/admin-auth";
+import { getCurrentUser } from "@/lib/user-auth";
 import { revertToRevision } from "@/lib/revisions";
 import { eq, and } from "drizzle-orm";
 
@@ -13,6 +14,11 @@ export async function POST(
   const token = request.cookies.get("user_session")?.value;
   const authError = await requireAdminAPI(token);
   if (authError) return authError;
+
+  const admin = await getCurrentUser();
+  if (!admin) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   const { id } = await params;
   const revisionId = parseInt(id, 10);
@@ -77,7 +83,7 @@ export async function POST(
       );
     }
 
-    const newRevision = await revertToRevision(prev.id, 0);
+    const newRevision = await revertToRevision(prev.id, admin.id);
     return NextResponse.json({ success: true, revisionId: newRevision.id });
   }
 

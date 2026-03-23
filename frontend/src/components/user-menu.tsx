@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/components/user-context";
-import { User, LogOut } from "lucide-react";
+import { User, LogOut, Shield } from "lucide-react";
 
 export function UserMenu() {
   const { user, loading } = useUser();
@@ -36,6 +36,16 @@ export function UserMenu() {
         <User className="h-3.5 w-3.5" />
         {user.displayName}
       </span>
+      {user.role === "admin" && (
+        <Link
+          href="/admin"
+          className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+          aria-label="Admin panel"
+          title="Admin panel"
+        >
+          <Shield className="h-4 w-4" />
+        </Link>
+      )}
       <button
         onClick={handleLogout}
         className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"

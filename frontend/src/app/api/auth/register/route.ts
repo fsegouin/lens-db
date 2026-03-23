@@ -4,7 +4,7 @@ import { users, emailVerificationTokens } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { getClientIP, rateLimitedResponse } from "@/lib/api-utils";
 import { createRateLimit } from "@/lib/rate-limit";
-import { hashPassword, createUserSession, userSessionCookieOptions } from "@/lib/user-auth";
+import { hashPassword } from "@/lib/user-auth";
 import { sendVerificationEmail } from "@/lib/email";
 
 const registerLimiter = createRateLimit(5, "60 s");
@@ -26,8 +26,8 @@ export async function POST(request: NextRequest) {
     if (!email || typeof email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return NextResponse.json({ error: "Valid email is required" }, { status: 400 });
     }
-    if (!password || typeof password !== "string" || password.length < 8) {
-      return NextResponse.json({ error: "Password must be at least 8 characters" }, { status: 400 });
+    if (!password || typeof password !== "string" || password.length < 8 || password.length > 128) {
+      return NextResponse.json({ error: "Password must be 8-128 characters" }, { status: 400 });
     }
     if (!displayName || typeof displayName !== "string" || displayName.trim().length < 2 || displayName.trim().length > 30) {
       return NextResponse.json({ error: "Display name must be 2-30 characters" }, { status: 400 });
@@ -40,14 +40,14 @@ export async function POST(request: NextRequest) {
     const normalizedEmail = email.toLowerCase().trim();
     const trimmedName = displayName.trim();
 
-    // Check uniqueness
+    // Check uniqueness (use generic message to prevent account enumeration)
     const [existingEmail] = await db
       .select({ id: users.id })
       .from(users)
       .where(eq(users.email, normalizedEmail))
       .limit(1);
     if (existingEmail) {
-      return NextResponse.json({ error: "Email already registered" }, { status: 409 });
+      return NextResponse.json({ error: "Could not create account. Email or display name may already be in use." }, { status: 409 });
     }
 
     const [existingName] = await db
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
       .where(eq(users.displayName, trimmedName))
       .limit(1);
     if (existingName) {
-      return NextResponse.json({ error: "Display name already taken" }, { status: 409 });
+      return NextResponse.json({ error: "Could not create account. Email or display name may already be in use." }, { status: 409 });
     }
 
     // Create user
@@ -86,11 +86,12 @@ export async function POST(request: NextRequest) {
       console.error(`[register] Failed to send verification email to ${normalizedEmail}:`, err);
     }
 
-    // Create session
-    const sessionToken = await createUserSession(newUser.id);
-    const response = NextResponse.json({ success: true, user: { id: newUser.id, displayName: trimmedName } });
-    response.cookies.set(userSessionCookieOptions(sessionToken));
-    return response;
+    // Do NOT create a session — require email verification first
+    return NextResponse.json({
+      success: true,
+      requiresVerification: true,
+      message: "Account created. Please check your email to verify your address before signing in.",
+    });
   } catch (error) {
     console.error("POST /api/auth/register error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

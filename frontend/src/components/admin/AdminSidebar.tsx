@@ -7,10 +7,11 @@ import LogoutButton from "./LogoutButton";
 interface AdminSidebarProps {
   pendingEditCount: number;
   unpatrolledCount?: number;
+  pendingDuplicateCount?: number;
   navItems: { href: string; label: string }[];
 }
 
-export default function AdminSidebar({ pendingEditCount, unpatrolledCount = 0, navItems }: AdminSidebarProps) {
+export default function AdminSidebar({ pendingEditCount, unpatrolledCount = 0, pendingDuplicateCount = 0, navItems }: AdminSidebarProps) {
   const [open, setOpen] = useState(false);
 
   // Close on escape key
@@ -31,6 +32,7 @@ export default function AdminSidebar({ pendingEditCount, unpatrolledCount = 0, n
   function getBadge(href: string): number | null {
     if (href === "/admin/recent-changes" && unpatrolledCount > 0) return unpatrolledCount;
     if (href === "/admin/pending-edits" && pendingEditCount > 0) return pendingEditCount;
+    if (href === "/admin/duplicates" && pendingDuplicateCount > 0) return pendingDuplicateCount;
     return null;
   }
 
