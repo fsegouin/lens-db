@@ -1,3 +1,5 @@
+"use client";
+
 import AdminTable from "@/components/admin/AdminTable";
 
 const columns = [

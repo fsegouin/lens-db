@@ -115,7 +115,12 @@ export async function validateUserSession(
   if (isNaN(userId) || isNaN(expiresAt)) return null;
   if (expiresAt < Math.floor(Date.now() / 1000)) return null;
 
-  const expected = await sign(`${userId}.${expiresAt}`);
+  let expected: string;
+  try {
+    expected = await sign(`${userId}.${expiresAt}`);
+  } catch {
+    return null;
+  }
   if (signature.length !== expected.length) return null;
   let diff = 0;
   for (let i = 0; i < signature.length; i++) {
