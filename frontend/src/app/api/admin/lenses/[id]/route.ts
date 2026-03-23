@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { lenses, systems } from "@/db/schema";
-import { requireAdminAPI } from "@/lib/admin-auth";
+import { requireAdminAPI, getAdminUserFromToken } from "@/lib/admin-auth";
 import { createRevision } from "@/lib/revisions";
 import { eq } from "drizzle-orm";
 
@@ -70,6 +70,7 @@ export async function PUT(
   if (authError) return authError;
 
   const { id } = await params;
+  const admin = await getAdminUserFromToken(token);
   const body = await request.json();
 
   const updates: Record<string, unknown> = {};
@@ -111,6 +112,7 @@ export async function PUT(
   await createRevision({
     entityType: "lens",
     entityId: parseInt(id),
+    userId: admin!.id,
     summary: "Admin edit",
     autoPatrol: true,
   });

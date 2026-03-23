@@ -35,7 +35,7 @@ async function getAdminUser(): Promise<{ id: number; role: string } | null> {
  * Validate admin from an API request's cookie.
  * The role is ALWAYS checked from the database — never from the token.
  */
-async function getAdminUserFromToken(
+export async function getAdminUserFromToken(
   token: string | undefined
 ): Promise<{ id: number; role: string } | null> {
   if (!token) return null;

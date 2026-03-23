@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { lensSeries, lensSeriesMemberships, lenses } from "@/db/schema";
-import { requireAdminAPI } from "@/lib/admin-auth";
+import { requireAdminAPI, getAdminUserFromToken } from "@/lib/admin-auth";
 import { createRevision } from "@/lib/revisions";
 import { eq } from "drizzle-orm";
 
@@ -47,6 +47,7 @@ export async function PUT(
 
   const { id } = await params;
   const numericId = parseInt(id);
+  const admin = await getAdminUserFromToken(token);
   const body = await request.json();
   const { name, slug, description, lensIds } = body;
 
@@ -88,6 +89,7 @@ export async function PUT(
   await createRevision({
     entityType: "series",
     entityId: numericId,
+    userId: admin!.id,
     summary: "Admin edit",
     autoPatrol: true,
   });
