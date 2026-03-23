@@ -76,7 +76,6 @@ const fieldLabels: Record<string, string> = {
   alias: "Alias",
   manufacturer: "Manufacturer",
   mountType: "Mount Type",
-  verified: "Verified",
 };
 
 export default function RevisionList({

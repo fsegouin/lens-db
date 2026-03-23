@@ -115,44 +115,77 @@ export async function POST(
     return NextResponse.json({ error: "No valid changes in this edit" }, { status: 400 });
   }
 
-  // Verify entity still exists
-  const [entity] = await db
-    .select({ id: table.id })
-    .from(table)
-    .where(eq(table.id, edit.entityId))
-    .limit(1);
+  // Also allow "slug" for new entity creation
+  if (rawChanges.slug) changes.slug = rawChanges.slug;
 
-  if (!entity) {
-    await db
-      .update(pendingEdits)
-      .set({
-        status: "rejected",
-        reviewedByUserId: admin.id,
-        reviewedAt: new Date(),
-        rejectReason: "Entity no longer exists",
-      })
-      .where(eq(pendingEdits.id, editId));
-    return NextResponse.json(
-      { error: "Entity no longer exists. Edit has been rejected." },
-      { status: 404 }
-    );
+  const isNewEntity = edit.entityId === 0;
+  let targetEntityId: number;
+
+  if (isNewEntity) {
+    // Create a new entity
+    if (!changes.name) {
+      return NextResponse.json({ error: "New entity must have a name" }, { status: 400 });
+    }
+
+    const insertData: Record<string, unknown> = { ...changes };
+    // Ensure required defaults
+    if (entityType === "lens") {
+      insertData.specs = insertData.specs ?? {};
+      insertData.images = insertData.images ?? [];
+      insertData.isZoom = insertData.isZoom ?? false;
+      insertData.isMacro = insertData.isMacro ?? false;
+      insertData.isPrime = insertData.isPrime ?? false;
+      insertData.hasStabilization = insertData.hasStabilization ?? false;
+      insertData.hasAutofocus = insertData.hasAutofocus ?? false;
+    } else if (entityType === "camera") {
+      insertData.specs = insertData.specs ?? {};
+      insertData.images = insertData.images ?? [];
+    }
+
+    const [created] = await db
+      .insert(table)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .values(insertData as any)
+      .returning({ id: table.id });
+    targetEntityId = created.id;
+  } else {
+    // Verify entity still exists
+    const [entity] = await db
+      .select({ id: table.id })
+      .from(table)
+      .where(eq(table.id, edit.entityId))
+      .limit(1);
+
+    if (!entity) {
+      await db
+        .update(pendingEdits)
+        .set({
+          status: "rejected",
+          reviewedByUserId: admin.id,
+          reviewedAt: new Date(),
+          rejectReason: "Entity no longer exists",
+        })
+        .where(eq(pendingEdits.id, editId));
+      return NextResponse.json(
+        { error: "Entity no longer exists. Edit has been rejected." },
+        { status: 404 }
+      );
+    }
+
+    // Apply the update
+    await db.update(table).set(changes).where(eq(table.id, edit.entityId));
+    targetEntityId = edit.entityId;
   }
-
-  // Apply the update
-  await db.update(table).set(changes).where(eq(table.id, edit.entityId));
 
   // Create revision attributed to the original submitter
   await createRevision({
     entityType,
-    entityId: edit.entityId,
+    entityId: targetEntityId,
     summary: edit.summary,
     userId: edit.userId,
     ipHash: edit.ipHash,
     autoPatrol: true, // Admin-approved edits are auto-patrolled
   });
-
-  // Increment submitter's edit count (createRevision already does this, but
-  // the pending edit didn't count yet — createRevision handles it)
 
   // Mark as approved
   await db

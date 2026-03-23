@@ -104,8 +104,13 @@ export default function PendingEditsPage() {
                     <span className="shrink-0 rounded bg-zinc-100 px-1 py-0.5 font-mono text-xs text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
                       {edit.entityType}
                     </span>
+                    {edit.entityId === 0 && (
+                      <span className="shrink-0 rounded bg-emerald-100 px-1.5 py-0.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300">
+                        New
+                      </span>
+                    )}
                     <span className="font-medium text-zinc-900 dark:text-zinc-100">
-                      {edit.entityName}
+                      {edit.entityId === 0 ? (edit.changes as Record<string, unknown>)?.name as string || "Untitled" : edit.entityName}
                     </span>
                   </div>
                   <p className="mt-0.5 text-sm text-zinc-600 dark:text-zinc-400">
