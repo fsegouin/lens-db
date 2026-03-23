@@ -239,7 +239,7 @@ export default async function LensDetailPage({
           </details>
         )}
 
-        {lens.url && (
+        {lens.url && /^https?:\/\//i.test(lens.url) && (
           <p className="text-xs text-zinc-400">
             Source:{" "}
             <a

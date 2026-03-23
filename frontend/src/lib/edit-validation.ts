@@ -86,6 +86,24 @@ export async function validateEdit({
     }
   }
 
+  // URL protocol validation
+  if (newData.url != null && newData.url !== "" && newData.url !== null) {
+    const url = String(newData.url);
+    if (!/^https?:\/\//i.test(url)) {
+      return "URL must start with http:// or https://";
+    }
+    if (url.length > 2000) {
+      return "URL is too long (max 2000 characters)";
+    }
+  }
+
+  // String length validation (prevent storage abuse)
+  for (const [key, val] of Object.entries(newData)) {
+    if (typeof val === "string" && val.length > 5000 && key !== "url") {
+      return `${key} is too long (max 5000 characters)`;
+    }
+  }
+
   // Year validation
   for (const field of ["yearIntroduced", "yearDiscontinued"]) {
     const val = newData[field];

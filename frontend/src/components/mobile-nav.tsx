@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, LogOut } from "lucide-react";
+import { Menu, LogOut, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { useUser } from "@/components/user-context";
@@ -58,6 +58,16 @@ export function MobileNav() {
                   <div className="px-3 py-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
                     {user.displayName}
                   </div>
+                  {user.role === "admin" && (
+                    <Link
+                      href="/admin"
+                      onClick={() => setOpen(false)}
+                      className="flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                    >
+                      <Shield className="h-4 w-4" />
+                      Admin panel
+                    </Link>
+                  )}
                   <button
                     onClick={async () => {
                       await fetch("/api/auth/logout", { method: "POST" });

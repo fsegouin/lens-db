@@ -79,9 +79,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid entity ID" }, { status: 400 });
   }
 
-  if (!summary || typeof summary !== "string" || summary.trim().length < 3) {
+  if (!summary || typeof summary !== "string" || summary.trim().length < 3 || summary.trim().length > 500) {
     return NextResponse.json(
-      { error: "Edit summary is required (minimum 3 characters)" },
+      { error: "Edit summary must be 3-500 characters" },
       { status: 400 }
     );
   }
@@ -111,6 +111,9 @@ export async function POST(request: NextRequest) {
       let val = changes[field];
       if (numericFields.has(field)) {
         val = val != null && val !== "" ? Number(val) : null;
+        if (val !== null && (!Number.isFinite(val))) {
+          return NextResponse.json({ error: `${field} must be a finite number` }, { status: 400 });
+        }
       }
       updates[field] = val;
     }

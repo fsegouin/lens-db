@@ -23,6 +23,9 @@ export async function POST(request: NextRequest) {
     if (!email || typeof email !== "string" || !password || typeof password !== "string") {
       return NextResponse.json({ error: "Email and password are required" }, { status: 400 });
     }
+    if (password.length > 128) {
+      return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
+    }
 
     const normalizedEmail = email.toLowerCase().trim();
     const [user] = await db
@@ -42,16 +45,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
     }
 
-    if (user.isBanned) {
-      return NextResponse.json(
-        { error: `Account suspended${user.banReason ? `: ${user.banReason}` : ""}` },
-        { status: 403 }
-      );
-    }
-
     const valid = await verifyPassword(password, user.passwordHash);
     if (!valid) {
       return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
+    }
+
+    if (user.isBanned) {
+      return NextResponse.json(
+        { error: "Account suspended" },
+        { status: 403 }
+      );
     }
 
     if (!user.emailVerifiedAt) {

@@ -188,7 +188,7 @@ export default async function CameraDetailPage({
           </details>
         )}
 
-        {camera.url && (
+        {camera.url && /^https?:\/\//i.test(camera.url) && (
           <p className="text-xs text-zinc-400">
             Source:{" "}
             <a
