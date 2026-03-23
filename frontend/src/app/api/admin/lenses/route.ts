@@ -15,14 +15,11 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const q = searchParams.get("q");
-  const verified = searchParams.get("verified");
   const cursor = parseInt(searchParams.get("cursor") || "0", 10);
   const sortParam = searchParams.get("sort");
   const orderParam = searchParams.get("order");
 
   const conditions = q ? buildNameSearch(lenses.name, q) : [];
-  if (verified === "true") conditions.push(eq(lenses.verified, true));
-  if (verified === "false") conditions.push(eq(lenses.verified, false));
   const where = conditions.length > 0 ? and(...conditions) : undefined;
 
   const sortMap = {
@@ -45,7 +42,6 @@ export async function GET(request: NextRequest) {
         focalLengthMin: lenses.focalLengthMin,
         focalLengthMax: lenses.focalLengthMax,
         yearIntroduced: lenses.yearIntroduced,
-        verified: lenses.verified,
       })
       .from(lenses)
       .leftJoin(systems, eq(lenses.systemId, systems.id))
@@ -112,7 +108,6 @@ export async function POST(request: NextRequest) {
       hasAutofocus: body.hasAutofocus ?? false,
       specs: body.specs ?? {},
       images: body.images ?? [],
-      verified: body.verified ?? true,
     })
     .returning();
 
