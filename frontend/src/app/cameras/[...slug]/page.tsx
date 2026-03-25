@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import BackButton from "@/components/BackButton";
 import { db } from "@/db";
@@ -6,13 +6,15 @@ import { cameras, systems } from "@/db/schema";
 import ViewTracker from "@/components/ViewTracker";
 import ImageGallery from "@/components/ImageGallery";
 import RatingWidget from "@/components/RatingWidget";
-import ReportIssueButton from "@/components/ReportIssueButton";
+import EditButton from "@/components/EditButton";
+import FlagDuplicateButton from "@/components/FlagDuplicateButton";
 import SpecsTable from "@/components/SpecsTable";
 import { getImages } from "@/lib/images";
 import { formatDescription } from "@/lib/format-description";
 import { PageTransition } from "@/components/page-transition";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { getCurrentUser } from "@/lib/user-auth";
 
 export const revalidate = 86400;
 
@@ -52,6 +54,19 @@ export default async function CameraDetailPage({
   if (!result) notFound();
 
   const { camera, system } = result;
+
+  // Redirect if this entity was merged into another
+  if (camera.mergedIntoId) {
+    const [target] = await db
+      .select({ slug: cameras.slug })
+      .from(cameras)
+      .where(eq(cameras.id, camera.mergedIntoId))
+      .limit(1);
+    if (target) redirect(`/cameras/${target.slug}`);
+  }
+
+  const currentUser = await getCurrentUser();
+  const allSystems = await db.select({ id: systems.id, name: systems.name }).from(systems).orderBy(systems.name);
   const specs = (camera.specs ?? {}) as Record<string, string>;
 
   const imagingRows: [string, string | number | null | undefined][] = [
@@ -108,12 +123,6 @@ export default async function CameraDetailPage({
           </div>
         </div>
 
-        {!camera.verified && (
-          <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-300">
-            This entry was submitted by the community and hasn&apos;t been verified yet. Information may be incomplete or inaccurate.
-          </div>
-        )}
-
         <ImageGallery
           images={
             getImages(
@@ -145,10 +154,6 @@ export default async function CameraDetailPage({
               rows={imagingRows
                 .filter(([, value]) => value != null && value !== "")
                 .map(([label, value]) => [label, String(value)])}
-              entityType="camera"
-              entityId={camera.id}
-              entityName={camera.name}
-              entitySlug={camera.slug}
             />
           </div>
 
@@ -162,10 +167,6 @@ export default async function CameraDetailPage({
               rows={bodyRows
                 .filter(([, value]) => value != null && value !== "")
                 .map(([label, value]) => [label, String(value)])}
-              entityType="camera"
-              entityId={camera.id}
-              entityName={camera.name}
-              entitySlug={camera.slug}
             />
           </div>
         </div>
@@ -181,7 +182,7 @@ export default async function CameraDetailPage({
           </details>
         )}
 
-        {camera.url && (
+        {camera.url && /^https?:\/\//i.test(camera.url) && (
           <p className="text-xs text-zinc-400">
             Source:{" "}
             <a
@@ -195,13 +196,52 @@ export default async function CameraDetailPage({
           </p>
         )}
 
+        <div className="flex items-center justify-between">
+          <EditButton
+            entityType="camera"
+            entityId={camera.id}
+            entitySlug={camera.slug}
+            isLoggedIn={!!currentUser}
+            currentValues={{
+              name: camera.name,
+              url: camera.url,
+              description: camera.description,
+              alias: camera.alias,
+              systemId: camera.systemId,
+              sensorType: camera.sensorType,
+              sensorSize: camera.sensorSize,
+              megapixels: camera.megapixels,
+              resolution: camera.resolution,
+              yearIntroduced: camera.yearIntroduced,
+              bodyType: camera.bodyType,
+              weightG: camera.weightG,
+            }}
+            fields={[
+              { name: "name", label: "Name", type: "text" },
+              { name: "alias", label: "Also known as", type: "text" },
+              { name: "description", label: "Description", type: "textarea" },
+              { name: "systemId", label: "Mount System", type: "select", options: allSystems.map((s) => ({ value: s.id, label: s.name })) },
+              { name: "sensorType", label: "Sensor Type", type: "text" },
+              { name: "sensorSize", label: "Sensor Size", type: "text" },
+              { name: "megapixels", label: "Megapixels", type: "number" },
+              { name: "resolution", label: "Resolution", type: "text" },
+              { name: "yearIntroduced", label: "Year Introduced", type: "number" },
+              { name: "bodyType", label: "Body Type", type: "text" },
+              { name: "weightG", label: "Weight (g)", type: "number" },
+              { name: "url", label: "Source URL", type: "text" },
+            ]}
+          />
+          <div className="flex items-center gap-2">
+            <FlagDuplicateButton
+              entityType="camera"
+              entityId={camera.id}
+              entityName={camera.name}
+              isLoggedIn={!!currentUser}
+            />
+          </div>
+        </div>
+
         <ViewTracker type="camera" id={camera.id} />
-        <ReportIssueButton
-          entityType="camera"
-          entityId={camera.id}
-          entityName={camera.name}
-          entitySlug={camera.slug}
-        />
       </div>
     </PageTransition>
   );

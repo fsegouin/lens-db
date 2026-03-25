@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { cameras } from "@/db/schema";
-import { requireAdminAPI } from "@/lib/admin-auth";
+import { requireAdminAPI, getAdminUserFromToken } from "@/lib/admin-auth";
+import { createRevision } from "@/lib/revisions";
 import { eq } from "drizzle-orm";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const token = request.cookies.get("admin_session")?.value;
+  const token = request.cookies.get("user_session")?.value;
   const authError = await requireAdminAPI(token);
   if (authError) return authError;
 
@@ -30,16 +31,17 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const token = request.cookies.get("admin_session")?.value;
+  const token = request.cookies.get("user_session")?.value;
   const authError = await requireAdminAPI(token);
   if (authError) return authError;
 
   const { id } = await params;
+  const admin = await getAdminUserFromToken(token);
   const body = await request.json();
   const {
     name, slug, url, systemId, description, alias,
     sensorType, sensorSize, megapixels, resolution,
-    yearIntroduced, bodyType, weightG, verified, specs, images,
+    yearIntroduced, bodyType, weightG, specs, images,
   } = body;
 
   const updates: Record<string, unknown> = {};
@@ -56,7 +58,6 @@ export async function PUT(
   if (yearIntroduced !== undefined) updates.yearIntroduced = yearIntroduced != null ? Number(yearIntroduced) : null;
   if (bodyType !== undefined) updates.bodyType = bodyType || null;
   if (weightG !== undefined) updates.weightG = weightG != null ? Number(weightG) : null;
-  if (verified !== undefined) updates.verified = verified;
   if (specs !== undefined) updates.specs = specs;
   if (images !== undefined) updates.images = images;
 
@@ -70,6 +71,14 @@ export async function PUT(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
+  await createRevision({
+    entityType: "camera",
+    entityId: parseInt(id),
+    userId: admin!.id,
+    summary: "Admin edit",
+    autoPatrol: true,
+  });
+
   return NextResponse.json(updated);
 }
 
@@ -77,7 +86,7 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const token = request.cookies.get("admin_session")?.value;
+  const token = request.cookies.get("user_session")?.value;
   const authError = await requireAdminAPI(token);
   if (authError) return authError;
 

@@ -1,179 +1,237 @@
 import { NextRequest, NextResponse } from "next/server";
-import { checkBotId } from "botid/server";
 import { db } from "@/db";
-import { lenses, cameras, blockedIps } from "@/db/schema";
-import { eq } from "drizzle-orm";
-import { getClientIP, hashIP, rateLimitedResponse } from "@/lib/api-utils";
+import { lenses, cameras, pendingEdits } from "@/db/schema";
+import { requireUserAPI } from "@/lib/user-auth";
+import { createRevision } from "@/lib/revisions";
+import { getUserTier } from "@/lib/edit-validation";
+import { getClientIP, hashIP } from "@/lib/api-utils";
 import { createRateLimit } from "@/lib/rate-limit";
 
-const dailyLimiter = createRateLimit(5, "24 h");
+const submitLimiter = createRateLimit(10, "3600 s"); // 10 submissions per hour
 
-const MAX_SPEC_KEYS = 50;
-const MAX_SPEC_VALUE_LENGTH = 500;
-
-function sanitizeSpecs(raw: unknown): Record<string, string> {
-  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) return {};
-  const entries = Object.entries(raw as Record<string, unknown>).slice(0, MAX_SPEC_KEYS);
-  const result: Record<string, string> = {};
-  for (const [key, value] of entries) {
-    if (typeof key !== "string" || key.length > 100) continue;
-    const strVal = typeof value === "string" ? value : typeof value === "number" ? String(value) : null;
-    if (strVal !== null) result[key] = strVal.slice(0, MAX_SPEC_VALUE_LENGTH);
-  }
-  return result;
-}
-
-export async function POST(request: NextRequest) {
-  const verification = await checkBotId();
-  if (verification.isBot) {
-    return NextResponse.json({ error: "Access denied" }, { status: 403 });
-  }
-
-  const ip = getClientIP(request);
-  const { success } = await dailyLimiter.limit(ip);
-  if (!success) return rateLimitedResponse();
-
-  // Check if IP is blocked (return generic error to not reveal the block)
-  const [blocked] = await db
-    .select({ id: blockedIps.id })
-    .from(blockedIps)
-    .where(eq(blockedIps.ipAddress, ip))
-    .limit(1);
-  if (blocked) {
-    return NextResponse.json(
-      { error: "Something went wrong" },
-      { status: 500 }
-    );
-  }
-
-  const body = await request.json().catch(() => null);
-  if (!body || typeof body.name !== "string" || !body.name.trim()) {
-    return NextResponse.json(
-      { error: "Name is required" },
-      { status: 400 }
-    );
-  }
-  if (body.entityType !== "lens" && body.entityType !== "camera") {
-    return NextResponse.json(
-      { error: "entityType must be 'lens' or 'camera'" },
-      { status: 400 }
-    );
-  }
-
-  const name = body.name.trim().slice(0, 500);
-  const slug = name
+function generateSlug(name: string): string {
+  return name
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
-  const hashedIp = await hashIP(ip);
+}
 
-  if (body.entityType === "lens") {
-    await db.insert(lenses).values({
-      name,
-      slug,
-      brand:
-        typeof body.brand === "string" ? body.brand.slice(0, 200) : null,
-      systemId:
-        typeof body.systemId === "number" ? body.systemId : null,
-      description:
-        typeof body.description === "string"
-          ? body.description.slice(0, 5000)
-          : null,
-      lensType:
-        typeof body.lensType === "string" ? body.lensType.slice(0, 200) : null,
-      era: typeof body.era === "string" ? body.era.slice(0, 200) : null,
-      productionStatus:
-        typeof body.productionStatus === "string"
-          ? body.productionStatus.slice(0, 200)
-          : null,
-      focalLengthMin:
-        typeof body.focalLengthMin === "number" ? body.focalLengthMin : null,
-      focalLengthMax:
-        typeof body.focalLengthMax === "number" ? body.focalLengthMax : null,
-      apertureMin:
-        typeof body.apertureMin === "number" ? body.apertureMin : null,
-      apertureMax:
-        typeof body.apertureMax === "number" ? body.apertureMax : null,
-      weightG: typeof body.weightG === "number" ? body.weightG : null,
-      filterSizeMm:
-        typeof body.filterSizeMm === "number" ? body.filterSizeMm : null,
-      minFocusDistanceM:
-        typeof body.minFocusDistanceM === "number"
-          ? body.minFocusDistanceM
-          : null,
-      maxMagnification:
-        typeof body.maxMagnification === "number"
-          ? body.maxMagnification
-          : null,
-      lensElements:
-        typeof body.lensElements === "number"
-          ? Math.round(body.lensElements)
-          : null,
-      lensGroups:
-        typeof body.lensGroups === "number"
-          ? Math.round(body.lensGroups)
-          : null,
-      diaphragmBlades:
-        typeof body.diaphragmBlades === "number"
-          ? Math.round(body.diaphragmBlades)
-          : null,
-      yearIntroduced:
-        typeof body.yearIntroduced === "number"
-          ? Math.round(body.yearIntroduced)
-          : null,
-      yearDiscontinued:
-        typeof body.yearDiscontinued === "number"
-          ? Math.round(body.yearDiscontinued)
-          : null,
-      isZoom: body.isZoom === true,
-      isMacro: body.isMacro === true,
-      isPrime: body.isPrime === true,
-      hasStabilization: body.hasStabilization === true,
-      hasAutofocus: body.hasAutofocus === true,
-      specs: sanitizeSpecs(body.specs),
-      images: [],
-      verified: false,
-      submittedByIp: hashedIp,
-    });
-  } else {
-    await db.insert(cameras).values({
-      name,
-      slug,
-      systemId:
-        typeof body.systemId === "number" ? body.systemId : null,
-      description:
-        typeof body.description === "string"
-          ? body.description.slice(0, 5000)
-          : null,
-      alias:
-        typeof body.alias === "string" ? body.alias.slice(0, 500) : null,
-      sensorType:
-        typeof body.sensorType === "string"
-          ? body.sensorType.slice(0, 200)
-          : null,
-      sensorSize:
-        typeof body.sensorSize === "string"
-          ? body.sensorSize.slice(0, 200)
-          : null,
-      megapixels:
-        typeof body.megapixels === "number" ? body.megapixels : null,
-      resolution:
-        typeof body.resolution === "string"
-          ? body.resolution.slice(0, 200)
-          : null,
-      yearIntroduced:
-        typeof body.yearIntroduced === "number"
-          ? Math.round(body.yearIntroduced)
-          : null,
-      bodyType:
-        typeof body.bodyType === "string" ? body.bodyType.slice(0, 200) : null,
-      weightG: typeof body.weightG === "number" ? body.weightG : null,
-      specs: sanitizeSpecs(body.specs),
-      images: [],
-      verified: false,
-      submittedByIp: hashedIp,
+// Allowed fields for new submissions (subset of editable fields)
+const lensFields = [
+  "name", "url", "brand", "description", "lensType", "era", "productionStatus",
+  "systemId",
+  "focalLengthMin", "focalLengthMax", "apertureMin", "apertureMax",
+  "weightG", "filterSizeMm", "minFocusDistanceM", "maxMagnification",
+  "lensElements", "lensGroups", "diaphragmBlades",
+  "yearIntroduced", "yearDiscontinued",
+  "isZoom", "isMacro", "isPrime", "hasStabilization", "hasAutofocus",
+];
+
+const cameraFields = [
+  "name", "url", "description", "alias",
+  "systemId",
+  "sensorType", "sensorSize", "megapixels", "resolution",
+  "yearIntroduced", "bodyType", "weightG",
+];
+
+const numericFields = new Set([
+  "systemId",
+  "focalLengthMin", "focalLengthMax", "apertureMin", "apertureMax",
+  "weightG", "filterSizeMm", "minFocusDistanceM", "maxMagnification",
+  "lensElements", "lensGroups", "diaphragmBlades",
+  "yearIntroduced", "yearDiscontinued", "megapixels",
+]);
+
+export async function POST(request: NextRequest) {
+  const token = request.cookies.get("user_session")?.value;
+  const authResult = await requireUserAPI(token);
+  if (authResult instanceof NextResponse) return authResult;
+  const { user } = authResult;
+
+  // Email verification check
+  if (!user.emailVerifiedAt) {
+    return NextResponse.json({ error: "Please verify your email before submitting" }, { status: 403 });
+  }
+
+  // Ban check
+  if (user.isBanned) {
+    return NextResponse.json({ error: "Your account is suspended" }, { status: 403 });
+  }
+
+  // Rate limit
+  const { success: rateLimitOk } = await submitLimiter.limit(`submit:${user.id}`);
+  if (!rateLimitOk) {
+    return NextResponse.json({ error: "Too many submissions. Please wait before submitting again." }, { status: 429 });
+  }
+
+  const body = await request.json();
+  const { entityType, data, summary } = body as {
+    entityType: string;
+    data: Record<string, unknown>;
+    summary: string;
+  };
+
+  if (entityType !== "lens" && entityType !== "camera") {
+    return NextResponse.json({ error: "Entity type must be 'lens' or 'camera'" }, { status: 400 });
+  }
+
+  // Validate name
+  const name = data?.name;
+  if (!name || typeof name !== "string" || name.trim().length < 2 || name.trim().length > 200) {
+    return NextResponse.json({ error: "Name is required (2-200 characters)" }, { status: 400 });
+  }
+
+  if (!summary || typeof summary !== "string" || summary.trim().length < 3 || summary.trim().length > 500) {
+    return NextResponse.json({ error: "Summary must be 3-500 characters" }, { status: 400 });
+  }
+
+  // URL validation
+  if (data.url && typeof data.url === "string") {
+    if (!/^https?:\/\//i.test(data.url)) {
+      return NextResponse.json({ error: "URL must start with http:// or https://" }, { status: 400 });
+    }
+    if (data.url.length > 2000) {
+      return NextResponse.json({ error: "URL is too long (max 2000 characters)" }, { status: 400 });
+    }
+  }
+
+  // String length validation
+  for (const [key, val] of Object.entries(data)) {
+    if (typeof val === "string" && val.length > 5000 && key !== "url") {
+      return NextResponse.json({ error: `${key} is too long (max 5000 characters)` }, { status: 400 });
+    }
+  }
+
+  // Build entity data from allowed fields only
+  const allowedFields = entityType === "lens" ? lensFields : cameraFields;
+  const entityData: Record<string, unknown> = {};
+  for (const field of allowedFields) {
+    if (data[field] !== undefined) {
+      let val = data[field];
+      if (numericFields.has(field)) {
+        val = val != null && val !== "" ? Number(val) : null;
+        if (val !== null && !Number.isFinite(val)) {
+          return NextResponse.json({ error: `${field} must be a finite number` }, { status: 400 });
+        }
+      }
+      entityData[field] = val;
+    }
+  }
+
+  // Normalize empty strings to null for text fields
+  for (const [key, val] of Object.entries(entityData)) {
+    if (val === "" && !numericFields.has(key)) entityData[key] = null;
+  }
+
+  entityData.name = name.trim();
+  const slug = generateSlug(name.trim());
+  entityData.slug = slug;
+
+  const ipHash = await hashIP(getClientIP(request));
+  const userTier = getUserTier(user);
+  const canAutoApply = userTier !== "none";
+
+  if (!canAutoApply) {
+    // Queue for admin review
+    const [pending] = await db
+      .insert(pendingEdits)
+      .values({
+        entityType,
+        entityId: 0, // 0 indicates a new entity creation
+        changes: entityData,
+        summary: summary.trim(),
+        userId: user.id,
+        ipHash,
+      })
+      .returning({ id: pendingEdits.id });
+
+    return NextResponse.json({
+      success: true,
+      pending: true,
+      pendingEditId: pending.id,
+      message: "Your submission has been queued for review. An admin will approve it shortly.",
     });
   }
 
-  return NextResponse.json({ slug, entityType: body.entityType }, { status: 201 });
+  // Auto-create for trusted users
+  let created: { id: number; slug: string };
+  if (entityType === "lens") {
+    const [row] = await db
+      .insert(lenses)
+      .values({
+        name: entityData.name as string,
+        slug,
+        url: (entityData.url as string) || null,
+        brand: (entityData.brand as string) || null,
+        systemId: (entityData.systemId as number) || null,
+        description: (entityData.description as string) || null,
+        lensType: (entityData.lensType as string) || null,
+        era: (entityData.era as string) || null,
+        productionStatus: (entityData.productionStatus as string) || null,
+        focalLengthMin: (entityData.focalLengthMin as number) ?? null,
+        focalLengthMax: (entityData.focalLengthMax as number) ?? null,
+        apertureMin: (entityData.apertureMin as number) ?? null,
+        apertureMax: (entityData.apertureMax as number) ?? null,
+        weightG: (entityData.weightG as number) ?? null,
+        filterSizeMm: (entityData.filterSizeMm as number) ?? null,
+        minFocusDistanceM: (entityData.minFocusDistanceM as number) ?? null,
+        maxMagnification: (entityData.maxMagnification as number) ?? null,
+        lensElements: (entityData.lensElements as number) ?? null,
+        lensGroups: (entityData.lensGroups as number) ?? null,
+        diaphragmBlades: (entityData.diaphragmBlades as number) ?? null,
+        yearIntroduced: (entityData.yearIntroduced as number) ?? null,
+        yearDiscontinued: (entityData.yearDiscontinued as number) ?? null,
+        isZoom: (entityData.isZoom as boolean) ?? false,
+        isMacro: (entityData.isMacro as boolean) ?? false,
+        isPrime: (entityData.isPrime as boolean) ?? false,
+        hasStabilization: (entityData.hasStabilization as boolean) ?? false,
+        hasAutofocus: (entityData.hasAutofocus as boolean) ?? false,
+        specs: {},
+        images: [],
+      })
+      .returning({ id: lenses.id, slug: lenses.slug });
+    created = row;
+  } else {
+    const [row] = await db
+      .insert(cameras)
+      .values({
+        name: entityData.name as string,
+        slug,
+        url: (entityData.url as string) || null,
+        systemId: (entityData.systemId as number) || null,
+        description: (entityData.description as string) || null,
+        alias: (entityData.alias as string) || null,
+        sensorType: (entityData.sensorType as string) || null,
+        sensorSize: (entityData.sensorSize as string) || null,
+        megapixels: (entityData.megapixels as number) ?? null,
+        resolution: (entityData.resolution as string) || null,
+        yearIntroduced: (entityData.yearIntroduced as number) ?? null,
+        bodyType: (entityData.bodyType as string) || null,
+        weightG: (entityData.weightG as number) ?? null,
+        specs: {},
+        images: [],
+      })
+      .returning({ id: cameras.id, slug: cameras.slug });
+    created = row;
+  }
+
+  const isAdmin = user.role === "admin";
+  const isTrusted = user.role === "trusted";
+
+  await createRevision({
+    entityType,
+    entityId: created.id,
+    summary: summary.trim(),
+    userId: user.id,
+    ipHash,
+    autoPatrol: isAdmin || isTrusted,
+  });
+
+  return NextResponse.json({
+    success: true,
+    pending: false,
+    entityId: created.id,
+    slug: created.slug,
+    entityType,
+  });
 }

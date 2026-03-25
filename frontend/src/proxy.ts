@@ -10,11 +10,11 @@ import { NextRequest, NextResponse } from "next/server";
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Protect /admin routes (except /admin/login)
-  if (pathname.startsWith("/admin") && pathname !== "/admin/login") {
-    const session = request.cookies.get("admin_session")?.value;
+  // Protect /admin routes — check for user_session cookie (role is validated server-side)
+  if (pathname.startsWith("/admin")) {
+    const session = request.cookies.get("user_session")?.value;
     if (!session) {
-      return NextResponse.redirect(new URL("/admin/login", request.url));
+      return NextResponse.redirect(new URL("/login", request.url));
     }
   }
 

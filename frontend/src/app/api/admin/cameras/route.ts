@@ -9,13 +9,12 @@ import { buildOrderBy } from "@/lib/admin-sort";
 const PAGE_SIZE = 50;
 
 export async function GET(request: NextRequest) {
-  const token = request.cookies.get("admin_session")?.value;
+  const token = request.cookies.get("user_session")?.value;
   const authError = await requireAdminAPI(token);
   if (authError) return authError;
 
   const { searchParams } = new URL(request.url);
   const q = searchParams.get("q");
-  const verified = searchParams.get("verified");
   const cursor = parseInt(searchParams.get("cursor") || "0", 10);
   const sortParam = searchParams.get("sort");
   const orderParam = searchParams.get("order");
@@ -31,8 +30,6 @@ export async function GET(request: NextRequest) {
           )!,
         ]
       : [];
-  if (verified === "true") conditions.push(eq(cameras.verified, true));
-  if (verified === "false") conditions.push(eq(cameras.verified, false));
   const where = conditions.length > 0 ? and(...conditions) : undefined;
 
   const sortMap = {
@@ -55,7 +52,6 @@ export async function GET(request: NextRequest) {
         sensorType: cameras.sensorType,
         megapixels: cameras.megapixels,
         yearIntroduced: cameras.yearIntroduced,
-        verified: cameras.verified,
       })
       .from(cameras)
       .leftJoin(systems, eq(cameras.systemId, systems.id))
@@ -76,7 +72,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const token = request.cookies.get("admin_session")?.value;
+  const token = request.cookies.get("user_session")?.value;
   const authError = await requireAdminAPI(token);
   if (authError) return authError;
 
@@ -112,7 +108,6 @@ export async function POST(request: NextRequest) {
       weightG: weightG != null ? Number(weightG) : null,
       specs: specs || {},
       images: images || [],
-      verified: body.verified ?? true,
     })
     .returning();
 

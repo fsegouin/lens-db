@@ -3,9 +3,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu } from "lucide-react";
+import { Menu, LogOut, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
+import { useUser } from "@/components/user-context";
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -21,6 +22,7 @@ const navLinks = [
 export function MobileNav() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+  const { user } = useUser();
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -50,6 +52,53 @@ export function MobileNav() {
                 </Link>
               );
             })}
+            <div className="mt-2 border-t border-border pt-2">
+              {user ? (
+                <>
+                  <div className="px-3 py-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                    {user.displayName}
+                  </div>
+                  {user.role === "admin" && (
+                    <Link
+                      href="/admin"
+                      onClick={() => setOpen(false)}
+                      className="flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                    >
+                      <Shield className="h-4 w-4" />
+                      Admin panel
+                    </Link>
+                  )}
+                  <button
+                    onClick={async () => {
+                      await fetch("/api/auth/logout", { method: "POST" });
+                      setOpen(false);
+                      window.location.href = "/";
+                    }}
+                    className="flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Sign out
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link
+                    href="/login"
+                    onClick={() => setOpen(false)}
+                    className="block rounded-md px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                  >
+                    Sign in
+                  </Link>
+                  <Link
+                    href="/register"
+                    onClick={() => setOpen(false)}
+                    className="block rounded-md px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                  >
+                    Create account
+                  </Link>
+                </>
+              )}
+            </div>
           </nav>
         </div>
       </SheetContent>

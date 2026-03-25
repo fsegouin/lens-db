@@ -6,7 +6,8 @@
   "scripts": {
     "preinstall": "npx only-allow pnpm",
     "dev": "next dev",
-    "build": "next build",
+    "db:migrate": "drizzle-kit migrate",
+    "build": "pnpm db:migrate && next build",
     "start": "next start",
     "lint": "eslint"
   },
@@ -29,6 +30,7 @@
     "next-themes": "^0.4.6",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "resend": "^6.9.4",
     "shadcn": "^4.0.2",
     "sharp": "^0.34.5",
     "sonner": "^2.0.7",

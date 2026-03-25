@@ -43,6 +43,34 @@
       "when": 1773079276636,
       "tag": "0005_little_sabretooth",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1773994998991,
+      "tag": "0006_lyrical_aqueduct",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1774020619601,
+      "tag": "0007_square_thunderbolt_ross",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1774158512384,
+      "tag": "0008_orange_proemial_gods",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1774166270310,
+      "tag": "0009_aspiring_surge",
+      "breakpoints": true
     }
   ]
 }

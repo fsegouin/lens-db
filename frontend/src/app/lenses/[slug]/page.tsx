@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import BackButton from "@/components/BackButton";
 import { db } from "@/db";
@@ -10,11 +10,13 @@ import { getImages } from "@/lib/images";
 import ViewTracker from "@/components/ViewTracker";
 import RatingWidget from "@/components/RatingWidget";
 import ImageGallery from "@/components/ImageGallery";
-import ReportIssueButton from "@/components/ReportIssueButton";
+import EditButton from "@/components/EditButton";
+import FlagDuplicateButton from "@/components/FlagDuplicateButton";
 import SpecsTable from "@/components/SpecsTable";
 import { PageTransition } from "@/components/page-transition";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { getCurrentUser } from "@/lib/user-auth";
 
 export const revalidate = 86400;
 
@@ -52,6 +54,18 @@ export default async function LensDetailPage({
   if (!result) notFound();
 
   const { lens, system } = result;
+
+  // Redirect if this entity was merged into another
+  if (lens.mergedIntoId) {
+    const [target] = await db
+      .select({ slug: lenses.slug })
+      .from(lenses)
+      .where(eq(lenses.id, lens.mergedIntoId))
+      .limit(1);
+    if (target) redirect(`/lenses/${target.slug}`);
+  }
+  const currentUser = await getCurrentUser();
+  const allSystems = await db.select({ id: systems.id, name: systems.name }).from(systems).orderBy(systems.name);
   const specs = (lens.specs ?? {}) as Record<string, string>;
   const mountFromSpecs =
     specs["Mount"] ??
@@ -160,12 +174,6 @@ export default async function LensDetailPage({
           </div>
         </div>
 
-        {!lens.verified && (
-          <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-300">
-            This entry was submitted by the community and hasn&apos;t been verified yet. Information may be incomplete or inaccurate.
-          </div>
-        )}
-
         <ImageGallery
           images={
             getImages(
@@ -197,10 +205,6 @@ export default async function LensDetailPage({
               rows={opticalRows
                 .filter(([, value]) => value != null && value !== "")
                 .map(([label, value]) => [label, String(value)])}
-              entityType="lens"
-              entityId={lens.id}
-              entityName={lens.name}
-              entitySlug={lens.slug}
             />
           </div>
 
@@ -214,10 +218,6 @@ export default async function LensDetailPage({
               rows={physicalRows
                 .filter(([, value]) => value != null && value !== "")
                 .map(([label, value]) => [label, String(value)])}
-              entityType="lens"
-              entityId={lens.id}
-              entityName={lens.name}
-              entitySlug={lens.slug}
             />
           </div>
         </div>
@@ -233,7 +233,7 @@ export default async function LensDetailPage({
           </details>
         )}
 
-        {lens.url && (
+        {lens.url && /^https?:\/\//i.test(lens.url) && (
           <p className="text-xs text-zinc-400">
             Source:{" "}
             <a
@@ -247,13 +247,80 @@ export default async function LensDetailPage({
           </p>
         )}
 
+        <div className="flex items-center justify-between">
+          <EditButton
+            entityType="lens"
+            entityId={lens.id}
+            entitySlug={lens.slug}
+            isLoggedIn={!!currentUser}
+            currentValues={{
+              name: lens.name,
+              url: lens.url,
+              brand: lens.brand,
+              description: lens.description,
+              systemId: lens.systemId,
+              lensType: lens.lensType,
+              era: lens.era,
+              productionStatus: lens.productionStatus,
+              focalLengthMin: lens.focalLengthMin,
+              focalLengthMax: lens.focalLengthMax,
+              apertureMin: lens.apertureMin,
+              apertureMax: lens.apertureMax,
+              weightG: lens.weightG,
+              filterSizeMm: lens.filterSizeMm,
+              minFocusDistanceM: lens.minFocusDistanceM,
+              maxMagnification: lens.maxMagnification,
+              lensElements: lens.lensElements,
+              lensGroups: lens.lensGroups,
+              diaphragmBlades: lens.diaphragmBlades,
+              yearIntroduced: lens.yearIntroduced,
+              yearDiscontinued: lens.yearDiscontinued,
+              hasAutofocus: lens.hasAutofocus,
+              hasStabilization: lens.hasStabilization,
+              isZoom: lens.isZoom,
+              isMacro: lens.isMacro,
+              isPrime: lens.isPrime,
+            }}
+            fields={[
+              { name: "name", label: "Name", type: "text" },
+              { name: "brand", label: "Brand", type: "text" },
+              { name: "description", label: "Description", type: "textarea" },
+              { name: "systemId", label: "Mount System", type: "select", options: allSystems.map((s) => ({ value: s.id, label: s.name })) },
+              { name: "lensType", label: "Lens Type", type: "text" },
+              { name: "era", label: "Era", type: "text" },
+              { name: "productionStatus", label: "Production Status", type: "text" },
+              { name: "focalLengthMin", label: "Focal Length Min (mm)", type: "number" },
+              { name: "focalLengthMax", label: "Focal Length Max (mm)", type: "number" },
+              { name: "apertureMin", label: "Max Aperture (f/)", type: "number" },
+              { name: "apertureMax", label: "Min Aperture (f/)", type: "number" },
+              { name: "weightG", label: "Weight (g)", type: "number" },
+              { name: "filterSizeMm", label: "Filter Size (mm)", type: "number" },
+              { name: "minFocusDistanceM", label: "Min Focus Distance (m)", type: "number" },
+              { name: "maxMagnification", label: "Max Magnification", type: "number" },
+              { name: "lensElements", label: "Lens Elements", type: "number" },
+              { name: "lensGroups", label: "Lens Groups", type: "number" },
+              { name: "diaphragmBlades", label: "Diaphragm Blades", type: "number" },
+              { name: "yearIntroduced", label: "Year Introduced", type: "number" },
+              { name: "yearDiscontinued", label: "Year Discontinued", type: "number" },
+              { name: "hasAutofocus", label: "Has Autofocus", type: "boolean" },
+              { name: "hasStabilization", label: "Has Stabilization", type: "boolean" },
+              { name: "isZoom", label: "Zoom", type: "boolean" },
+              { name: "isMacro", label: "Macro", type: "boolean" },
+              { name: "isPrime", label: "Prime", type: "boolean" },
+              { name: "url", label: "Source URL", type: "text" },
+            ]}
+          />
+          <div className="flex items-center gap-2">
+            <FlagDuplicateButton
+              entityType="lens"
+              entityId={lens.id}
+              entityName={lens.name}
+              isLoggedIn={!!currentUser}
+            />
+          </div>
+        </div>
+
         <ViewTracker type="lens" id={lens.id} />
-        <ReportIssueButton
-          entityType="lens"
-          entityId={lens.id}
-          entityName={lens.name}
-          entitySlug={lens.slug}
-        />
       </div>
     </PageTransition>
   );
