@@ -98,8 +98,10 @@ export async function validateEdit({
   }
 
   // String length validation (prevent storage abuse)
+  // Only validate fields that were actually changed to avoid rejecting
+  // pre-existing long values when editing unrelated fields.
   for (const [key, val] of Object.entries(newData)) {
-    if (typeof val === "string" && val.length > 5000 && key !== "url") {
+    if (typeof val === "string" && val.length > 5000 && key !== "url" && val !== oldData[key]) {
       return `${key} is too long (max 5000 characters)`;
     }
   }
