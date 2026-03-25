@@ -89,7 +89,7 @@ export default function RatingWidget(props: RatingWidgetProps) {
   }, [type, entityId, submitting]);
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 min-h-[4.5rem]">
       <div className="flex flex-wrap items-center gap-1.5">
         {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => {
           const filled = n <= (hovering ?? userRating ?? 0);
