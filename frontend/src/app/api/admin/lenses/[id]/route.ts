@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { lenses, systems } from "@/db/schema";
-import { requireAdminAPI } from "@/lib/admin-auth";
+import { requireAdminAPI, getAdminUserFromToken } from "@/lib/admin-auth";
+import { createRevision } from "@/lib/revisions";
 import { eq } from "drizzle-orm";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const token = request.cookies.get("admin_session")?.value;
+  const token = request.cookies.get("user_session")?.value;
   const authError = await requireAdminAPI(token);
   if (authError) return authError;
 
@@ -44,7 +45,6 @@ export async function GET(
       isPrime: lenses.isPrime,
       hasStabilization: lenses.hasStabilization,
       hasAutofocus: lenses.hasAutofocus,
-      verified: lenses.verified,
       specs: lenses.specs,
       images: lenses.images,
       createdAt: lenses.createdAt,
@@ -65,11 +65,12 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const token = request.cookies.get("admin_session")?.value;
+  const token = request.cookies.get("user_session")?.value;
   const authError = await requireAdminAPI(token);
   if (authError) return authError;
 
   const { id } = await params;
+  const admin = await getAdminUserFromToken(token);
   const body = await request.json();
 
   const updates: Record<string, unknown> = {};
@@ -81,7 +82,7 @@ export async function PUT(
     "lensElements", "lensGroups", "diaphragmBlades",
     "yearIntroduced", "yearDiscontinued",
     "isZoom", "isMacro", "isPrime", "hasStabilization", "hasAutofocus",
-    "verified", "specs", "images",
+    "specs", "images",
   ];
 
   for (const field of fields) {
@@ -108,6 +109,14 @@ export async function PUT(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
+  await createRevision({
+    entityType: "lens",
+    entityId: parseInt(id),
+    userId: admin!.id,
+    summary: "Admin edit",
+    autoPatrol: true,
+  });
+
   return NextResponse.json(updated);
 }
 
@@ -115,7 +124,7 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const token = request.cookies.get("admin_session")?.value;
+  const token = request.cookies.get("user_session")?.value;
   const authError = await requireAdminAPI(token);
   if (authError) return authError;
 

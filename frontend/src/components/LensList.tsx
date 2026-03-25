@@ -424,11 +424,6 @@ export default function LensList({
                   >
                     {lens.name}
                   </Link>
-                  {!lens.verified && (
-                    <Badge variant="outline" className="ml-2 text-amber-600 border-amber-300 dark:text-amber-400 dark:border-amber-700">
-                      Unverified
-                    </Badge>
-                  )}
                 </TableCell>
                 <TableCell className="text-zinc-500">
                   {lens.brand ? (

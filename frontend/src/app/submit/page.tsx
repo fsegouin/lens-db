@@ -1,38 +1,35 @@
 import { db } from "@/db";
 import { systems } from "@/db/schema";
 import { asc } from "drizzle-orm";
-import { getDistinctLensTags } from "@/lib/lens-tags";
-import SubmissionForm from "@/components/SubmissionForm";
-import { PageTransition } from "@/components/page-transition";
+import { getCurrentUser } from "@/lib/user-auth";
+import { redirect } from "next/navigation";
+import SubmitForm from "./SubmitForm";
 
-export const dynamic = "force-dynamic";
-
-export function generateMetadata() {
-  return { title: "Submit a Missing Lens or Camera | The Lens DB" };
-}
+export const metadata = {
+  title: "Submit New Entry",
+};
 
 export default async function SubmitPage() {
-  const [systemRows, tags] = await Promise.all([
-    db
-      .select({ id: systems.id, name: systems.name })
-      .from(systems)
-      .orderBy(asc(systems.name)),
-    getDistinctLensTags(),
-  ]);
+  const user = await getCurrentUser();
+  if (!user) {
+    redirect("/login?next=/submit");
+  }
+
+  const allSystems = await db
+    .select({ id: systems.id, name: systems.name })
+    .from(systems)
+    .orderBy(asc(systems.name));
 
   return (
-    <PageTransition>
-      <div className="mx-auto max-w-3xl px-4 py-10">
-        <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
-          Submit a Missing Lens or Camera
-        </h1>
-        <p className="mt-2 text-zinc-500 dark:text-zinc-400">
-          Can&apos;t find a lens or camera in our database? Help the community by adding it below.
-        </p>
-        <div className="mt-8">
-          <SubmissionForm systems={systemRows} tags={tags} />
-        </div>
-      </div>
-    </PageTransition>
+    <div className="mx-auto max-w-2xl px-4 py-8">
+      <h1 className="mb-1 text-2xl font-bold text-zinc-900 dark:text-zinc-100">
+        Submit New Entry
+      </h1>
+      <p className="mb-6 text-sm text-muted-foreground">
+        Add a new lens or camera to the database. Your submission will be
+        reviewed by an admin before being published.
+      </p>
+      <SubmitForm systems={allSystems} />
+    </div>
   );
 }

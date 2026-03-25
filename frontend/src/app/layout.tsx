@@ -9,6 +9,8 @@ import { MobileNav } from "@/components/mobile-nav";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SearchProvider } from "@/components/search-context";
+import { UserProvider } from "@/components/user-context";
+import { UserMenu } from "@/components/user-menu";
 import { Separator } from "@/components/ui/separator";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -45,6 +47,7 @@ export default function RootLayout({
         className={`${GeistSans.variable} ${GeistMono.variable} font-sans antialiased`}
       >
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <UserProvider>
           <TooltipProvider>
             <SearchProvider>
               <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
@@ -59,6 +62,7 @@ export default function RootLayout({
                   <div className="flex items-center gap-1">
                     <HeaderSearch />
                     <ThemeToggle />
+                    <UserMenu />
                     <MobileNav />
                   </div>
                 </div>
@@ -77,6 +81,7 @@ export default function RootLayout({
               </div>
             </footer>
           </TooltipProvider>
+          </UserProvider>
         </ThemeProvider>
         <Analytics />
         <Toaster />
