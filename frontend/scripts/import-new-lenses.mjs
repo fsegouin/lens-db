@@ -86,18 +86,43 @@ function generateSlug(name) {
 }
 
 function extractBrand(name) {
-  const brands = [
-    '7Artisans', '7artisans', 'Canon', 'Carl Zeiss', 'Fujifilm', 'Hasselblad',
-    'HD Pentax', 'Holga', 'Irix', 'Kamlan', 'Kenko', 'Laowa', 'Leica',
-    'Lensbaby', 'LK', 'Meike', 'Minolta', 'Nikon', 'NiSi', 'Olympus',
-    'OM System', 'Panasonic', 'Pentax', 'Samsung', 'Samyang', 'Schneider',
-    'Sigma', 'Sirui', 'Sony', 'Tamron', 'Tokina', 'Venus Optics',
-    'Viltrox', 'Voigtlander', 'Zeiss', 'Hartblei',
+  // Multi-word brands checked first (longest match)
+  const multiWordBrands = [
+    ['Carl Zeiss Jena', 'Carl Zeiss Jena'],
+    ['Carl Zeiss', 'Carl Zeiss'],
+    ['HD Pentax', 'Pentax'],
+    ['smc Pentax', 'Pentax'],
+    ['SMC Pentax', 'Pentax'],
+    ['Asahi Pentax', 'Pentax'],
+    ['Nippon Kogaku', 'Nikon'],
+    ['Venus Optics', 'Laowa'],
+    ['OM System', 'Olympus'],
+    ['Meyer-Optik', 'Meyer-Optik Görlitz'],
+    ['Brightin Star', 'Brightin Star'],
+    ['Light Lens Lab', 'Light Lens Lab'],
+    ['MS Optics', 'MS Optics'],
   ];
-  for (const b of brands) {
-    if (name.startsWith(b)) return b;
+  for (const [prefix, brand] of multiWordBrands) {
+    if (name.startsWith(prefix)) return brand;
   }
-  return name.split(' ')[0];
+  // Single-word brands
+  const brandAliases = {
+    '7Artisans': '7Artisans', '7artisans': '7Artisans',
+    'Canon': 'Canon', 'Fujifilm': 'Fuji', 'Fujica': 'Fuji',
+    'Hasselblad': 'Hasselblad', 'Holga': 'Holga', 'Irix': 'Irix',
+    'Kamlan': 'Kamlan', 'Kenko': 'Kenko', 'Laowa': 'Laowa', 'Leica': 'Leica',
+    'Lensbaby': 'Lensbaby', 'LK': 'LK', 'Meike': 'Meike', 'Minolta': 'Minolta',
+    'Nikon': 'Nikon', 'Nikkor': 'Nikon', 'NiSi': 'NiSi', 'Olympus': 'Olympus',
+    'Panasonic': 'Panasonic', 'Pentax': 'Pentax', 'Samsung': 'Samsung',
+    'Samyang': 'Samyang', 'Schneider': 'Schneider-Kreuznach',
+    'Sigma': 'Sigma', 'Sirui': 'Sirui', 'Sony': 'Sony',
+    'Tamron': 'Tamron', 'Tokina': 'Tokina', 'Viltrox': 'Viltrox',
+    'Voigtlander': 'Voigtländer', 'Zeiss': 'Carl Zeiss', 'Hartblei': 'Hartblei',
+    'Mamiya': 'Mamiya', 'Komura': 'Komura', 'Rollei': 'Rollei',
+    'Exakta': 'Exakta', 'Contax': 'Contax',
+  };
+  const firstWord = name.split(' ')[0];
+  return brandAliases[firstWord] || firstWord;
 }
 
 function parseAperture(str) {
