@@ -30,6 +30,16 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  async redirects() {
+    return [
+      // Merged Canon EOS system slugs → mount-named equivalents
+      { source: "/systems/canon-eos", destination: "/systems/canon-ef", permanent: true },
+      { source: "/systems/canon-eos-aps-c", destination: "/systems/canon-ef-s", permanent: true },
+      { source: "/systems/canon-eos-m", destination: "/systems/canon-ef-m", permanent: true },
+      { source: "/systems/canon-eos-r", destination: "/systems/canon-rf", permanent: true },
+      { source: "/systems/canon-eos-r-aps-c", destination: "/systems/canon-rf-s", permanent: true },
+    ];
+  },
   async headers() {
     return [
       {
