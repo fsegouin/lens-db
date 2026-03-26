@@ -221,13 +221,21 @@ _MULTI_WORD_BRANDS = [
     ("Fuji Photo Film", "Fuji"),
     ("Auto Mamiya/Sekor", "Mamiya"),
     ("Auto Mamiya-Sekor", "Mamiya"),
-    ("Asahi Super-Multi-Coated Takumar", "Asahi Pentax"),
-    ("Asahi Super-Takumar", "Asahi Pentax"),
-    ("Asahi Takumar", "Asahi Pentax"),
-    ("Asahi Opt.", "Asahi Pentax"),
+    ("Mamiya/SEKOR", "Mamiya"),
+    ("Mamiya/Sekor", "Mamiya"),
+    ("Mamiya-SEKOR", "Mamiya"),
+    ("Mamiya-Sekor", "Mamiya"),
+    ("Asahi Super-Multi-Coated Takumar", "Pentax"),
+    ("Asahi Super-Takumar", "Pentax"),
+    ("Asahi Takumar", "Pentax"),
+    ("Asahi Opt.", "Pentax"),
+    ("Asahi Pentax", "Pentax"),
+    ("Nippon Kogaku", "Nikon"),
+    ("Carl Zeiss Jena", "Carl Zeiss Jena"),
     ("Carl Zeiss", "Carl Zeiss"),
     ("Meyer-Optik Gorlitz", "Meyer-Optik Görlitz"),
     ("Meyer-Optik Görlitz", "Meyer-Optik Görlitz"),
+    ("Meyer-Optik", "Meyer-Optik Görlitz"),
     ("Schneider-Kreuznach", "Schneider-Kreuznach"),
     ("Schneider-KREUZNACH", "Schneider-Kreuznach"),
     ("Zenza Bronica", "Bronica"),
@@ -239,12 +247,30 @@ _MULTI_WORD_BRANDS = [
     ("Fuji EBC", "Fuji"),
     ("Fuji Fujinon", "Fuji"),
     ("P. Angenieux", "Angénieux"),
+    ("Brightin Star", "Brightin Star"),
+    ("Light Lens Lab", "Light Lens Lab"),
+    ("MS Optics", "MS Optics"),
+    ("Rollei-HFT", "Rollei"),
+    ("Zoom-Rolleinar", "Rollei"),
+    ("Reflex-Rolleinar", "Rollei"),
+    ("Reflex-ROLLEINAR", "Rollei"),
+    ("HFT-Rolleinar", "Rollei"),
+    ("F-Rolleinar-MC", "Rollei"),
+    ("F-ROLLEINAR-MC", "Rollei"),
+    ("APO-Rolleinar", "Rollei"),
+    ("Apo-Rolleinar", "Rollei"),
+    ("ROLLEINAR-MC", "Rollei"),
+    ("Rolleinar-MC", "Rollei"),
+    ("ROLLEINAR", "Rollei"),
+    ("Rolleinar", "Rollei"),
+    ("TAKUMAR-F", "Pentax"),
+    ("Takumar-F", "Pentax"),
+    ("Takumar-A", "Pentax"),
     ("smc Pentax", "Pentax"),
     ("SMC Pentax", "Pentax"),
     ("HD Pentax", "Pentax"),
     ("RMC Tokina", "Tokina"),
     ("Auto Chinon", "Chinon"),
-    ("Mamiya-Sekor", "Mamiya"),
     ("Sigma[-XQ]", "Sigma"),
 ]
 
@@ -252,12 +278,17 @@ _MULTI_WORD_BRANDS = [
 _BRAND_ALIASES = {
     "Nikon": "Nikon",
     "Nikkor": "Nikon",
+    "NIKKOR": "Nikon",
+    "Nikkorex": "Nikon",
+    "NIKKOREX": "Nikon",
+    "Nippon": "Nikon",
     "Canon": "Canon",
     "Minolta": "Minolta",
     "Sigma": "Sigma",
     "Leica": "Leica",
     "Leitz": "Leica",
     "Tamron": "Tamron",
+    "Tamron-F": "Tamron",
     "Cosina": "Cosina",
     "Sony": "Sony",
     "Vivitar": "Vivitar",
@@ -270,8 +301,12 @@ _BRAND_ALIASES = {
     "Soligor": "Soligor",
     "Samyang": "Samyang",
     "Fujifilm": "Fuji",
+    "Fujica": "Fuji",
     "Hasselblad": "Hasselblad",
     "Pentax": "Pentax",
+    "Asahi": "Pentax",
+    "Asahiflex": "Pentax",
+    "Takumar": "Pentax",
     "Voigtlander": "Voigtländer",
     "Voigtländer": "Voigtländer",
     "Samsung": "Samsung",
@@ -290,7 +325,25 @@ _BRAND_ALIASES = {
     "Albinar": "Albinar",
     "Kiron": "Kiron",
     "Komura": "Komura",
+    "Komuranon": "Komura",
+    "KOMURANON": "Komura",
+    "Komura-FX": "Komura",
+    "Angenieux": "Angénieux",
+    "Angénieux": "Angénieux",
+    "Brightin": "Brightin Star",
+    "Light": "Light Lens Lab",
+    "MS": "MS Optics",
+    "Meyer": "Meyer-Optik Görlitz",
+    "Exaktar": "Exakta",
+    "Exakta": "Exakta",
+    "Rollei": "Rollei",
 }
+
+
+_SOVIET_BRAND_RE = re.compile(
+    r"^(INDUSTAR|Industar|JUPITER|Jupiter|MTO|MIR|Mir|HELIOS|Helios|TAIR|Tair|RUSSAR|Russar|ORION|Orion|VEGA|Vega|VOLNA|Volna|ARSAT|Arsat|ZENITAR|Zenitar)",
+    re.IGNORECASE,
+)
 
 
 def parse_brand(name: str) -> str | None:
@@ -307,6 +360,12 @@ def parse_brand(name: str) -> str | None:
     first_word = clean.split()[0] if clean.split() else ""
     if first_word in _BRAND_ALIASES:
         return _BRAND_ALIASES[first_word]
+
+    # Soviet lenses: "INDUSTAR-22" → "Industar", "JUPITER-3" → "Jupiter", etc.
+    # Strip model number suffix (e.g., "-22", "-3P") and title-case
+    m = _SOVIET_BRAND_RE.match(first_word)
+    if m:
+        return m.group(1).capitalize()
 
     # Fallback: return first word as-is if it looks like a brand (starts uppercase, not a number/spec)
     if first_word and first_word[0].isupper() and not re.match(r"\d", first_word) and _is_valid_name(first_word):
