@@ -180,6 +180,27 @@ def slugify(text: str) -> str:
     return slug.strip("-")
 
 
+def canonical_slug(name: str) -> str:
+    """Generate a canonical slug that collapses cosmetic name variants.
+
+    This normalizes common differences that produce false "unique" slugs:
+      - Brackets: [MM] and (MM) → mm
+      - Mount prefixes: "C/Y " → stripped (already stored as system_id)
+      - Case: "TESSAR" and "Tessar" → tessar
+
+    Used as the ON CONFLICT key so cosmetic variants upsert instead of
+    creating duplicates.
+    """
+    s = name.strip()
+    # 1. Normalize brackets: [X] → (X) before slugify strips them
+    s = re.sub(r"\[([^\]]*)\]", r"(\1)", s)
+    # 2. Strip mount-system prefixes (redundant with system_id)
+    s = re.sub(r"\s*C/Y\s+", " ", s)
+    # 3. Collapse whitespace
+    s = re.sub(r"\s+", " ", s).strip()
+    return slugify(s)
+
+
 def _is_valid_name(name: str) -> bool:
     """Check if a name is meaningful (not junk like '-', 'n/a', single chars, punctuation-only)."""
     if not name:
@@ -499,6 +520,65 @@ def get_or_create_system(cur, name: str, cache: dict) -> int | None:
     return None
 
 
+def _merge_images(base: list, other: list) -> list:
+    """Merge two image lists, deduplicating by src URL."""
+    seen = {(img.get("src") if isinstance(img, dict) else img) for img in base}
+    merged = list(base)
+    for img in other:
+        src = img.get("src") if isinstance(img, dict) else img
+        if src and src not in seen:
+            merged.append(img)
+            seen.add(src)
+    return merged
+
+
+def _merge_lens_row(keeper: dict, donor: dict):
+    """Merge donor lens data into keeper in-place. Richer description wins name/desc."""
+    # If donor has a longer description, take its name and description
+    keeper_desc_len = len(keeper.get("description") or "")
+    donor_desc_len = len(donor.get("description") or "")
+    if donor_desc_len > keeper_desc_len:
+        keeper["name"] = donor["name"]
+        keeper["description"] = donor["description"]
+        keeper["url"] = donor["url"] or keeper["url"]
+
+    # Fill empty fields from donor
+    fillable = [
+        "brand", "system_id", "lens_type", "era", "production_status",
+        "fl_min", "fl_max", "ap_min", "ap_max",
+        "weight", "filter_size", "focus_dist", "magnification",
+        "elements", "groups", "blades", "year",
+    ]
+    for field in fillable:
+        if keeper.get(field) is None and donor.get(field) is not None:
+            keeper[field] = donor[field]
+
+    # Merge specs (keeper values win on conflict)
+    donor_specs = donor.get("specs") or {}
+    for k, v in donor_specs.items():
+        if k not in keeper["specs"] or not keeper["specs"][k]:
+            keeper["specs"][k] = v
+
+    # Merge images
+    keeper["images"] = _merge_images(keeper.get("images") or [], donor.get("images") or [])
+
+
+def _lens_row_to_tuple(row: dict) -> tuple:
+    """Convert a lens row dict to a tuple for execute_values."""
+    return (
+        row["name"], row["slug"], row["url"],
+        row["brand"], row["system_id"], row["description"],
+        row["lens_type"], row["era"], row["production_status"],
+        row["fl_min"], row["fl_max"], row["ap_min"], row["ap_max"],
+        row["weight"], row["filter_size"], row["focus_dist"], row["magnification"],
+        row["elements"], row["groups"], row["blades"],
+        row["year"],
+        row["is_zoom"], row["is_macro"], row["is_prime"],
+        row["stab"], row["af"],
+        json.dumps(row["specs"]), json.dumps(row["images"]),
+    )
+
+
 def import_lenses(conn, lenses: list[dict]):
     """Import lenses into the database using batch inserts."""
     system_cache: dict[str, int] = {}
@@ -520,9 +600,11 @@ def import_lenses(conn, lenses: list[dict]):
     conn.commit()
     print(f"  Created {len(system_cache)} mount systems", flush=True)
 
-    # Phase 2: prepare all rows in memory
+    # Phase 2: prepare all rows in memory, deduplicating by canonical slug
     print("  Phase 2: Preparing lens rows...", flush=True)
-    rows = []
+    prepared: list[dict] = []
+    seen_canonical: dict[str, int] = {}  # canonical_slug → index in prepared
+    deduped = 0
     for lens in lenses:
         name = lens.get("name", "").strip()
         if not name:
@@ -568,21 +650,39 @@ def import_lenses(conn, lenses: list[dict]):
                 production_status = "In production"
 
         description = lens.get("description")
-        rows.append((
-            name, slug, lens.get("_url"), brand, system_id, description, lens_type, era, production_status,
-            fl_min, fl_max, ap_min, ap_max,
-            weight, filter_size, focus_dist, magnification,
-            elements, groups, blades,
-            year,
-            is_zoom, is_macro, is_prime,
-            stab, af,
-            json.dumps(specs), json.dumps(lens.get("images", []))
-        ))
 
-    print(f"  Prepared {len(rows)} rows ({skipped} skipped)", flush=True)
+        row = {
+            "name": name, "slug": slug, "url": lens.get("_url"),
+            "brand": brand, "system_id": system_id, "description": description,
+            "lens_type": lens_type, "era": era, "production_status": production_status,
+            "fl_min": fl_min, "fl_max": fl_max, "ap_min": ap_min, "ap_max": ap_max,
+            "weight": weight, "filter_size": filter_size,
+            "focus_dist": focus_dist, "magnification": magnification,
+            "elements": elements, "groups": groups, "blades": blades,
+            "year": year,
+            "is_zoom": is_zoom, "is_macro": is_macro, "is_prime": is_prime,
+            "stab": stab, "af": af,
+            "specs": specs, "images": lens.get("images", []),
+        }
 
-    # Phase 3: batch insert
+        # Deduplicate by canonical slug — if we've seen this canonical form,
+        # merge data into the existing row (keep the one with more data)
+        canon = canonical_slug(name)
+        if canon in seen_canonical:
+            idx = seen_canonical[canon]
+            existing = prepared[idx]
+            _merge_lens_row(existing, row)
+            deduped += 1
+            continue
+
+        seen_canonical[canon] = len(prepared)
+        prepared.append(row)
+
+    print(f"  Prepared {len(prepared)} rows ({skipped} skipped, {deduped} deduped)", flush=True)
+
+    # Phase 3: batch insert — convert dicts to tuples for execute_values
     print("  Phase 3: Batch inserting...", flush=True)
+    rows = [_lens_row_to_tuple(r) for r in prepared]
     batch_size = 500
     imported = 0
     with conn.cursor() as cur:
