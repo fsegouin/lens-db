@@ -14,8 +14,9 @@ const getCachedDropdownData = unstable_cache(
         .from(lenses)
         .orderBy(asc(lenses.brand)),
       db
-        .select({ name: systems.name, slug: systems.slug })
+        .selectDistinct({ name: systems.name, slug: systems.slug })
         .from(systems)
+        .innerJoin(lenses, eq(lenses.systemId, systems.id))
         .orderBy(asc(systems.name)),
       db
         .select({ name: lensSeries.name, slug: lensSeries.slug })
