@@ -9,8 +9,9 @@ const getCachedDropdownData = unstable_cache(
   async () => {
     const [systemRows, allCameras] = await Promise.all([
       db
-        .select({ name: systems.name, slug: systems.slug })
+        .selectDistinct({ name: systems.name, slug: systems.slug })
         .from(systems)
+        .innerJoin(cameras, eq(cameras.systemId, systems.id))
         .orderBy(asc(systems.name)),
       db
         .select({ specs: cameras.specs, sensorType: cameras.sensorType })
