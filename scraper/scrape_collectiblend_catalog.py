@@ -42,8 +42,9 @@ CAMERAS_URL = f"{BASE_URL}/Cameras/"
 LENSES_URL = f"{BASE_URL}/Lenses/"
 
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) LensDB-Research/1.0",
-    "Accept": "text/html,application/xhtml+xml",
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
 }
 
 # Delay between requests in seconds
@@ -170,13 +171,26 @@ def scrape_catalog(item_type: str, session: requests.Session,
 
     # Step 2: Scrape each manufacturer's page
     all_items = []
+    start_time = time.time()
     for i, mfr in enumerate(manufacturers):
-        print(f"  [{i+1}/{len(manufacturers)}] {mfr['name']}...", end="", flush=True)
+        pct = (i / len(manufacturers)) * 100
+        elapsed = time.time() - start_time
+        if i > 0:
+            eta_sec = int((elapsed / i) * (len(manufacturers) - i))
+            eta_min = eta_sec // 60
+            eta_str = f"{eta_min}m{eta_sec % 60:02d}s" if eta_min else f"{eta_sec}s"
+        else:
+            eta_str = "calculating..."
+        bar_len = 30
+        filled = int(bar_len * i / len(manufacturers))
+        bar = "█" * filled + "░" * (bar_len - filled)
+        print(f"\r  {bar} {pct:5.1f}% [{i+1}/{len(manufacturers)}] ETA {eta_str} — {mfr['name']:<30}", end="", flush=True)
         time.sleep(REQUEST_DELAY)
 
         items = scrape_manufacturer_items(mfr["url"], mfr["name"], item_type, session)
         all_items.extend(items)
-        print(f" {len(items)} items")
+
+    print(f"\r  {'█' * 30} 100.0% [{len(manufacturers)}/{len(manufacturers)}] Done{' ' * 40}")
 
     print(f"  Total {item_type}: {len(all_items)}")
     return all_items

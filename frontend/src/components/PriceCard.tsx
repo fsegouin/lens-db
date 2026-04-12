@@ -34,7 +34,8 @@ interface PriceCardProps {
 }
 
 function formatPrice(low: number | null, high: number | null) {
-  if (low == null && high == null) return "—";
+  // Treat 0 as missing
+  if ((!low && !high) || (low == null && high == null)) return "—";
   if (low === high || high == null) return `$${low?.toLocaleString()}`;
   if (low == null) return `$${high.toLocaleString()}`;
   return `$${low.toLocaleString()}–${high.toLocaleString()}`;
