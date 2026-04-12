@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import {
   pendingEdits,
@@ -196,6 +197,24 @@ export async function POST(
       reviewedAt: new Date(),
     })
     .where(eq(pendingEdits.id, editId));
+
+  // Revalidate the public page for this entity
+  const [entity] = await db
+    .select({ slug: table.slug })
+    .from(table)
+    .where(eq(table.id, targetEntityId))
+    .limit(1);
+
+  if (entity) {
+    const pathPrefixes: Record<string, string> = {
+      lens: "/lenses",
+      camera: "/cameras",
+      system: "/systems",
+      collection: "/collections",
+      series: "/lenses/series",
+    };
+    revalidatePath(`${pathPrefixes[entityType]}/${entity.slug}`);
+  }
 
   return NextResponse.json({ success: true, action: "approved" });
 }

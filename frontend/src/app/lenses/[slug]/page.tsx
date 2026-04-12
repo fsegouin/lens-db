@@ -18,7 +18,12 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { getCurrentUser } from "@/lib/user-auth";
 
-export const revalidate = 86400;
+export const revalidate = 604800;
+
+export async function generateStaticParams() {
+  const rows = await db.select({ slug: lenses.slug }).from(lenses);
+  return rows.map((r) => ({ slug: r.slug }));
+}
 
 export async function generateMetadata({
   params,
