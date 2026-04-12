@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { cameras, systems } from "@/db/schema";
+import { cameras, systems, priceEstimates } from "@/db/schema";
 import { asc, desc, eq, and, or, sql } from "drizzle-orm";
 import { unstable_cache } from "next/cache";
 import CameraList from "@/components/CameraList";
@@ -66,6 +66,8 @@ type SearchParams = Promise<{
   sensorType?: string;
   cropFactor?: string;
   year?: string;
+  priceMin?: string;
+  priceMax?: string;
   sort?: string;
   order?: string;
 }>;
@@ -82,6 +84,7 @@ export default async function CamerasPage({
   let initialItems: {
     camera: typeof cameras.$inferSelect;
     system: typeof systems.$inferSelect | null;
+    avgPrice: number | null;
   }[] = [];
   let total = 0;
   let systemList: { name: string; slug: string }[] = [];
@@ -146,6 +149,19 @@ export default async function CamerasPage({
     if (params.year) {
       conditions.push(eq(cameras.yearIntroduced, parseInt(params.year)));
     }
+    // "Avg Price" = midpoint of the Very Good condition range
+    const avgPrice = sql<number>`(${priceEstimates.priceVeryGoodLow} + ${priceEstimates.priceVeryGoodHigh}) / 2`;
+
+    if (params.priceMin) {
+      const val = parseInt(params.priceMin);
+      if (Number.isFinite(val))
+        conditions.push(sql`${avgPrice} >= ${val}`);
+    }
+    if (params.priceMax) {
+      const val = parseInt(params.priceMax);
+      if (Number.isFinite(val))
+        conditions.push(sql`${avgPrice} <= ${val}`);
+    }
 
     const where = conditions.length > 0 ? and(...conditions) : undefined;
 
@@ -156,31 +172,36 @@ export default async function CamerasPage({
       year: cameras.yearIntroduced,
       megapixels: cameras.megapixels,
       weight: cameras.weightG,
+      price: avgPrice,
     };
-    const sortCol = sortColumns[params.sort || ""] || cameras.name;
+    const sortKey = params.sort || "";
+    const sortCol = sortColumns[sortKey] || cameras.name;
     const orderFn = params.order === "desc" ? desc : asc;
+    const nullsLast = sortKey === "price"
+      ? [sql`${avgPrice} IS NULL`, orderFn(sortCol)]
+      : [orderFn(sortCol)];
 
-    // When filtering by system, we need a join for the WHERE clause
-    const needsSystemJoin = !!params.system;
-
-    const [countResult] = needsSystemJoin
-      ? await db
-          .select({ count: sql<number>`count(*)` })
-          .from(cameras)
-          .leftJoin(systems, eq(cameras.systemId, systems.id))
-          .where(where)
-      : await db
-          .select({ count: sql<number>`count(*)` })
-          .from(cameras)
-          .where(where);
+    const [countResult] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(cameras)
+      .leftJoin(systems, eq(cameras.systemId, systems.id))
+      .leftJoin(priceEstimates, and(
+        eq(priceEstimates.entityType, "camera"),
+        eq(priceEstimates.entityId, cameras.id),
+      ))
+      .where(where);
     total = Number(countResult.count);
 
     initialItems = await db
-      .select({ camera: cameras, system: systems })
+      .select({ camera: cameras, system: systems, avgPrice: avgPrice })
       .from(cameras)
       .leftJoin(systems, eq(cameras.systemId, systems.id))
+      .leftJoin(priceEstimates, and(
+        eq(priceEstimates.entityType, "camera"),
+        eq(priceEstimates.entityId, cameras.id),
+      ))
       .where(where)
-      .orderBy(orderFn(sortCol))
+      .orderBy(...nullsLast)
       .limit(PAGE_SIZE)
       .offset(0);
   } catch {

@@ -14,6 +14,7 @@ import { ScrollToTop } from "@/components/scroll-to-top";
 type CameraRow = {
   camera: typeof cameras.$inferSelect;
   system: typeof systems.$inferSelect | null;
+  avgPrice: number | null;
 };
 
 type SystemOption = { name: string; slug: string };
@@ -39,6 +40,8 @@ type FilterOverrides = {
   sensorType?: string;
   cropFactor?: string;
   year?: string;
+  priceMin?: string;
+  priceMax?: string;
   sort?: string;
   order?: string;
 };
@@ -72,6 +75,8 @@ export default function CameraList({
   const sensorType = searchParams.get("sensorType") || "";
   const cropFactor = searchParams.get("cropFactor") || "";
   const year = searchParams.get("year") || "";
+  const priceMin = searchParams.get("priceMin") || "";
+  const priceMax = searchParams.get("priceMax") || "";
   const sort = searchParams.get("sort") || "";
   const order = searchParams.get("order") || "";
 
@@ -84,6 +89,8 @@ export default function CameraList({
   const [formSensorType, setFormSensorType] = useState(sensorType);
   const [formCropFactor, setFormCropFactor] = useState(cropFactor);
   const [formYear, setFormYear] = useState(year);
+  const [formPriceMin, setFormPriceMin] = useState(priceMin);
+  const [formPriceMax, setFormPriceMax] = useState(priceMax);
 
   // Sync form state when URL params change (back/forward navigation)
   useEffect(() => {
@@ -95,7 +102,9 @@ export default function CameraList({
     setFormSensorType(sensorType);
     setFormCropFactor(cropFactor);
     setFormYear(year);
-  }, [q, system, type, model, filmType, sensorType, cropFactor, year]);
+    setFormPriceMin(priceMin);
+    setFormPriceMax(priceMax);
+  }, [q, system, type, model, filmType, sensorType, cropFactor, year, priceMin, priceMax]);
 
   // Reset list when initial data changes (filters applied via server component)
   useEffect(() => {
@@ -115,12 +124,14 @@ export default function CameraList({
       if (sensorType) params.set("sensorType", sensorType);
       if (cropFactor) params.set("cropFactor", cropFactor);
       if (year) params.set("year", year);
+      if (priceMin) params.set("priceMin", priceMin);
+      if (priceMax) params.set("priceMax", priceMax);
       if (sort) params.set("sort", sort);
       if (order) params.set("order", order);
       params.set("cursor", String(cursor));
       return `/api/cameras?${params.toString()}`;
     },
-    [q, system, type, model, filmType, sensorType, cropFactor, year, sort, order]
+    [q, system, type, model, filmType, sensorType, cropFactor, year, priceMin, priceMax, sort, order]
   );
 
   const loadMore = useCallback(async () => {
@@ -169,6 +180,8 @@ export default function CameraList({
     const sensorTypeVal = overrides.sensorType ?? formSensorType;
     const cropFactorVal = overrides.cropFactor ?? formCropFactor;
     const yearVal = overrides.year ?? formYear;
+    const priceMinVal = overrides.priceMin ?? formPriceMin;
+    const priceMaxVal = overrides.priceMax ?? formPriceMax;
     const sortVal = overrides.sort ?? sort;
     const orderVal = overrides.order ?? order;
     if (qVal) params.set("q", qVal);
@@ -179,6 +192,8 @@ export default function CameraList({
     if (sensorTypeVal) params.set("sensorType", sensorTypeVal);
     if (cropFactorVal) params.set("cropFactor", cropFactorVal);
     if (yearVal) params.set("year", yearVal);
+    if (priceMinVal) params.set("priceMin", priceMinVal);
+    if (priceMaxVal) params.set("priceMax", priceMaxVal);
     if (sortVal) params.set("sort", sortVal);
     if (orderVal) params.set("order", orderVal);
     const qs = params.toString();
@@ -203,7 +218,7 @@ export default function CameraList({
     debouncedApply({ q: value });
   }
 
-  const clearAll: FilterOverrides = { q: "", system: "", type: "", model: "", filmType: "", sensorType: "", cropFactor: "", year: "" };
+  const clearAll: FilterOverrides = { q: "", system: "", type: "", model: "", filmType: "", sensorType: "", cropFactor: "", year: "", priceMin: "", priceMax: "" };
 
   return (
     <>
@@ -317,6 +332,28 @@ export default function CameraList({
             className="h-10 w-28"
           />
         </div>
+        <div>
+          <label className="sr-only" htmlFor="camera-price-min">Min price</label>
+          <Input
+            id="camera-price-min"
+            type="number"
+            placeholder="Min $"
+            value={formPriceMin}
+            onChange={(e) => { setFormPriceMin(e.target.value); debouncedApply({ priceMin: e.target.value }); }}
+            className="h-10 w-24"
+          />
+        </div>
+        <div>
+          <label className="sr-only" htmlFor="camera-price-max">Max price</label>
+          <Input
+            id="camera-price-max"
+            type="number"
+            placeholder="Max $"
+            value={formPriceMax}
+            onChange={(e) => { setFormPriceMax(e.target.value); debouncedApply({ priceMax: e.target.value }); }}
+            className="h-10 w-24"
+          />
+        </div>
       </div>
 
       {/* Results */}
@@ -333,6 +370,7 @@ export default function CameraList({
                 { key: "imagingSensor", label: "Imaging Sensor", sortable: false },
                 { key: "cropFactor", label: "Crop Factor", sortable: false },
                 { key: "year", label: "Year" },
+                { key: "price", label: "Avg Price" },
                 { key: "weight", label: "Weight" },
               ].map((col) => (
                 <TableHead
@@ -372,7 +410,7 @@ export default function CameraList({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {items.map(({ camera, system: sys }) => {
+            {items.map(({ camera, system: sys, avgPrice }) => {
               const specs = (camera.specs ?? {}) as Record<string, string>;
               return (
                 <TableRow key={camera.id}>
@@ -455,15 +493,20 @@ export default function CameraList({
                     ) : "\u2014"}
                   </TableCell>
                   <TableCell className="text-zinc-600 dark:text-zinc-400">
+                    {avgPrice != null
+                      ? `$${avgPrice.toLocaleString()}`
+                      : "\u2014"}
+                  </TableCell>
+                  <TableCell className="text-zinc-600 dark:text-zinc-400">
                     {camera.weightG ? `${camera.weightG}g` : "\u2014"}
                   </TableCell>
                 </TableRow>
               );
             })}
-            {loading && <TableSkeleton columns={9} rows={3} />}
+            {loading && <TableSkeleton columns={10} rows={3} />}
             {nextCursor !== null && (
               <TableRow>
-                <TableCell colSpan={9} className="p-0">
+                <TableCell colSpan={10} className="p-0">
                   <div ref={sentinelRef} className="h-px w-full" />
                 </TableCell>
               </TableRow>
