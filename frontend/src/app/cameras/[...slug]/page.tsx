@@ -10,6 +10,7 @@ import EditButton from "@/components/EditButton";
 import FlagDuplicateButton from "@/components/FlagDuplicateButton";
 import SpecsTable from "@/components/SpecsTable";
 import PriceCard from "@/components/PriceCard";
+import EbayListings from "@/components/EbayListings";
 import { getImages } from "@/lib/images";
 import { formatDescription } from "@/lib/format-description";
 import { PageTransition } from "@/components/page-transition";
@@ -177,6 +178,8 @@ export default async function CameraDetailPage({
           estimate={priceEstimate ?? null}
           history={priceHistoryRows}
         />
+
+        <EbayListings query={camera.name} />
 
         <RatingWidget cameraId={camera.id} />
 
