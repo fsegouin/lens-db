@@ -24,14 +24,14 @@ interface PriceChartProps {
 
 const CONDITION_LABELS: Record<string, string> = {
   A: "Excellent",
-  "A+": "Excellent+",
+  "A+": "Excellent",
   B: "Good",
-  "B+": "Good+",
-  "B-A": "Good–Excellent",
-  "B-C": "Good–Fair",
+  "B+": "Good",
+  "B-A": "Good",
+  "B-C": "Fair",
   C: "Fair",
-  "C+": "Fair+",
-  "C-B": "Fair–Good",
+  "C+": "Fair",
+  "C-B": "Fair",
   D: "Poor",
 };
 
@@ -124,6 +124,12 @@ export default function PriceChart({ history }: PriceChartProps) {
             domain={["dataMin", "dataMax"]}
             tickFormatter={(ts) => {
               const d = new Date(ts);
+              const span = points[points.length - 1].timestamp - points[0].timestamp;
+              const oneYear = 365 * 24 * 60 * 60 * 1000;
+              // Show month+year if data spans less than 3 years, otherwise just year
+              if (span < oneYear * 3) {
+                return d.toLocaleDateString("en-US", { month: "short", year: "2-digit" });
+              }
               return d.getFullYear().toString();
             }}
             tick={{ fontSize: 11 }}
