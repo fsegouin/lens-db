@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { cameras } from "@/db/schema";
 import { requireAdminAPI, getAdminUserFromToken } from "@/lib/admin-auth";
@@ -79,6 +80,8 @@ export async function PUT(
     autoPatrol: true,
   });
 
+  revalidatePath(`/cameras/${updated.slug}`);
+
   return NextResponse.json(updated);
 }
 
@@ -91,7 +94,14 @@ export async function DELETE(
   if (authError) return authError;
 
   const { id } = await params;
-  await db.delete(cameras).where(eq(cameras.id, parseInt(id)));
+  const [deleted] = await db
+    .delete(cameras)
+    .where(eq(cameras.id, parseInt(id)))
+    .returning({ slug: cameras.slug });
+
+  if (deleted) {
+    revalidatePath(`/cameras/${deleted.slug}`);
+  }
 
   return NextResponse.json({ success: true });
 }

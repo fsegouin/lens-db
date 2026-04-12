@@ -6,7 +6,7 @@ import { Aperture, Camera, Layers, BookOpen, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { PageTransition } from "@/components/page-transition";
 
-export const revalidate = 86400;
+export const revalidate = 604800;
 
 const sections = [
   {

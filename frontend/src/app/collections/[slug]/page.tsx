@@ -15,7 +15,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-export const revalidate = 86400;
+export const revalidate = 604800;
+
+export async function generateStaticParams() {
+  const rows = await db.select({ slug: collections.slug }).from(collections);
+  return rows.map((r) => ({ slug: r.slug }));
+}
 
 export async function generateMetadata({
   params,
