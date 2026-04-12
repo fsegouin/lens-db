@@ -18,6 +18,7 @@ interface PriceEstimate {
   rarity: string | null;
   rarityVotes: number | null;
   sourceUrl: string | null;
+  sourceName: string | null;
   extractedAt: Date;
 }
 
@@ -26,6 +27,7 @@ interface PriceHistoryEntry {
   condition: string | null;
   priceUsd: number | null;
   source: string | null;
+  sourceUrl: string | null;
 }
 
 interface PriceCardProps {
@@ -45,14 +47,14 @@ function formatCondition(cond: string | null) {
   if (!cond) return "—";
   const labels: Record<string, string> = {
     A: "Excellent",
-    "A+": "Excellent+",
+    "A+": "Excellent",
     B: "Good",
-    "B+": "Good+",
-    "B-A": "Good–Excellent",
-    "B-C": "Good–Fair",
+    "B+": "Good",
+    "B-A": "Good",
+    "B-C": "Fair",
     C: "Fair",
-    "C+": "Fair+",
-    "C-B": "Fair–Good",
+    "C+": "Fair",
+    "C-B": "Fair",
     D: "Poor",
   };
   return labels[cond] ?? cond;
@@ -111,7 +113,7 @@ export default function PriceCard({ estimate, history }: PriceCardProps) {
           <div className="grid grid-cols-3 divide-x divide-zinc-200 dark:divide-zinc-800">
             <div className="p-4 text-center">
               <div className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">
-                Average
+                Fair
               </div>
               <div className="mt-1 text-lg font-semibold text-zinc-900 dark:text-zinc-100">
                 {formatPrice(estimate!.priceAverageLow, estimate!.priceAverageHigh)}
@@ -119,7 +121,7 @@ export default function PriceCard({ estimate, history }: PriceCardProps) {
             </div>
             <div className="p-4 text-center">
               <div className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">
-                Very Good
+                Good
               </div>
               <div className="mt-1 text-lg font-semibold text-zinc-900 dark:text-zinc-100">
                 {formatPrice(estimate!.priceVeryGoodLow, estimate!.priceVeryGoodHigh)}
@@ -127,7 +129,7 @@ export default function PriceCard({ estimate, history }: PriceCardProps) {
             </div>
             <div className="p-4 text-center bg-zinc-50 dark:bg-zinc-900/50">
               <div className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">
-                Mint
+                Excellent
               </div>
               <div className="mt-1 text-lg font-semibold text-zinc-900 dark:text-zinc-100">
                 {formatPrice(estimate!.priceMintLow, estimate!.priceMintHigh)}
@@ -143,27 +145,15 @@ export default function PriceCard({ estimate, history }: PriceCardProps) {
                     Rarity
                   </span>
                   <RarityDiamonds label={estimate!.rarity} />
-                  {estimate!.rarityVotes != null && (
+                  {estimate!.rarityVotes != null && estimate!.rarityVotes > 0 && (
                     <span className="text-xs text-zinc-400">
-                      ({estimate!.rarityVotes} votes)
+                      ({estimate!.rarityVotes} sold in last 90 days)
                     </span>
                   )}
                 </div>
               )}
               <span className="text-xs text-zinc-400">
-                Prices from{" "}
-                {estimate!.sourceUrl ? (
-                  <a
-                    href={estimate!.sourceUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="underline hover:text-zinc-600 dark:hover:text-zinc-300"
-                  >
-                    CollectiBlend
-                  </a>
-                ) : (
-                  "CollectiBlend"
-                )}
+                Based on recent {estimate!.sourceName || "eBay"} sales
                 {" · "}
                 {new Date(estimate!.extractedAt).toLocaleDateString("en-US", {
                   month: "short",
@@ -205,7 +195,18 @@ export default function PriceCard({ estimate, history }: PriceCardProps) {
                         : "—"}
                     </TableCell>
                     <TableCell className="text-sm text-zinc-500">
-                      {entry.source ?? "—"}
+                      {entry.sourceUrl ? (
+                        <a
+                          href={entry.sourceUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="underline hover:text-zinc-700 dark:hover:text-zinc-300"
+                        >
+                          {entry.source ?? "Link"}
+                        </a>
+                      ) : (
+                        entry.source ?? "—"
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}

@@ -92,6 +92,7 @@ export default async function CameraDetailPage({
       condition: priceHistory.condition,
       priceUsd: priceHistory.priceUsd,
       source: priceHistory.source,
+      sourceUrl: priceHistory.sourceUrl,
     })
     .from(priceHistory)
     .where(and(

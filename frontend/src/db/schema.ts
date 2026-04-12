@@ -435,6 +435,7 @@ export const priceHistory = pgTable(
     condition: text("condition"), // A, B, C, B-A, B-C, etc.
     priceUsd: integer("price_usd"),
     source: text("source"), // eBay, LP Foto Auction, etc.
+    sourceUrl: text("source_url"), // link to the original listing
     extractedAt: timestamp("extracted_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
