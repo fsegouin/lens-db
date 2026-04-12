@@ -37,21 +37,29 @@ def get_connection():
     return psycopg2.connect(DATABASE_URL)
 
 
+BATCH_SIZE = 20  # Max listings per LLM call to avoid schema errors
+
+
 def classify_listings(camera_name: str, listings: list[dict]) -> list[dict]:
-    """Send listings to the classify API and return classified results."""
+    """Send listings to the classify API in batches and return classified results."""
     import requests
 
-    resp = requests.post(CLASSIFY_URL, json={
-        "cameraName": camera_name,
-        "listings": listings,
-    }, timeout=120)
+    all_classified = []
+    for i in range(0, len(listings), BATCH_SIZE):
+        batch = listings[i:i + BATCH_SIZE]
+        resp = requests.post(CLASSIFY_URL, json={
+            "cameraName": camera_name,
+            "listings": batch,
+        }, timeout=120)
 
-    if resp.status_code != 200:
-        print(f"    Classification error: {resp.status_code} {resp.text[:200]}")
-        return []
+        if resp.status_code != 200:
+            print(f"    Classification error (batch {i // BATCH_SIZE + 1}): {resp.status_code} {resp.text[:200]}")
+            continue
 
-    data = resp.json()
-    return data.get("classified", [])
+        data = resp.json()
+        all_classified.extend(data.get("classified", []))
+
+    return all_classified
 
 
 def store_classified_sales(conn, entity_type: str, entity_id: int,
