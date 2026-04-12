@@ -32,8 +32,7 @@ export async function GET(request: NextRequest) {
     MAX_OFFSET
   );
 
-  // "Avg Price" = midpoint of the Very Good condition range
-    const avgPrice = sql<number>`(${priceEstimates.priceVeryGoodLow} + ${priceEstimates.priceVeryGoodHigh}) / 2`;
+  const avgPrice = priceEstimates.medianPrice;
 
   try {
     const conditions = [];

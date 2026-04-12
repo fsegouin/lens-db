@@ -149,8 +149,7 @@ export default async function CamerasPage({
     if (params.year) {
       conditions.push(eq(cameras.yearIntroduced, parseInt(params.year)));
     }
-    // "Avg Price" = midpoint of the Very Good condition range
-    const avgPrice = sql<number>`(${priceEstimates.priceVeryGoodLow} + ${priceEstimates.priceVeryGoodHigh}) / 2`;
+    const avgPrice = priceEstimates.medianPrice;
 
     if (params.priceMin) {
       const val = parseInt(params.priceMin);
