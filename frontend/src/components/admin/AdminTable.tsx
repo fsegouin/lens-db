@@ -21,6 +21,12 @@ interface FilterConfig {
   options: FilterOption[];
 }
 
+interface BulkAction {
+  label: string;
+  /** Called with the selected item IDs. Should return true if the action succeeded (triggers refetch + clear). */
+  onAction: (ids: number[]) => Promise<boolean>;
+}
+
 interface AdminTableProps {
   title: string;
   apiPath: string;         // e.g. "/api/admin/lenses"
@@ -29,6 +35,7 @@ interface AdminTableProps {
   newHref: string;         // e.g. "/admin/lenses/new"
   filters?: FilterConfig[];
   rowActions?: (item: Record<string, unknown>, refetch: () => void) => React.ReactNode;
+  bulkActions?: BulkAction[];
 }
 
 const PAGE_SIZE = 50;
@@ -41,6 +48,7 @@ export default function AdminTable({
   newHref,
   filters = [],
   rowActions,
+  bulkActions = [],
 }: AdminTableProps) {
   const [items, setItems] = useState<Record<string, unknown>[]>([]);
   const [total, setTotal] = useState(0);
@@ -54,6 +62,50 @@ export default function AdminTable({
     () => Object.fromEntries(filters.map((filter) => [filter.key, ""]))
   );
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [bulkLoading, setBulkLoading] = useState(false);
+
+  const hasBulk = bulkActions.length > 0;
+  const allOnPageSelected = items.length > 0 && items.every((item) => selectedIds.has(Number(item.id)));
+
+  function toggleSelect(id: number) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    if (allOnPageSelected) {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        for (const item of items) next.delete(Number(item.id));
+        return next;
+      });
+    } else {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        for (const item of items) next.add(Number(item.id));
+        return next;
+      });
+    }
+  }
+
+  async function runBulkAction(action: BulkAction) {
+    if (selectedIds.size === 0) return;
+    setBulkLoading(true);
+    try {
+      const ok = await action.onAction(Array.from(selectedIds));
+      if (ok) {
+        setSelectedIds(new Set());
+        fetchData();
+      }
+    } finally {
+      setBulkLoading(false);
+    }
+  }
 
   // Debounce search input (400ms)
   useEffect(() => {
@@ -165,6 +217,30 @@ export default function AdminTable({
         </div>
 
         <div className="text-sm text-zinc-500">{total.toLocaleString()} results</div>
+
+        {hasBulk && selectedIds.size > 0 && (
+          <div className="flex items-center gap-3 rounded-lg bg-blue-50 px-4 py-2 dark:bg-blue-950/50">
+            <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+              {selectedIds.size} selected
+            </span>
+            {bulkActions.map((action) => (
+              <button
+                key={action.label}
+                onClick={() => runBulkAction(action)}
+                disabled={bulkLoading}
+                className="rounded-md bg-blue-600 px-3 py-1 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                {action.label}
+              </button>
+            ))}
+            <button
+              onClick={() => setSelectedIds(new Set())}
+              className="ml-auto text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400"
+            >
+              Clear
+            </button>
+          </div>
+        )}
       </div>
 
       {loading ? (
@@ -174,6 +250,16 @@ export default function AdminTable({
           <table className="w-full text-sm">
             <thead className="sticky top-0 z-10">
               <tr className="shadow-[inset_0_-1px_0_theme(colors.zinc.200)] dark:shadow-[inset_0_-1px_0_theme(colors.zinc.800)]">
+                {hasBulk && (
+                  <th className="bg-white px-3 py-2 dark:bg-zinc-950">
+                    <input
+                      type="checkbox"
+                      checked={allOnPageSelected}
+                      onChange={toggleSelectAll}
+                      className="h-4 w-4 rounded border-zinc-300 dark:border-zinc-600"
+                    />
+                  </th>
+                )}
                 {columns.map((col) => (
                   <th
                     key={col.key}
@@ -198,6 +284,16 @@ export default function AdminTable({
             <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
               {items.map((item) => (
                 <tr key={String(item.id)} className="hover:bg-zinc-50 dark:hover:bg-zinc-900/50">
+                  {hasBulk && (
+                    <td className="px-3 py-2">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(Number(item.id))}
+                        onChange={() => toggleSelect(Number(item.id))}
+                        className="h-4 w-4 rounded border-zinc-300 dark:border-zinc-600"
+                      />
+                    </td>
+                  )}
                   {columns.map((col, i) => (
                     <td key={col.key} className="px-9 py-2 text-zinc-700 dark:text-zinc-300">
                       {i === 0 ? (
@@ -221,7 +317,7 @@ export default function AdminTable({
               ))}
               {items.length === 0 && (
                 <tr>
-                  <td colSpan={columns.length + (rowActions ? 1 : 0)} className="px-9 py-8 text-center text-zinc-400">
+                  <td colSpan={columns.length + (rowActions ? 1 : 0) + (hasBulk ? 1 : 0)} className="px-9 py-8 text-center text-zinc-400">
                     No results found
                   </td>
                 </tr>
