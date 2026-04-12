@@ -1,6 +1,7 @@
-import AdminTable from "@/components/admin/AdminTable";
+"use client";
 
-export const dynamic = "force-dynamic";
+import AdminTable from "@/components/admin/AdminTable";
+import { useBulkCameraActions } from "@/components/admin/BulkCameraActions";
 
 const columns = [
   { key: "name", label: "Name", sortKey: "name" },
@@ -11,13 +12,19 @@ const columns = [
 ];
 
 export default function AdminCamerasPage() {
+  const { bulkActions, modalElement } = useBulkCameraActions();
+
   return (
-    <AdminTable
-      title="Cameras"
-      apiPath="/api/admin/cameras"
-      editPath="/admin/cameras"
-      columns={columns}
-      newHref="/admin/cameras/new"
-    />
+    <>
+      <AdminTable
+        title="Cameras"
+        apiPath="/api/admin/cameras"
+        editPath="/admin/cameras"
+        columns={columns}
+        newHref="/admin/cameras/new"
+        bulkActions={bulkActions}
+      />
+      {modalElement}
+    </>
   );
 }

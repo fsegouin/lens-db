@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { lenses, systems } from "@/db/schema";
+import { lenses, systems, lensTags, tags, lensSeriesMemberships, lensSeries } from "@/db/schema";
 import { requireAdminAPI } from "@/lib/admin-auth";
-import { and, sql, eq } from "drizzle-orm";
+import { and, sql, eq, inArray } from "drizzle-orm";
 import { buildNameSearch } from "@/lib/search";
 import { buildOrderBy } from "@/lib/admin-sort";
 
@@ -58,7 +58,42 @@ export async function GET(request: NextRequest) {
   const total = Number(countResult[0].count);
   const nextCursor = cursor + PAGE_SIZE < total ? cursor + PAGE_SIZE : null;
 
-  return NextResponse.json({ items, total, nextCursor });
+  // Batch-fetch tags and series for the returned lenses
+  const lensIds = items.map((i) => i.id);
+  let tagMap: Record<number, { id: number; name: string }[]> = {};
+  let seriesMap: Record<number, { id: number; name: string }[]> = {};
+
+  if (lensIds.length > 0) {
+    const [tagRows, seriesRows] = await Promise.all([
+      db
+        .select({ lensId: lensTags.lensId, tagId: tags.id, tagName: tags.name })
+        .from(lensTags)
+        .innerJoin(tags, eq(lensTags.tagId, tags.id))
+        .where(inArray(lensTags.lensId, lensIds)),
+      db
+        .select({ lensId: lensSeriesMemberships.lensId, seriesId: lensSeries.id, seriesName: lensSeries.name })
+        .from(lensSeriesMemberships)
+        .innerJoin(lensSeries, eq(lensSeriesMemberships.seriesId, lensSeries.id))
+        .where(inArray(lensSeriesMemberships.lensId, lensIds)),
+    ]);
+
+    tagMap = {};
+    for (const r of tagRows) {
+      (tagMap[r.lensId] ??= []).push({ id: r.tagId, name: r.tagName });
+    }
+    seriesMap = {};
+    for (const r of seriesRows) {
+      (seriesMap[r.lensId] ??= []).push({ id: r.seriesId, name: r.seriesName });
+    }
+  }
+
+  const enrichedItems = items.map((item) => ({
+    ...item,
+    tags: tagMap[item.id] ?? [],
+    series: seriesMap[item.id] ?? [],
+  }));
+
+  return NextResponse.json({ items: enrichedItems, total, nextCursor });
 }
 
 export async function POST(request: NextRequest) {
