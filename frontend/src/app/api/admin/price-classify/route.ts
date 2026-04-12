@@ -26,7 +26,7 @@ const ClassifiedListingSchema = z.object({
         "If a lens is included, describe it (e.g. 'FD 50mm f/1.8'). Null if body only."
       ),
       conditionGrade: z.enum(["excellent", "good", "fair", "skip"]).describe(
-        "excellent: near-mint/mint/like-new, collector grade, minimal wear. good: very good/excellent, clean and fully functional, minor signs of use. fair: good/fair, working but with visible wear or cosmetic issues. skip: not working, untested, parts, or broken."
+        "Be strict — most cameras are 'good'. excellent: ONLY mint/near-mint/top-mint with zero caveats (10-20% of listings). good: the default for any working camera in decent shape — Exc+5, Very Good, tested, CLA'd, refurbished. fair: working but with noted issues, cosmetic damage, needs work, or vague condition claims. skip: broken, parts, untested."
       ),
       conditionNotes: z.string().describe(
         "Brief notes about condition from the listing title"
@@ -56,10 +56,10 @@ IMPORTANT RULES:
 - Mark isRelevant=false for: parts/repair, untested, broken, lots/bundles, different models, accessories only.
 - conditionGrade "skip" should be used for anything not in working condition — these will be filtered out entirely.
 
-Condition grading for WORKING cameras only:
-- excellent: Near-mint, mint, like-new, [N MINT], collector grade, minimal wear
-- good: Excellent, [Exc+5], [Exc+4], Very Good, clean and fully functional, minor signs of use
-- fair: Good, fair, working but with visible wear, cosmetic issues, or minor problems noted
+Condition grading — be strict, most used cameras are "good", not "excellent":
+- excellent: ONLY if explicitly described as mint, near-mint, [N MINT], [Top MINT], [MINT in Box], or collector grade. Must have no caveats. This is rare — maybe 10-20% of listings.
+- good: The default for working cameras. Includes [Exc+5], [Exc+4], Excellent, Very Good, tested/working, CLA'd, Good Refurbished, Very Good Refurbished. Most listings should be here.
+- fair: Any camera with caveats: *Read, cosmetic damage noted, "works but...", needs light seals, minor issues mentioned, no condition info given, just "body only" with no condition claim.
 
 For each listing provide: isRelevant, isBodyOnly, includesLens, conditionGrade, conditionNotes, effectivePrice.
 
@@ -68,7 +68,7 @@ ${listings.map((l, i) => `${i + 1}. "${l.title}" | $${l.price} | ${l.date} | ${l
 
   try {
     const { output } = await generateText({
-      model: "mistral/ministral-8b",
+      model: "google/gemini-2.0-flash-lite",
       output: Output.object({ schema: ClassifiedListingSchema }),
       prompt,
     });
