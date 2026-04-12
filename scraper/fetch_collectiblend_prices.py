@@ -44,8 +44,9 @@ DATABASE_URL = os.environ.get("DATABASE_URL")
 
 BASE_URL = "https://collectiblend.com"
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) LensDB-Research/1.0",
-    "Accept": "text/html,application/xhtml+xml",
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
 }
 
 # Source icon filenames to human-readable names
@@ -212,14 +213,18 @@ def scrape_price_data(url: str, session: requests.Session) -> dict | None:
                 avg_low, avg_high = parse_price_range(price_cells[0])
                 vg_low, vg_high = parse_price_range(price_cells[1])
                 mint_low, mint_high = parse_price_range(price_cells[2])
-                result["average_index"] = {
-                    "average_low": avg_low,
-                    "average_high": avg_high,
-                    "very_good_low": vg_low,
-                    "very_good_high": vg_high,
-                    "mint_low": mint_low,
-                    "mint_high": mint_high,
+                # Drop zero prices — they're meaningless
+                idx = {
+                    "average_low": avg_low if avg_low else None,
+                    "average_high": avg_high if avg_high else None,
+                    "very_good_low": vg_low if vg_low else None,
+                    "very_good_high": vg_high if vg_high else None,
+                    "mint_low": mint_low if mint_low else None,
+                    "mint_high": mint_high if mint_high else None,
                 }
+                # Only keep if at least one non-zero price exists
+                if any(v for v in idx.values()):
+                    result["average_index"] = idx
 
         # Find the historical prices table (Date / Condition / Price)
         if "Condition" in text and "Price" in text and "Date" in text:
@@ -246,7 +251,7 @@ def scrape_price_data(url: str, session: requests.Session) -> dict | None:
                     elif ct.startswith("$"):
                         price_val = parse_price_value(ct)
 
-                if date_val and price_val is not None:
+                if date_val and price_val is not None and price_val > 0:
                     # Get source from icon in first cell
                     source_img = cells[0].find("img") if cells else None
                     source = extract_source_from_icon(source_img)
@@ -375,35 +380,39 @@ def main():
         with_prices = 0
         errors = 0
 
+        start_time = time.time()
+
         for i, entry in enumerate(matched):
             url = entry["match"]["url"]
-            print(f"  [{i+1}/{len(matched)}] {entry['db_name']}...", end="", flush=True)
+
+            pct = (i / len(matched)) * 100
+            elapsed = time.time() - start_time
+            if i > 0:
+                eta_sec = int((elapsed / i) * (len(matched) - i))
+                eta_min = eta_sec // 60
+                eta_str = f"{eta_min}m{eta_sec % 60:02d}s" if eta_min else f"{eta_sec}s"
+            else:
+                eta_str = "..."
+            bar_len = 30
+            filled = int(bar_len * i / len(matched))
+            bar = "\u2588" * filled + "\u2591" * (bar_len - filled)
+            name_short = entry["db_name"][:28]
+            print(f"\r  {bar} {pct:5.1f}% [{i+1}/{len(matched)}] ETA {eta_str} \u2014 {name_short:<30}", end="", flush=True)
 
             time.sleep(REQUEST_DELAY)
 
             price_data = scrape_price_data(url, session)
             if price_data:
                 with_prices += 1
-                avg = price_data.get("average_index")
-                hist_count = len(price_data.get("historical_prices", []))
-                rarity = price_data.get("rarity")
-                parts = []
-                if avg:
-                    parts.append(f"avg=${avg.get('average_low', '?')}-{avg.get('average_high', '?')}")
-                if rarity:
-                    parts.append(f"rarity={rarity.get('label')}")
-                parts.append(f"{hist_count} sales")
-                print(f" OK {', '.join(parts)}")
 
                 if conn and not args.dry_run:
                     save_price_data(conn, entity_type, entry["db_id"],
                                      price_data, extracted_at)
-            else:
-                print(" no price data")
 
             fetched += 1
 
-        print(f"\n  Fetched: {fetched}, With prices: {with_prices}, Errors: {errors}")
+        print(f"\r  {'\u2588' * 30} 100.0% Done{' ' * 50}")
+        print(f"  Fetched: {fetched}, With prices: {with_prices}, Errors: {errors}")
 
     if conn:
         conn.close()
