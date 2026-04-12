@@ -58,13 +58,8 @@ function CustomTooltip({
         {formatDate(data.date)}
       </p>
       {data.condition && (
-        <p className="text-zinc-500 dark:text-zinc-400">
-          {CONDITION_LABELS[data.condition] ?? data.condition}
-        </p>
-      )}
-      {data.source && (
         <p className="text-zinc-400 dark:text-zinc-500 text-xs">
-          {data.source}
+          {CONDITION_LABELS[data.condition] ?? data.condition}
         </p>
       )}
     </div>
@@ -73,17 +68,25 @@ function CustomTooltip({
 
 export default function PriceChart({ history }: PriceChartProps) {
   // Filter to entries with both date and price, sort chronologically
-  const points = history
+  const rawPoints = history
     .filter((e) => e.saleDate && e.priceUsd != null)
     .map((e) => ({
       date: e.saleDate!,
       price: e.priceUsd!,
       condition: e.condition,
       source: e.source,
-      // Numeric timestamp for X axis
       timestamp: new Date(e.saleDate! + "T00:00:00").getTime(),
     }))
     .sort((a, b) => a.timestamp - b.timestamp);
+
+  // Offset same-date points slightly so each dot is individually hoverable
+  const seen = new Map<number, number>();
+  const hourMs = 3600000;
+  const points = rawPoints.map((p) => {
+    const count = seen.get(p.timestamp) ?? 0;
+    seen.set(p.timestamp, count + 1);
+    return { ...p, timestamp: p.timestamp + count * hourMs };
+  });
 
   if (points.length < 2) return null;
 
