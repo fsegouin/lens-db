@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { cameras, systems } from "@/db/schema";
+import { cameras, systems, priceEstimates } from "@/db/schema";
 import { asc, desc, eq, and, or, sql } from "drizzle-orm";
 import { getClientIP, rateLimitedResponse } from "@/lib/api-utils";
 import { rateLimiters } from "@/lib/rate-limit";
@@ -22,6 +22,8 @@ export async function GET(request: NextRequest) {
   const sensorType = searchParams.get("sensorType") || undefined;
   const cropFactor = searchParams.get("cropFactor") || undefined;
   const year = searchParams.get("year") || undefined;
+  const priceMin = searchParams.get("priceMin") || undefined;
+  const priceMax = searchParams.get("priceMax") || undefined;
   const sort = searchParams.get("sort") || undefined;
   const order = searchParams.get("order") || undefined;
   const rawCursor = parseInt(searchParams.get("cursor") || "0");
@@ -29,6 +31,9 @@ export async function GET(request: NextRequest) {
     Math.max(Number.isFinite(rawCursor) ? rawCursor : 0, 0),
     MAX_OFFSET
   );
+
+  // "Avg Price" = midpoint of the Very Good condition range
+    const avgPrice = sql<number>`(${priceEstimates.priceVeryGoodLow} + ${priceEstimates.priceVeryGoodHigh}) / 2`;
 
   try {
     const conditions = [];
@@ -76,6 +81,16 @@ export async function GET(request: NextRequest) {
       if (Number.isFinite(val))
         conditions.push(eq(cameras.yearIntroduced, val));
     }
+    if (priceMin) {
+      const val = parseInt(priceMin);
+      if (Number.isFinite(val))
+        conditions.push(sql`${avgPrice} >= ${val}`);
+    }
+    if (priceMax) {
+      const val = parseInt(priceMax);
+      if (Number.isFinite(val))
+        conditions.push(sql`${avgPrice} <= ${val}`);
+    }
 
     const where = conditions.length > 0 ? and(...conditions) : undefined;
 
@@ -86,30 +101,39 @@ export async function GET(request: NextRequest) {
       year: cameras.yearIntroduced,
       megapixels: cameras.megapixels,
       weight: cameras.weightG,
+      price: avgPrice,
     };
-    const sortCol = sortColumns[sort || ""] || cameras.name;
+    const sortKey = sort || "";
+    const sortCol = sortColumns[sortKey] || cameras.name;
     const orderFn = order === "desc" ? desc : asc;
+    // For price sorting, push NULLs to the end
+    const nullsLast = sortKey === "price"
+      ? [sql`${avgPrice} IS NULL`, orderFn(sortCol)]
+      : [orderFn(sortCol)];
 
-    const needsSystemJoin = !!system;
-
-    const [countResult] = needsSystemJoin
-      ? await db
-          .select({ count: sql<number>`count(*)` })
-          .from(cameras)
-          .leftJoin(systems, eq(cameras.systemId, systems.id))
-          .where(where)
-      : await db
-          .select({ count: sql<number>`count(*)` })
-          .from(cameras)
-          .where(where);
-    const total = Number(countResult.count);
-
-    const items = await db
-      .select({ camera: cameras, system: systems })
+    const baseQuery = db
+      .select({ camera: cameras, system: systems, avgPrice: avgPrice })
       .from(cameras)
       .leftJoin(systems, eq(cameras.systemId, systems.id))
+      .leftJoin(priceEstimates, and(
+        eq(priceEstimates.entityType, "camera"),
+        eq(priceEstimates.entityId, cameras.id),
+      ));
+
+    const [countResult] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(cameras)
+      .leftJoin(systems, eq(cameras.systemId, systems.id))
+      .leftJoin(priceEstimates, and(
+        eq(priceEstimates.entityType, "camera"),
+        eq(priceEstimates.entityId, cameras.id),
+      ))
+      .where(where);
+    const total = Number(countResult.count);
+
+    const items = await baseQuery
       .where(where)
-      .orderBy(orderFn(sortCol))
+      .orderBy(...nullsLast)
       .limit(PAGE_SIZE)
       .offset(cursor);
 

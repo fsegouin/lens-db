@@ -11,3 +11,7 @@ __pycache__/
 *.pyc
 .next/
 /docs/plans/
+.vercel
+.env*.local
+scraper/collectiblend_catalog.json
+scraper/collectiblend_matches.json

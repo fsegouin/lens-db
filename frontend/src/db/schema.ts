@@ -7,6 +7,7 @@ import {
   boolean,
   jsonb,
   timestamp,
+  date,
   primaryKey,
   index,
   unique,
@@ -396,5 +397,47 @@ export const cameraComparisons = pgTable(
     unique("uq_camera_comparisons_pair").on(table.cameraId1, table.cameraId2),
     index("idx_camera_comparisons_views").on(table.viewCount),
     check("chk_camera_order", sql`${table.cameraId1} < ${table.cameraId2}`),
+  ]
+);
+
+export const priceEstimates = pgTable(
+  "price_estimates",
+  {
+    id: serial("id").primaryKey(),
+    entityType: text("entity_type").notNull(), // "camera" | "lens"
+    entityId: integer("entity_id").notNull(),
+    sourceUrl: text("source_url"),
+    sourceName: text("source_name"),
+    priceAverageLow: integer("price_average_low"),
+    priceAverageHigh: integer("price_average_high"),
+    priceVeryGoodLow: integer("price_very_good_low"),
+    priceVeryGoodHigh: integer("price_very_good_high"),
+    priceMintLow: integer("price_mint_low"),
+    priceMintHigh: integer("price_mint_high"),
+    currency: text("currency").default("USD"),
+    rarity: text("rarity"), // e.g. "Very common", "Common", "Uncommon", "Rare", "Very rare"
+    rarityVotes: integer("rarity_votes"),
+    extractedAt: timestamp("extracted_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    unique("uq_price_estimates_entity").on(table.entityType, table.entityId),
+    index("idx_price_estimates_entity").on(table.entityType, table.entityId),
+  ]
+);
+
+export const priceHistory = pgTable(
+  "price_history",
+  {
+    id: serial("id").primaryKey(),
+    entityType: text("entity_type").notNull(), // "camera" | "lens"
+    entityId: integer("entity_id").notNull(),
+    saleDate: date("sale_date"),
+    condition: text("condition"), // A, B, C, B-A, B-C, etc.
+    priceUsd: integer("price_usd"),
+    source: text("source"), // eBay, LP Foto Auction, etc.
+    extractedAt: timestamp("extracted_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_price_history_entity").on(table.entityType, table.entityId),
   ]
 );

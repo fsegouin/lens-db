@@ -1,14 +1,15 @@
 import { notFound, redirect } from "next/navigation";
-import { eq } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import BackButton from "@/components/BackButton";
 import { db } from "@/db";
-import { cameras, systems } from "@/db/schema";
+import { cameras, systems, priceEstimates, priceHistory } from "@/db/schema";
 import ViewTracker from "@/components/ViewTracker";
 import ImageGallery from "@/components/ImageGallery";
 import RatingWidget from "@/components/RatingWidget";
 import EditButton from "@/components/EditButton";
 import FlagDuplicateButton from "@/components/FlagDuplicateButton";
 import SpecsTable from "@/components/SpecsTable";
+import PriceCard from "@/components/PriceCard";
 import { getImages } from "@/lib/images";
 import { formatDescription } from "@/lib/format-description";
 import { PageTransition } from "@/components/page-transition";
@@ -68,6 +69,30 @@ export default async function CameraDetailPage({
   const currentUser = await getCurrentUser();
   const allSystems = await db.select({ id: systems.id, name: systems.name }).from(systems).orderBy(systems.name);
   const specs = (camera.specs ?? {}) as Record<string, string>;
+
+  // Fetch price data
+  const [priceEstimate] = await db
+    .select()
+    .from(priceEstimates)
+    .where(and(
+      eq(priceEstimates.entityType, "camera"),
+      eq(priceEstimates.entityId, camera.id),
+    ))
+    .limit(1);
+
+  const priceHistoryRows = await db
+    .select({
+      saleDate: priceHistory.saleDate,
+      condition: priceHistory.condition,
+      priceUsd: priceHistory.priceUsd,
+      source: priceHistory.source,
+    })
+    .from(priceHistory)
+    .where(and(
+      eq(priceHistory.entityType, "camera"),
+      eq(priceHistory.entityId, camera.id),
+    ))
+    .orderBy(desc(priceHistory.saleDate));
 
   const imagingRows: [string, string | number | null | undefined][] = [
     ["Type", specs["Type"]],
@@ -142,6 +167,11 @@ export default async function CameraDetailPage({
             ))}
           </div>
         )}
+
+        <PriceCard
+          estimate={priceEstimate ?? null}
+          history={priceHistoryRows}
+        />
 
         <RatingWidget cameraId={camera.id} />
 
