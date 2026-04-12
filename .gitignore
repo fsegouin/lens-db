@@ -13,5 +13,3 @@ __pycache__/
 /docs/plans/
 .vercel
 .env*.local
-scraper/collectiblend_catalog.json
-scraper/collectiblend_matches.json
