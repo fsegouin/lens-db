@@ -186,6 +186,20 @@ def recompute_price_estimates(conn, entity_type: str, entity_id: int):
             p95 = all_prices[min(len(all_prices) - 1, int(len(all_prices) * 0.95))]
             mint_low, mint_high = p75, p95
 
+        # Compute median price — prefer recent sales (90 days), fall back to 1 year
+        all_prices = sorted([price for _, price, _ in rows])
+        cur.execute("""
+            SELECT price_usd FROM price_history
+            WHERE entity_type = %s AND entity_id = %s
+              AND price_usd > 0
+              AND sale_date >= NOW() - INTERVAL '90 days'
+            ORDER BY price_usd
+        """, (entity_type, entity_id))
+        recent_prices = sorted([r[0] for r in cur.fetchall()])
+        # Use 90-day prices if we have enough, otherwise use all (up to 2 years)
+        median_source = recent_prices if len(recent_prices) >= 5 else all_prices
+        median_price = median_source[len(median_source) // 2] if median_source else None
+
         # Compute rarity from listing volume
         # Count unique sales in the last 90 days
         cur.execute("""
@@ -222,8 +236,8 @@ def recompute_price_estimates(conn, entity_type: str, entity_id: int):
                  price_average_low, price_average_high,
                  price_very_good_low, price_very_good_high,
                  price_mint_low, price_mint_high,
-                 rarity, rarity_votes, extracted_at)
-            VALUES (%s, %s, NULL, 'eBay', %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                 median_price, rarity, rarity_votes, extracted_at)
+            VALUES (%s, %s, NULL, 'eBay', %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT (entity_type, entity_id) DO UPDATE SET
                 source_name = 'eBay',
                 price_average_low = EXCLUDED.price_average_low,
@@ -232,13 +246,14 @@ def recompute_price_estimates(conn, entity_type: str, entity_id: int):
                 price_very_good_high = EXCLUDED.price_very_good_high,
                 price_mint_low = EXCLUDED.price_mint_low,
                 price_mint_high = EXCLUDED.price_mint_high,
+                median_price = EXCLUDED.median_price,
                 rarity = EXCLUDED.rarity,
                 rarity_votes = EXCLUDED.rarity_votes,
                 extracted_at = EXCLUDED.extracted_at
         """, (
             entity_type, entity_id, avg_low, avg_high,
             vg_low, vg_high, mint_low, mint_high,
-            rarity_label, recent_count, extracted_at,
+            median_price, rarity_label, recent_count, extracted_at,
         ))
 
     conn.commit()

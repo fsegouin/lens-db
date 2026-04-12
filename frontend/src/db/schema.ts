@@ -414,6 +414,7 @@ export const priceEstimates = pgTable(
     priceVeryGoodHigh: integer("price_very_good_high"),
     priceMintLow: integer("price_mint_low"),
     priceMintHigh: integer("price_mint_high"),
+    medianPrice: integer("median_price"), // median of all sale prices — best single "what you'd pay" number
     currency: text("currency").default("USD"),
     rarity: text("rarity"), // e.g. "Very common", "Common", "Uncommon", "Rare", "Very rare"
     rarityVotes: integer("rarity_votes"),
