@@ -1,5 +1,4 @@
-import puppeteer from "puppeteer-core";
-import chromium from "@sparticuz/chromium";
+import { chromium } from "playwright-core";
 import { buildEbaySearchQuery } from "@/lib/ebay-search-query";
 
 export interface EbayListing {
@@ -19,34 +18,33 @@ const MONTHS: Record<string, string> = {
 };
 
 /**
- * Launch a headless browser instance.
- * Uses @sparticuz/chromium in serverless (Vercel), local Chrome in dev.
- */
-async function launchBrowser() {
-  return puppeteer.launch({
-    args: chromium.args,
-    defaultViewport: { width: 1280, height: 800 },
-    executablePath: await chromium.executablePath(),
-    headless: true,
-  });
-}
-
-/**
- * Fetch sold/completed eBay listings for a batch of cameras using Puppeteer.
- * Reuses a single browser instance across all cameras to avoid cold start per camera.
+ * Fetch sold/completed eBay listings for a batch of cameras using Playwright.
+ * Reuses a single browser instance across all cameras.
  */
 export async function searchSoldListingsBatch(
   cameras: { id: number; name: string }[],
   onResult: (camera: { id: number; name: string }, listings: EbayListing[]) => Promise<void>,
   delayMs: number = 2000,
 ): Promise<void> {
-  const browser = await launchBrowser();
+  const browser = await chromium.launch({
+    channel: "chrome",
+    headless: true,
+    args: [
+      "--disable-blink-features=AutomationControlled",
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+    ],
+  });
 
   try {
-    const page = await browser.newPage();
-    await page.setUserAgent(
-      "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
-    );
+    const context = await browser.newContext({
+      userAgent:
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
+      viewport: { width: 1280, height: 800 },
+      locale: "en-US",
+    });
+
+    const page = await context.newPage();
 
     for (let i = 0; i < cameras.length; i++) {
       const camera = cameras[i];
@@ -59,22 +57,22 @@ export async function searchSoldListingsBatch(
         const listings = await searchSoldListings(page, camera.name);
         await onResult(camera, listings);
       } catch (error) {
-        console.error(`Error scraping ${camera.name}:`, error);
+        console.error(`[ebay-prices] Error scraping ${camera.name}:`, error);
         await onResult(camera, []);
       }
     }
 
-    await page.close();
+    await context.close();
   } finally {
     await browser.close();
   }
 }
 
 /**
- * Fetch sold listings for a single camera using an existing Puppeteer page.
+ * Fetch sold listings for a single camera using an existing Playwright page.
  */
 async function searchSoldListings(
-  page: Awaited<ReturnType<Awaited<ReturnType<typeof launchBrowser>>["newPage"]>>,
+  page: Awaited<ReturnType<Awaited<ReturnType<typeof chromium.launch>>["newPage"]>>,
   cameraName: string,
 ): Promise<EbayListing[]> {
   const query = buildEbaySearchQuery(cameraName);

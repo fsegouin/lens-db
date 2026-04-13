@@ -22,7 +22,7 @@ export default function EbayListingsSkeleton() {
         </h3>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
-        {Array.from({ length: 4 }).map((_, i) => (
+        {Array.from({ length: 6 }).map((_, i) => (
           <ListingSkeleton key={i} />
         ))}
       </div>
