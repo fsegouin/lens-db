@@ -22,6 +22,9 @@ export const metadata: Metadata = {
   description:
     "Comprehensive database of camera lenses and bodies with specs, compatibility, and expert recommendations.",
   metadataBase: new URL("https://thelensdb.com"),
+  verification: {
+    google: "VqQ5eoCMbzHnK0tn55oyWCiTeUUgh8hfFaRNo6OfoDk",
+  },
   openGraph: {
     title: "The Lens DB - Camera Lens Database",
     description:
