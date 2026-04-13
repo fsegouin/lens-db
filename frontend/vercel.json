@@ -6,9 +6,9 @@
     }
   ],
   "functions": {
-    "src/app/api/cron/ebay-prices/route.ts": {
+    "src/app/api/cron/ebay-prices/scrape/route.ts": {
       "memory": 1024,
-      "maxDuration": 300
+      "maxDuration": 60
     }
   }
 }
