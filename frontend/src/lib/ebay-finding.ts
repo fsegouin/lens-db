@@ -47,10 +47,18 @@ export async function searchSoldItems(cameraName: string): Promise<SoldListing[]
   const res = await fetch(`${FINDING_API_URL}?${params}`);
 
   if (!res.ok) {
-    throw new Error(`Finding API failed: ${res.status}`);
+    console.error(`Finding API HTTP ${res.status} for "${cameraName}"`);
+    return [];
   }
 
   const data = await res.json();
+
+  // Rate limiting returns 200 with an error body
+  if (data.errorMessage) {
+    const msg = data.errorMessage[0]?.error?.[0]?.message?.[0] ?? "Unknown error";
+    console.error(`Finding API error for "${cameraName}": ${msg}`);
+    return [];
+  }
 
   const response = data.findCompletedItemsResponse?.[0];
   if (!response || response.ack?.[0] !== "Success") {
