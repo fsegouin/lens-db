@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { cameras, priceEstimates } from "@/db/schema";
 import { sql, isNull, desc } from "drizzle-orm";
-import { EbayScraper } from "@/lib/ebay-finding";
 import type { EbayListing } from "@/lib/ebay-finding";
 import { classifyListings } from "@/lib/price-classify";
 import { storeClassifiedSales, recomputePriceEstimates } from "@/lib/price-pipeline";
@@ -35,6 +34,28 @@ async function getCameraBatch(): Promise<{ id: number; name: string; alias: stri
     .limit(BATCH_SIZE);
 
   return rows.map((r) => ({ id: r.id, name: r.name, alias: r.alias }));
+}
+
+/**
+ * Call the isolated scrape function for a single camera name.
+ * Each call is a separate serverless invocation with fresh memory.
+ */
+async function scrapeCamera(
+  baseUrl: string,
+  cameraName: string,
+  secret: string | undefined,
+): Promise<EbayListing[]> {
+  const url = new URL("/api/cron/ebay-prices/scrape", baseUrl);
+  url.searchParams.set("name", cameraName);
+
+  const headers: Record<string, string> = {};
+  if (secret) headers["Authorization"] = `Bearer ${secret}`;
+
+  const res = await fetch(url.toString(), { headers });
+  if (!res.ok) return [];
+
+  const data = await res.json();
+  return data.listings ?? [];
 }
 
 async function processListings(
@@ -73,6 +94,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // Base URL for calling the scrape function
+  const baseUrl = request.nextUrl.origin;
+
   const startTime = Date.now();
   const cameraBatch = await getCameraBatch();
   console.log(`[ebay-prices] Starting batch of ${cameraBatch.length} cameras`);
@@ -89,15 +113,13 @@ export async function GET(request: NextRequest) {
     if (pendingClassify) await pendingClassify;
     if (idx > 0) await delay(DELAY_BETWEEN_CAMERAS_MS);
 
-    // Open browser, scrape, close — frees memory between cameras
-    const scraper = new EbayScraper();
+    // Scrape via isolated function call (separate memory allocation)
     let listings: EbayListing[] = [];
     try {
-      await scraper.open();
-      listings = await scraper.scrape(camera.name);
+      listings = await scrapeCamera(baseUrl, camera.name, cronSecret);
       // If alias exists and primary search returned few results, also search alias
       if (camera.alias && listings.length < 5) {
-        const aliasListings = await scraper.scrape(camera.alias);
+        const aliasListings = await scrapeCamera(baseUrl, camera.alias, cronSecret);
         const seen = new Set(listings.map((l) => l.itemId));
         for (const l of aliasListings) {
           if (!seen.has(l.itemId)) listings.push(l);
@@ -106,8 +128,6 @@ export async function GET(request: NextRequest) {
       }
     } catch (error) {
       console.error(`[ebay-prices] Error scraping ${camera.name}:`, error);
-    } finally {
-      await scraper.close();
     }
 
     console.log(`[ebay-prices] ${idx + 1}/${cameraBatch.length} ${camera.name}: ${listings.length} listings`);
@@ -117,7 +137,6 @@ export async function GET(request: NextRequest) {
       continue;
     }
 
-    // Start classification in background — runs while next camera scrapes
     const capturedListings = listings;
     const capturedCamera = camera;
     pendingClassify = (async () => {
