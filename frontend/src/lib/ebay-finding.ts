@@ -1,6 +1,6 @@
-const FINDING_API_URL = "https://svcs.ebay.com/services/search/FindingService/v1";
+import { buildEbaySearchQuery } from "@/lib/ebay-search-query";
 
-export interface SoldListing {
+export interface EbayListing {
   itemId: string;
   title: string;
   price: number;
@@ -10,80 +10,108 @@ export interface SoldListing {
   url: string;
 }
 
-function buildSearchQuery(cameraName: string): string {
-  let name = cameraName;
-  for (const prefix of ["Asahi ", "Nippon Kogaku "]) {
-    if (name.startsWith(prefix)) {
-      name = name.slice(prefix.length);
-    }
-  }
-  return `${name} camera body`;
-}
+const MONTHS: Record<string, string> = {
+  Jan: "01", Feb: "02", Mar: "03", Apr: "04",
+  May: "05", Jun: "06", Jul: "07", Aug: "08",
+  Sep: "09", Oct: "10", Nov: "11", Dec: "12",
+};
 
-export async function searchSoldItems(cameraName: string): Promise<SoldListing[]> {
-  const appId = process.env.EBAY_APP_ID;
-  if (!appId) {
-    throw new Error("EBAY_APP_ID is required");
-  }
+const HEADERS = {
+  "User-Agent":
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+  Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+  "Accept-Language": "en-US,en;q=0.9",
+};
 
-  const query = buildSearchQuery(cameraName);
-
+/**
+ * Fetch sold/completed eBay listings by scraping the search results page.
+ * eBay server-renders listing cards with title, price, sold date, and condition
+ * in the HTML using s-card__* class names.
+ */
+export async function searchSoldListings(cameraName: string): Promise<EbayListing[]> {
+  const query = buildEbaySearchQuery(cameraName);
   const params = new URLSearchParams({
-    "OPERATION-NAME": "findCompletedItems",
-    "SERVICE-VERSION": "1.13.0",
-    "SECURITY-APPNAME": appId,
-    "RESPONSE-DATA-FORMAT": "JSON",
-    "REST-PAYLOAD": "",
-    "keywords": query,
-    "categoryId": "625",
-    "itemFilter(0).name": "SoldItemsOnly",
-    "itemFilter(0).value": "true",
-    "itemFilter(1).name": "ListingType",
-    "itemFilter(1).value": "FixedPrice,AuctionWithBIN,Auction",
-    "sortOrder": "EndTimeSoonest",
-    "paginationInput.entriesPerPage": "50",
+    _nkw: query,
+    _sacat: "625", // Film Cameras category
+    LH_Sold: "1",
+    LH_Complete: "1",
+    _sop: "13", // Sort by end date: recent first
+    _ipg: "120", // Results per page
   });
 
-  const res = await fetch(`${FINDING_API_URL}?${params}`);
+  const url = `https://www.ebay.com/sch/i.html?${params}`;
 
-  if (!res.ok) {
-    console.error(`Finding API HTTP ${res.status} for "${cameraName}"`);
+  let html: string;
+  try {
+    const res = await fetch(url, { headers: HEADERS });
+    if (!res.ok) {
+      console.error(`eBay scrape HTTP ${res.status} for "${cameraName}"`);
+      return [];
+    }
+    html = await res.text();
+  } catch (error) {
+    console.error(`eBay scrape failed for "${cameraName}":`, error);
     return [];
   }
 
-  const data = await res.json();
+  return parseSoldListings(html);
+}
 
-  // Rate limiting returns 200 with an error body
-  if (data.errorMessage) {
-    const msg = data.errorMessage[0]?.error?.[0]?.message?.[0] ?? "Unknown error";
-    console.error(`Finding API error for "${cameraName}": ${msg}`);
-    return [];
+function parseSoldListings(html: string): EbayListing[] {
+  const listings: EbayListing[] = [];
+
+  // Split on card caption (each sold listing starts with one)
+  const cards = html.split(/<div class=s-card__caption>/);
+
+  for (const card of cards.slice(1)) {
+    // Sold date: "Sold  Apr 10, 2026"
+    const soldMatch = card.match(/Sold\s+(\w+)\s+(\d+),\s+(\d+)/);
+    if (!soldMatch) continue;
+
+    const month = MONTHS[soldMatch[1]] ?? "01";
+    const day = soldMatch[2].padStart(2, "0");
+    const year = soldMatch[3];
+    const date = `${year}-${month}-${day}`;
+
+    // Title: inside s-card__title span
+    const titleMatch = card.match(
+      /s-card__title[^>]*><span[^>]*>([^<]+)/,
+    );
+    if (!titleMatch) continue;
+    const title = titleMatch[1]
+      .replace(/Opens in a new window or tab$/, "")
+      .trim()
+      .slice(0, 120);
+
+    // Price: first dollar amount in the attributes section
+    const priceMatch = card.match(
+      /attributes__primary[\s\S]*?>([\d,]+\.\d{2})</,
+    );
+    if (!priceMatch) continue;
+    const price = parseFloat(priceMatch[1].replace(",", ""));
+    if (price <= 0) continue;
+
+    // Condition: inside s-card__subtitle span
+    const conditionMatch = card.match(
+      /s-card__subtitle[\s\S]*?<span[^>]*>([^<]+)/,
+    );
+    const condition = conditionMatch ? conditionMatch[1].trim() : "";
+
+    // Item ID from /itm/ link
+    const itemIdMatch = card.match(/\/itm\/(\d+)/);
+    if (!itemIdMatch) continue;
+    const itemId = itemIdMatch[1];
+
+    listings.push({
+      itemId,
+      title,
+      price,
+      currency: "USD",
+      date,
+      condition,
+      url: `https://www.ebay.com/itm/${itemId}`,
+    });
   }
 
-  const response = data.findCompletedItemsResponse?.[0];
-  if (!response || response.ack?.[0] !== "Success") {
-    return [];
-  }
-
-  const items = response.searchResult?.[0]?.item ?? [];
-
-  return items.map((item: Record<string, unknown[]>) => {
-    const sellingStatus = (item.sellingStatus as Record<string, unknown[]>[])?.[0];
-    const currentPrice = (sellingStatus?.currentPrice as Record<string, string>[])?.[0];
-    const listingInfo = (item.listingInfo as Record<string, string[]>[])?.[0];
-    const condition = (item.condition as Record<string, string[]>[])?.[0];
-
-    const endTime = listingInfo?.endTime?.[0] ?? "";
-    const dateStr = endTime ? endTime.slice(0, 10) : new Date().toISOString().slice(0, 10);
-
-    return {
-      itemId: (item.itemId as string[])?.[0] ?? "",
-      title: (item.title as string[])?.[0] ?? "",
-      price: parseFloat(currentPrice?.__value__ ?? "0"),
-      currency: currentPrice?.["@currencyId"] ?? "USD",
-      date: dateStr,
-      condition: condition?.conditionDisplayName?.[0] ?? "",
-      url: (item.viewItemURL as string[])?.[0] ?? "",
-    };
-  }).filter((listing: SoldListing) => listing.itemId && listing.price > 0);
+  return listings;
 }

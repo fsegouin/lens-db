@@ -1,7 +1,7 @@
 import { getEbayAccessToken } from "@/lib/ebay-auth";
-import type { SoldListing } from "@/lib/ebay-finding";
+import type { EbayListing } from "@/lib/ebay-finding";
 
-export interface EnrichedListing extends SoldListing {
+export interface EnrichedListing extends EbayListing {
   description: string;
 }
 
@@ -18,12 +18,9 @@ function stripHtml(html: string): string {
 }
 
 async function fetchItemDescription(itemId: string, token: string): Promise<string> {
-  // Finding API returns legacy IDs; Browse API needs v1 format
-  const v1ItemId = `v1|${itemId}|0`;
-
   try {
     const res = await fetch(
-      `https://api.ebay.com/buy/browse/v1/item/${encodeURIComponent(v1ItemId)}`,
+      `https://api.ebay.com/buy/browse/v1/item/${encodeURIComponent(itemId)}`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -43,7 +40,7 @@ async function fetchItemDescription(itemId: string, token: string): Promise<stri
 }
 
 export async function enrichListingsWithDescriptions(
-  listings: SoldListing[],
+  listings: EbayListing[],
 ): Promise<EnrichedListing[]> {
   const token = await getEbayAccessToken();
 

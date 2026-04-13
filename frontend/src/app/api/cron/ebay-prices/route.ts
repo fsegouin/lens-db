@@ -2,13 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { cameras, priceEstimates } from "@/db/schema";
 import { sql, isNull, desc } from "drizzle-orm";
-import { searchSoldItems } from "@/lib/ebay-finding";
-import { enrichListingsWithDescriptions } from "@/lib/ebay-browse";
+import { searchSoldListings } from "@/lib/ebay-finding";
 import { classifyListings } from "@/lib/price-classify";
 import { storeClassifiedSales, recomputePriceEstimates } from "@/lib/price-pipeline";
 
 const BATCH_SIZE = 30;
-const DELAY_BETWEEN_CAMERAS_MS = 2000;
+const DELAY_BETWEEN_CAMERAS_MS = 1000;
 
 function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -47,6 +46,7 @@ export async function GET(request: NextRequest) {
 
   const startTime = Date.now();
   const cameraBatch = await getCameraBatch();
+  console.log(`[ebay-prices] Starting batch of ${cameraBatch.length} cameras`);
   const results: { name: string; listings: number; relevant: number; stored: number }[] = [];
   let totalStored = 0;
 
@@ -58,43 +58,29 @@ export async function GET(request: NextRequest) {
 
     try {
       // 1. Fetch sold listings
-      const soldListings = await searchSoldItems(camera.name);
+      console.log(`[ebay-prices] ${idx + 1}/${cameraBatch.length} Searching: ${camera.name}`);
+      const soldListings = await searchSoldListings(camera.name);
       if (soldListings.length === 0) {
+        console.log(`[ebay-prices]   No listings found`);
         results.push({ name: camera.name, listings: 0, relevant: 0, stored: 0 });
         continue;
       }
 
-      // 2. Enrich with descriptions
-      const enrichedListings = await enrichListingsWithDescriptions(soldListings);
+      // 2. Classify via LLM
+      console.log(`[ebay-prices]   ${soldListings.length} listings, classifying...`);
+      const classified = await classifyListings(camera.name, soldListings);
 
-      // 3. Classify via LLM
-      const rawForClassify = enrichedListings.map((l) => ({
-        title: l.title,
-        price: l.price,
-        date: l.date,
-        condition: l.condition,
-        description: l.description,
-      }));
-      const classified = await classifyListings(camera.name, rawForClassify);
-
-      // 4. Store classified sales
-      const rawForStorage = enrichedListings.map((l) => ({
-        title: l.title,
-        price: l.price,
-        date: l.date,
-        condition: l.condition,
-        url: l.url,
-      }));
+      // 3. Store classified sales
       const extractedAt = new Date().toISOString();
       const stored = await storeClassifiedSales(
         "camera",
         camera.id,
         classified,
-        rawForStorage,
+        soldListings,
         extractedAt,
       );
 
-      // 5. Recompute price estimates
+      // 4. Recompute price estimates
       if (stored > 0) {
         await recomputePriceEstimates("camera", camera.id);
       }
@@ -103,6 +89,7 @@ export async function GET(request: NextRequest) {
         (c) => c.isRelevant && c.conditionGrade !== "skip",
       ).length;
       totalStored += stored;
+      console.log(`[ebay-prices]   Relevant: ${relevant}, Stored: ${stored}`);
       results.push({ name: camera.name, listings: soldListings.length, relevant, stored });
     } catch (error) {
       console.error(`Error processing ${camera.name}:`, error);
@@ -111,6 +98,8 @@ export async function GET(request: NextRequest) {
   }
 
   const durationMs = Date.now() - startTime;
+
+  console.log(`[ebay-prices] Done: ${cameraBatch.length} cameras, ${totalStored} stored, ${Math.round(durationMs / 1000)}s`);
 
   return NextResponse.json({
     processed: cameraBatch.length,
