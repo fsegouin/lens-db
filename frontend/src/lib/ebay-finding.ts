@@ -1,8 +1,5 @@
 import { chromium, type Browser, type Page } from "playwright-core";
-import chromiumMin from "@sparticuz/chromium-min";
-
-const CHROMIUM_REMOTE_URL =
-  "https://github.com/Sparticuz/chromium/releases/download/v147.0.0/chromium-v147.0.0-pack.x64.tar";
+import sparticuzChromium from "@sparticuz/chromium";
 
 export interface EbayListing {
   itemId: string;
@@ -20,7 +17,6 @@ const MONTHS: Record<string, string> = {
   Sep: "09", Oct: "10", Nov: "11", Dec: "12",
 };
 
-// Minimal Chrome args to reduce memory usage in serverless
 const SERVERLESS_ARGS = [
   "--disable-blink-features=AutomationControlled",
   "--no-sandbox",
@@ -52,7 +48,6 @@ export class EbayScraper {
   }
 
   private async launchBrowser(): Promise<void> {
-    // Close existing if any
     if (this.browser) {
       try { await this.browser.close(); } catch { /* ignore */ }
     }
@@ -65,8 +60,8 @@ export class EbayScraper {
         args: ["--disable-blink-features=AutomationControlled", "--no-sandbox"],
       });
     } else {
-      console.log("[ebay-scraper] Downloading + launching serverless Chromium...");
-      const executablePath = await chromiumMin.executablePath(CHROMIUM_REMOTE_URL);
+      console.log("[ebay-scraper] Launching serverless Chromium...");
+      const executablePath = await sparticuzChromium.executablePath();
       console.log("[ebay-scraper] Chromium path:", executablePath);
       this.browser = await chromium.launch({
         executablePath,
@@ -99,20 +94,14 @@ export class EbayScraper {
   }
 
   private async ensurePage(): Promise<Page> {
-    // Check if browser/page is still alive
     if (this.page && this.browser?.isConnected()) {
       return this.page;
     }
-    // Browser crashed — relaunch
-    console.log("[ebay-prices] Browser crashed, relaunching...");
+    console.log("[ebay-scraper] Browser crashed, relaunching...");
     await this.launchBrowser();
     return this.page!;
   }
 
-  /**
-   * Scrape sold listings for a camera.
-   * Strips parentheses and manufacturer prefixes from the name.
-   */
   async scrape(cameraName: string): Promise<EbayListing[]> {
     const page = await this.ensurePage();
 
@@ -137,7 +126,7 @@ export class EbayScraper {
 
     console.log(`[ebay-scraper] Navigating: ${query}`);
     const response = await page.goto(url, { waitUntil: "load", timeout: 20000 });
-    console.log(`[ebay-scraper] Page loaded: ${response?.status()} ${response?.url().slice(0, 80)}`);
+    console.log(`[ebay-scraper] Page loaded: ${response?.status()}`);
     await page.waitForTimeout(3000);
 
     return page.evaluate((months: Record<string, string>) => {

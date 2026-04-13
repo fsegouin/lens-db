@@ -17,7 +17,7 @@ importers:
       '@neondatabase/serverless':
         specifier: ^1.0.2
         version: 1.0.2
-      '@sparticuz/chromium-min':
+      '@sparticuz/chromium':
         specifier: ^147.0.0
         version: 147.0.0
       '@upstash/ratelimit':
@@ -1593,8 +1593,8 @@ packages:
     resolution: {integrity: sha512-O/IEdcCUKkubz60tFbGA7ceITTAJsty+lBjNoorP4Z6XRqaFb/OjQjZODophEcuq68nKm6/0r+6/lLQ+XVpk8g==}
     engines: {node: '>=18.0.0'}
 
-  '@sparticuz/chromium-min@147.0.0':
-    resolution: {integrity: sha512-NGmo7YpM7yihKSIXvOuqelLcoJFTsc1lAiWIqA2/5W/gWop5+ZDceflDdnaJYUjZOCUY3kTHDDakbNKb74km9A==}
+  '@sparticuz/chromium@147.0.0':
+    resolution: {integrity: sha512-4ZKeAQQa8up2mt675qSitztLdbQrlf8BKdC5naeap+5Mv1OV1OlJdPoU+EJC/p5sQUJUQmN4r+q5+EhaaOUHpQ==}
     engines: {node: '>=20.11.0'}
 
   '@stablelib/base64@1.0.1':
@@ -6275,7 +6275,7 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
-  '@sparticuz/chromium-min@147.0.0':
+  '@sparticuz/chromium@147.0.0':
     dependencies:
       follow-redirects: 1.16.0
       tar-fs: 3.1.2
