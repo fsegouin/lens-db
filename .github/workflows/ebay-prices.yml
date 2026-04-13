@@ -1,0 +1,27 @@
+name: eBay Price Pipeline
+
+on:
+  schedule:
+    # Daily at 6:00 AM UTC
+    - cron: "0 6 * * *"
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  scrape-and-classify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install script dependencies
+        run: cd scraper && npm install playwright-core
+
+      - name: Run eBay price scraper
+        env:
+          API_URL: ${{ secrets.API_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: node scraper/ebay-scrape-action.mjs
