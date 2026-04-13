@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { notFound, redirect } from "next/navigation";
 import { eq, and, desc } from "drizzle-orm";
 import BackButton from "@/components/BackButton";
@@ -11,6 +12,7 @@ import FlagDuplicateButton from "@/components/FlagDuplicateButton";
 import SpecsTable from "@/components/SpecsTable";
 import PriceCard from "@/components/PriceCard";
 import EbayListings from "@/components/EbayListings";
+import EbayListingsSkeleton from "@/components/EbayListingsSkeleton";
 import { getImages } from "@/lib/images";
 import { formatDescription } from "@/lib/format-description";
 import { PageTransition } from "@/components/page-transition";
@@ -180,7 +182,9 @@ export default async function CameraDetailPage({
           history={priceHistoryRows}
         />
 
-        <EbayListings query={camera.name} />
+        <Suspense fallback={<EbayListingsSkeleton />}>
+          <EbayListings query={camera.name} />
+        </Suspense>
 
         <RatingWidget cameraId={camera.id} />
 
