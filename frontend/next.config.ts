@@ -30,6 +30,7 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  serverExternalPackages: ["@sparticuz/chromium", "playwright-core"],
   async redirects() {
     return [
       // Merged Canon EOS system slugs → mount-named equivalents
