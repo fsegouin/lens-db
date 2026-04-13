@@ -1,6 +1,5 @@
 import { chromium, type Browser, type Page } from "playwright-core";
 import sparticuzChromium from "@sparticuz/chromium";
-import { buildEbaySearchQuery } from "@/lib/ebay-search-query";
 
 export interface EbayListing {
   itemId: string;
@@ -63,12 +62,22 @@ export class EbayScraper {
   }
 
   /**
-   * Scrape sold listings for a single camera.
+   * Scrape sold listings for a camera.
+   * Pass the camera name directly — no "camera body" suffix (the LLM filters relevance).
+   * Strips parentheses and content inside them to avoid eBay search issues.
    */
   async scrape(cameraName: string): Promise<EbayListing[]> {
     if (!this.page) throw new Error("Browser not open — call open() first");
 
-    const query = buildEbaySearchQuery(cameraName);
+    // Strip manufacturer prefixes that hurt search
+    let query = cameraName;
+    for (const prefix of ["Asahi ", "Nippon Kogaku "]) {
+      if (query.startsWith(prefix)) {
+        query = query.slice(prefix.length);
+      }
+    }
+    // Strip parenthesized content: "Canon EOS M50 (EOS Kiss M)" → "Canon EOS M50"
+    query = query.replace(/\s*\([^)]*\)/g, "").trim();
     const params = new URLSearchParams({
       _nkw: query,
       _sacat: "625",
