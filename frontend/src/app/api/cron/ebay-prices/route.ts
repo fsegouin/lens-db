@@ -37,10 +37,6 @@ async function getCameraBatch(): Promise<{ id: number; name: string; alias: stri
   return rows.map((r) => ({ id: r.id, name: r.name, alias: r.alias }));
 }
 
-/**
- * Classify + store + recompute for a single camera.
- * Runs concurrently with the next camera's scrape.
- */
 async function processListings(
   camera: { id: number; name: string },
   listings: EbayListing[],
@@ -84,68 +80,60 @@ export async function GET(request: NextRequest) {
   const results: { name: string; listings: number; relevant: number; stored: number }[] = [];
   let totalStored = 0;
 
-  const scraper = new EbayScraper();
-  await scraper.open();
+  // Pipeline: classify camera[i] while scraping camera[i+1]
+  let pendingClassify: Promise<void> | null = null;
 
-  try {
-    // Pipeline: scrape camera[i+1] while classifying camera[i]
-    let pendingClassify: Promise<void> | null = null;
+  for (let idx = 0; idx < cameraBatch.length; idx++) {
+    const camera = cameraBatch[idx];
 
-    for (let idx = 0; idx < cameraBatch.length; idx++) {
-      const camera = cameraBatch[idx];
+    if (pendingClassify) await pendingClassify;
+    if (idx > 0) await delay(DELAY_BETWEEN_CAMERAS_MS);
 
-      // Wait for previous classification to finish before logging next camera
-      if (pendingClassify) await pendingClassify;
-
-      if (idx > 0) await delay(DELAY_BETWEEN_CAMERAS_MS);
-
-      // Scrape this camera (and alias if available)
-      let listings: EbayListing[] = [];
-      try {
-        listings = await scraper.scrape(camera.name);
-        // If alias exists and primary search returned few results, also search alias
-        if (camera.alias && listings.length < 5) {
-          await delay(DELAY_BETWEEN_CAMERAS_MS);
-          const aliasListings = await scraper.scrape(camera.alias);
-          // Merge, dedup by itemId
-          const seen = new Set(listings.map((l) => l.itemId));
-          for (const l of aliasListings) {
-            if (!seen.has(l.itemId)) listings.push(l);
-          }
-          listings = listings.slice(0, 20);
+    // Open browser, scrape, close — frees memory between cameras
+    const scraper = new EbayScraper();
+    let listings: EbayListing[] = [];
+    try {
+      await scraper.open();
+      listings = await scraper.scrape(camera.name);
+      // If alias exists and primary search returned few results, also search alias
+      if (camera.alias && listings.length < 5) {
+        const aliasListings = await scraper.scrape(camera.alias);
+        const seen = new Set(listings.map((l) => l.itemId));
+        for (const l of aliasListings) {
+          if (!seen.has(l.itemId)) listings.push(l);
         }
-      } catch (error) {
-        console.error(`[ebay-prices] Error scraping ${camera.name}:`, error);
+        listings = listings.slice(0, 20);
       }
-
-      console.log(`[ebay-prices] ${idx + 1}/${cameraBatch.length} ${camera.name}: ${listings.length} listings`);
-
-      if (listings.length === 0) {
-        results.push({ name: camera.name, listings: 0, relevant: 0, stored: 0 });
-        continue;
-      }
-
-      // Start classification in background — will overlap with next camera's scrape
-      const capturedListings = listings;
-      const capturedCamera = camera;
-      pendingClassify = (async () => {
-        try {
-          const { relevant, stored } = await processListings(capturedCamera, capturedListings);
-          totalStored += stored;
-          console.log(`[ebay-prices]   ${capturedCamera.name}: Relevant: ${relevant}, Stored: ${stored}`);
-          results.push({ name: capturedCamera.name, listings: capturedListings.length, relevant, stored });
-        } catch (error) {
-          console.error(`[ebay-prices]   Error classifying ${capturedCamera.name}:`, error);
-          results.push({ name: capturedCamera.name, listings: capturedListings.length, relevant: 0, stored: 0 });
-        }
-      })();
+    } catch (error) {
+      console.error(`[ebay-prices] Error scraping ${camera.name}:`, error);
+    } finally {
+      await scraper.close();
     }
 
-    // Wait for the last classification to finish
-    if (pendingClassify) await pendingClassify;
-  } finally {
-    await scraper.close();
+    console.log(`[ebay-prices] ${idx + 1}/${cameraBatch.length} ${camera.name}: ${listings.length} listings`);
+
+    if (listings.length === 0) {
+      results.push({ name: camera.name, listings: 0, relevant: 0, stored: 0 });
+      continue;
+    }
+
+    // Start classification in background — runs while next camera scrapes
+    const capturedListings = listings;
+    const capturedCamera = camera;
+    pendingClassify = (async () => {
+      try {
+        const { relevant, stored } = await processListings(capturedCamera, capturedListings);
+        totalStored += stored;
+        console.log(`[ebay-prices]   ${capturedCamera.name}: Relevant: ${relevant}, Stored: ${stored}`);
+        results.push({ name: capturedCamera.name, listings: capturedListings.length, relevant, stored });
+      } catch (error) {
+        console.error(`[ebay-prices]   Error classifying ${capturedCamera.name}:`, error);
+        results.push({ name: capturedCamera.name, listings: capturedListings.length, relevant: 0, stored: 0 });
+      }
+    })();
   }
+
+  if (pendingClassify) await pendingClassify;
 
   const durationMs = Date.now() - startTime;
   console.log(`[ebay-prices] Done: ${cameraBatch.length} cameras, ${totalStored} stored, ${Math.round(durationMs / 1000)}s`);
