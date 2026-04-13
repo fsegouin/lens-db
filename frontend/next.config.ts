@@ -30,12 +30,6 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["@sparticuz/chromium", "playwright-core"],
-  outputFileTracingIncludes: {
-    "/api/cron/ebay-prices": [
-      "./node_modules/@sparticuz/chromium/bin/**",
-    ],
-  },
   async redirects() {
     return [
       // Merged Canon EOS system slugs → mount-named equivalents
