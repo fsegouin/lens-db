@@ -1,5 +1,8 @@
 import { chromium, type Browser, type Page } from "playwright-core";
-import sparticuzChromium from "@sparticuz/chromium";
+import chromiumMin from "@sparticuz/chromium-min";
+
+const CHROMIUM_REMOTE_URL =
+  "https://github.com/nichochar/chromium-for-lambda/releases/download/v147.0.0/chromium-v147.0.0-pack.tar";
 
 export interface EbayListing {
   itemId: string;
@@ -35,11 +38,11 @@ export class EbayScraper {
         args: ["--disable-blink-features=AutomationControlled", "--no-sandbox"],
       });
     } else {
-      const executablePath = await sparticuzChromium.executablePath();
+      const executablePath = await chromiumMin.executablePath(CHROMIUM_REMOTE_URL);
       this.browser = await chromium.launch({
         executablePath,
         headless: true,
-        args: sparticuzChromium.args,
+        args: chromiumMin.args,
       });
     }
 
