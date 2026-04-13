@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { cameras, priceEstimates } from "@/db/schema";
-import { sql, isNull, asc, desc } from "drizzle-orm";
+import { sql, isNull, desc } from "drizzle-orm";
 import { searchSoldItems } from "@/lib/ebay-finding";
 import { enrichListingsWithDescriptions } from "@/lib/ebay-browse";
 import { classifyListings } from "@/lib/price-classify";
@@ -23,7 +23,7 @@ async function getCameraBatch(): Promise<{ id: number; name: string }[]> {
     )
     .where(isNull(cameras.mergedIntoId))
     .orderBy(
-      asc(priceEstimates.extractedAt).nullsFirst(),
+      sql`${priceEstimates.extractedAt} ASC NULLS FIRST`,
       desc(cameras.viewCount),
     )
     .limit(BATCH_SIZE);
