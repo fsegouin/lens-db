@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import { Badge } from "@/components/ui/badge";
 import { buildEbaySearchQuery } from "@/lib/ebay-search-query";
 import { getEbayAccessToken } from "@/lib/ebay-auth";
@@ -43,7 +44,7 @@ function affiliateUrl(searchQuery: string): string {
   return `https://rover.ebay.com/rover/1/711-53200-19255-0/1?campid=${EBAY_CAMPAIGN_ID}&toolid=10001&mpre=${encodeURIComponent(`https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(searchQuery)}`)}`;
 }
 
-async function fetchListings(query: string): Promise<EbayListing[]> {
+async function fetchListings(query: string, countryCode: string): Promise<EbayListing[]> {
   if (!process.env.EBAY_APP_ID || !process.env.EBAY_CERT_ID) return [];
 
   try {
@@ -54,7 +55,7 @@ async function fetchListings(query: string): Promise<EbayListing[]> {
       q: searchQuery,
       limit: "6",
       category_ids: "625",
-      filter: "deliveryCountry:US,conditions:{USED}",
+      filter: `deliveryCountry:${countryCode},conditions:{USED}`,
       sort: "newlyListed",
     });
 
@@ -69,7 +70,7 @@ async function fetchListings(query: string): Promise<EbayListing[]> {
 
     const res = await fetch(
       `https://api.ebay.com/buy/browse/v1/item_summary/search?${params}`,
-      { headers, next: { revalidate: 3600 } },
+      { headers },
     );
 
     if (!res.ok) {
@@ -97,7 +98,9 @@ async function fetchListings(query: string): Promise<EbayListing[]> {
 }
 
 export default async function EbayListings({ query }: EbayListingsProps) {
-  const listings = await fetchListings(query);
+  const hdrs = await headers();
+  const countryCode = hdrs.get("x-vercel-ip-country") ?? "US";
+  const listings = await fetchListings(query, countryCode);
 
   if (listings.length === 0) return null;
 
@@ -148,7 +151,7 @@ export default async function EbayListings({ query }: EbayListingsProps) {
                   <Badge variant="outline" className="text-[10px]">Free shipping</Badge>
                 )}
                 {listing.shippingCost && listing.shippingCost !== "0.00" && (
-                  <span className="text-xs text-zinc-400">+${listing.shippingCost} ship</span>
+                  <span className="text-xs text-zinc-400">+${listing.shippingCost} shipping</span>
                 )}
               </div>
               <div className="mt-1 flex items-center gap-2">
@@ -162,17 +165,6 @@ export default async function EbayListings({ query }: EbayListingsProps) {
         ))}
       </div>
 
-      <p className="text-xs text-zinc-400">
-        Listings from{" "}
-        <a
-          href={affiliateUrl(searchQuery)}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="underline hover:text-zinc-600 dark:hover:text-zinc-300"
-        >
-          eBay
-        </a>
-      </p>
     </div>
   );
 }
