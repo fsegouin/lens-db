@@ -8,6 +8,11 @@ import { classifyListings } from "@/lib/price-classify";
 import { storeClassifiedSales, recomputePriceEstimates } from "@/lib/price-pipeline";
 
 const BATCH_SIZE = 30;
+const DELAY_BETWEEN_CAMERAS_MS = 2000;
+
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 async function getCameraBatch(): Promise<{ id: number; name: string }[]> {
   const rows = await db
@@ -45,7 +50,12 @@ export async function GET(request: NextRequest) {
   const results: { name: string; listings: number; relevant: number; stored: number }[] = [];
   let totalStored = 0;
 
-  for (const camera of cameraBatch) {
+  for (let idx = 0; idx < cameraBatch.length; idx++) {
+    const camera = cameraBatch[idx];
+
+    // Rate limit: delay between cameras (skip first)
+    if (idx > 0) await delay(DELAY_BETWEEN_CAMERAS_MS);
+
     try {
       // 1. Fetch sold listings
       const soldListings = await searchSoldItems(camera.name);
