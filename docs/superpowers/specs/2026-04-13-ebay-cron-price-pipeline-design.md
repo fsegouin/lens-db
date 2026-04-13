@@ -46,8 +46,7 @@ Estimated per camera: ~5-10s with parallelized `getItem` calls. 30 cameras = ~3-
 
 ## eBay Finding API
 
-- **Production**: `https://svcs.ebay.com/services/search/FindingService/v1`
-- **Sandbox**: `https://svcs.sandbox.ebay.com/services/search/FindingService/v1`
+- **Endpoint**: `https://svcs.ebay.com/services/search/FindingService/v1`
 - **Auth**: `SECURITY-APPNAME` query param = `EBAY_APP_ID` (no OAuth needed)
 - **Operation**: `findCompletedItems`
 - **Rate limit**: 5000 calls/day
@@ -89,7 +88,7 @@ From `findCompletedItemsResponse.searchResult.item[]`:
 
 ## eBay Browse API (description enrichment)
 
-- **Production**: `https://api.ebay.com/buy/browse/v1/item/{itemId}`
+- **Endpoint**: `https://api.ebay.com/buy/browse/v1/item/{itemId}`
 - **Auth**: Bearer token via OAuth2 client credentials (reuse existing `getEbayAccessToken()` from `/api/ebay-listings`)
 - **Fields used**: `shortDescription` or `description` (HTML — strip tags for LLM)
 
@@ -167,8 +166,8 @@ Runs daily at 6:00 AM UTC.
 
 | Variable | Purpose | Status |
 |----------|---------|--------|
-| `EBAY_APP_ID` | Finding API auth + Browse API OAuth client ID | Already set (sandbox) |
-| `EBAY_CERT_ID` | Browse API OAuth client secret | Already set (sandbox) |
+| `EBAY_APP_ID` | Finding API auth + Browse API OAuth client ID | Already set (production) |
+| `EBAY_CERT_ID` | Browse API OAuth client secret | Already set (production) |
 | `CRON_SECRET` | Vercel cron auth | Auto-set by Vercel |
 
 The existing `/api/ebay-listings` route uses `EBAY_CLIENT_ID`/`EBAY_CLIENT_SECRET`. As part of this work, we'll update it to use `EBAY_APP_ID`/`EBAY_CERT_ID` instead, so there's a single set of env var names for all eBay API calls.
