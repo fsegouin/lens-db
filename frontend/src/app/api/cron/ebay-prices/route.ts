@@ -14,11 +14,12 @@ function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function getCameraBatch(): Promise<{ id: number; name: string }[]> {
+async function getCameraBatch(): Promise<{ id: number; name: string; alias: string | null }[]> {
   const rows = await db
     .select({
       id: cameras.id,
       name: cameras.name,
+      alias: cameras.alias,
       extractedAt: priceEstimates.extractedAt,
     })
     .from(cameras)
@@ -33,7 +34,7 @@ async function getCameraBatch(): Promise<{ id: number; name: string }[]> {
     )
     .limit(BATCH_SIZE);
 
-  return rows.map((r) => ({ id: r.id, name: r.name }));
+  return rows.map((r) => ({ id: r.id, name: r.name, alias: r.alias }));
 }
 
 /**
@@ -98,10 +99,21 @@ export async function GET(request: NextRequest) {
 
       if (idx > 0) await delay(DELAY_BETWEEN_CAMERAS_MS);
 
-      // Scrape this camera
+      // Scrape this camera (and alias if available)
       let listings: EbayListing[] = [];
       try {
         listings = await scraper.scrape(camera.name);
+        // If alias exists and primary search returned few results, also search alias
+        if (camera.alias && listings.length < 5) {
+          await delay(DELAY_BETWEEN_CAMERAS_MS);
+          const aliasListings = await scraper.scrape(camera.alias);
+          // Merge, dedup by itemId
+          const seen = new Set(listings.map((l) => l.itemId));
+          for (const l of aliasListings) {
+            if (!seen.has(l.itemId)) listings.push(l);
+          }
+          listings = listings.slice(0, 20);
+        }
       } catch (error) {
         console.error(`[ebay-prices] Error scraping ${camera.name}:`, error);
       }
