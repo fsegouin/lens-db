@@ -1,4 +1,5 @@
 import { chromium } from "playwright-core";
+import sparticuzChromium from "@sparticuz/chromium";
 import { buildEbaySearchQuery } from "@/lib/ebay-search-query";
 
 export interface EbayListing {
@@ -18,7 +19,32 @@ const MONTHS: Record<string, string> = {
 };
 
 /**
- * Fetch sold/completed eBay listings for a batch of cameras using Playwright.
+ * Launch a browser instance.
+ * In production (Vercel): uses @sparticuz/chromium lightweight binary.
+ * In development: uses locally installed Chrome.
+ */
+async function launchBrowser() {
+  const isDev = process.env.NODE_ENV === "development";
+
+  if (isDev) {
+    return chromium.launch({
+      channel: "chrome",
+      headless: true,
+      args: ["--disable-blink-features=AutomationControlled", "--no-sandbox"],
+    });
+  }
+
+  // Vercel serverless: use @sparticuz/chromium
+  const executablePath = await sparticuzChromium.executablePath();
+  return chromium.launch({
+    executablePath,
+    headless: true,
+    args: sparticuzChromium.args,
+  });
+}
+
+/**
+ * Fetch sold/completed eBay listings for a batch of cameras.
  * Reuses a single browser instance across all cameras.
  */
 export async function searchSoldListingsBatch(
@@ -26,15 +52,7 @@ export async function searchSoldListingsBatch(
   onResult: (camera: { id: number; name: string }, listings: EbayListing[]) => Promise<void>,
   delayMs: number = 2000,
 ): Promise<void> {
-  const browser = await chromium.launch({
-    channel: "chrome",
-    headless: true,
-    args: [
-      "--disable-blink-features=AutomationControlled",
-      "--no-sandbox",
-      "--disable-setuid-sandbox",
-    ],
-  });
+  const browser = await launchBrowser();
 
   try {
     const context = await browser.newContext({
@@ -69,7 +87,7 @@ export async function searchSoldListingsBatch(
 }
 
 /**
- * Fetch sold listings for a single camera using an existing Playwright page.
+ * Fetch sold listings for a single camera using an existing page.
  */
 async function searchSoldListings(
   page: Awaited<ReturnType<Awaited<ReturnType<typeof chromium.launch>>["newPage"]>>,
@@ -87,7 +105,9 @@ async function searchSoldListings(
 
   const url = `https://www.ebay.com/sch/i.html?${params}`;
 
-  await page.goto(url, { waitUntil: "domcontentloaded", timeout: 15000 });
+  await page.goto(url, { waitUntil: "load", timeout: 20000 });
+  // Wait for eBay's JavaScript to render the listing cards
+  await page.waitForTimeout(3000);
 
   // Extract listings from the rendered DOM
   const listings = await page.evaluate((months: Record<string, string>) => {
