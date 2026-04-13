@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getClientIP, rateLimitedResponse } from "@/lib/api-utils";
 import { rateLimiters } from "@/lib/rate-limit";
+import { getEbayAccessToken } from "@/lib/ebay-auth";
 
 export interface EbayListing {
   itemId: string;
@@ -12,12 +13,6 @@ export interface EbayListing {
   seller: { username: string; feedbackPercentage: string };
   listingType: string;
   shippingCost: string | null;
-}
-
-interface EbayTokenResponse {
-  access_token: string;
-  expires_in: number;
-  token_type: string;
 }
 
 interface EbaySearchResponse {
@@ -34,47 +29,6 @@ interface EbaySearchResponse {
     shippingOptions?: Array<{ shippingCost?: { value: string; currency: string } }>;
   }>;
   total: number;
-}
-
-// Cache the OAuth token in memory (survives across requests in the same function instance)
-let cachedToken: { token: string; expiresAt: number } | null = null;
-
-async function getEbayAccessToken(): Promise<string> {
-  if (cachedToken && Date.now() < cachedToken.expiresAt) {
-    return cachedToken.token;
-  }
-
-  const clientId = process.env.EBAY_CLIENT_ID;
-  const clientSecret = process.env.EBAY_CLIENT_SECRET;
-
-  if (!clientId || !clientSecret) {
-    throw new Error("EBAY_CLIENT_ID and EBAY_CLIENT_SECRET are required");
-  }
-
-  const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
-
-  const res = await fetch("https://api.ebay.com/identity/v1/oauth2/token", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-      Authorization: `Basic ${credentials}`,
-    },
-    body: "grant_type=client_credentials&scope=https://api.ebay.com/oauth/api_scope",
-  });
-
-  if (!res.ok) {
-    throw new Error(`eBay OAuth failed: ${res.status}`);
-  }
-
-  const data: EbayTokenResponse = await res.json();
-
-  cachedToken = {
-    token: data.access_token,
-    // Expire 5 minutes early to avoid edge cases
-    expiresAt: Date.now() + (data.expires_in - 300) * 1000,
-  };
-
-  return data.access_token;
 }
 
 const EBAY_CAMPAIGN_ID = "5339149048";
@@ -133,7 +87,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "q parameter is required" }, { status: 400 });
   }
 
-  if (!process.env.EBAY_CLIENT_ID || !process.env.EBAY_CLIENT_SECRET) {
+  if (!process.env.EBAY_APP_ID || !process.env.EBAY_CERT_ID) {
     return NextResponse.json({ listings: [], total: 0 });
   }
 
