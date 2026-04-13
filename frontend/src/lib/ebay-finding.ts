@@ -20,31 +20,65 @@ const MONTHS: Record<string, string> = {
   Sep: "09", Oct: "10", Nov: "11", Dec: "12",
 };
 
+// Minimal Chrome args to reduce memory usage in serverless
+const SERVERLESS_ARGS = [
+  "--disable-blink-features=AutomationControlled",
+  "--no-sandbox",
+  "--disable-setuid-sandbox",
+  "--disable-dev-shm-usage",
+  "--disable-gpu",
+  "--single-process",
+  "--no-zygote",
+  "--disable-extensions",
+  "--disable-background-networking",
+  "--disable-default-apps",
+  "--disable-sync",
+  "--disable-translate",
+  "--metrics-recording-only",
+  "--no-first-run",
+];
+
 /**
  * Managed browser session for scraping eBay sold listings.
- * Call open() before scraping, close() when done.
+ * Automatically recovers if the browser crashes.
  */
 export class EbayScraper {
   private browser: Browser | null = null;
   private page: Page | null = null;
+  private isDev = process.env.NODE_ENV === "development";
 
   async open(): Promise<void> {
-    const isDev = process.env.NODE_ENV === "development";
+    await this.launchBrowser();
+  }
 
-    if (isDev) {
+  private async launchBrowser(): Promise<void> {
+    // Close existing if any
+    if (this.browser) {
+      try { await this.browser.close(); } catch { /* ignore */ }
+    }
+
+    if (this.isDev && !process.env.FORCE_SERVERLESS_CHROMIUM) {
+      console.log("[ebay-scraper] Launching local Chrome...");
       this.browser = await chromium.launch({
         channel: "chrome",
         headless: true,
         args: ["--disable-blink-features=AutomationControlled", "--no-sandbox"],
       });
     } else {
+      console.log("[ebay-scraper] Downloading + launching serverless Chromium...");
       const executablePath = await chromiumMin.executablePath(CHROMIUM_REMOTE_URL);
+      console.log("[ebay-scraper] Chromium path:", executablePath);
       this.browser = await chromium.launch({
         executablePath,
         headless: true,
-        args: chromiumMin.args,
+        args: SERVERLESS_ARGS,
       });
     }
+    console.log("[ebay-scraper] Browser launched, connected:", this.browser.isConnected());
+
+    this.browser.on("disconnected", () => {
+      console.error("[ebay-scraper] Browser disconnected!");
+    });
 
     const context = await this.browser.newContext({
       userAgent:
@@ -58,29 +92,38 @@ export class EbayScraper {
 
   async close(): Promise<void> {
     if (this.browser) {
-      await this.browser.close();
+      try { await this.browser.close(); } catch { /* ignore */ }
       this.browser = null;
       this.page = null;
     }
   }
 
+  private async ensurePage(): Promise<Page> {
+    // Check if browser/page is still alive
+    if (this.page && this.browser?.isConnected()) {
+      return this.page;
+    }
+    // Browser crashed — relaunch
+    console.log("[ebay-prices] Browser crashed, relaunching...");
+    await this.launchBrowser();
+    return this.page!;
+  }
+
   /**
    * Scrape sold listings for a camera.
-   * Pass the camera name directly — no "camera body" suffix (the LLM filters relevance).
-   * Strips parentheses and content inside them to avoid eBay search issues.
+   * Strips parentheses and manufacturer prefixes from the name.
    */
   async scrape(cameraName: string): Promise<EbayListing[]> {
-    if (!this.page) throw new Error("Browser not open — call open() first");
+    const page = await this.ensurePage();
 
-    // Strip manufacturer prefixes that hurt search
     let query = cameraName;
     for (const prefix of ["Asahi ", "Nippon Kogaku "]) {
       if (query.startsWith(prefix)) {
         query = query.slice(prefix.length);
       }
     }
-    // Strip parenthesized content: "Canon EOS M50 (EOS Kiss M)" → "Canon EOS M50"
     query = query.replace(/\s*\([^)]*\)/g, "").trim();
+
     const params = new URLSearchParams({
       _nkw: query,
       _sacat: "625",
@@ -92,10 +135,12 @@ export class EbayScraper {
 
     const url = `https://www.ebay.com/sch/i.html?${params}`;
 
-    await this.page.goto(url, { waitUntil: "load", timeout: 20000 });
-    await this.page.waitForTimeout(3000);
+    console.log(`[ebay-scraper] Navigating: ${query}`);
+    const response = await page.goto(url, { waitUntil: "load", timeout: 20000 });
+    console.log(`[ebay-scraper] Page loaded: ${response?.status()} ${response?.url().slice(0, 80)}`);
+    await page.waitForTimeout(3000);
 
-    return this.page.evaluate((months: Record<string, string>) => {
+    return page.evaluate((months: Record<string, string>) => {
       const cards = document.querySelectorAll(".su-card-container");
       const results: {
         itemId: string;
