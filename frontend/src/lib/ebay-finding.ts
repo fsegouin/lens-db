@@ -2,7 +2,7 @@ import { chromium, type Browser, type Page } from "playwright-core";
 import chromiumMin from "@sparticuz/chromium-min";
 
 const CHROMIUM_REMOTE_URL =
-  "https://github.com/nichochar/chromium-for-lambda/releases/download/v147.0.0/chromium-v147.0.0-pack.tar";
+  "https://github.com/Sparticuz/chromium/releases/download/v147.0.0/chromium-v147.0.0-pack.x64.tar";
 
 export interface EbayListing {
   itemId: string;
