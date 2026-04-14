@@ -70,35 +70,38 @@ export async function POST(request: NextRequest) {
     listings: EbayListing[];
   };
 
-  if (!cameraId || !cameraName || !listings?.length) {
-    return NextResponse.json({ error: "cameraId, cameraName, and listings required" }, { status: 400 });
+  if (!cameraId || !cameraName) {
+    return NextResponse.json({ error: "cameraId and cameraName required" }, { status: 400 });
   }
 
-  console.log(`[ebay-prices] Processing ${cameraName}: ${listings.length} listings`);
+  console.log(`[ebay-prices] Processing ${cameraName}: ${listings?.length ?? 0} listings`);
 
   try {
-    const classified = await classifyListings(cameraName, listings);
+    let stored = 0;
+    let relevant = 0;
 
-    const extractedAt = new Date().toISOString();
-    const stored = await storeClassifiedSales(
-      "camera",
-      cameraId,
-      classified,
-      listings,
-      extractedAt,
-    );
-
-    if (stored > 0) {
-      await recomputePriceEstimates("camera", cameraId);
+    if (listings?.length) {
+      const classified = await classifyListings(cameraName, listings);
+      const extractedAt = new Date().toISOString();
+      stored = await storeClassifiedSales(
+        "camera",
+        cameraId,
+        classified,
+        listings,
+        extractedAt,
+      );
+      relevant = classified.filter(
+        (c) => c.isRelevant && c.conditionGrade !== "skip",
+      ).length;
     }
 
-    const relevant = classified.filter(
-      (c) => c.isRelevant && c.conditionGrade !== "skip",
-    ).length;
+    // Always upsert price_estimates to mark this camera as scraped
+    // (even with 0 listings/stored, so we don't re-scrape it next run)
+    await recomputePriceEstimates("camera", cameraId);
 
     console.log(`[ebay-prices]   ${cameraName}: Relevant: ${relevant}, Stored: ${stored}`);
 
-    return NextResponse.json({ cameraName, listings: listings.length, relevant, stored });
+    return NextResponse.json({ cameraName, listings: listings?.length ?? 0, relevant, stored });
   } catch (error) {
     console.error(`[ebay-prices] Error processing ${cameraName}:`, error);
     return NextResponse.json(
