@@ -6,7 +6,7 @@ import type { EbayListing } from "@/lib/ebay-types";
 import { classifyListings } from "@/lib/price-classify";
 import { storeClassifiedSales, recomputePriceEstimates } from "@/lib/price-pipeline";
 
-const BATCH_SIZE = 20;
+const BATCH_SIZE = 100;
 
 async function getCameraBatch(): Promise<{ id: number; name: string; alias: string | null }[]> {
   const rows = await db
