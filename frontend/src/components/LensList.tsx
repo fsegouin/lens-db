@@ -199,7 +199,7 @@ export default function LensList({
 
   function debouncedApply(overrides: Parameters<typeof applyFilters>[0]) {
     clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => applyFilters(overrides), 400);
+    debounceRef.current = setTimeout(() => applyFilters(overrides), 700);
   }
 
   function handleSort(column: string) {

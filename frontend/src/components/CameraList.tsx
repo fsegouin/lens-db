@@ -202,7 +202,7 @@ export default function CameraList({
 
   function debouncedApply(overrides: FilterOverrides) {
     clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => applyFilters(overrides), 400);
+    debounceRef.current = setTimeout(() => applyFilters(overrides), 700);
   }
 
   function handleSort(column: string) {

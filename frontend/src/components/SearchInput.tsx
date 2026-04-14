@@ -18,7 +18,7 @@ export default function SearchInput({ defaultValue }: { defaultValue?: string })
       if (v.trim()) params.set("q", v.trim());
       const qs = params.toString();
       router.push(qs ? `/search?${qs}` : "/search");
-    }, 400);
+    }, 700);
   }
 
   return (
