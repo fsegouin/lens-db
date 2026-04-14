@@ -188,12 +188,13 @@ async function main() {
 
     console.log(`${i + 1}/${cameras.length} ${camera.name}: ${listings.length} listings`);
 
-    if (listings.length === 0) continue;
-
-    // Submit to API for classification + storage
+    // Always submit to API — even with 0 listings, so the camera is marked as scraped
+    // and gets rotated out of the "never-scraped" priority queue
     try {
       const result = await submitListings(camera.id, camera.name, listings);
-      console.log(`  Relevant: ${result.relevant}, Stored: ${result.stored}`);
+      if (listings.length > 0) {
+        console.log(`  Relevant: ${result.relevant}, Stored: ${result.stored}`);
+      }
       totalStored += result.stored || 0;
     } catch (error) {
       console.error(`  Error submitting: ${error.message}`);

@@ -108,7 +108,25 @@ export async function recomputePriceEstimates(
       ),
     );
 
-  if (rows.length === 0) return;
+  // If no price history, just upsert a tracking row so we know this camera was scraped
+  if (rows.length === 0) {
+    const now = new Date();
+    await db
+      .insert(priceEstimates)
+      .values({
+        entityType,
+        entityId,
+        sourceName: "eBay",
+        rarity: "Extremely rare",
+        rarityVotes: 0,
+        extractedAt: now,
+      })
+      .onConflictDoUpdate({
+        target: [priceEstimates.entityType, priceEstimates.entityId],
+        set: { extractedAt: now },
+      });
+    return;
+  }
 
   // Bucket by condition
   const buckets: Record<string, number[]> = { excellent: [], good: [], fair: [] };
