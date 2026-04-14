@@ -10,7 +10,7 @@ jobs:
   scrape-and-classify:
     runs-on: ubuntu-latest
     environment: production
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
 
