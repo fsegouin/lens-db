@@ -31,6 +31,48 @@ async function getCameraBatch(): Promise<{ id: number; name: string; alias: stri
   return rows.map((r) => ({ id: r.id, name: r.name, alias: r.alias }));
 }
 
+async function getCameraRotationStats(staleBefore?: Date) {
+  const [{ totalActiveCameras: totalActiveCamerasRaw }] = await db
+    .select({
+      totalActiveCameras: sql<number>`count(*)`,
+    })
+    .from(cameras)
+    .where(isNull(cameras.mergedIntoId));
+
+  const totalActiveCameras = Number(totalActiveCamerasRaw);
+
+  if (!staleBefore) {
+    return {
+      batchSize: BATCH_SIZE,
+      totalActiveCameras,
+    };
+  }
+
+  const [{ outdatedCameras: outdatedCamerasRaw }] = await db
+    .select({
+      outdatedCameras: sql<number>`count(*)`,
+    })
+    .from(cameras)
+    .leftJoin(
+      priceEstimates,
+      sql`${priceEstimates.entityType} = 'camera' AND ${priceEstimates.entityId} = ${cameras.id}`,
+    )
+    .where(
+      sql`${cameras.mergedIntoId} IS NULL AND (
+        ${priceEstimates.extractedAt} IS NULL OR ${priceEstimates.extractedAt} < ${staleBefore}
+      )`,
+    );
+
+  const outdatedCameras = Number(outdatedCamerasRaw);
+
+  return {
+    batchSize: BATCH_SIZE,
+    totalActiveCameras,
+    outdatedCameras,
+    estimatedRunsRemaining: Math.ceil(outdatedCameras / BATCH_SIZE),
+  };
+}
+
 export const maxDuration = 300;
 
 /**
@@ -45,8 +87,20 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const staleBeforeRaw = request.nextUrl.searchParams.get("staleBefore");
+  let staleBefore: Date | undefined;
+
+  if (staleBeforeRaw) {
+    staleBefore = new Date(staleBeforeRaw);
+    if (Number.isNaN(staleBefore.getTime())) {
+      return NextResponse.json({ error: "Invalid staleBefore timestamp" }, { status: 400 });
+    }
+  }
+
   const cameraBatch = await getCameraBatch();
-  return NextResponse.json({ cameras: cameraBatch });
+  const stats = await getCameraRotationStats(staleBefore);
+
+  return NextResponse.json({ cameras: cameraBatch, stats });
 }
 
 /**
