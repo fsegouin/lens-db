@@ -35,15 +35,23 @@ function buildSearchQuery(cameraName) {
 }
 
 async function getCameraBatch() {
+  return getCameraBatchState();
+}
+
+async function getCameraBatchState(staleBefore) {
   const headers = {};
   if (CRON_SECRET) headers["Authorization"] = `Bearer ${CRON_SECRET}`;
 
-  const res = await fetch(`${API_URL}/api/cron/ebay-prices`, { headers });
+  const url = new URL(`${API_URL}/api/cron/ebay-prices`);
+  if (staleBefore) {
+    url.searchParams.set("staleBefore", staleBefore);
+  }
+
+  const res = await fetch(url, { headers });
   if (!res.ok) {
     throw new Error(`Failed to get camera batch: ${res.status} ${await res.text()}`);
   }
-  const data = await res.json();
-  return data.cameras;
+  return res.json();
 }
 
 async function submitListings(cameraId, cameraName, listings) {
@@ -145,8 +153,10 @@ async function main() {
     console.warn("Warning: CRON_SECRET not set — requests will be unauthenticated");
   }
 
+  const rotationStartedAt = new Date().toISOString();
   console.log(`Fetching camera batch from ${API_URL}...`);
-  const cameras = await getCameraBatch();
+  const batchState = await getCameraBatch();
+  const cameras = batchState.cameras;
   console.log(`Got ${cameras.length} cameras to process\n`);
 
   const browser = await chromium.launch({
@@ -203,6 +213,19 @@ async function main() {
 
   await browser.close();
   console.log(`\nDone: ${cameras.length} cameras, ${totalStored} stored`);
+
+  try {
+    const finalState = await getCameraBatchState(rotationStartedAt);
+    const stats = finalState.stats;
+    if (stats?.outdatedCameras !== undefined) {
+      console.log(
+        `Rotation remaining: ${stats.outdatedCameras} cameras with outdated data ` +
+        `(~${stats.estimatedRunsRemaining} runs left at ${stats.batchSize}/run)`
+      );
+    }
+  } catch (error) {
+    console.warn(`Could not fetch rotation stats: ${error.message}`);
+  }
 }
 
 main().catch((error) => {
