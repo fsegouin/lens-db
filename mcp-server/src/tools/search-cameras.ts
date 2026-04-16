@@ -12,7 +12,7 @@ export const searchCamerasSchema = z.object({
   yearTo: z.number().optional().describe("Latest year introduced"),
   sensorSize: z.string().optional().describe("Sensor size, e.g. 'Full Frame', 'APS-C'"),
   bodyType: z.string().optional().describe("Body type, e.g. 'SLR', 'Mirrorless', 'Rangefinder'"),
-  limit: z.number().min(1).max(50).default(20).describe("Max results to return"),
+  limit: z.number().min(1).max(100).default(50).describe("Max results to return"),
 });
 
 export type SearchCamerasParams = z.infer<typeof searchCamerasSchema>;
@@ -59,6 +59,13 @@ export async function searchCameras(params: SearchCamerasParams) {
 
   const where = conditions.length > 0 ? and(...conditions) : undefined;
 
+  const [countResult] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(cameras)
+    .leftJoin(systems, eq(cameras.systemId, systems.id))
+    .where(where);
+  const total = Number(countResult.count);
+
   const results = await db
     .select({
       name: cameras.name,
@@ -86,7 +93,11 @@ export async function searchCameras(params: SearchCamerasParams) {
     .limit(params.limit);
 
   return {
-    count: results.length,
+    total,
+    returned: results.length,
     cameras: results,
+    ...(total > results.length && {
+      note: `Showing ${results.length} of ${total} results. Use the 'query' parameter to narrow your search, or use get_camera_details on specific cameras for full specs.`,
+    }),
   };
 }

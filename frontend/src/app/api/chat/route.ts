@@ -28,17 +28,15 @@ export async function POST(request: NextRequest) {
   const { success } = await rateLimiters.chat.limit(ip);
   if (!success) return rateLimitedResponse();
 
-  const { message, messages }: { message: UIMessage; messages: UIMessage[] } =
-    await request.json();
-
-  const allMessages = messages ?? [message];
+  const body = await request.json();
+  const allMessages: UIMessage[] = body.messages ?? [body.message];
 
   const result = streamText({
     model: gateway("google/gemini-2.5-flash"),
     system: SYSTEM_PROMPT,
     messages: await convertToModelMessages(allMessages),
     tools: mcpTools,
-    stopWhen: stepCountIs(5),
+    stopWhen: stepCountIs(10),
   });
 
   return result.toUIMessageStreamResponse();
