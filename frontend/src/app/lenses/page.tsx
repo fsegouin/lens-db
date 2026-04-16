@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { lenses, systems, lensSeries, lensSeriesMemberships } from "@/db/schema";
+import { lenses, systems, lensSeries, lensSeriesMemberships, priceEstimates } from "@/db/schema";
 import { asc, desc, eq, and, gte, lte, sql, inArray } from "drizzle-orm";
 import { unstable_cache } from "next/cache";
 import Link from "next/link";
@@ -53,7 +53,10 @@ type SearchParams = Promise<{
   lensType?: string;
   era?: string;
   productionStatus?: string;
+  coverage?: string;
   series?: string;
+  priceMin?: string;
+  priceMax?: string;
   sort?: string;
   order?: string;
 }>;
@@ -70,6 +73,7 @@ export default async function LensesPage({
   let initialItems: {
     lens: typeof lenses.$inferSelect;
     system: typeof systems.$inferSelect | null;
+    avgPrice: number | null;
     series: { name: string; slug: string }[];
   }[] = [];
   let total = 0;
@@ -83,6 +87,8 @@ export default async function LensesPage({
     brands = dropdownData.brands;
     systemList = dropdownData.systems;
     seriesList = dropdownData.series;
+
+    const avgPrice = priceEstimates.medianPrice;
 
     const conditions = [];
 
@@ -103,6 +109,9 @@ export default async function LensesPage({
     }
     if (params.system) {
       conditions.push(eq(systems.slug, params.system));
+    }
+    if (params.coverage) {
+      conditions.push(eq(lenses.coverage, params.coverage));
     }
     if (params.type === "zoom") {
       conditions.push(eq(lenses.isZoom, true));
@@ -144,6 +153,16 @@ export default async function LensesPage({
         )`
       );
     }
+    if (params.priceMin) {
+      const val = parseInt(params.priceMin);
+      if (Number.isFinite(val))
+        conditions.push(sql`${avgPrice} >= ${val}`);
+    }
+    if (params.priceMax) {
+      const val = parseInt(params.priceMax);
+      if (Number.isFinite(val))
+        conditions.push(sql`${avgPrice} <= ${val}`);
+    }
 
     const where = conditions.length > 0 ? and(...conditions) : undefined;
 
@@ -157,13 +176,17 @@ export default async function LensesPage({
       year: lenses.yearIntroduced,
       weight: lenses.weightG,
       rating: lenses.averageRating,
+      price: avgPrice,
     };
-    const sortCol = sortColumns[params.sort || ""] || lenses.name;
+    const sortKey = params.sort || "";
+    const sortCol = sortColumns[sortKey] || lenses.name;
     const orderFn = params.order === "desc" ? desc : asc;
     const sortByName = sortCol === lenses.name;
     const namePrefix = sql`regexp_replace(${lenses.name}, '\\d+(\\.\\d+)?mm.*$', '')`;
     const orderClauses = sortByName
       ? [orderFn(namePrefix), asc(lenses.focalLengthMin), asc(lenses.apertureMin)]
+      : sortKey === "price"
+      ? [sql`${avgPrice} IS NULL`, orderFn(sortCol)]
       : [orderFn(sortCol)];
 
     // When filtering by system, we need a join for the WHERE clause
@@ -174,17 +197,29 @@ export default async function LensesPage({
           .select({ count: sql<number>`count(*)` })
           .from(lenses)
           .leftJoin(systems, eq(lenses.systemId, systems.id))
+          .leftJoin(priceEstimates, and(
+            eq(priceEstimates.entityType, "lens"),
+            eq(priceEstimates.entityId, lenses.id),
+          ))
           .where(where)
       : await db
           .select({ count: sql<number>`count(*)` })
           .from(lenses)
+          .leftJoin(priceEstimates, and(
+            eq(priceEstimates.entityType, "lens"),
+            eq(priceEstimates.entityId, lenses.id),
+          ))
           .where(where);
     total = Number(countResult.count);
 
     const rawItems = await db
-      .select({ lens: lenses, system: systems })
+      .select({ lens: lenses, system: systems, avgPrice: avgPrice })
       .from(lenses)
       .leftJoin(systems, eq(lenses.systemId, systems.id))
+      .leftJoin(priceEstimates, and(
+        eq(priceEstimates.entityType, "lens"),
+        eq(priceEstimates.entityId, lenses.id),
+      ))
       .where(where)
       .orderBy(...orderClauses)
       .limit(PAGE_SIZE)

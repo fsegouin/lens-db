@@ -48,7 +48,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${GeistSans.variable} ${GeistMono.variable} font-sans antialiased`}
+        className={`${GeistSans.variable} ${GeistMono.variable} font-sans antialiased flex flex-col min-h-dvh`}
       >
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <UserProvider>
@@ -72,7 +72,7 @@ export default function RootLayout({
                 </div>
               </header>
             </SearchProvider>
-            <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+            <main className="mx-auto flex flex-col flex-1 min-h-0 w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
               {children}
             </main>
             <Separator />

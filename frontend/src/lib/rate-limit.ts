@@ -36,4 +36,5 @@ export const rateLimiters = {
   views: createRateLimit(20, "60 s"),
   comparisons: createRateLimit(10, "60 s"),
   search: createRateLimit(20, "60 s"),
+  chat: createRateLimit(10, "60 s"),
 };

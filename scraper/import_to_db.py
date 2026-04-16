@@ -74,6 +74,7 @@ def create_tables(conn):
                 is_prime BOOLEAN DEFAULT FALSE,
                 has_stabilization BOOLEAN DEFAULT FALSE,
                 has_autofocus BOOLEAN DEFAULT FALSE,
+                coverage TEXT,
                 -- Engagement
                 view_count INTEGER DEFAULT 0,
                 average_rating REAL,
@@ -517,6 +518,40 @@ def parse_mount_name(specs: dict) -> str | None:
     return None
 
 
+# Mapping from APS-C mount names to their parent mount + coverage
+APSC_MOUNT_MAP = {
+    "Canon EF-S": ("Canon EF", "aps-c"),
+    "Canon RF-S": ("Canon RF", "aps-c"),
+    "Nikon Z APS-C": ("Nikon Z", "aps-c"),
+    "Nikon F APS-C": ("Nikon F", "aps-c"),
+    "Sony E APS-C": ("Sony E", "aps-c"),
+    "Sony A APS-C": ("Minolta/Sony A", "aps-c"),
+    "Pentax K APS-C": ("Pentax K", "aps-c"),
+    "Sigma SA APS-C": ("Sigma SA", "aps-c"),
+    "Leica L APS-C": ("Leica L", "aps-c"),
+    "Konica Minolta A APS-C": ("Minolta/Sony A", "aps-c"),
+}
+
+# Systems that are entirely APS-C (no FF parent)
+APSC_ONLY_SYSTEMS = {"Fujifilm X", "Canon EF-M", "Samsung NX", "Samsung NX-M"}
+MFT_SYSTEMS = {"Micro Four Thirds", "Four Thirds"}
+
+
+def normalize_mount(raw_name: str) -> tuple[str, str | None]:
+    """Normalize an APS-C mount name to its parent and return coverage.
+
+    Returns (system_name, coverage) where coverage is 'aps-c',
+    'micro-four-thirds', or None (unknown / full-frame).
+    """
+    if raw_name in APSC_MOUNT_MAP:
+        return APSC_MOUNT_MAP[raw_name]
+    if raw_name in APSC_ONLY_SYSTEMS:
+        return (raw_name, "aps-c")
+    if raw_name in MFT_SYSTEMS:
+        return (raw_name, "micro-four-thirds")
+    return (raw_name, None)
+
+
 def has_autofocus(specs: dict) -> bool:
     modes = specs.get("Focusing modes", "").lower()
     return "autofocus" in modes or "af" in modes
@@ -634,6 +669,7 @@ def _lens_row_to_tuple(row: dict) -> tuple:
         row["year"],
         row["is_zoom"], row["is_macro"], row["is_prime"],
         row["stab"], row["af"],
+        row["coverage"],
         json.dumps(row["specs"]), json.dumps(row["images"]),
     )
 
@@ -649,8 +685,9 @@ def import_lenses(conn, lenses: list[dict]):
     mount_names = set()
     for lens in lenses:
         specs = lens.get("specs", {})
-        mount_name = parse_mount_name(specs)
-        if mount_name:
+        raw_mount = parse_mount_name(specs)
+        if raw_mount:
+            mount_name, _ = normalize_mount(raw_mount)
             mount_names.add(mount_name)
 
     with conn.cursor() as cur:
@@ -678,8 +715,13 @@ def import_lenses(conn, lenses: list[dict]):
             continue
 
         specs = lens.get("specs", {})
-        mount_name = parse_mount_name(specs)
-        system_id = system_cache.get(mount_name)
+        raw_mount = parse_mount_name(specs)
+        if raw_mount:
+            mount_name, coverage = normalize_mount(raw_mount)
+            system_id = system_cache.get(mount_name)
+        else:
+            system_id = None
+            coverage = None
 
         brand = parse_brand(name)
         fl_min, fl_max = parse_focal_length(specs, name)
@@ -721,6 +763,7 @@ def import_lenses(conn, lenses: list[dict]):
             "year": year,
             "is_zoom": is_zoom, "is_macro": is_macro, "is_prime": is_prime,
             "stab": stab, "af": af,
+            "coverage": coverage,
             "specs": specs, "images": lens.get("images", []),
         }
 
@@ -759,6 +802,7 @@ def import_lenses(conn, lenses: list[dict]):
                         year_introduced,
                         is_zoom, is_macro, is_prime,
                         has_stabilization, has_autofocus,
+                        coverage,
                         specs, images
                     ) VALUES %s
                     ON CONFLICT (slug) DO UPDATE SET

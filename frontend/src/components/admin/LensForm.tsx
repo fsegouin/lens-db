@@ -33,6 +33,7 @@ interface LensData {
   isPrime?: boolean | null;
   hasStabilization?: boolean | null;
   hasAutofocus?: boolean | null;
+  coverage?: string | null;
   specs?: unknown;
   images?: unknown;
 }
@@ -120,6 +121,7 @@ export default function LensForm({ lens, systems, tags }: LensFormProps) {
   const [hasAutofocus, setHasAutofocus] = useState(
     lens?.hasAutofocus ?? false
   );
+  const [coverage, setCoverage] = useState(lens?.coverage ?? "");
   const [specsEntries, setSpecsEntries] = useState<[string, string][]>(() => {
     if (!lens?.specs || typeof lens.specs !== "object") return [];
     return Object.entries(lens.specs as Record<string, string>).map(
@@ -200,6 +202,7 @@ export default function LensForm({ lens, systems, tags }: LensFormProps) {
       isPrime,
       hasStabilization,
       hasAutofocus,
+      coverage: coverage || null,
       specs: parsedSpecs,
       images: parsedImages,
     };
@@ -320,7 +323,7 @@ export default function LensForm({ lens, systems, tags }: LensFormProps) {
       {/* Classification */}
       <section className="space-y-4">
         <h3 className={sectionClass}>Classification</h3>
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="space-y-1">
             <label className={labelClass}>Lens Type</label>
             <ComboboxInput
@@ -347,6 +350,20 @@ export default function LensForm({ lens, systems, tags }: LensFormProps) {
               options={tags?.productionStatuses ?? []}
               className={`w-full ${inputClass}`}
             />
+          </div>
+          <div className="space-y-1">
+            <label className={labelClass}>Coverage</label>
+            <select
+              value={coverage}
+              onChange={(e) => setCoverage(e.target.value)}
+              className={`w-full ${inputClass}`}
+            >
+              <option value="">-- Unknown --</option>
+              <option value="full-frame">Full Frame</option>
+              <option value="aps-c">APS-C</option>
+              <option value="micro-four-thirds">Micro Four Thirds</option>
+              <option value="medium-format">Medium Format</option>
+            </select>
           </div>
         </div>
       </section>

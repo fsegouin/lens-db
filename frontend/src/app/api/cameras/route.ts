@@ -19,6 +19,7 @@ export async function GET(request: NextRequest) {
   const type = searchParams.get("type") || undefined;
   const model = searchParams.get("model") || undefined;
   const filmType = searchParams.get("filmType") || undefined;
+  const sensorSize = searchParams.get("sensorSize") || undefined;
   const sensorType = searchParams.get("sensorType") || undefined;
   const cropFactor = searchParams.get("cropFactor") || undefined;
   const year = searchParams.get("year") || undefined;
@@ -66,6 +67,9 @@ export async function GET(request: NextRequest) {
     }
     if (filmType) {
       conditions.push(sql`${cameras.specs}->>'Film type' = ${filmType}`);
+    }
+    if (sensorSize) {
+      conditions.push(eq(cameras.sensorSize, sensorSize));
     }
     if (sensorType) {
       conditions.push(eq(cameras.sensorType, sensorType));
