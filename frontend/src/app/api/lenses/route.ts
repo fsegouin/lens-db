@@ -18,6 +18,7 @@ export async function GET(request: NextRequest) {
   const slug = searchParams.get("slug") || undefined;
   const brand = searchParams.get("brand") || undefined;
   const system = searchParams.get("system") || undefined;
+  const coverage = searchParams.get("coverage") || undefined;
   const type = searchParams.get("type") || undefined;
   const minFocal = searchParams.get("minFocal") || undefined;
   const maxFocal = searchParams.get("maxFocal") || undefined;
@@ -64,6 +65,9 @@ export async function GET(request: NextRequest) {
     }
     if (system) {
       conditions.push(eq(systems.slug, system));
+    }
+    if (coverage) {
+      conditions.push(eq(lenses.coverage, coverage));
     }
     if (type === "zoom") {
       conditions.push(eq(lenses.isZoom, true));
