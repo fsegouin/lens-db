@@ -29,6 +29,7 @@ export async function getPrice(params: GetPriceParams) {
       .where(
         sql`${table.slug} ILIKE ${'%' + params.slug + '%'} OR ${table.name} ILIKE ${'%' + params.slug + '%'}`
       )
+      .orderBy(sql`length(${table.slug})`)
       .limit(1);
   }
 
