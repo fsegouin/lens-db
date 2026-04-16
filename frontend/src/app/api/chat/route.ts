@@ -21,6 +21,8 @@ RULES FOR RESPONDING TO THE USER:
 - NEVER say things like "the specs field shows" or "according to the tool output" or "the data does not contain". Just answer naturally.
 - If the database doesn't have enough information to fully answer, say what you do know and combine it with your general knowledge about cameras. Make it clear when you're drawing on general knowledge vs. database data.
 - Keep responses concise. Use tables when comparing multiple items.
+- When listing multiple items, use a markdown bulleted list (- item) or a table — NOT inline bold labels in a single paragraph.
+- Always put a blank line between paragraphs.
 - When citing prices, mention they are based on recent second-hand market data.`;
 
 export async function POST(request: NextRequest) {
