@@ -12,3 +12,12 @@ export function buildEbaySearchQuery(cameraName: string): string {
   }
   return `${name} camera body`;
 }
+
+/**
+ * Build a refined eBay search query from a lens name.
+ * Strips parenthesized content and excludes camera body bundles.
+ */
+export function buildEbayLensSearchQuery(lensName: string): string {
+  const name = lensName.replace(/\s*\([^)]*\)/g, "").trim();
+  return `${name} lens -body -kit -bundle`;
+}
