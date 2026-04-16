@@ -8,8 +8,8 @@ export const metadata: Metadata = {
 
 export default function ChatPage() {
   return (
-    <main className="container mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold mb-6">Chat with The Lens DB</h1>
+    <main className="container mx-auto flex flex-col px-4 py-4 h-[calc(100dvh-var(--header-height,4rem))] overflow-hidden">
+      <h1 className="text-xl font-bold mb-3 shrink-0">Chat with The Lens DB</h1>
       <ChatInterface />
     </main>
   );
