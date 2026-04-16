@@ -15,6 +15,7 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = request.nextUrl;
   const q = searchParams.get("q")?.slice(0, 200) || undefined;
+  const slug = searchParams.get("slug") || undefined;
   const system = searchParams.get("system") || undefined;
   const type = searchParams.get("type") || undefined;
   const model = searchParams.get("model") || undefined;
@@ -53,6 +54,9 @@ export async function GET(request: NextRequest) {
           )
         );
       }
+    }
+    if (slug) {
+      conditions.push(eq(cameras.slug, slug));
     }
     if (system) {
       conditions.push(eq(systems.slug, system));
