@@ -85,6 +85,13 @@
       "when": 1776086073818,
       "tag": "0011_lame_silhouette",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1776359022456,
+      "tag": "0012_dear_kinsey_walden",
+      "breakpoints": true
     }
   ]
 }
