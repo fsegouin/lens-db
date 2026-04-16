@@ -45,7 +45,7 @@ export default function ChatInterface() {
               className={`max-w-[85%] rounded-lg ${
                 message.role === "user"
                   ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 whitespace-pre-wrap px-4 py-2 text-sm"
-                  : "bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100 px-5 py-3 prose prose-zinc dark:prose-invert prose-p:leading-relaxed prose-p:my-2 prose-headings:my-3 prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-table:my-3 prose-pre:my-2 max-w-none text-[0.9rem]"
+                  : "bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100 px-5 py-3 prose prose-zinc dark:prose-invert prose-p:leading-relaxed prose-p:my-3 prose-headings:my-3 prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-table:my-3 prose-pre:my-2 max-w-none text-[0.9rem]"
               }`}
             >
               {message.role === "user"
