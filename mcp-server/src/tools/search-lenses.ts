@@ -18,7 +18,7 @@ export const searchLensesSchema = z.object({
   hasStabilization: z.boolean().optional().describe("Filter for stabilized lenses"),
   yearFrom: z.number().optional().describe("Earliest year introduced"),
   yearTo: z.number().optional().describe("Latest year introduced"),
-  limit: z.number().min(1).max(50).default(20).describe("Max results to return"),
+  limit: z.number().min(1).max(100).default(50).describe("Max results to return"),
 });
 
 export type SearchLensesParams = z.infer<typeof searchLensesSchema>;
@@ -79,6 +79,13 @@ export async function searchLenses(params: SearchLensesParams) {
 
   const where = conditions.length > 0 ? and(...conditions) : undefined;
 
+  const [countResult] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(lenses)
+    .leftJoin(systems, eq(lenses.systemId, systems.id))
+    .where(where);
+  const total = Number(countResult.count);
+
   const results = await db
     .select({
       name: lenses.name,
@@ -112,7 +119,11 @@ export async function searchLenses(params: SearchLensesParams) {
     .limit(params.limit);
 
   return {
-    count: results.length,
+    total,
+    returned: results.length,
     lenses: results,
+    ...(total > results.length && {
+      note: `Showing ${results.length} of ${total} results. Use the 'query' parameter to narrow your search, or use get_lens_details on specific lenses for full specs.`,
+    }),
   };
 }
