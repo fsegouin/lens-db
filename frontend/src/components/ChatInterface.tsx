@@ -23,7 +23,7 @@ export default function ChatInterface() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-12rem)] max-w-3xl mx-auto">
+    <div className="flex flex-col flex-1 min-h-0 max-w-3xl mx-auto w-full">
       {/* Messages */}
       <div className="flex-1 overflow-y-auto space-y-4 pb-4">
         {messages.length === 0 && (
