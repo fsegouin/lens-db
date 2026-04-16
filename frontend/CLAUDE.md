@@ -75,6 +75,18 @@ Key relationships:
 
 Schema location: `src/db/schema.ts`. Drizzle config: `drizzle.config.ts` (output: `./drizzle`).
 
+## Database Migrations
+
+Vercel runs `drizzle-kit migrate` before `next build` (`"build": "pnpm db:migrate && next build"`). `drizzle-kit migrate` only applies files listed in `drizzle/meta/_journal.json` — a `.sql` file that isn't registered there is silently skipped. A past outage came from exactly this: two orphan migration files never ran on prod, and the build broke when queries referenced a column that was never added.
+
+Rules:
+
+- **Always use `drizzle-kit generate` for schema changes.** It writes the SQL, updates `_journal.json`, and creates the matching `meta/NNNN_snapshot.json` atomically. Never hand-drop a `.sql` into `drizzle/`.
+- **For data-only migrations**, use `pnpm exec drizzle-kit generate --custom --name <slug>`. This creates an empty registered migration you fill in with custom SQL.
+- **Commit the SQL + journal + snapshot together.** If a PR touches `drizzle/*.sql` but not `_journal.json`, something is wrong.
+- **Write migrations idempotently** so partial prior states (manual hotfixes, interrupted runs) don't break reruns: `ADD COLUMN IF NOT EXISTS`, `DROP ... IF EXISTS`, `COALESCE(..., 0)` around scalar subqueries used in arithmetic, name- or id-based `WHERE` clauses that simply match nothing if the target is gone.
+- **Never edit a migration that has already shipped.** Add a new one instead — `drizzle-kit migrate` tracks applied migrations by filename hash in `__drizzle_migrations`.
+
 ## API Routes & Rate Limits
 
 | Endpoint | Methods | Rate Limit | Purpose |
