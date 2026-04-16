@@ -79,13 +79,7 @@ export async function searchLenses(params: SearchLensesParams) {
 
   const where = conditions.length > 0 ? and(...conditions) : undefined;
 
-  const [countResult] = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(lenses)
-    .leftJoin(systems, eq(lenses.systemId, systems.id))
-    .where(where);
-  const total = Number(countResult.count);
-
+  // Fetch limit+1 to detect if there are more results without a separate COUNT query
   const results = await db
     .select({
       name: lenses.name,
@@ -116,14 +110,17 @@ export async function searchLenses(params: SearchLensesParams) {
     )
     .where(where)
     .orderBy(asc(lenses.name))
-    .limit(params.limit);
+    .limit(params.limit + 1);
+
+  const hasMore = results.length > params.limit;
+  const trimmed = hasMore ? results.slice(0, params.limit) : results;
 
   return {
-    total,
-    returned: results.length,
-    lenses: results,
-    ...(total > results.length && {
-      note: `Showing ${results.length} of ${total} results. Use the 'query' parameter to narrow your search, or use get_lens_details on specific lenses for full specs.`,
+    returned: trimmed.length,
+    hasMore,
+    lenses: trimmed,
+    ...(hasMore && {
+      note: `More results available. Narrow your search with more specific filters.`,
     }),
   };
 }
