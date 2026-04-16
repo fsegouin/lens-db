@@ -1,4 +1,4 @@
-name: eBay Price Pipeline
+name: eBay Camera Price Pipeline
 
 on:
   schedule:
@@ -21,7 +21,7 @@ jobs:
       - name: Install script dependencies
         run: cd scraper && npm install playwright-core
 
-      - name: Run eBay price scraper
+      - name: Run eBay camera price scraper
         env:
           API_URL: ${{ secrets.API_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
