@@ -365,10 +365,8 @@ export default function CameraList({
                 { key: "name", label: "Name" },
                 { key: "system", label: "System" },
                 { key: "sensorSize", label: "Sensor Size", sortable: false },
-                { key: "type", label: "Type", sortable: false },
                 { key: "model", label: "Model", sortable: false },
                 { key: "filmType", label: "Film Type", sortable: false },
-                { key: "cropFactor", label: "Crop Factor", sortable: false },
                 { key: "year", label: "Year" },
                 { key: "price", label: "Avg Price" },
                 { key: "weight", label: "Weight" },
@@ -436,16 +434,6 @@ export default function CameraList({
                     {camera.sensorSize || "\u2014"}
                   </TableCell>
                   <TableCell className="text-zinc-600 dark:text-zinc-400">
-                    {specs["Type"] ? (
-                      <button
-                        onClick={() => applyFilters({ ...clearAll, type: specs["Type"] })}
-                        className="text-left hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
-                      >
-                        {specs["Type"]}
-                      </button>
-                    ) : "\u2014"}
-                  </TableCell>
-                  <TableCell className="text-zinc-600 dark:text-zinc-400">
                     {specs["Model"] ? (
                       <button
                         onClick={() => {
@@ -473,16 +461,6 @@ export default function CameraList({
                     ) : "\u2014"}
                   </TableCell>
                   <TableCell className="text-zinc-600 dark:text-zinc-400">
-                    {specs["Crop factor"] ? (
-                      <button
-                        onClick={() => applyFilters({ ...clearAll, cropFactor: specs["Crop factor"] })}
-                        className="text-left hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
-                      >
-                        {specs["Crop factor"]}
-                      </button>
-                    ) : "\u2014"}
-                  </TableCell>
-                  <TableCell className="text-zinc-600 dark:text-zinc-400">
                     {camera.yearIntroduced ? (
                       <button
                         onClick={() => applyFilters({ ...clearAll, year: String(camera.yearIntroduced) })}
@@ -503,10 +481,10 @@ export default function CameraList({
                 </TableRow>
               );
             })}
-            {loading && <TableSkeleton columns={10} rows={3} />}
+            {loading && <TableSkeleton columns={8} rows={3} />}
             {nextCursor !== null && (
               <TableRow>
-                <TableCell colSpan={10} className="p-0">
+                <TableCell colSpan={8} className="p-0">
                   <div ref={sentinelRef} className="h-px w-full" />
                 </TableCell>
               </TableRow>
