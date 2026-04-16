@@ -14,7 +14,7 @@ const navLinks: { href: string; label: string; badge?: string }[] = [
   { href: "/collections", label: "Collections" },
   { href: "/compare", label: "Compare" },
   { href: "/submit", label: "Submit" },
-  { href: "/chat", label: "Chat", badge: "new" },
+  { href: "/chat", label: "Chat", badge: "New" },
 ];
 
 export function HeaderNav() {
