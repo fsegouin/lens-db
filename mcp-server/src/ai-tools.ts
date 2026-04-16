@@ -19,7 +19,7 @@ import {
 export const mcpTools = {
   search_cameras: tool({
     description:
-      "Search for cameras by name, mount system, year, sensor size, or body type. Returns a summary list. Use get_camera_details for full specs.",
+      "Search for cameras (both digital and film) by name, mount system, year, sensor size, body type, or film type. Returns a summary list. Use get_camera_details for full specs.",
     inputSchema: searchCamerasSchema,
     execute: async (params) => searchCameras(params),
   }),
