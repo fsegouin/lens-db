@@ -59,6 +59,7 @@ export default function LensList({
   const lensType = searchParams.get("lensType") || "";
   const era = searchParams.get("era") || "";
   const productionStatus = searchParams.get("productionStatus") || "";
+  const coverage = searchParams.get("coverage") || "";
   const series = searchParams.get("series") || "";
   const sort = searchParams.get("sort") || "";
   const order = searchParams.get("order") || "";
@@ -117,13 +118,14 @@ export default function LensList({
       if (lensType) params.set("lensType", lensType);
       if (era) params.set("era", era);
       if (productionStatus) params.set("productionStatus", productionStatus);
+      if (coverage) params.set("coverage", coverage);
       if (series) params.set("series", series);
       if (sort) params.set("sort", sort);
       if (order) params.set("order", order);
       params.set("cursor", String(cursor));
       return `/api/lenses?${params.toString()}`;
     },
-    [q, brand, system, type, minFocal, maxFocal, minAperture, maxAperture, year, lensType, era, productionStatus, series, sort, order]
+    [q, brand, system, type, minFocal, maxFocal, minAperture, maxAperture, year, lensType, era, productionStatus, coverage, series, sort, order]
   );
 
   const loadMore = useCallback(async () => {
@@ -161,7 +163,7 @@ export default function LensList({
 
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  function applyFilters(overrides: { q?: string; brand?: string; system?: string; type?: string; minFocal?: string; maxFocal?: string; minAperture?: string; maxAperture?: string; year?: string; lensType?: string; era?: string; productionStatus?: string; series?: string; sort?: string; order?: string } = {}) {
+  function applyFilters(overrides: { q?: string; brand?: string; system?: string; type?: string; minFocal?: string; maxFocal?: string; minAperture?: string; maxAperture?: string; year?: string; lensType?: string; era?: string; productionStatus?: string; coverage?: string; series?: string; sort?: string; order?: string } = {}) {
     const params = new URLSearchParams();
     const qVal = overrides?.q ?? formQ;
     const brandVal = overrides?.brand ?? formBrand;
@@ -175,6 +177,7 @@ export default function LensList({
     const lensTypeVal = overrides?.lensType ?? lensType;
     const eraVal = overrides?.era ?? era;
     const productionStatusVal = overrides?.productionStatus ?? productionStatus;
+    const coverageVal = overrides?.coverage ?? coverage;
     const seriesVal = overrides?.series ?? series;
     const sortVal = overrides?.sort ?? sort;
     const orderVal = overrides?.order ?? order;
@@ -190,6 +193,7 @@ export default function LensList({
     if (lensTypeVal) params.set("lensType", lensTypeVal);
     if (eraVal) params.set("era", eraVal);
     if (productionStatusVal) params.set("productionStatus", productionStatusVal);
+    if (coverageVal) params.set("coverage", coverageVal);
     if (seriesVal) params.set("series", seriesVal);
     if (sortVal) params.set("sort", sortVal);
     if (orderVal) params.set("order", orderVal);
@@ -300,6 +304,21 @@ export default function LensList({
                 {s.name}
               </option>
             ))}
+          </select>
+        </div>
+        <div>
+          <label className="sr-only" htmlFor="lens-coverage">Coverage</label>
+          <select
+            id="lens-coverage"
+            value={coverage}
+            onChange={(e) => applyFilters({ coverage: e.target.value })}
+            className="filter-select h-10 rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+          >
+            <option value="">All coverage</option>
+            <option value="full-frame">Full Frame</option>
+            <option value="aps-c">APS-C</option>
+            <option value="micro-four-thirds">Micro Four Thirds</option>
+            <option value="medium-format">Medium Format</option>
           </select>
         </div>
         <div>
@@ -428,7 +447,7 @@ export default function LensList({
                 <TableCell className="text-zinc-500">
                   {lens.brand ? (
                     <button
-                      onClick={() => applyFilters({ brand: lens.brand!, system: "", q: "", type: "", minFocal: "", maxFocal: "", minAperture: "", maxAperture: "", year: "", lensType: "", era: "", productionStatus: "" })}
+                      onClick={() => applyFilters({ brand: lens.brand!, system: "", q: "", type: "", minFocal: "", maxFocal: "", minAperture: "", maxAperture: "", year: "", lensType: "", era: "", productionStatus: "", coverage: "" })}
                       className="text-left hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
                     >
                       {lens.brand}
