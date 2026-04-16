@@ -11,21 +11,39 @@ const transport = new DefaultChatTransport({ api: "/api/chat" });
 
 /**
  * Pre-process LLM text so it renders well as markdown.
- * Gemini often outputs lists as consecutive lines without blank lines,
- * which markdown collapses into one paragraph. This inserts blank lines
- * to force separate paragraphs/list items.
+ * Gemini often outputs lists as consecutive bold-started lines
+ * without using markdown list syntax. This detects runs of 2+
+ * consecutive lines starting with ** and converts them to bullet lists.
  */
 function formatForMarkdown(text: string): string {
-  return text
-    // Blank line before lines starting with bold
-    .replace(/\n(?=\*\*)/g, "\n\n")
-    // Blank line before lines starting with bullet markers
-    .replace(/\n(?=[-*•] )/g, "\n\n")
-    // Convert lines that look like "Name (details):" or "Name: details"
-    // into bullet points if they aren't already
-    .replace(/\n(?=[A-Z][A-Za-z ]+(?:\([^)]+\))?:)/g, "\n\n")
-    // Collapse any triple+ newlines back to double
-    .replace(/\n{3,}/g, "\n\n");
+  // Split into lines, detect consecutive bold-started lines, convert to bullets
+  const lines = text.split("\n");
+  const result: string[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const isBoldLine = /^\*\*/.test(line.trim());
+    const prevIsBoldLine = i > 0 && /^\*\*/.test(lines[i - 1].trim());
+    const nextIsBoldLine =
+      i < lines.length - 1 && /^\*\*/.test(lines[i + 1].trim());
+
+    if (isBoldLine && (prevIsBoldLine || nextIsBoldLine)) {
+      // Part of a consecutive bold run — convert to bullet
+      if (!prevIsBoldLine) {
+        // First in the run — add blank line before list
+        result.push("");
+      }
+      result.push(`- ${line.trim()}`);
+      if (!nextIsBoldLine) {
+        // Last in the run — add blank line after list
+        result.push("");
+      }
+    } else {
+      result.push(line);
+    }
+  }
+
+  return result.join("\n").replace(/\n{3,}/g, "\n\n");
 }
 
 export default function ChatInterface() {
@@ -64,7 +82,7 @@ export default function ChatInterface() {
               className={`max-w-[85%] rounded-lg ${
                 message.role === "user"
                   ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 whitespace-pre-wrap px-4 py-2 text-sm"
-                  : "bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100 px-5 py-4 prose prose-zinc dark:prose-invert prose-p:leading-relaxed prose-p:my-3 prose-headings:my-3 prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-table:my-3 prose-pre:my-2 max-w-none text-[0.9rem] [&>*:first-child]:mt-0 [&>*:last-child]:mb-0"
+                  : "bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100 px-5 py-4 prose prose-zinc dark:prose-invert prose-p:leading-relaxed prose-p:my-3 prose-headings:my-3 prose-ul:my-2 prose-ul:list-disc prose-ul:pl-5 prose-ol:my-2 prose-ol:list-decimal prose-ol:pl-5 prose-li:my-1 prose-table:my-3 prose-pre:my-2 max-w-none text-[0.9rem] [&>*:first-child]:mt-0 [&>*:last-child]:mb-0"
               }`}
             >
               {message.role === "user"
