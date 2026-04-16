@@ -53,6 +53,7 @@ type SearchParams = Promise<{
   lensType?: string;
   era?: string;
   productionStatus?: string;
+  coverage?: string;
   series?: string;
   sort?: string;
   order?: string;
@@ -103,6 +104,9 @@ export default async function LensesPage({
     }
     if (params.system) {
       conditions.push(eq(systems.slug, params.system));
+    }
+    if (params.coverage) {
+      conditions.push(eq(lenses.coverage, params.coverage));
     }
     if (params.type === "zoom") {
       conditions.push(eq(lenses.isZoom, true));
