@@ -6,7 +6,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { useSearch } from "@/components/search-context";
 import { HeaderSearchExpanded } from "@/components/HeaderSearch";
 
-const navLinks = [
+const navLinks: { href: string; label: string; badge?: string }[] = [
   { href: "/", label: "Home" },
   { href: "/systems", label: "Systems" },
   { href: "/lenses", label: "Lenses" },
@@ -14,7 +14,7 @@ const navLinks = [
   { href: "/collections", label: "Collections" },
   { href: "/compare", label: "Compare" },
   { href: "/submit", label: "Submit" },
-  { href: "/chat", label: "Chat" },
+  { href: "/chat", label: "Chat", badge: "new" },
 ];
 
 export function HeaderNav() {
@@ -48,6 +48,11 @@ export function HeaderNav() {
                 }`}
               >
                 {link.label}
+                {link.badge && (
+                  <span className="ml-1 rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-emerald-600 dark:text-emerald-400">
+                    {link.badge}
+                  </span>
+                )}
               </Link>
             );
           })}
