@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "exports": {
+    "./ai-tools": "./src/ai-tools.ts"
+  },
   "scripts": {
     "build": "tsc",
     "start": "node dist/server.js"
