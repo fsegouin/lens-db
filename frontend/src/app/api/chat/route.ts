@@ -1,4 +1,4 @@
-import { streamText, stepCountIs } from "ai";
+import { streamText, convertToModelMessages, UIMessage, stepCountIs } from "ai";
 import { gateway } from "@ai-sdk/gateway";
 import { NextRequest } from "next/server";
 import { getClientIP, rateLimitedResponse } from "@/lib/api-utils";
@@ -28,15 +28,18 @@ export async function POST(request: NextRequest) {
   const { success } = await rateLimiters.chat.limit(ip);
   if (!success) return rateLimitedResponse();
 
-  const { messages } = await request.json();
+  const { message, messages }: { message: UIMessage; messages: UIMessage[] } =
+    await request.json();
+
+  const allMessages = messages ?? [message];
 
   const result = streamText({
     model: gateway("google/gemini-2.5-flash"),
     system: SYSTEM_PROMPT,
-    messages,
+    messages: await convertToModelMessages(allMessages),
     tools: mcpTools,
     stopWhen: stepCountIs(5),
   });
 
-  return result.toTextStreamResponse();
+  return result.toUIMessageStreamResponse();
 }
