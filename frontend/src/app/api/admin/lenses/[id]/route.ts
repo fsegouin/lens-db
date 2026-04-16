@@ -46,6 +46,7 @@ export async function GET(
       isPrime: lenses.isPrime,
       hasStabilization: lenses.hasStabilization,
       hasAutofocus: lenses.hasAutofocus,
+      coverage: lenses.coverage,
       specs: lenses.specs,
       images: lenses.images,
       createdAt: lenses.createdAt,
@@ -82,7 +83,7 @@ export async function PUT(
     "weightG", "filterSizeMm", "minFocusDistanceM", "maxMagnification",
     "lensElements", "lensGroups", "diaphragmBlades",
     "yearIntroduced", "yearDiscontinued",
-    "isZoom", "isMacro", "isPrime", "hasStabilization", "hasAutofocus",
+    "isZoom", "isMacro", "isPrime", "hasStabilization", "hasAutofocus", "coverage",
     "specs", "images",
   ];
 
@@ -94,7 +95,7 @@ export async function PUT(
 
   // Normalize empty strings to null for optional text fields
   const textFields = [
-    "url", "brand", "description", "lensType", "era", "productionStatus",
+    "url", "brand", "description", "lensType", "era", "productionStatus", "coverage",
   ];
   for (const field of textFields) {
     if (updates[field] === "") updates[field] = null;
