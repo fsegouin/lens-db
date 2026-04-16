@@ -77,26 +77,26 @@ export default function ChatInterface() {
         )}
       </div>
 
-      {/* Input — fixed to bottom */}
-      <div className="fixed bottom-0 left-0 right-0 z-10 border-t border-zinc-200 dark:border-zinc-700 bg-background/80 backdrop-blur-xl">
-        <div className="mx-auto max-w-3xl px-4 py-3">
+      {/* Input — floating at bottom */}
+      <div className="fixed bottom-4 left-0 right-0 z-10 px-4">
+        <div className="mx-auto max-w-3xl">
           {error && (
             <div className="text-red-500 text-sm mb-2 text-center">
               Something went wrong. Please try again.
             </div>
           )}
-          <form onSubmit={handleSubmit} className="flex gap-2">
+          <form onSubmit={handleSubmit} className="relative">
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Ask about cameras, lenses, prices..."
-              className="flex-1 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-400 dark:focus:ring-zinc-500"
+              className="w-full rounded-full border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 pl-5 pr-12 py-3 text-sm shadow-lg focus:outline-none focus:ring-2 focus:ring-zinc-400 dark:focus:ring-zinc-500"
               disabled={isLoading}
             />
             <button
               type="submit"
               disabled={isLoading || !input.trim()}
-              className="rounded-lg bg-zinc-900 dark:bg-zinc-100 px-4 py-2 text-white dark:text-zinc-900 hover:bg-zinc-700 dark:hover:bg-zinc-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-zinc-900 dark:bg-zinc-100 p-2 text-white dark:text-zinc-900 hover:bg-zinc-700 dark:hover:bg-zinc-300 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             >
               <Send className="w-4 h-4" />
             </button>
