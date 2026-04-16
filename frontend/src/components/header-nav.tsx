@@ -49,7 +49,7 @@ export function HeaderNav() {
               >
                 {link.label}
                 {link.badge && (
-                  <span className="ml-1 rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-emerald-600 dark:text-emerald-400">
+                  <span className="ml-1 inline-flex items-center rounded-full bg-zinc-200 dark:bg-zinc-700 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-zinc-700 dark:text-zinc-200 align-middle">
                     {link.badge}
                   </span>
                 )}
