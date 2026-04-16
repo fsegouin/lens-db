@@ -141,6 +141,7 @@ export async function POST(request: NextRequest) {
       isPrime: body.isPrime ?? false,
       hasStabilization: body.hasStabilization ?? false,
       hasAutofocus: body.hasAutofocus ?? false,
+      coverage: body.coverage || null,
       specs: body.specs ?? {},
       images: body.images ?? [],
     })
