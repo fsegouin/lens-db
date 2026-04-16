@@ -154,6 +154,17 @@ export default async function LensDetailPage({
                 <Badge variant="system">{system.name}</Badge>
               </Link>
             )}
+            {lens.coverage && (
+              <Link href={`/lenses?coverage=${encodeURIComponent(lens.coverage)}`}>
+                <Badge variant="outline">
+                  {lens.coverage === "aps-c" ? "APS-C"
+                    : lens.coverage === "full-frame" ? "Full Frame"
+                    : lens.coverage === "micro-four-thirds" ? "Micro Four Thirds"
+                    : lens.coverage === "medium-format" ? "Medium Format"
+                    : lens.coverage}
+                </Badge>
+              </Link>
+            )}
             {lens.lensType && (
               <Link href={`/lenses?lensType=${encodeURIComponent(lens.lensType)}`}>
                 <Badge variant="lensType">{lens.lensType}</Badge>
