@@ -59,6 +59,7 @@ export const lenses = pgTable(
     isPrime: boolean("is_prime").default(false),
     hasStabilization: boolean("has_stabilization").default(false),
     hasAutofocus: boolean("has_autofocus").default(false),
+    coverage: text("coverage"), // "full-frame" | "aps-c" | "micro-four-thirds" | null (unknown)
     // Engagement
     viewCount: integer("view_count").default(0),
     averageRating: real("average_rating"),
