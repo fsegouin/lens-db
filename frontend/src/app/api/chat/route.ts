@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
   const { messages } = await request.json();
 
   const result = streamText({
-    model: gateway("anthropic/claude-sonnet-4-5"),
+    model: gateway("google/gemini-2.5-flash"),
     system: SYSTEM_PROMPT,
     messages,
     tools: mcpTools,
