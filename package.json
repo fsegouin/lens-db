@@ -1,0 +1,14 @@
+{
+  "name": "lens-db-root",
+  "private": true,
+  "pnpm": {
+    "overrides": {
+      "drizzle-orm": "0.45.1"
+    },
+    "peerDependencyRules": {
+      "allowedVersions": {
+        "drizzle-orm>@types/pg": "*"
+      }
+    }
+  }
+}
