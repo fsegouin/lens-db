@@ -8,9 +8,12 @@ export const metadata: Metadata = {
 
 export default function ChatPage() {
   return (
-    <div className="flex flex-col flex-1 min-h-0">
-      <h1 className="text-xl font-bold mb-3 shrink-0">Chat with The Lens DB</h1>
-      <ChatInterface />
-    </div>
+    <>
+      <style>{`[data-slot="separator"], footer { display: none !important; }`}</style>
+      <div className="flex flex-col flex-1 min-h-0">
+        <h1 className="text-xl font-bold mb-3 shrink-0">Chat with The Lens DB</h1>
+        <ChatInterface />
+      </div>
+    </>
   );
 }
