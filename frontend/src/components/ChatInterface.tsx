@@ -9,6 +9,16 @@ import remarkGfm from "remark-gfm";
 
 const transport = new DefaultChatTransport({ api: "/api/chat" });
 
+/**
+ * Pre-process LLM text so it renders well as markdown.
+ * Adds blank lines between lines that look like separate items
+ * (e.g. lines starting with bold text) so markdown doesn't
+ * collapse them into a single paragraph.
+ */
+function formatForMarkdown(text: string): string {
+  return text.replace(/\n(?=\*\*)/g, "\n\n");
+}
+
 export default function ChatInterface() {
   const { messages, sendMessage, status, error } = useChat({ transport });
   const [input, setInput] = useState("");
@@ -54,7 +64,7 @@ export default function ChatInterface() {
                     .map((p, i) => <span key={i}>{p.text}</span>)
                 : message.parts
                     .filter((p) => p.type === "text")
-                    .map((p, i) => <Markdown key={i} remarkPlugins={[remarkGfm]}>{p.text}</Markdown>)}
+                    .map((p, i) => <Markdown key={i} remarkPlugins={[remarkGfm]}>{formatForMarkdown(p.text)}</Markdown>)}
             </div>
           </div>
         ))}
