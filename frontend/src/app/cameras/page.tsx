@@ -14,7 +14,7 @@ const getCachedDropdownData = unstable_cache(
         .innerJoin(cameras, eq(cameras.systemId, systems.id))
         .orderBy(asc(systems.name)),
       db
-        .select({ specs: cameras.specs, sensorType: cameras.sensorType })
+        .select({ specs: cameras.specs, sensorType: cameras.sensorType, sensorSize: cameras.sensorSize })
         .from(cameras),
     ]);
 
@@ -23,6 +23,7 @@ const getCachedDropdownData = unstable_cache(
     const filmTypeSet = new Set<string>();
     const cropFactorSet = new Set<string>();
     const sensorTypeSet = new Set<string>();
+    const sensorSizeSet = new Set<string>();
 
     for (const r of allCameras) {
       const s = (r.specs || {}) as Record<string, string>;
@@ -37,6 +38,7 @@ const getCachedDropdownData = unstable_cache(
       if (s["Film type"]) filmTypeSet.add(s["Film type"]);
       if (s["Crop factor"]) cropFactorSet.add(s["Crop factor"]);
       if (r.sensorType) sensorTypeSet.add(r.sensorType);
+      if (r.sensorSize) sensorSizeSet.add(r.sensorSize);
     }
 
     return {
@@ -46,6 +48,7 @@ const getCachedDropdownData = unstable_cache(
       filmTypes: [...filmTypeSet].sort(),
       cropFactors: [...cropFactorSet].sort(),
       sensorTypes: [...sensorTypeSet].sort(),
+      sensorSizes: [...sensorSizeSet].sort(),
     };
   },
   ["cameras-dropdown-data"],
@@ -60,6 +63,7 @@ export const metadata = {
 type SearchParams = Promise<{
   q?: string;
   system?: string;
+  sensorSize?: string;
   type?: string;
   model?: string;
   filmType?: string;
@@ -92,6 +96,7 @@ export default async function CamerasPage({
   let models: string[] = [];
   let filmTypes: string[] = [];
   let sensorTypes: string[] = [];
+  let sensorSizes: string[] = [];
   let cropFactors: string[] = [];
 
   try {
@@ -101,6 +106,7 @@ export default async function CamerasPage({
     models = dropdownData.models;
     filmTypes = dropdownData.filmTypes;
     sensorTypes = dropdownData.sensorTypes;
+    sensorSizes = dropdownData.sensorSizes;
     cropFactors = dropdownData.cropFactors;
 
     const conditions = [];
@@ -122,6 +128,9 @@ export default async function CamerasPage({
     }
     if (params.system) {
       conditions.push(eq(systems.slug, params.system));
+    }
+    if (params.sensorSize) {
+      conditions.push(eq(cameras.sensorSize, params.sensorSize));
     }
     if (params.type) {
       conditions.push(
@@ -226,6 +235,7 @@ export default async function CamerasPage({
         initialTotal={total}
         initialNextCursor={nextCursor}
         systems={systemList}
+        sensorSizes={sensorSizes}
         types={types}
         models={models}
         filmTypes={filmTypes}

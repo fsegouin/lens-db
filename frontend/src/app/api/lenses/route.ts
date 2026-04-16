@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { lenses, systems, lensSeries, lensSeriesMemberships } from "@/db/schema";
+import { lenses, systems, lensSeries, lensSeriesMemberships, priceEstimates } from "@/db/schema";
 import { asc, desc, eq, and, gte, lte, sql, inArray } from "drizzle-orm";
 import { getClientIP, rateLimitedResponse } from "@/lib/api-utils";
 import { rateLimiters } from "@/lib/rate-limit";
@@ -18,6 +18,7 @@ export async function GET(request: NextRequest) {
   const slug = searchParams.get("slug") || undefined;
   const brand = searchParams.get("brand") || undefined;
   const system = searchParams.get("system") || undefined;
+  const coverage = searchParams.get("coverage") || undefined;
   const type = searchParams.get("type") || undefined;
   const minFocal = searchParams.get("minFocal") || undefined;
   const maxFocal = searchParams.get("maxFocal") || undefined;
@@ -28,6 +29,8 @@ export async function GET(request: NextRequest) {
   const era = searchParams.get("era") || undefined;
   const productionStatus = searchParams.get("productionStatus") || undefined;
   const series = searchParams.get("series") || undefined;
+  const priceMin = searchParams.get("priceMin") || undefined;
+  const priceMax = searchParams.get("priceMax") || undefined;
   const sort = searchParams.get("sort") || undefined;
   const order = searchParams.get("order") || undefined;
   const rawCursor = parseInt(searchParams.get("cursor") || "0");
@@ -35,6 +38,8 @@ export async function GET(request: NextRequest) {
     Math.max(Number.isFinite(rawCursor) ? rawCursor : 0, 0),
     MAX_OFFSET
   );
+
+  const avgPrice = priceEstimates.medianPrice;
 
   try {
     const conditions = [];
@@ -64,6 +69,9 @@ export async function GET(request: NextRequest) {
     }
     if (system) {
       conditions.push(eq(systems.slug, system));
+    }
+    if (coverage) {
+      conditions.push(eq(lenses.coverage, coverage));
     }
     if (type === "zoom") {
       conditions.push(eq(lenses.isZoom, true));
@@ -101,6 +109,16 @@ export async function GET(request: NextRequest) {
     if (productionStatus) {
       conditions.push(eq(lenses.productionStatus, productionStatus));
     }
+    if (priceMin) {
+      const val = parseInt(priceMin);
+      if (Number.isFinite(val))
+        conditions.push(sql`${avgPrice} >= ${val}`);
+    }
+    if (priceMax) {
+      const val = parseInt(priceMax);
+      if (Number.isFinite(val))
+        conditions.push(sql`${avgPrice} <= ${val}`);
+    }
     if (series) {
       conditions.push(
         sql`${lenses.id} IN (
@@ -123,14 +141,19 @@ export async function GET(request: NextRequest) {
       year: lenses.yearIntroduced,
       weight: lenses.weightG,
       rating: lenses.averageRating,
+      price: avgPrice,
     };
-    const sortCol = sortColumns[sort || ""] || lenses.name;
+    const sortKey = sort || "";
+    const sortCol = sortColumns[sortKey] || lenses.name;
     const orderFn = order === "desc" ? desc : asc;
     const sortByName = sortCol === lenses.name;
     // When sorting by name, sort by the name prefix (before focal length), then focal length numerically
     const namePrefix = sql`regexp_replace(${lenses.name}, '\\d+(\\.\\d+)?mm.*$', '')`;
+    // For price sorting, push NULLs to the end
     const orderClauses = sortByName
       ? [orderFn(namePrefix), asc(lenses.focalLengthMin), asc(lenses.apertureMin)]
+      : sortKey === "price"
+      ? [sql`${avgPrice} IS NULL`, orderFn(sortCol)]
       : [orderFn(sortCol)];
 
     const needsSystemJoin = !!system;
@@ -140,17 +163,29 @@ export async function GET(request: NextRequest) {
           .select({ count: sql<number>`count(*)` })
           .from(lenses)
           .leftJoin(systems, eq(lenses.systemId, systems.id))
+          .leftJoin(priceEstimates, and(
+            eq(priceEstimates.entityType, "lens"),
+            eq(priceEstimates.entityId, lenses.id),
+          ))
           .where(where)
       : await db
           .select({ count: sql<number>`count(*)` })
           .from(lenses)
+          .leftJoin(priceEstimates, and(
+            eq(priceEstimates.entityType, "lens"),
+            eq(priceEstimates.entityId, lenses.id),
+          ))
           .where(where);
     const total = Number(countResult.count);
 
     const items = await db
-      .select({ lens: lenses, system: systems })
+      .select({ lens: lenses, system: systems, avgPrice: avgPrice })
       .from(lenses)
       .leftJoin(systems, eq(lenses.systemId, systems.id))
+      .leftJoin(priceEstimates, and(
+        eq(priceEstimates.entityType, "lens"),
+        eq(priceEstimates.entityId, lenses.id),
+      ))
       .where(where)
       .orderBy(...orderClauses)
       .limit(PAGE_SIZE)

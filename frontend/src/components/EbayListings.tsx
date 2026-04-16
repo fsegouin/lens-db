@@ -1,10 +1,11 @@
 import { headers } from "next/headers";
 import { Badge } from "@/components/ui/badge";
-import { buildEbaySearchQuery } from "@/lib/ebay-search-query";
+import { buildEbaySearchQuery, buildEbayLensSearchQuery } from "@/lib/ebay-search-query";
 import { getEbayAccessToken } from "@/lib/ebay-auth";
 
 interface EbayListingsProps {
   query: string;
+  entityType?: "camera" | "lens";
 }
 
 interface EbayListing {
@@ -44,12 +45,14 @@ function affiliateUrl(searchQuery: string): string {
   return `https://rover.ebay.com/rover/1/711-53200-19255-0/1?campid=${EBAY_CAMPAIGN_ID}&toolid=10001&mpre=${encodeURIComponent(`https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(searchQuery)}`)}`;
 }
 
-async function fetchListings(query: string, countryCode: string): Promise<EbayListing[]> {
+async function fetchListings(query: string, countryCode: string, entityType: "camera" | "lens" = "camera"): Promise<EbayListing[]> {
   if (!process.env.EBAY_APP_ID || !process.env.EBAY_CERT_ID) return [];
 
   try {
     const token = await getEbayAccessToken();
-    const searchQuery = buildEbaySearchQuery(query);
+    const searchQuery = entityType === "lens"
+      ? buildEbayLensSearchQuery(query)
+      : buildEbaySearchQuery(query);
 
     const params = new URLSearchParams({
       q: searchQuery,
@@ -97,14 +100,16 @@ async function fetchListings(query: string, countryCode: string): Promise<EbayLi
   }
 }
 
-export default async function EbayListings({ query }: EbayListingsProps) {
+export default async function EbayListings({ query, entityType = "camera" }: EbayListingsProps) {
   const hdrs = await headers();
   const countryCode = hdrs.get("x-vercel-ip-country") ?? "US";
-  const listings = await fetchListings(query, countryCode);
+  const listings = await fetchListings(query, countryCode, entityType);
 
   if (listings.length === 0) return null;
 
-  const searchQuery = buildEbaySearchQuery(query);
+  const searchQuery = entityType === "lens"
+    ? buildEbayLensSearchQuery(query)
+    : buildEbaySearchQuery(query);
 
   return (
     <div className="space-y-4">

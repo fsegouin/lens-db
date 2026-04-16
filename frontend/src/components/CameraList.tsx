@@ -24,6 +24,7 @@ type Props = {
   initialTotal: number;
   initialNextCursor: number | null;
   systems?: SystemOption[];
+  sensorSizes?: string[];
   types?: string[];
   models?: string[];
   filmTypes?: string[];
@@ -34,6 +35,7 @@ type Props = {
 type FilterOverrides = {
   q?: string;
   system?: string;
+  sensorSize?: string;
   type?: string;
   model?: string;
   filmType?: string;
@@ -51,6 +53,7 @@ export default function CameraList({
   initialTotal,
   initialNextCursor,
   systems: systemOptions = [],
+  sensorSizes = [],
   types = [],
   models = [],
   filmTypes = [],
@@ -69,6 +72,7 @@ export default function CameraList({
   // Current filter values from URL
   const q = searchParams.get("q") || "";
   const system = searchParams.get("system") || "";
+  const sensorSize = searchParams.get("sensorSize") || "";
   const type = searchParams.get("type") || "";
   const model = searchParams.get("model") || "";
   const filmType = searchParams.get("filmType") || "";
@@ -83,6 +87,7 @@ export default function CameraList({
   // Form state
   const [formQ, setFormQ] = useState(q);
   const [formSystem, setFormSystem] = useState(system);
+  const [formSensorSize, setFormSensorSize] = useState(sensorSize);
   const [formType, setFormType] = useState(type);
   const [formModel, setFormModel] = useState(model);
   const [formFilmType, setFormFilmType] = useState(filmType);
@@ -96,6 +101,7 @@ export default function CameraList({
   useEffect(() => {
     setFormQ(q);
     setFormSystem(system);
+    setFormSensorSize(sensorSize);
     setFormType(type);
     setFormModel(model);
     setFormFilmType(filmType);
@@ -104,7 +110,7 @@ export default function CameraList({
     setFormYear(year);
     setFormPriceMin(priceMin);
     setFormPriceMax(priceMax);
-  }, [q, system, type, model, filmType, sensorType, cropFactor, year, priceMin, priceMax]);
+  }, [q, system, sensorSize, type, model, filmType, sensorType, cropFactor, year, priceMin, priceMax]);
 
   // Reset list when initial data changes (filters applied via server component)
   useEffect(() => {
@@ -118,6 +124,7 @@ export default function CameraList({
       const params = new URLSearchParams();
       if (q) params.set("q", q);
       if (system) params.set("system", system);
+      if (sensorSize) params.set("sensorSize", sensorSize);
       if (type) params.set("type", type);
       if (model) params.set("model", model);
       if (filmType) params.set("filmType", filmType);
@@ -131,7 +138,7 @@ export default function CameraList({
       params.set("cursor", String(cursor));
       return `/api/cameras?${params.toString()}`;
     },
-    [q, system, type, model, filmType, sensorType, cropFactor, year, priceMin, priceMax, sort, order]
+    [q, system, sensorSize, type, model, filmType, sensorType, cropFactor, year, priceMin, priceMax, sort, order]
   );
 
   const loadMore = useCallback(async () => {
@@ -174,6 +181,7 @@ export default function CameraList({
     const params = new URLSearchParams();
     const qVal = overrides.q ?? formQ;
     const systemVal = overrides.system ?? formSystem;
+    const sensorSizeVal = overrides.sensorSize ?? formSensorSize;
     const typeVal = overrides.type ?? formType;
     const modelVal = overrides.model ?? formModel;
     const filmTypeVal = overrides.filmType ?? formFilmType;
@@ -186,6 +194,7 @@ export default function CameraList({
     const orderVal = overrides.order ?? order;
     if (qVal) params.set("q", qVal);
     if (systemVal) params.set("system", systemVal);
+    if (sensorSizeVal) params.set("sensorSize", sensorSizeVal);
     if (typeVal) params.set("type", typeVal);
     if (modelVal) params.set("model", modelVal);
     if (filmTypeVal) params.set("filmType", filmTypeVal);
@@ -218,7 +227,7 @@ export default function CameraList({
     debouncedApply({ q: value });
   }
 
-  const clearAll: FilterOverrides = { q: "", system: "", type: "", model: "", filmType: "", sensorType: "", cropFactor: "", year: "", priceMin: "", priceMax: "" };
+  const clearAll: FilterOverrides = { q: "", system: "", sensorSize: "", type: "", model: "", filmType: "", sensorType: "", cropFactor: "", year: "", priceMin: "", priceMax: "" };
 
   return (
     <>
@@ -248,6 +257,20 @@ export default function CameraList({
               <option key={s.slug} value={s.slug}>
                 {s.name}
               </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="sr-only" htmlFor="camera-sensor-size">Sensor size</label>
+          <select
+            id="camera-sensor-size"
+            value={formSensorSize}
+            onChange={(e) => { setFormSensorSize(e.target.value); applyFilters({ sensorSize: e.target.value }); }}
+            className="filter-select h-10 rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+          >
+            <option value="">All sensor sizes</option>
+            {sensorSizes.map((s) => (
+              <option key={s} value={s}>{s}</option>
             ))}
           </select>
         </div>
@@ -364,11 +387,9 @@ export default function CameraList({
               {[
                 { key: "name", label: "Name" },
                 { key: "system", label: "System" },
-                { key: "type", label: "Type", sortable: false },
+                { key: "sensorSize", label: "Sensor Size", sortable: false },
                 { key: "model", label: "Model", sortable: false },
                 { key: "filmType", label: "Film Type", sortable: false },
-                { key: "imagingSensor", label: "Imaging Sensor", sortable: false },
-                { key: "cropFactor", label: "Crop Factor", sortable: false },
                 { key: "year", label: "Year" },
                 { key: "price", label: "Avg Price" },
                 { key: "weight", label: "Weight" },
@@ -433,14 +454,7 @@ export default function CameraList({
                     ) : "\u2014"}
                   </TableCell>
                   <TableCell className="text-zinc-600 dark:text-zinc-400">
-                    {specs["Type"] ? (
-                      <button
-                        onClick={() => applyFilters({ ...clearAll, type: specs["Type"] })}
-                        className="text-left hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
-                      >
-                        {specs["Type"]}
-                      </button>
-                    ) : "\u2014"}
+                    {camera.sensorSize || "\u2014"}
                   </TableCell>
                   <TableCell className="text-zinc-600 dark:text-zinc-400">
                     {specs["Model"] ? (
@@ -470,19 +484,6 @@ export default function CameraList({
                     ) : "\u2014"}
                   </TableCell>
                   <TableCell className="text-zinc-600 dark:text-zinc-400">
-                    {specs["Imaging sensor"] || specs["Imaging plane"] || "\u2014"}
-                  </TableCell>
-                  <TableCell className="text-zinc-600 dark:text-zinc-400">
-                    {specs["Crop factor"] ? (
-                      <button
-                        onClick={() => applyFilters({ ...clearAll, cropFactor: specs["Crop factor"] })}
-                        className="text-left hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
-                      >
-                        {specs["Crop factor"]}
-                      </button>
-                    ) : "\u2014"}
-                  </TableCell>
-                  <TableCell className="text-zinc-600 dark:text-zinc-400">
                     {camera.yearIntroduced ? (
                       <button
                         onClick={() => applyFilters({ ...clearAll, year: String(camera.yearIntroduced) })}
@@ -503,10 +504,10 @@ export default function CameraList({
                 </TableRow>
               );
             })}
-            {loading && <TableSkeleton columns={10} rows={3} />}
+            {loading && <TableSkeleton columns={8} rows={3} />}
             {nextCursor !== null && (
               <TableRow>
-                <TableCell colSpan={10} className="p-0">
+                <TableCell colSpan={8} className="p-0">
                   <div ref={sentinelRef} className="h-px w-full" />
                 </TableCell>
               </TableRow>

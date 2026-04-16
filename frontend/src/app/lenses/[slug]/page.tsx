@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import BackButton from "@/components/BackButton";
 import { db } from "@/db";
-import { lenses, systems } from "@/db/schema";
+import { lenses, systems, priceEstimates, priceHistory } from "@/db/schema";
 import { formatDescription } from "@/lib/format-description";
 import { formatMagnification } from "@/lib/format-magnification";
 import { getImages } from "@/lib/images";
@@ -17,6 +17,10 @@ import { PageTransition } from "@/components/page-transition";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { getCurrentUser } from "@/lib/user-auth";
+import { Suspense } from "react";
+import PriceCard from "@/components/PriceCard";
+import EbayListings from "@/components/EbayListings";
+import EbayListingsSkeleton from "@/components/EbayListingsSkeleton";
 
 export const revalidate = 604800;
 
@@ -70,6 +74,32 @@ export default async function LensDetailPage({
     if (target) redirect(`/lenses/${target.slug}`);
   }
   const currentUser = await getCurrentUser();
+
+  // Fetch price data
+  const [priceEstimate] = await db
+    .select()
+    .from(priceEstimates)
+    .where(and(
+      eq(priceEstimates.entityType, "lens"),
+      eq(priceEstimates.entityId, lens.id),
+    ))
+    .limit(1);
+
+  const priceHistoryRows = await db
+    .select({
+      saleDate: priceHistory.saleDate,
+      condition: priceHistory.condition,
+      priceUsd: priceHistory.priceUsd,
+      source: priceHistory.source,
+      sourceUrl: priceHistory.sourceUrl,
+    })
+    .from(priceHistory)
+    .where(and(
+      eq(priceHistory.entityType, "lens"),
+      eq(priceHistory.entityId, lens.id),
+    ))
+    .orderBy(desc(priceHistory.saleDate));
+
   const allSystems = await db.select({ id: systems.id, name: systems.name }).from(systems).orderBy(systems.name);
   const specs = (lens.specs ?? {}) as Record<string, string>;
   const mountFromSpecs =
@@ -154,6 +184,17 @@ export default async function LensDetailPage({
                 <Badge variant="system">{system.name}</Badge>
               </Link>
             )}
+            {lens.coverage && (
+              <Link href={`/lenses?coverage=${encodeURIComponent(lens.coverage)}`}>
+                <Badge variant="outline">
+                  {lens.coverage === "aps-c" ? "APS-C"
+                    : lens.coverage === "full-frame" ? "Full Frame"
+                    : lens.coverage === "micro-four-thirds" ? "Micro Four Thirds"
+                    : lens.coverage === "medium-format" ? "Medium Format"
+                    : lens.coverage}
+                </Badge>
+              </Link>
+            )}
             {lens.lensType && (
               <Link href={`/lenses?lensType=${encodeURIComponent(lens.lensType)}`}>
                 <Badge variant="lensType">{lens.lensType}</Badge>
@@ -200,6 +241,15 @@ export default async function LensDetailPage({
         )}
 
         <RatingWidget lensId={lens.id} />
+
+        <PriceCard
+          estimate={priceEstimate ?? null}
+          history={priceHistoryRows}
+        />
+
+        <Suspense fallback={<EbayListingsSkeleton />}>
+          <EbayListings query={lens.name} entityType="lens" />
+        </Suspense>
 
         <div className="space-y-5">
           <div>

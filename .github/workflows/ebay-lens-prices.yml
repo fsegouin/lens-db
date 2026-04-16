@@ -1,0 +1,28 @@
+name: eBay Lens Price Pipeline
+
+on:
+  schedule:
+    # Daily at noon UTC (cameras run at 6 AM UTC)
+    - cron: "0 12 * * *"
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  scrape-and-classify:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Install script dependencies
+        run: cd scraper && npm install playwright-core
+
+      - name: Run eBay lens price scraper
+        env:
+          API_URL: ${{ secrets.API_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: node scraper/ebay-lens-scrape-action.mjs

@@ -30,6 +30,7 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  transpilePackages: ["lens-db-mcp-server"],
   async redirects() {
     return [
       // Merged Canon EOS system slugs → mount-named equivalents
