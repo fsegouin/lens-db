@@ -59,13 +59,7 @@ export async function searchCameras(params: SearchCamerasParams) {
 
   const where = conditions.length > 0 ? and(...conditions) : undefined;
 
-  const [countResult] = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(cameras)
-    .leftJoin(systems, eq(cameras.systemId, systems.id))
-    .where(where);
-  const total = Number(countResult.count);
-
+  // Fetch limit+1 to detect if there are more results without a separate COUNT query
   const results = await db
     .select({
       name: cameras.name,
@@ -90,14 +84,17 @@ export async function searchCameras(params: SearchCamerasParams) {
     )
     .where(where)
     .orderBy(asc(cameras.name))
-    .limit(params.limit);
+    .limit(params.limit + 1);
+
+  const hasMore = results.length > params.limit;
+  const trimmed = hasMore ? results.slice(0, params.limit) : results;
 
   return {
-    total,
-    returned: results.length,
-    cameras: results,
-    ...(total > results.length && {
-      note: `Showing ${results.length} of ${total} results. Use the 'query' parameter to narrow your search, or use get_camera_details on specific cameras for full specs.`,
+    returned: trimmed.length,
+    hasMore,
+    cameras: trimmed,
+    ...(hasMore && {
+      note: `More results available. Use the 'query' or 'brand' parameter to narrow your search.`,
     }),
   };
 }
