@@ -13,6 +13,7 @@ const lensFields = [
   { name: "brand", label: "Brand", type: "text" },
   { name: "description", label: "Description", type: "textarea" },
   { name: "systemId", label: "Mount System", type: "select" },
+  { name: "coverage", label: "Coverage", type: "coverage" },
   { name: "url", label: "Reference URL", type: "text" },
   { name: "lensType", label: "Lens Type", type: "text", placeholder: "e.g. Standard, Wide Angle, Telephoto" },
   { name: "era", label: "Era", type: "text", placeholder: "e.g. Modern, Vintage" },
@@ -224,6 +225,19 @@ export default function SubmitForm({ systems }: { systems: SystemOption[] }) {
                     {s.name}
                   </option>
                 ))}
+              </select>
+            ) : field.type === "coverage" ? (
+              <select
+                id={field.name}
+                value={(formData[field.name] as string) ?? ""}
+                onChange={(e) => updateField(field.name, e.target.value || null)}
+                className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
+              >
+                <option value="">Select...</option>
+                <option value="full-frame">Full Frame</option>
+                <option value="aps-c">APS-C</option>
+                <option value="micro-four-thirds">Micro Four Thirds</option>
+                <option value="medium-format">Medium Format</option>
               </select>
             ) : field.type === "boolean" ? (
               <label className="flex items-center gap-2">

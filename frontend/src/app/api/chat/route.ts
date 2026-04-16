@@ -3,7 +3,7 @@ import { gateway } from "@ai-sdk/gateway";
 import { NextRequest } from "next/server";
 import { getClientIP, rateLimitedResponse } from "@/lib/api-utils";
 import { rateLimiters } from "@/lib/rate-limit";
-import { mcpTools } from "@mcp-server/ai-tools.js";
+import { mcpTools } from "lens-db-mcp-server/src/ai-tools.js";
 
 const SYSTEM_PROMPT = `You are a helpful assistant for The Lens DB, a database of camera lenses, cameras, and mount systems.
 

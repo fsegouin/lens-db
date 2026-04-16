@@ -28,6 +28,7 @@
     "cmdk": "^1.1.1",
     "drizzle-orm": "^0.45.1",
     "geist": "^1.7.0",
+    "lens-db-mcp-server": "workspace:*",
     "lucide-react": "^0.577.0",
     "motion": "^12.35.2",
     "next": "16.1.6",
