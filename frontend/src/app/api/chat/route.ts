@@ -21,10 +21,7 @@ RULES FOR RESPONDING TO THE USER:
 - NEVER say things like "the specs field shows" or "according to the tool output" or "the data does not contain". Just answer naturally.
 - If the database doesn't have enough information to fully answer, say what you do know and combine it with your general knowledge about cameras. Make it clear when you're drawing on general knowledge vs. database data.
 - Keep responses concise.
-- FORMATTING IS CRITICAL. When listing multiple items (cameras, lenses, etc.), you MUST use one of these formats:
-  * A markdown table (preferred for comparisons)
-  * A markdown bulleted list with "- " prefix per item
-  NEVER list items as consecutive lines of bold text in a single paragraph.
+- FORMATTING IS CRITICAL. When listing multiple items (cameras, lenses, etc.), ALWAYS use a markdown bulleted list with "- " prefix per item. Do NOT use tables. Do NOT list items as consecutive lines of bold text in a single paragraph.
 - When citing prices, mention they are based on recent second-hand market data.`;
 
 export async function POST(request: NextRequest) {
