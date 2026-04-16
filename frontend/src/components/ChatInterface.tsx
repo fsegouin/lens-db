@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { Send } from "lucide-react";
+import Markdown from "react-markdown";
 
 const transport = new DefaultChatTransport({ api: "/api/chat" });
 
@@ -40,17 +41,19 @@ export default function ChatInterface() {
             className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
           >
             <div
-              className={`max-w-[85%] rounded-lg px-4 py-2 text-sm whitespace-pre-wrap ${
+              className={`max-w-[85%] rounded-lg px-4 py-2 text-sm ${
                 message.role === "user"
-                  ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
-                  : "bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100"
+                  ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 whitespace-pre-wrap"
+                  : "bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100 prose prose-sm prose-zinc dark:prose-invert max-w-none"
               }`}
             >
-              {message.parts
-                .filter((p) => p.type === "text")
-                .map((p, i) => (
-                  <span key={i}>{p.text}</span>
-                ))}
+              {message.role === "user"
+                ? message.parts
+                    .filter((p) => p.type === "text")
+                    .map((p, i) => <span key={i}>{p.text}</span>)
+                : message.parts
+                    .filter((p) => p.type === "text")
+                    .map((p, i) => <Markdown key={i}>{p.text}</Markdown>)}
             </div>
           </div>
         ))}
