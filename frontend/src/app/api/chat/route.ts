@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
   const allMessages: UIMessage[] = body.messages ?? [body.message];
 
   const result = streamText({
-    model: gateway("google/gemini-2.5-flash"),
+    model: gateway("google/gemini-2.0-flash"),
     system: SYSTEM_PROMPT,
     messages: await convertToModelMessages(allMessages),
     tools: mcpTools,
