@@ -51,6 +51,11 @@ IMPORTANT RULES:
 - Mark isRelevant=false for: different models, bundled with a camera body, parts/repair, untested, broken, lots/bundles, accessories only.
 - conditionGrade "skip" should be used for anything not in working condition or with optical defects — these will be filtered out entirely.
 
+MODEL PRECISION — suffixes and designations change the model:
+- "AF" vs "AF-D" vs "AF-S" vs "AF-P" are all different lens lines (e.g. "Nikon AF Nikkor 50mm f/1.4" is NOT the same as "Nikon AF Nikkor 50mm f/1.4D").
+- Suffixes like D, G, E, S, VR, II, III, ED, L, IS, USM, STM, etc. are part of the model identity.
+- Do NOT treat a listing as relevant if it has designations not in the target name, or is missing designations that are in the target name.
+
 Condition grading — be strict, most used lenses are "good", not "excellent":
 - excellent: ONLY if explicitly described as mint, near-mint, [N MINT], [Top MINT], [MINT in Box], or collector grade. Must have no caveats. This is rare — maybe 10-20% of listings.
 - good: The default for working lenses. Includes clean optics, smooth focus ring, clean aperture blades, [Exc+5], [Exc+4], Excellent, Very Good, tested/working, CLA'd.
