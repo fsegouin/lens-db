@@ -12,6 +12,7 @@ export const searchCamerasSchema = z.object({
   yearTo: z.number().optional().describe("Latest year introduced"),
   sensorSize: z.string().optional().describe("Sensor size, e.g. 'Full Frame', 'APS-C'"),
   bodyType: z.string().optional().describe("Body type, e.g. 'SLR', 'Mirrorless', 'Rangefinder'"),
+  filmType: z.string().optional().describe("Film format for film cameras, e.g. '35mm', '120', 'Medium format'. Filters cameras whose specs 'Film type' matches exactly."),
   limit: z.number().min(1).max(100).default(50).describe("Max results to return"),
 });
 
@@ -55,6 +56,9 @@ export async function searchCameras(params: SearchCamerasParams) {
   }
   if (params.bodyType) {
     conditions.push(eq(cameras.bodyType, params.bodyType));
+  }
+  if (params.filmType) {
+    conditions.push(sql`${cameras.specs}->>'Film type' = ${params.filmType}`);
   }
 
   const where = conditions.length > 0 ? and(...conditions) : undefined;
