@@ -35,7 +35,7 @@ export default function ChatInterface() {
   return (
     <div className="flex flex-col flex-1 min-h-0 max-w-3xl mx-auto w-full">
       {/* Messages */}
-      <div className={`flex-1 overflow-y-auto pb-4 ${messages.length === 0 ? "flex items-center justify-center" : "space-y-4"}`}>
+      <div className={`flex-1 overflow-y-auto pb-20 ${messages.length === 0 ? "flex items-center justify-center" : "space-y-4"}`}>
         {messages.length === 0 && (
           <div className="text-center text-zinc-500 dark:text-zinc-400">
             <p className="text-lg font-medium mb-2">Ask me anything about cameras and lenses</p>
@@ -77,30 +77,32 @@ export default function ChatInterface() {
         )}
       </div>
 
-      {/* Error */}
-      {error && (
-        <div className="text-red-500 text-sm mb-2 text-center">
-          Something went wrong. Please try again.
+      {/* Input — fixed to bottom */}
+      <div className="fixed bottom-0 left-0 right-0 z-10 border-t border-zinc-200 dark:border-zinc-700 bg-background/80 backdrop-blur-xl">
+        <div className="mx-auto max-w-3xl px-4 py-3">
+          {error && (
+            <div className="text-red-500 text-sm mb-2 text-center">
+              Something went wrong. Please try again.
+            </div>
+          )}
+          <form onSubmit={handleSubmit} className="flex gap-2">
+            <input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Ask about cameras, lenses, prices..."
+              className="flex-1 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-400 dark:focus:ring-zinc-500"
+              disabled={isLoading}
+            />
+            <button
+              type="submit"
+              disabled={isLoading || !input.trim()}
+              className="rounded-lg bg-zinc-900 dark:bg-zinc-100 px-4 py-2 text-white dark:text-zinc-900 hover:bg-zinc-700 dark:hover:bg-zinc-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <Send className="w-4 h-4" />
+            </button>
+          </form>
         </div>
-      )}
-
-      {/* Input */}
-      <form onSubmit={handleSubmit} className="flex gap-2 border-t border-zinc-200 dark:border-zinc-700 pt-4">
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask about cameras, lenses, prices..."
-          className="flex-1 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-400 dark:focus:ring-zinc-500"
-          disabled={isLoading}
-        />
-        <button
-          type="submit"
-          disabled={isLoading || !input.trim()}
-          className="rounded-lg bg-zinc-900 dark:bg-zinc-100 px-4 py-2 text-white dark:text-zinc-900 hover:bg-zinc-700 dark:hover:bg-zinc-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          <Send className="w-4 h-4" />
-        </button>
-      </form>
+      </div>
     </div>
   );
 }
