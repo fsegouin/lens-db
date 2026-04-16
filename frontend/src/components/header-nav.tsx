@@ -49,7 +49,11 @@ export function HeaderNav() {
               >
                 {link.label}
                 {link.badge && (
-                  <span className="ml-1 inline-flex items-center rounded-full bg-zinc-200 dark:bg-zinc-700 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-zinc-700 dark:text-zinc-200 align-middle">
+                  <span className={`ml-1 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold leading-none align-middle ${
+                    isActive
+                      ? "bg-zinc-400/40 dark:bg-zinc-500/40 text-accent-foreground"
+                      : "bg-zinc-300 dark:bg-zinc-600 text-zinc-700 dark:text-zinc-200"
+                  }`}>
                     {link.badge}
                   </span>
                 )}
