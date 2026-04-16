@@ -25,9 +25,9 @@ export default function ChatInterface() {
   return (
     <div className="flex flex-col flex-1 min-h-0 max-w-3xl mx-auto w-full">
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto space-y-4 pb-4">
+      <div className={`flex-1 overflow-y-auto pb-4 ${messages.length === 0 ? "flex items-center justify-center" : "space-y-4"}`}>
         {messages.length === 0 && (
-          <div className="text-center text-zinc-500 dark:text-zinc-400 mt-20">
+          <div className="text-center text-zinc-500 dark:text-zinc-400">
             <p className="text-lg font-medium mb-2">Ask me anything about cameras and lenses</p>
             <div className="space-y-1 text-sm">
               <p>&ldquo;Which Nikon F camera was the first with autofocus?&rdquo;</p>
