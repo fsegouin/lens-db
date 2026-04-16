@@ -41,7 +41,7 @@ export async function getCameraDetails(params: GetCameraDetailsParams) {
 
   if (exact) return exact;
 
-  // Fallback: fuzzy match on slug or name
+  // Fallback: fuzzy match on slug or name, prefer shortest slug (most likely the base model)
   const [fuzzy] = await db
     .select(CAMERA_FIELDS)
     .from(cameras)
@@ -49,6 +49,7 @@ export async function getCameraDetails(params: GetCameraDetailsParams) {
     .where(
       sql`${cameras.slug} ILIKE ${'%' + params.slug + '%'} OR ${cameras.name} ILIKE ${'%' + params.slug + '%'}`
     )
+    .orderBy(sql`length(${cameras.slug})`)
     .limit(1);
 
   if (fuzzy) return fuzzy;

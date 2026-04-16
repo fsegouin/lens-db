@@ -5,6 +5,7 @@ import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { Send } from "lucide-react";
 import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 const transport = new DefaultChatTransport({ api: "/api/chat" });
 
@@ -53,7 +54,7 @@ export default function ChatInterface() {
                     .map((p, i) => <span key={i}>{p.text}</span>)
                 : message.parts
                     .filter((p) => p.type === "text")
-                    .map((p, i) => <Markdown key={i}>{p.text}</Markdown>)}
+                    .map((p, i) => <Markdown key={i} remarkPlugins={[remarkGfm]}>{p.text}</Markdown>)}
             </div>
           </div>
         ))}
