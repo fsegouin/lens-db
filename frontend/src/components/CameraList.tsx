@@ -364,10 +364,10 @@ export default function CameraList({
               {[
                 { key: "name", label: "Name" },
                 { key: "system", label: "System" },
+                { key: "sensorSize", label: "Sensor Size", sortable: false },
                 { key: "type", label: "Type", sortable: false },
                 { key: "model", label: "Model", sortable: false },
                 { key: "filmType", label: "Film Type", sortable: false },
-                { key: "imagingSensor", label: "Imaging Sensor", sortable: false },
                 { key: "cropFactor", label: "Crop Factor", sortable: false },
                 { key: "year", label: "Year" },
                 { key: "price", label: "Avg Price" },
@@ -433,6 +433,9 @@ export default function CameraList({
                     ) : "\u2014"}
                   </TableCell>
                   <TableCell className="text-zinc-600 dark:text-zinc-400">
+                    {camera.sensorSize || "\u2014"}
+                  </TableCell>
+                  <TableCell className="text-zinc-600 dark:text-zinc-400">
                     {specs["Type"] ? (
                       <button
                         onClick={() => applyFilters({ ...clearAll, type: specs["Type"] })}
@@ -468,9 +471,6 @@ export default function CameraList({
                         {specs["Film type"]}
                       </button>
                     ) : "\u2014"}
-                  </TableCell>
-                  <TableCell className="text-zinc-600 dark:text-zinc-400">
-                    {specs["Imaging sensor"] || specs["Imaging plane"] || "\u2014"}
                   </TableCell>
                   <TableCell className="text-zinc-600 dark:text-zinc-400">
                     {specs["Crop factor"] ? (
