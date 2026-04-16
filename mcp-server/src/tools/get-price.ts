@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 import { getDb, schema } from "../db";
 
 const { cameras, lenses, priceEstimates, priceHistory } = schema;
@@ -14,16 +14,26 @@ export type GetPriceParams = z.infer<typeof getPriceSchema>;
 export async function getPrice(params: GetPriceParams) {
   const db = getDb();
 
-  // Resolve slug to entity ID
+  // Resolve slug to entity ID (exact match, then fuzzy fallback)
   const table = params.entityType === "camera" ? cameras : lenses;
-  const [entity] = await db
+  let [entity] = await db
     .select({ id: table.id, name: table.name })
     .from(table)
     .where(eq(table.slug, params.slug))
     .limit(1);
 
   if (!entity) {
-    return { error: `${params.entityType} not found with slug: ${params.slug}` };
+    [entity] = await db
+      .select({ id: table.id, name: table.name })
+      .from(table)
+      .where(
+        sql`${table.slug} ILIKE ${'%' + params.slug + '%'} OR ${table.name} ILIKE ${'%' + params.slug + '%'}`
+      )
+      .limit(1);
+  }
+
+  if (!entity) {
+    return { error: `${params.entityType} not found: ${params.slug}` };
   }
 
   // Get price estimate
