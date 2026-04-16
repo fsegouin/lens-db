@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 export default function ChatPage() {
   return (
-    <div className="flex flex-col -mb-8" style={{ height: "calc(100dvh - 4rem - 2rem)" }}>
+    <div className="flex flex-col flex-1 min-h-0">
       <h1 className="text-xl font-bold mb-3 shrink-0">Chat with The Lens DB</h1>
       <ChatInterface />
     </div>
