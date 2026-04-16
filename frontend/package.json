@@ -12,6 +12,8 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@ai-sdk/gateway": "^3.0.101",
+    "@ai-sdk/react": "^3.0.166",
     "@aws-sdk/client-s3": "^3.1005.0",
     "@base-ui/react": "^1.2.0",
     "@neondatabase/serverless": "^1.0.2",
