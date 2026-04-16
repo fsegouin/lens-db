@@ -190,6 +190,8 @@ export default function LensList({
     const seriesVal = overrides?.series ?? series;
     const sortVal = overrides?.sort ?? sort;
     const orderVal = overrides?.order ?? order;
+    const priceMinVal = overrides?.priceMin ?? formPriceMin;
+    const priceMaxVal = overrides?.priceMax ?? formPriceMax;
     if (qVal) params.set("q", qVal);
     if (brandVal) params.set("brand", brandVal);
     if (systemVal) params.set("system", systemVal);
@@ -206,6 +208,8 @@ export default function LensList({
     if (seriesVal) params.set("series", seriesVal);
     if (sortVal) params.set("sort", sortVal);
     if (orderVal) params.set("order", orderVal);
+    if (priceMinVal) params.set("priceMin", priceMinVal);
+    if (priceMaxVal) params.set("priceMax", priceMaxVal);
     const qs = params.toString();
     router.push(qs ? `/lenses?${qs}` : "/lenses");
   }
@@ -387,6 +391,28 @@ export default function LensList({
             className="h-10 w-28"
           />
         </div>
+        <div>
+          <label className="sr-only" htmlFor="lens-price-min">Min price</label>
+          <Input
+            id="lens-price-min"
+            type="number"
+            placeholder="Min $"
+            value={formPriceMin}
+            onChange={(e) => { setFormPriceMin(e.target.value); debouncedApply({ priceMin: e.target.value }); }}
+            className="h-10 w-24"
+          />
+        </div>
+        <div>
+          <label className="sr-only" htmlFor="lens-price-max">Max price</label>
+          <Input
+            id="lens-price-max"
+            type="number"
+            placeholder="Max $"
+            value={formPriceMax}
+            onChange={(e) => { setFormPriceMax(e.target.value); debouncedApply({ priceMax: e.target.value }); }}
+            className="h-10 w-24"
+          />
+        </div>
       </div>
 
       {/* Results */}
@@ -403,6 +429,7 @@ export default function LensList({
                 { key: "type", label: "Type", sortable: false, className: "w-20" },
                 { key: "series", label: "Series", sortable: false },
                 { key: "year", label: "Year" },
+                { key: "price", label: "Avg Price" },
                 { key: "weight", label: "Weight" },
                 { key: "rating", label: "Rating" },
               ].map((col) => (
@@ -443,7 +470,7 @@ export default function LensList({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {items.map(({ lens, system, series: lensSeries }) => (
+            {items.map(({ lens, system, series: lensSeries, avgPrice }) => (
               <TableRow key={lens.id}>
                 <TableCell className="max-w-[22rem] whitespace-normal">
                   <Link
@@ -562,6 +589,11 @@ export default function LensList({
                   ) : "\u2014"}
                 </TableCell>
                 <TableCell className="text-zinc-600 dark:text-zinc-400">
+                  {avgPrice != null
+                    ? `$${avgPrice.toLocaleString()}`
+                    : "\u2014"}
+                </TableCell>
+                <TableCell className="text-zinc-600 dark:text-zinc-400">
                   {lens.weightG ? `${lens.weightG}g` : "\u2014"}
                 </TableCell>
                 <TableCell className="text-zinc-600 dark:text-zinc-400">
@@ -573,10 +605,10 @@ export default function LensList({
                 </TableCell>
               </TableRow>
             ))}
-            {loading && <TableSkeleton columns={10} rows={3} />}
+            {loading && <TableSkeleton columns={11} rows={3} />}
             {nextCursor !== null && (
               <TableRow>
-                <TableCell colSpan={10} className="p-0">
+                <TableCell colSpan={11} className="p-0">
                   <div ref={sentinelRef} className="h-px w-full" />
                 </TableCell>
               </TableRow>
