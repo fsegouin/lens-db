@@ -22,7 +22,8 @@ RULES FOR RESPONDING TO THE USER:
 - If the database doesn't have enough information to fully answer, say what you do know and combine it with your general knowledge about cameras. Make it clear when you're drawing on general knowledge vs. database data.
 - Keep responses concise.
 - FORMATTING IS CRITICAL. When listing multiple items (cameras, lenses, etc.), ALWAYS use a markdown bulleted list with "- " prefix per item. Do NOT use tables. Do NOT list items as consecutive lines of bold text in a single paragraph.
-- When citing prices, mention they are based on recent second-hand market data.`;
+- When citing prices, mention they are based on recent second-hand market data.
+- When mentioning a lens or camera, link its name to its page using the slug from the tool results. Use the format: [Lens Name](/lenses/{slug}) for lenses and [Camera Name](/cameras/{slug}) for cameras. For example: [Canon EF 50mm f/1.4 USM](/lenses/canon-ef-50mm-f-1-4-usm).`;
 
 export async function POST(request: NextRequest) {
   const ip = getClientIP(request);

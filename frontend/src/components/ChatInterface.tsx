@@ -82,7 +82,7 @@ export default function ChatInterface() {
               className={`max-w-[85%] rounded-lg ${
                 message.role === "user"
                   ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 whitespace-pre-wrap px-4 py-2 text-sm"
-                  : "bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100 px-5 py-4 prose prose-zinc dark:prose-invert prose-p:leading-relaxed max-w-none text-[0.9rem] [&>*:first-child]:mt-0 [&>*:last-child]:mb-0"
+                  : "bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100 px-5 py-4 prose prose-zinc dark:prose-invert prose-p:leading-relaxed prose-a:text-blue-500 prose-a:no-underline hover:prose-a:underline max-w-none text-[0.9rem] [&>*:first-child]:mt-0 [&>*:last-child]:mb-0"
               }`}
             >
               {message.role === "user"
