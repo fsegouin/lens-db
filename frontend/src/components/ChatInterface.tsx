@@ -11,12 +11,21 @@ const transport = new DefaultChatTransport({ api: "/api/chat" });
 
 /**
  * Pre-process LLM text so it renders well as markdown.
- * Adds blank lines between lines that look like separate items
- * (e.g. lines starting with bold text) so markdown doesn't
- * collapse them into a single paragraph.
+ * Gemini often outputs lists as consecutive lines without blank lines,
+ * which markdown collapses into one paragraph. This inserts blank lines
+ * to force separate paragraphs/list items.
  */
 function formatForMarkdown(text: string): string {
-  return text.replace(/\n(?=\*\*)/g, "\n\n");
+  return text
+    // Blank line before lines starting with bold
+    .replace(/\n(?=\*\*)/g, "\n\n")
+    // Blank line before lines starting with bullet markers
+    .replace(/\n(?=[-*•] )/g, "\n\n")
+    // Convert lines that look like "Name (details):" or "Name: details"
+    // into bullet points if they aren't already
+    .replace(/\n(?=[A-Z][A-Za-z ]+(?:\([^)]+\))?:)/g, "\n\n")
+    // Collapse any triple+ newlines back to double
+    .replace(/\n{3,}/g, "\n\n");
 }
 
 export default function ChatInterface() {
