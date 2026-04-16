@@ -15,7 +15,7 @@ import {
   getSystemInfoSchema,
   getCompatibleLenses,
   getCompatibleLensesSchema,
-} from "./tools/index.js";
+} from "./tools/index";
 
 const server = new McpServer({
   name: "lens-db",
