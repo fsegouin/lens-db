@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { eq, and, desc } from "drizzle-orm";
-import { getDb, schema } from "../db.js";
+import { getDb, schema } from "../db";
 
 const { cameras, lenses, priceEstimates, priceHistory } = schema;
 

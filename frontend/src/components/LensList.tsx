@@ -17,6 +17,7 @@ type LensRow = {
   lens: typeof lenses.$inferSelect;
   system: typeof systems.$inferSelect | null;
   series: SeriesInfo[];
+  avgPrice: number | null;
 };
 
 type SystemOption = { name: string; slug: string };
@@ -63,6 +64,8 @@ export default function LensList({
   const series = searchParams.get("series") || "";
   const sort = searchParams.get("sort") || "";
   const order = searchParams.get("order") || "";
+  const priceMin = searchParams.get("priceMin") || "";
+  const priceMax = searchParams.get("priceMax") || "";
 
   // Form state
   const [formQ, setFormQ] = useState(q);
@@ -74,6 +77,8 @@ export default function LensList({
   const [formMinAperture, setFormMinAperture] = useState(minAperture);
   const [formMaxAperture, setFormMaxAperture] = useState(maxAperture);
   const [formYear, setFormYear] = useState(year);
+  const [formPriceMin, setFormPriceMin] = useState(priceMin);
+  const [formPriceMax, setFormPriceMax] = useState(priceMax);
 
   function dedupeLensRows(rows: LensRow[]) {
     const seen = new Set<number>();
@@ -95,7 +100,9 @@ export default function LensList({
     setFormMinAperture(minAperture);
     setFormMaxAperture(maxAperture);
     setFormYear(year);
-  }, [q, brand, system, type, minFocal, maxFocal, minAperture, maxAperture, year]);
+    setFormPriceMin(priceMin);
+    setFormPriceMax(priceMax);
+  }, [q, brand, system, type, minFocal, maxFocal, minAperture, maxAperture, year, priceMin, priceMax]);
 
   // Reset list when initial data changes (filters applied via server component)
   useEffect(() => {
@@ -122,10 +129,12 @@ export default function LensList({
       if (series) params.set("series", series);
       if (sort) params.set("sort", sort);
       if (order) params.set("order", order);
+      if (priceMin) params.set("priceMin", priceMin);
+      if (priceMax) params.set("priceMax", priceMax);
       params.set("cursor", String(cursor));
       return `/api/lenses?${params.toString()}`;
     },
-    [q, brand, system, type, minFocal, maxFocal, minAperture, maxAperture, year, lensType, era, productionStatus, coverage, series, sort, order]
+    [q, brand, system, type, minFocal, maxFocal, minAperture, maxAperture, year, lensType, era, productionStatus, coverage, series, sort, order, priceMin, priceMax]
   );
 
   const loadMore = useCallback(async () => {
@@ -163,7 +172,7 @@ export default function LensList({
 
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  function applyFilters(overrides: { q?: string; brand?: string; system?: string; type?: string; minFocal?: string; maxFocal?: string; minAperture?: string; maxAperture?: string; year?: string; lensType?: string; era?: string; productionStatus?: string; coverage?: string; series?: string; sort?: string; order?: string } = {}) {
+  function applyFilters(overrides: { q?: string; brand?: string; system?: string; type?: string; minFocal?: string; maxFocal?: string; minAperture?: string; maxAperture?: string; year?: string; lensType?: string; era?: string; productionStatus?: string; coverage?: string; series?: string; sort?: string; order?: string; priceMin?: string; priceMax?: string } = {}) {
     const params = new URLSearchParams();
     const qVal = overrides?.q ?? formQ;
     const brandVal = overrides?.brand ?? formBrand;

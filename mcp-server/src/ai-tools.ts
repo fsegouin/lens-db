@@ -14,7 +14,7 @@ import {
   getSystemInfoSchema,
   getCompatibleLenses,
   getCompatibleLensesSchema,
-} from "./tools/index.js";
+} from "./tools/index";
 
 export const mcpTools = {
   search_cameras: tool({
