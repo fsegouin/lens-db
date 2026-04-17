@@ -16,8 +16,11 @@ export const searchLensesSchema = z.object({
   isMacro: z.boolean().optional().describe("Filter for macro lenses"),
   hasAutofocus: z.boolean().optional().describe("Filter for autofocus lenses"),
   hasStabilization: z.boolean().optional().describe("Filter for stabilized lenses"),
+  coverage: z.enum(["full-frame", "aps-c", "micro-four-thirds", "medium-format"]).optional().describe("Image circle coverage"),
   yearFrom: z.number().optional().describe("Earliest year introduced"),
   yearTo: z.number().optional().describe("Latest year introduced"),
+  priceMin: z.number().optional().describe("Minimum second-hand median price in USD"),
+  priceMax: z.number().optional().describe("Maximum second-hand median price in USD"),
   limit: z.number().min(1).max(100).default(50).describe("Max results to return"),
 });
 
@@ -70,11 +73,20 @@ export async function searchLenses(params: SearchLensesParams) {
   if (params.hasStabilization !== undefined) {
     conditions.push(eq(lenses.hasStabilization, params.hasStabilization));
   }
+  if (params.coverage) {
+    conditions.push(eq(lenses.coverage, params.coverage));
+  }
   if (params.yearFrom) {
     conditions.push(gte(lenses.yearIntroduced, params.yearFrom));
   }
   if (params.yearTo) {
     conditions.push(lte(lenses.yearIntroduced, params.yearTo));
+  }
+  if (params.priceMin !== undefined) {
+    conditions.push(gte(priceEstimates.medianPrice, params.priceMin));
+  }
+  if (params.priceMax !== undefined) {
+    conditions.push(lte(priceEstimates.medianPrice, params.priceMax));
   }
 
   const where = conditions.length > 0 ? and(...conditions) : undefined;
