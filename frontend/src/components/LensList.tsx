@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { ScrollToTop } from "@/components/scroll-to-top";
+import { trackEvent } from "@/lib/analytics";
 
 type SeriesInfo = { name: string; slug: string };
 
@@ -220,11 +221,9 @@ export default function LensList({
   }
 
   function handleSort(column: string) {
-    if (sort === column) {
-      applyFilters({ sort: column, order: order === "asc" ? "desc" : "asc" });
-    } else {
-      applyFilters({ sort: column, order: "asc" });
-    }
+    const nextOrder = sort === column ? (order === "asc" ? "desc" : "asc") : "asc";
+    trackEvent("lens_sort_change", { column, order: nextOrder });
+    applyFilters({ sort: column, order: nextOrder });
   }
 
   function handleSearchChange(value: string) {
@@ -252,7 +251,7 @@ export default function LensList({
           <select
             id="lens-brand"
             value={formBrand}
-            onChange={(e) => { setFormBrand(e.target.value); applyFilters({ brand: e.target.value }); }}
+            onChange={(e) => { setFormBrand(e.target.value); trackEvent("lens_filter_apply", { filter: "brand", value: e.target.value }); applyFilters({ brand: e.target.value }); }}
             className="filter-select h-10 rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
           >
             <option value="">All brands</option>
@@ -268,7 +267,7 @@ export default function LensList({
           <select
             id="lens-system"
             value={formSystem}
-            onChange={(e) => { setFormSystem(e.target.value); applyFilters({ system: e.target.value }); }}
+            onChange={(e) => { setFormSystem(e.target.value); trackEvent("lens_filter_apply", { filter: "system", value: e.target.value }); applyFilters({ system: e.target.value }); }}
             className="filter-select h-10 rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
           >
             <option value="">All systems</option>
@@ -286,6 +285,7 @@ export default function LensList({
             value={lensType === "teleconverter" ? "teleconverter" : formType}
             onChange={(e) => {
               const val = e.target.value;
+              trackEvent("lens_filter_apply", { filter: "type", value: val });
               if (val === "teleconverter") {
                 setFormType("");
                 applyFilters({ type: "", lensType: "teleconverter" });
@@ -308,7 +308,7 @@ export default function LensList({
           <select
             id="lens-series"
             value={series}
-            onChange={(e) => applyFilters({ series: e.target.value })}
+            onChange={(e) => { trackEvent("lens_filter_apply", { filter: "series", value: e.target.value }); applyFilters({ series: e.target.value }); }}
             className="filter-select h-10 rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
           >
             <option value="">All series</option>
@@ -324,7 +324,7 @@ export default function LensList({
           <select
             id="lens-coverage"
             value={coverage}
-            onChange={(e) => applyFilters({ coverage: e.target.value })}
+            onChange={(e) => { trackEvent("lens_filter_apply", { filter: "coverage", value: e.target.value }); applyFilters({ coverage: e.target.value }); }}
             className="filter-select h-10 rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
           >
             <option value="">All coverage</option>

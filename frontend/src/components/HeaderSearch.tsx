@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSearch } from "@/components/search-context";
+import { trackEvent } from "@/lib/analytics";
 
 interface SearchResult {
   id: number;
@@ -33,6 +34,13 @@ const SECTIONS: {
   { key: "systems", label: "Systems", href: (s) => `/systems/${s}` },
   { key: "collections", label: "Collections", href: (s) => `/collections/${s}` },
 ];
+
+const SECTION_RESULT_TYPE: Record<keyof SearchResults, "lens" | "camera" | "system" | "collection"> = {
+  lenses: "lens",
+  cameras: "camera",
+  systems: "system",
+  collections: "collection",
+};
 
 function useSearchLogic() {
   const { open, setOpen } = useSearch();
@@ -85,8 +93,10 @@ function useSearchLogic() {
     if (e.key === "Escape") {
       handleClose();
     } else if (e.key === "Enter" && query.trim()) {
+      const q = query.trim();
+      trackEvent("search_submit", { query: q, source: "header" });
       handleClose();
-      router.push(`/search?q=${encodeURIComponent(query.trim())}`);
+      router.push(`/search?q=${encodeURIComponent(q)}`);
     }
   }
 
@@ -142,7 +152,14 @@ function SearchDropdown({
                 <Link
                   key={item.id}
                   href={href(item.slug)}
-                  onClick={handleClose}
+                  onClick={() => {
+                    trackEvent("search_result_click", {
+                      query: query.trim(),
+                      result_type: SECTION_RESULT_TYPE[key],
+                      result_slug: item.slug,
+                    });
+                    handleClose();
+                  }}
                   className="block px-4 py-2 text-sm text-zinc-700 transition-colors hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
                 >
                   {item.name}
@@ -155,7 +172,10 @@ function SearchDropdown({
       {hasResults && (
         <Link
           href={`/search?q=${encodeURIComponent(query.trim())}`}
-          onClick={handleClose}
+          onClick={() => {
+            trackEvent("search_submit", { query: query.trim(), source: "header" });
+            handleClose();
+          }}
           className="block border-t border-zinc-100 px-4 py-2 text-center text-sm font-medium text-zinc-500 transition-colors hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-800"
         >
           View all results
