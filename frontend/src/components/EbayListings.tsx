@@ -1,11 +1,13 @@
 import { headers } from "next/headers";
 import { Badge } from "@/components/ui/badge";
+import EbayTrackedLink from "@/components/EbayTrackedLink";
 import { buildEbaySearchQuery, buildEbayLensSearchQuery } from "@/lib/ebay-search-query";
 import { getEbayAccessToken } from "@/lib/ebay-auth";
 
 interface EbayListingsProps {
   query: string;
   entityType?: "camera" | "lens";
+  entitySlug: string;
 }
 
 interface EbayListing {
@@ -100,7 +102,7 @@ async function fetchListings(query: string, countryCode: string, entityType: "ca
   }
 }
 
-export default async function EbayListings({ query, entityType = "camera" }: EbayListingsProps) {
+export default async function EbayListings({ query, entityType = "camera", entitySlug }: EbayListingsProps) {
   const hdrs = await headers();
   const countryCode = hdrs.get("x-vercel-ip-country") ?? "US";
   const listings = await fetchListings(query, countryCode, entityType);
@@ -117,23 +119,30 @@ export default async function EbayListings({ query, entityType = "camera" }: Eba
         <h3 className="text-sm font-semibold tracking-wider text-muted-foreground uppercase">
           eBay Listings
         </h3>
-        <a
+        <EbayTrackedLink
           href={affiliateUrl(searchQuery)}
-          target="_blank"
-          rel="noopener noreferrer"
+          event="ebay_view_all_click"
+          eventProps={{ entity_type: entityType, entity_slug: entitySlug }}
           className="text-xs text-zinc-400 underline hover:text-zinc-600 dark:hover:text-zinc-300"
         >
           View all on eBay
-        </a>
+        </EbayTrackedLink>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
         {listings.map((listing) => (
-          <a
+          <EbayTrackedLink
             key={listing.itemId}
             href={listing.itemWebUrl}
-            target="_blank"
-            rel="noopener noreferrer"
+            event="ebay_listing_click"
+            eventProps={{
+              entity_type: entityType,
+              entity_slug: entitySlug,
+              item_id: listing.itemId,
+              price: Number(listing.price.value),
+              condition: listing.condition,
+              listing_type: listing.listingType,
+            }}
             className="flex gap-3 rounded-lg border border-zinc-200 p-3 transition-colors hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900/50"
           >
             {listing.imageUrl && (
@@ -166,7 +175,7 @@ export default async function EbayListings({ query, entityType = "camera" }: Eba
                 </span>
               </div>
             </div>
-          </a>
+          </EbayTrackedLink>
         ))}
       </div>
 

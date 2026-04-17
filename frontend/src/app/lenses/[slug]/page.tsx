@@ -248,7 +248,7 @@ export default async function LensDetailPage({
         />
 
         <Suspense fallback={<EbayListingsSkeleton />}>
-          <EbayListings query={lens.name} entityType="lens" />
+          <EbayListings query={lens.name} entityType="lens" entitySlug={lens.slug} />
         </Suspense>
 
         <div className="space-y-5">
