@@ -11,7 +11,11 @@ export const searchCamerasSchema = z.object({
   yearFrom: z.number().optional().describe("Earliest year introduced"),
   yearTo: z.number().optional().describe("Latest year introduced"),
   sensorSize: z.string().optional().describe("Sensor size, e.g. 'Full Frame', 'APS-C'"),
+  sensorType: z.string().optional().describe("Sensor type, e.g. 'CMOS', 'CCD', 'Film'. Use 'Film' to restrict to film cameras, or a digital sensor type to exclude them."),
   bodyType: z.string().optional().describe("Body type, e.g. 'SLR', 'Mirrorless', 'Rangefinder'"),
+  filmType: z.string().optional().describe("Film format for film cameras, e.g. '35mm', '120', 'Medium format'. Filters cameras whose specs 'Film type' matches exactly."),
+  priceMin: z.number().optional().describe("Minimum second-hand median price in USD"),
+  priceMax: z.number().optional().describe("Maximum second-hand median price in USD"),
   limit: z.number().min(1).max(100).default(50).describe("Max results to return"),
 });
 
@@ -53,8 +57,20 @@ export async function searchCameras(params: SearchCamerasParams) {
   if (params.sensorSize) {
     conditions.push(eq(cameras.sensorSize, params.sensorSize));
   }
+  if (params.sensorType) {
+    conditions.push(eq(cameras.sensorType, params.sensorType));
+  }
   if (params.bodyType) {
     conditions.push(eq(cameras.bodyType, params.bodyType));
+  }
+  if (params.filmType) {
+    conditions.push(sql`${cameras.specs}->>'Film type' = ${params.filmType}`);
+  }
+  if (params.priceMin !== undefined) {
+    conditions.push(gte(priceEstimates.medianPrice, params.priceMin));
+  }
+  if (params.priceMax !== undefined) {
+    conditions.push(lte(priceEstimates.medianPrice, params.priceMax));
   }
 
   const where = conditions.length > 0 ? and(...conditions) : undefined;
