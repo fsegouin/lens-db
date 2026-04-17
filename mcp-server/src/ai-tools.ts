@@ -19,13 +19,13 @@ import {
 export const mcpTools = {
   search_cameras: tool({
     description:
-      "Search for cameras (both digital and film) by name, mount system, year, sensor size, body type, or film type. Returns a summary list. Use get_camera_details for full specs.",
+      "Search for cameras (both digital and film) by name, mount system, year, sensor size/type, body type, film type, or second-hand price range. Returns a summary list. Use get_camera_details for full specs.",
     inputSchema: searchCamerasSchema,
     execute: async (params) => searchCameras(params),
   }),
   search_lenses: tool({
     description:
-      "Search for lenses by name, mount system, brand, focal length, aperture, or features. Returns a summary list. Use get_lens_details for full specs.",
+      "Search for lenses by name, mount system, brand, focal length, aperture, coverage, features, or second-hand price range. Returns a summary list. Use get_lens_details for full specs.",
     inputSchema: searchLensesSchema,
     execute: async (params) => searchLenses(params),
   }),
