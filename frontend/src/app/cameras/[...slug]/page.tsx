@@ -183,7 +183,7 @@ export default async function CameraDetailPage({
         />
 
         <Suspense fallback={<EbayListingsSkeleton />}>
-          <EbayListings query={camera.name} />
+          <EbayListings query={camera.name} entitySlug={camera.slug} />
         </Suspense>
 
         <RatingWidget cameraId={camera.id} />

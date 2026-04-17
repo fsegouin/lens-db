@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowUpDown, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { formatMagnification } from "@/lib/format-magnification";
+import { trackEvent } from "@/lib/analytics";
 import { useEntitySearch, type EntityType } from "@/hooks/use-entity-search";
 import { Button } from "@/components/ui/button";
 import {
@@ -357,6 +358,11 @@ export default function CompareClient() {
     const key = `${item1.type}-${Math.min(item1.data.id, item2.data.id)}-${Math.max(item1.data.id, item2.data.id)}`;
     if (trackedRef.current === key) return;
     trackedRef.current = key;
+
+    const [slugA, slugB] = item1.data.id < item2.data.id
+      ? [item1.data.slug, item2.data.slug]
+      : [item2.data.slug, item1.data.slug];
+    trackEvent("comparison_start", { entity_type: item1.type, slug_1: slugA, slug_2: slugB });
 
     fetch("/api/comparisons", {
       method: "POST",

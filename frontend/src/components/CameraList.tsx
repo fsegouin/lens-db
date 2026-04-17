@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { ScrollToTop } from "@/components/scroll-to-top";
+import { trackEvent } from "@/lib/analytics";
 
 type CameraRow = {
   camera: typeof cameras.$inferSelect;
@@ -215,11 +216,9 @@ export default function CameraList({
   }
 
   function handleSort(column: string) {
-    if (sort === column) {
-      applyFilters({ sort: column, order: order === "asc" ? "desc" : "asc" });
-    } else {
-      applyFilters({ sort: column, order: "asc" });
-    }
+    const nextOrder = sort === column ? (order === "asc" ? "desc" : "asc") : "asc";
+    trackEvent("camera_sort_change", { column, order: nextOrder });
+    applyFilters({ sort: column, order: nextOrder });
   }
 
   function handleSearchChange(value: string) {
@@ -249,7 +248,7 @@ export default function CameraList({
           <select
             id="camera-system"
             value={formSystem}
-            onChange={(e) => { setFormSystem(e.target.value); applyFilters({ system: e.target.value }); }}
+            onChange={(e) => { setFormSystem(e.target.value); trackEvent("camera_filter_apply", { filter: "system", value: e.target.value }); applyFilters({ system: e.target.value }); }}
             className="filter-select h-10 rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
           >
             <option value="">All systems</option>
@@ -265,7 +264,7 @@ export default function CameraList({
           <select
             id="camera-sensor-size"
             value={formSensorSize}
-            onChange={(e) => { setFormSensorSize(e.target.value); applyFilters({ sensorSize: e.target.value }); }}
+            onChange={(e) => { setFormSensorSize(e.target.value); trackEvent("camera_filter_apply", { filter: "sensorSize", value: e.target.value }); applyFilters({ sensorSize: e.target.value }); }}
             className="filter-select h-10 rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
           >
             <option value="">All sensor sizes</option>
@@ -279,7 +278,7 @@ export default function CameraList({
           <select
             id="camera-type"
             value={formType}
-            onChange={(e) => { setFormType(e.target.value); applyFilters({ type: e.target.value }); }}
+            onChange={(e) => { setFormType(e.target.value); trackEvent("camera_filter_apply", { filter: "type", value: e.target.value }); applyFilters({ type: e.target.value }); }}
             className="filter-select h-10 rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
           >
             <option value="">All types</option>
@@ -307,7 +306,7 @@ export default function CameraList({
           <select
             id="camera-film-type"
             value={formFilmType}
-            onChange={(e) => { setFormFilmType(e.target.value); applyFilters({ filmType: e.target.value }); }}
+            onChange={(e) => { setFormFilmType(e.target.value); trackEvent("camera_filter_apply", { filter: "filmType", value: e.target.value }); applyFilters({ filmType: e.target.value }); }}
             className="filter-select h-10 rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
           >
             <option value="">All film types</option>
@@ -321,7 +320,7 @@ export default function CameraList({
           <select
             id="camera-sensor-type"
             value={formSensorType}
-            onChange={(e) => { setFormSensorType(e.target.value); applyFilters({ sensorType: e.target.value }); }}
+            onChange={(e) => { setFormSensorType(e.target.value); trackEvent("camera_filter_apply", { filter: "sensorType", value: e.target.value }); applyFilters({ sensorType: e.target.value }); }}
             className="filter-select h-10 rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
           >
             <option value="">All sensors</option>
@@ -335,7 +334,7 @@ export default function CameraList({
           <select
             id="camera-crop-factor"
             value={formCropFactor}
-            onChange={(e) => { setFormCropFactor(e.target.value); applyFilters({ cropFactor: e.target.value }); }}
+            onChange={(e) => { setFormCropFactor(e.target.value); trackEvent("camera_filter_apply", { filter: "cropFactor", value: e.target.value }); applyFilters({ cropFactor: e.target.value }); }}
             className="filter-select h-10 rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
           >
             <option value="">All crop factors</option>
