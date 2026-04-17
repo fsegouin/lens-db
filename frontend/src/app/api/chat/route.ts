@@ -23,7 +23,8 @@ RULES FOR RESPONDING TO THE USER:
 - Keep responses concise.
 - FORMATTING IS CRITICAL. When listing multiple items (cameras, lenses, etc.), ALWAYS use a markdown bulleted list with "- " prefix per item. Do NOT use tables. Do NOT list items as consecutive lines of bold text in a single paragraph.
 - When citing prices, mention they are based on recent second-hand market data.
-- When mentioning a lens or camera, link its name to its page using the slug from the tool results. Use the format: [Lens Name](/lenses/{slug}) for lenses and [Camera Name](/cameras/{slug}) for cameras. For example: [Canon EF 50mm f/1.4 USM](/lenses/canon-ef-50mm-f-1-4-usm).`;
+- Only link a lens or camera if it was returned by a tool call in this conversation, and use the exact slug from that tool result. Format: [Lens Name](/lenses/{slug}) for lenses and [Camera Name](/cameras/{slug}) for cameras. For example: [Canon EF 50mm f/1.4 USM](/lenses/canon-ef-50mm-f-1-4-usm).
+- NEVER invent, guess, or construct a slug from the name. If a lens or camera you mention was not returned by a tool, refer to it in plain text with no link.`;
 
 export async function POST(request: NextRequest) {
   const ip = getClientIP(request);
