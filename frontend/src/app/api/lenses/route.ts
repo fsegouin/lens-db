@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { lenses, systems, lensSeries, lensSeriesMemberships, priceEstimates } from "@/db/schema";
-import { asc, desc, eq, and, gte, lte, sql, inArray } from "drizzle-orm";
+import { asc, desc, eq, and, gte, lte, sql, inArray, isNull } from "drizzle-orm";
 import { getClientIP, rateLimitedResponse } from "@/lib/api-utils";
 import { rateLimiters } from "@/lib/rate-limit";
 
@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
   const avgPrice = priceEstimates.medianPrice;
 
   try {
-    const conditions = [];
+    const conditions: ReturnType<typeof and>[] = [isNull(lenses.mergedIntoId)];
 
     if (q) {
       // Split query into words, match each with word boundaries

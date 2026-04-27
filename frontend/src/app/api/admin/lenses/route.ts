@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { lenses, systems, lensTags, tags, lensSeriesMemberships, lensSeries } from "@/db/schema";
 import { requireAdminAPI } from "@/lib/admin-auth";
-import { and, sql, eq, inArray } from "drizzle-orm";
+import { and, sql, eq, inArray, isNull } from "drizzle-orm";
 import { buildNameSearch } from "@/lib/search";
 import { buildOrderBy } from "@/lib/admin-sort";
 
@@ -19,7 +19,12 @@ export async function GET(request: NextRequest) {
   const sortParam = searchParams.get("sort");
   const orderParam = searchParams.get("order");
 
-  const conditions = q ? buildNameSearch(lenses.name, q) : [];
+  const showMerged = searchParams.get("show_merged") === "1";
+
+  const conditions: ReturnType<typeof and>[] = q ? buildNameSearch(lenses.name, q) : [];
+  if (!showMerged) {
+    conditions.push(isNull(lenses.mergedIntoId));
+  }
   const where = conditions.length > 0 ? and(...conditions) : undefined;
 
   const sortMap = {
