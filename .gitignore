@@ -13,3 +13,4 @@ __pycache__/
 /docs/plans/
 .vercel
 .env*.local
+.worktrees/
