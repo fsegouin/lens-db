@@ -5,48 +5,21 @@
  */
 
 import { neon } from '@neondatabase/serverless';
-import { S3Client, PutObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
-import sharp from 'sharp';
+import { objectExists, processAndUpload, R2_PUBLIC } from './lib/r2-upload.mjs';
 import fs from 'fs';
 
 const sql = neon(process.env.DATABASE_URL);
 const dryRun = process.argv.includes('--dry-run');
 
-const {
-  R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME, R2_PUBLIC_URL,
-} = process.env;
-
-const s3 = new S3Client({
-  region: 'auto',
-  endpoint: `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
-  credentials: { accessKeyId: R2_ACCESS_KEY_ID, secretAccessKey: R2_SECRET_ACCESS_KEY },
-});
-
 const toReplace = JSON.parse(fs.readFileSync('../dpreview-lenses-to-replace-images.json', 'utf8'));
 
 const delay = ms => new Promise(r => setTimeout(r, ms));
-
-async function objectExists(key) {
-  try {
-    await s3.send(new HeadObjectCommand({ Bucket: R2_BUCKET_NAME, Key: key }));
-    return true;
-  } catch { return false; }
-}
 
 async function downloadResizeUpload(sourceUrl, r2Key) {
   const resp = await fetch(sourceUrl);
   if (!resp.ok) return null;
   const buffer = Buffer.from(await resp.arrayBuffer());
-  const resized = await sharp(buffer)
-    .resize(500, 500, { fit: 'inside', withoutEnlargement: true })
-    .webp({ quality: 80 })
-    .toBuffer();
-  await s3.send(new PutObjectCommand({
-    Bucket: R2_BUCKET_NAME, Key: r2Key, Body: resized,
-    ContentType: 'image/webp',
-    CacheControl: 'public, max-age=31536000, immutable',
-  }));
-  return `${R2_PUBLIC_URL}/${r2Key}`;
+  return processAndUpload(buffer, r2Key);
 }
 
 console.log(`Processing ${toReplace.length} lenses (dryRun=${dryRun})`);
@@ -65,14 +38,14 @@ for (let i = 0; i < toReplace.length; i++) {
     const r2Key = `lenses/${slug}/${j + 1}.webp`;
 
     if (dryRun) {
-      newImages.push({ src: `${R2_PUBLIC_URL}/${r2Key}`, alt: lens.name });
+      newImages.push({ src: `${R2_PUBLIC}/${r2Key}`, alt: lens.name });
       continue;
     }
 
     try {
       const exists = await objectExists(r2Key);
       if (exists) {
-        newImages.push({ src: `${R2_PUBLIC_URL}/${r2Key}`, alt: lens.name });
+        newImages.push({ src: `${R2_PUBLIC}/${r2Key}`, alt: lens.name });
         continue;
       }
       const publicUrl = await downloadResizeUpload(imgUrl, r2Key);

@@ -15,6 +15,7 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const q = searchParams.get("q");
+  const missingImages = searchParams.get("missing_images") === "1";
   const cursor = parseInt(searchParams.get("cursor") || "0", 10);
   const sortParam = searchParams.get("sort");
   const orderParam = searchParams.get("order");
@@ -22,6 +23,11 @@ export async function GET(request: NextRequest) {
   const showMerged = searchParams.get("show_merged") === "1";
 
   const conditions: ReturnType<typeof and>[] = q ? buildNameSearch(lenses.name, q) : [];
+  if (missingImages) {
+    conditions.push(
+      sql`(jsonb_typeof(${lenses.images}) <> 'array' OR jsonb_array_length(${lenses.images}) = 0)`
+    );
+  }
   if (!showMerged) {
     conditions.push(isNull(lenses.mergedIntoId));
   }

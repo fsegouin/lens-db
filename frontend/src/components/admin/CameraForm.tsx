@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import ImageUploader from "@/components/admin/ImageUploader";
 
 interface CameraData {
   id: number;
@@ -64,7 +65,7 @@ export default function CameraForm({ camera, systems }: CameraFormProps) {
       ([k, v]) => [k, String(v ?? "")]
     );
   });
-  const [images, setImages] = useState(camera?.images ? JSON.stringify(camera.images, null, 2) : "");
+  const initialImages = (Array.isArray(camera?.images) ? camera.images : []) as { src: string; alt: string }[];
 
   const isEdit = !!camera;
 
@@ -85,18 +86,6 @@ export default function CameraForm({ camera, systems }: CameraFormProps) {
       const key = k.trim();
       if (key) parsedSpecs[key] = v;
     }
-    let parsedImages: unknown[] = [];
-
-    if (images.trim()) {
-      try {
-        parsedImages = JSON.parse(images);
-      } catch {
-        setError("Invalid JSON in images");
-        setSaving(false);
-        return;
-      }
-    }
-
     const body = {
       name,
       slug,
@@ -112,7 +101,6 @@ export default function CameraForm({ camera, systems }: CameraFormProps) {
       bodyType: bodyType || null,
       weightG: weightG ? Number(weightG) : null,
       specs: parsedSpecs,
-      images: parsedImages,
     };
 
     try {
@@ -365,15 +353,16 @@ export default function CameraForm({ camera, systems }: CameraFormProps) {
       {/* Images */}
       <section className="space-y-4">
         <h3 className={sectionClass}>Images</h3>
-        <div className="space-y-1">
-          <label className={labelClass}>Images (JSON)</label>
-          <textarea
-            value={images}
-            onChange={(e) => setImages(e.target.value)}
-            rows={4}
-            className={`w-full font-mono ${inputClass}`}
+        {camera?.id ? (
+          <ImageUploader
+            entityType="cameras"
+            entityId={camera.id}
+            entityName={camera?.name || ""}
+            initialImages={initialImages}
           />
-        </div>
+        ) : (
+          <p className="text-sm text-zinc-500">Save the camera first to enable image uploads.</p>
+        )}
       </section>
 
       {/* Actions */}
