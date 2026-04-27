@@ -78,6 +78,8 @@ Internal:
 
 Embedded in `CameraForm.tsx` and `LensForm.tsx`, replacing the current JSON textarea Images section. On the "new" page (no `entityId`), render a disabled placeholder with the message "Save first to enable image uploads."
 
+Below the uploader, a `<details>` disclosure labelled "Show raw JSON" reveals a **read-only** monospace `<pre>` of the current `images` JSONB (pretty-printed). For inspection / copy-paste / debugging only — there is no edit affordance and no save path. The uploader remains the sole writer.
+
 ## Data flow
 
 ### Upload (drop or clipboard image)
