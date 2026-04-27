@@ -15,6 +15,7 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const q = searchParams.get("q");
+  const missingImages = searchParams.get("missing_images") === "1";
   const cursor = parseInt(searchParams.get("cursor") || "0", 10);
   const sortParam = searchParams.get("sort");
   const orderParam = searchParams.get("order");
@@ -30,6 +31,11 @@ export async function GET(request: NextRequest) {
           )!,
         ]
       : [];
+  if (missingImages) {
+    conditions.push(
+      sql`(jsonb_typeof(${cameras.images}) <> 'array' OR jsonb_array_length(${cameras.images}) = 0)`
+    );
+  }
   const where = conditions.length > 0 ? and(...conditions) : undefined;
 
   const sortMap = {
