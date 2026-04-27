@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import ComboboxInput from "./ComboboxInput";
+import ImageUploader from "@/components/admin/ImageUploader";
 
 interface LensData {
   id: number;
@@ -128,9 +129,7 @@ export default function LensForm({ lens, systems, tags }: LensFormProps) {
       ([k, v]) => [k, String(v ?? "")]
     );
   });
-  const [images, setImages] = useState(
-    lens?.images ? JSON.stringify(lens.images, null, 2) : ""
-  );
+  const initialImages = (Array.isArray(lens?.images) ? lens.images : []) as { src: string; alt: string }[];
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -163,17 +162,6 @@ export default function LensForm({ lens, systems, tags }: LensFormProps) {
       const key = k.trim();
       if (key) parsedSpecs[key] = v;
     }
-    let parsedImages: unknown[] = [];
-
-    if (images.trim()) {
-      try {
-        parsedImages = JSON.parse(images);
-      } catch {
-        setError("Invalid JSON in images field");
-        return;
-      }
-    }
-
     const payload = {
       name,
       slug,
@@ -204,7 +192,6 @@ export default function LensForm({ lens, systems, tags }: LensFormProps) {
       hasAutofocus,
       coverage: coverage || null,
       specs: parsedSpecs,
-      images: parsedImages,
     };
 
     setSaving(true);
@@ -596,15 +583,16 @@ export default function LensForm({ lens, systems, tags }: LensFormProps) {
       {/* Images */}
       <section className="space-y-4">
         <h3 className={sectionClass}>Images</h3>
-        <div className="space-y-1">
-          <label className={labelClass}>Images (JSON)</label>
-          <textarea
-            rows={4}
-            value={images}
-            onChange={(e) => setImages(e.target.value)}
-            className={`w-full font-mono ${inputClass}`}
+        {lens?.id ? (
+          <ImageUploader
+            entityType="lenses"
+            entityId={lens.id}
+            entityName={lens?.name || ""}
+            initialImages={initialImages}
           />
-        </div>
+        ) : (
+          <p className="text-sm text-zinc-500">Save the lens first to enable image uploads.</p>
+        )}
       </section>
 
       {/* Actions */}

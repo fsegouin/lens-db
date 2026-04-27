@@ -1,0 +1,62 @@
+import { S3Client, PutObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
+import sharp from "sharp";
+
+const {
+  R2_ACCOUNT_ID,
+  R2_ACCESS_KEY_ID,
+  R2_SECRET_ACCESS_KEY,
+  R2_BUCKET_NAME,
+  R2_PUBLIC_URL,
+} = process.env;
+
+let cachedClient: S3Client | null = null;
+function client(): S3Client {
+  if (cachedClient) return cachedClient;
+  if (!R2_ACCOUNT_ID || !R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY || !R2_BUCKET_NAME || !R2_PUBLIC_URL) {
+    throw new Error("Missing R2 env vars (R2_ACCOUNT_ID/R2_ACCESS_KEY_ID/R2_SECRET_ACCESS_KEY/R2_BUCKET_NAME/R2_PUBLIC_URL)");
+  }
+  cachedClient = new S3Client({
+    region: "auto",
+    endpoint: `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+    credentials: { accessKeyId: R2_ACCESS_KEY_ID, secretAccessKey: R2_SECRET_ACCESS_KEY },
+  });
+  return cachedClient;
+}
+
+export function publicUrlFor(r2Key: string): string {
+  if (!R2_PUBLIC_URL) throw new Error("Missing R2_PUBLIC_URL");
+  return `${R2_PUBLIC_URL}/${r2Key}`;
+}
+
+export async function objectExists(r2Key: string): Promise<boolean> {
+  try {
+    await client().send(new HeadObjectCommand({ Bucket: R2_BUCKET_NAME, Key: r2Key }));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function processAndUpload(buffer: Buffer, r2Key: string): Promise<string> {
+  const resized = await sharp(buffer)
+    .resize(500, 500, { fit: "inside", withoutEnlargement: true })
+    .webp({ quality: 80 })
+    .toBuffer();
+  await client().send(new PutObjectCommand({
+    Bucket: R2_BUCKET_NAME,
+    Key: r2Key,
+    Body: resized,
+    ContentType: "image/webp",
+    CacheControl: "public, max-age=31536000, immutable",
+  }));
+  return publicUrlFor(r2Key);
+}
+
+export async function fetchAndUpload(sourceUrl: string, r2Key: string): Promise<string> {
+  const resp = await fetch(sourceUrl, {
+    headers: { "User-Agent": "lens-db-image-upload/1.0 (https://lens-db.com)" },
+  });
+  if (!resp.ok) throw new Error(`fetch ${sourceUrl} -> ${resp.status}`);
+  const buffer = Buffer.from(await resp.arrayBuffer());
+  return processAndUpload(buffer, r2Key);
+}

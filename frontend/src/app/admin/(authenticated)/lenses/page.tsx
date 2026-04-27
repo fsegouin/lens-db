@@ -56,6 +56,17 @@ const columns = [
   },
 ];
 
+const filters = [
+  {
+    key: "missing_images",
+    label: "Images",
+    options: [
+      { value: "", label: "Any" },
+      { value: "1", label: "Missing" },
+    ],
+  },
+];
+
 export default function AdminLensesPage() {
   const { bulkActions, modalElement } = useBulkLensActions();
 
@@ -66,6 +77,7 @@ export default function AdminLensesPage() {
         apiPath="/api/admin/lenses"
         editPath="/admin/lenses"
         columns={columns}
+        filters={filters}
         newHref="/admin/lenses/new"
         bulkActions={bulkActions}
       />
