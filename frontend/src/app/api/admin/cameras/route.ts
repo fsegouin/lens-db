@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
       : [];
   if (missingImages) {
     conditions.push(
-      sql`(jsonb_typeof(${cameras.images}) <> 'array' OR jsonb_array_length(${cameras.images}) = 0)`
+      sql`(${cameras.images} IS NULL OR jsonb_typeof(${cameras.images}) <> 'array' OR jsonb_array_length(${cameras.images}) = 0)`
     );
   }
 

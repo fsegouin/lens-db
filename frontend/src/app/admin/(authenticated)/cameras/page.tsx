@@ -12,14 +12,7 @@ const columns = [
 ];
 
 const filters = [
-  {
-    key: "missing_images",
-    label: "Images",
-    options: [
-      { value: "", label: "Any" },
-      { value: "1", label: "Missing" },
-    ],
-  },
+  { key: "missing_images", label: "Show cameras with missing images", type: "checkbox" as const },
 ];
 
 export default function AdminCamerasPage() {

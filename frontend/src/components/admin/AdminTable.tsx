@@ -18,7 +18,8 @@ interface FilterOption {
 interface FilterConfig {
   key: string;
   label: string;
-  options: FilterOption[];
+  type?: "select" | "checkbox";
+  options?: FilterOption[];
 }
 
 interface BulkAction {
@@ -192,28 +193,46 @@ export default function AdminTable({
             onChange={(e) => setSearch(e.target.value)}
             className="w-full max-w-sm rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
           />
-          {filters.map((filter) => (
-            <label key={filter.key} className="flex flex-col gap-1 text-sm text-zinc-500">
-              <span>{filter.label}</span>
-              <select
-                value={filterValues[filter.key] ?? ""}
-                onChange={(e) => {
-                  setFilterValues((current) => ({
-                    ...current,
-                    [filter.key]: e.target.value,
-                  }));
-                  setPage(0);
-                }}
-                className="rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-              >
-                {filter.options.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ))}
+          {filters.map((filter) =>
+            filter.type === "checkbox" ? (
+              <label key={filter.key} className="flex items-center gap-2 self-end py-2 text-sm text-zinc-700 dark:text-zinc-300">
+                <input
+                  type="checkbox"
+                  checked={filterValues[filter.key] === "1"}
+                  onChange={(e) => {
+                    setFilterValues((current) => ({
+                      ...current,
+                      [filter.key]: e.target.checked ? "1" : "",
+                    }));
+                    setPage(0);
+                  }}
+                  className="h-4 w-4 rounded border-zinc-300 dark:border-zinc-600"
+                />
+                {filter.label}
+              </label>
+            ) : (
+              <label key={filter.key} className="flex flex-col gap-1 text-sm text-zinc-500">
+                <span>{filter.label}</span>
+                <select
+                  value={filterValues[filter.key] ?? ""}
+                  onChange={(e) => {
+                    setFilterValues((current) => ({
+                      ...current,
+                      [filter.key]: e.target.value,
+                    }));
+                    setPage(0);
+                  }}
+                  className="rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+                >
+                  {filter.options?.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )
+          )}
         </div>
 
         <div className="text-sm text-zinc-500">{total.toLocaleString()} results</div>
