@@ -99,6 +99,13 @@
       "when": 1777280065450,
       "tag": "0013_remove_hasselblad_v_cameras_system",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1777300452498,
+      "tag": "0014_strip-lens-db-com-images",
+      "breakpoints": true
     }
   ]
 }
