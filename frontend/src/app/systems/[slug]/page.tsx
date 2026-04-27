@@ -19,6 +19,7 @@ import {
 export const revalidate = 604800;
 
 export async function generateStaticParams() {
+  if (process.env.VERCEL_ENV !== "production") return [];
   const rows = await db.select({ slug: systems.slug }).from(systems);
   return rows.map((r) => ({ slug: r.slug }));
 }
