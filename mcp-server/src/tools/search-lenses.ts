@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { eq, and, gte, lte, sql, asc } from "drizzle-orm";
 import { getDb, schema } from "../db";
+import { buildSearchPatterns } from "../search";
 
 const { lenses, systems, priceEstimates } = schema;
 
@@ -31,13 +32,7 @@ export async function searchLenses(params: SearchLensesParams) {
   const conditions = [];
 
   if (params.query) {
-    const words = params.query.trim().split(/\s+/).filter(Boolean).slice(0, 10);
-    for (const word of words) {
-      const clean = word.replace(/[^a-zA-Z0-9.]/g, "");
-      if (!clean) continue;
-      const escaped = clean.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      const startsWithDigit = /^\d/.test(clean);
-      const pattern = startsWithDigit ? `\\m${escaped}` : escaped;
+    for (const pattern of buildSearchPatterns(params.query)) {
       conditions.push(
         sql`regexp_replace(${lenses.name}, '[^a-zA-Z0-9. ]', '', 'g') ~* ${pattern}`
       );
