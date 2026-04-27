@@ -3,6 +3,9 @@
 import { useCallback, useRef, useState } from "react";
 import Image from "next/image";
 import { resizeImageBlob } from "@/lib/client-image-resize";
+import { DndContext, closestCenter, type DragEndEvent } from "@dnd-kit/core";
+import { SortableContext, useSortable, arrayMove, rectSortingStrategy } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 type ImageData = { src: string; alt: string };
 
@@ -15,6 +18,38 @@ interface Props {
 }
 
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+
+function Thumbnail({
+  img,
+  entityName,
+  onDelete,
+}: {
+  img: ImageData;
+  entityName: string;
+  onDelete: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: img.src });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+  return (
+    <div ref={setNodeRef} style={style} className="relative aspect-square overflow-hidden rounded border border-zinc-200 dark:border-zinc-700">
+      <div {...attributes} {...listeners} className="absolute inset-0 cursor-grab active:cursor-grabbing">
+        <Image src={img.src} alt={img.alt || entityName} fill sizes="100px" className="object-cover" />
+      </div>
+      <button
+        type="button"
+        onClick={onDelete}
+        className="absolute right-1 top-1 rounded-full bg-black/60 px-2 text-xs text-white hover:bg-black/80"
+        aria-label="Remove image"
+      >
+        ×
+      </button>
+    </div>
+  );
+}
 
 export default function ImageUploader({
   entityType,
@@ -68,6 +103,58 @@ export default function ImageUploader({
     [entityType, entityId, updateImages],
   );
 
+  const deleteImage = useCallback(
+    async (src: string) => {
+      if (!confirm("Remove this image?")) return;
+      setError(null);
+      try {
+        const resp = await fetch(`/api/admin/${entityType}/${entityId}/images`, {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ src }),
+        });
+        if (!resp.ok) throw new Error((await resp.json().catch(() => ({}))).error || `HTTP ${resp.status}`);
+        const data = await resp.json();
+        updateImages(data.images);
+      } catch (e) {
+        setError((e as Error).message);
+      }
+    },
+    [entityType, entityId, updateImages],
+  );
+
+  const handleDragEnd = useCallback(
+    async (event: DragEndEvent) => {
+      const { active, over } = event;
+      if (!over || active.id === over.id) return;
+      const oldIndex = images.findIndex((i) => i.src === active.id);
+      const newIndex = images.findIndex((i) => i.src === over.id);
+      if (oldIndex < 0 || newIndex < 0) return;
+      const reordered = arrayMove(images, oldIndex, newIndex);
+      updateImages(reordered);
+      setError(null);
+      try {
+        const resp = await fetch(`/api/admin/${entityType}/${entityId}/images`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ srcs: reordered.map((i) => i.src) }),
+        });
+        if (!resp.ok) {
+          const data = await resp.json().catch(() => ({}));
+          setError(data.error || "Reorder failed");
+          updateImages(images);
+        } else {
+          const data = await resp.json();
+          updateImages(data.images);
+        }
+      } catch (e) {
+        setError((e as Error).message);
+        updateImages(images);
+      }
+    },
+    [images, entityType, entityId, updateImages],
+  );
+
   const onDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
@@ -119,13 +206,20 @@ export default function ImageUploader({
       )}
 
       {images.length > 0 && (
-        <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
-          {images.map((img) => (
-            <div key={img.src} className="relative aspect-square overflow-hidden rounded border border-zinc-200 dark:border-zinc-700">
-              <Image src={img.src} alt={img.alt || entityName} fill sizes="100px" className="object-cover" />
+        <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={images.map((i) => i.src)} strategy={rectSortingStrategy}>
+            <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
+              {images.map((img) => (
+                <Thumbnail
+                  key={img.src}
+                  img={img}
+                  entityName={entityName}
+                  onDelete={() => void deleteImage(img.src)}
+                />
+              ))}
             </div>
-          ))}
-        </div>
+          </SortableContext>
+        </DndContext>
       )}
 
       <details className="text-xs text-zinc-500">
