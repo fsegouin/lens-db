@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { cameras, systems, priceEstimates } from "@/db/schema";
-import { asc, desc, eq, and, or, sql } from "drizzle-orm";
+import { asc, desc, eq, and, or, sql, isNull } from "drizzle-orm";
 import { getClientIP, rateLimitedResponse } from "@/lib/api-utils";
 import { rateLimiters } from "@/lib/rate-limit";
 
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
   const avgPrice = priceEstimates.medianPrice;
 
   try {
-    const conditions = [];
+    const conditions: ReturnType<typeof and>[] = [isNull(cameras.mergedIntoId)];
 
     if (q) {
       const words = q.trim().split(/\s+/).filter(Boolean).slice(0, 10);
