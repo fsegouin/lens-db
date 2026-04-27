@@ -11,6 +11,17 @@ const columns = [
   { key: "yearIntroduced", label: "Year", sortKey: "year" },
 ];
 
+const filters = [
+  {
+    key: "missing_images",
+    label: "Images",
+    options: [
+      { value: "", label: "Any" },
+      { value: "1", label: "Missing" },
+    ],
+  },
+];
+
 export default function AdminCamerasPage() {
   const { bulkActions, modalElement } = useBulkCameraActions();
 
@@ -21,6 +32,7 @@ export default function AdminCamerasPage() {
         apiPath="/api/admin/cameras"
         editPath="/admin/cameras"
         columns={columns}
+        filters={filters}
         newHref="/admin/cameras/new"
         bulkActions={bulkActions}
       />
