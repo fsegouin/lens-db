@@ -35,10 +35,21 @@ const nextConfig: NextConfig = {
     return [
       // Merged Canon EOS system slugs → mount-named equivalents
       { source: "/systems/canon-eos", destination: "/systems/canon-ef", permanent: true },
-      { source: "/systems/canon-eos-aps-c", destination: "/systems/canon-ef-s", permanent: true },
+      { source: "/systems/canon-eos-aps-c", destination: "/systems/canon-ef", permanent: true },
       { source: "/systems/canon-eos-m", destination: "/systems/canon-ef-m", permanent: true },
       { source: "/systems/canon-eos-r", destination: "/systems/canon-rf", permanent: true },
-      { source: "/systems/canon-eos-r-aps-c", destination: "/systems/canon-rf-s", permanent: true },
+      { source: "/systems/canon-eos-r-aps-c", destination: "/systems/canon-rf", permanent: true },
+      // Unified APS-C systems → full-frame parent mounts (drizzle 0012)
+      { source: "/systems/canon-ef-s", destination: "/systems/canon-ef", permanent: true },
+      { source: "/systems/canon-rf-s", destination: "/systems/canon-rf", permanent: true },
+      { source: "/systems/nikon-z-aps-c", destination: "/systems/nikon-z", permanent: true },
+      { source: "/systems/nikon-f-aps-c", destination: "/systems/nikon-f", permanent: true },
+      { source: "/systems/sony-e-aps-c", destination: "/systems/sony-e", permanent: true },
+      { source: "/systems/sony-a-aps-c", destination: "/systems/minoltasony-a", permanent: true },
+      { source: "/systems/konica-minolta-a-aps-c", destination: "/systems/minoltasony-a", permanent: true },
+      { source: "/systems/pentax-k-aps-c", destination: "/systems/pentax-k", permanent: true },
+      { source: "/systems/sigma-sa-aps-c", destination: "/systems/sigma-sa", permanent: true },
+      { source: "/systems/leica-l-aps-c", destination: "/systems/leica-l", permanent: true },
     ];
   },
   async headers() {
