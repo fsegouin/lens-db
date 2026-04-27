@@ -1,25 +1,46 @@
 import { sql, type SQL } from "drizzle-orm";
 import type { AnyColumn } from "drizzle-orm";
 
-/**
- * Build regex-based word search conditions for a name column.
- * Each word in the query is matched independently, with word-start boundaries
- * for digit-starting words (so "35" doesn't match inside "135").
- * Punctuation is stripped from both the query and the column value.
- */
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function shouldMergeModelFragments(a: string, b: string): boolean {
+  const aIsShortAlpha = /^[a-zA-Z]{1,2}$/.test(a);
+  const bIsNumeric = /^\d[\d.]*$/.test(b);
+  const bIsShortAlpha = /^[a-zA-Z]{1,2}$/.test(b);
+  const aIsNumeric = /^\d[\d.]*$/.test(a);
+  return (aIsShortAlpha && bIsNumeric) || (aIsNumeric && bIsShortAlpha);
+}
+
 export function buildNameSearch(column: AnyColumn, query: string): SQL[] {
   const words = query.trim().split(/\s+/).filter(Boolean).slice(0, 10);
-  const conditions: SQL[] = [];
+  const cleaned = words
+    .map((w) => w.replace(/[^a-zA-Z0-9.]/g, ""))
+    .filter(Boolean);
 
-  for (const word of words) {
-    const clean = word.replace(/[^a-zA-Z0-9.]/g, "");
-    if (!clean) continue;
-    const escaped = clean.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const startsWithDigit = /^\d/.test(clean);
-    const pattern = startsWithDigit ? `\\m${escaped}` : escaped;
-    conditions.push(
-      sql`regexp_replace(${column}, '[^a-zA-Z0-9. ]', '', 'g') ~* ${pattern}`
-    );
+  const conditions: SQL[] = [];
+  let i = 0;
+
+  while (i < cleaned.length) {
+    if (
+      i + 1 < cleaned.length &&
+      shouldMergeModelFragments(cleaned[i], cleaned[i + 1])
+    ) {
+      const merged = `${escapeRegex(cleaned[i])}\\s*${escapeRegex(cleaned[i + 1])}`;
+      const pattern = /^\d/.test(cleaned[i]) ? `\\m${merged}` : merged;
+      conditions.push(
+        sql`regexp_replace(${column}, '[^a-zA-Z0-9. ]', '', 'g') ~* ${pattern}`
+      );
+      i += 2;
+    } else {
+      const escaped = escapeRegex(cleaned[i]);
+      const pattern = /^\d/.test(cleaned[i]) ? `\\m${escaped}` : escaped;
+      conditions.push(
+        sql`regexp_replace(${column}, '[^a-zA-Z0-9. ]', '', 'g') ~* ${pattern}`
+      );
+      i++;
+    }
   }
 
   return conditions;
