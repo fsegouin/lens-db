@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { cameras, systems } from "@/db/schema";
 import { requireAdminAPI } from "@/lib/admin-auth";
-import { and, or, sql, eq } from "drizzle-orm";
+import { and, or, sql, eq, isNull } from "drizzle-orm";
 import { buildNameSearch } from "@/lib/search";
 import { buildOrderBy } from "@/lib/admin-sort";
 
@@ -19,9 +19,11 @@ export async function GET(request: NextRequest) {
   const sortParam = searchParams.get("sort");
   const orderParam = searchParams.get("order");
 
+  const showMerged = searchParams.get("show_merged") === "1";
+
   const nameConditions = q ? buildNameSearch(cameras.name, q) : [];
   const aliasConditions = q ? buildNameSearch(cameras.alias, q) : [];
-  const conditions =
+  const conditions: ReturnType<typeof and>[] =
     nameConditions.length > 0 || aliasConditions.length > 0
       ? [
           or(
@@ -30,6 +32,10 @@ export async function GET(request: NextRequest) {
           )!,
         ]
       : [];
+
+  if (!showMerged) {
+    conditions.push(isNull(cameras.mergedIntoId));
+  }
   const where = conditions.length > 0 ? and(...conditions) : undefined;
 
   const sortMap = {
