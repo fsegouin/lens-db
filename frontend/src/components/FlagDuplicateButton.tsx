@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -28,12 +29,10 @@ export default function FlagDuplicateButton({
   entityType,
   entityId,
   entityName,
-  isLoggedIn,
 }: {
   entityType: "lens" | "camera";
   entityId: number;
   entityName: string;
-  isLoggedIn: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [popoverOpen, setPopoverOpen] = useState(false);
@@ -43,6 +42,21 @@ export default function FlagDuplicateButton({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [loadingAuth, setLoadingAuth] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
+
+  async function loadAuth() {
+    setLoadingAuth(true);
+    try {
+      const res = await fetch("/api/auth/me");
+      const data = await res.json();
+      setIsLoggedIn(!!data.user);
+    } catch {
+      setIsLoggedIn(false);
+    } finally {
+      setLoadingAuth(false);
+    }
+  }
 
   const { query, results, handleQueryChange, reset: resetSearch } = useEntitySearch({
     types: [entityType],
@@ -95,11 +109,10 @@ export default function FlagDuplicateButton({
       resetSearch();
       setError(null);
       setSuccess(false);
+      loadAuth();
     }
     setOpen(isOpen);
   }
-
-  if (!isLoggedIn) return null;
 
   return (
     <Dialog open={open} onOpenChange={handleOpen}>
@@ -109,7 +122,29 @@ export default function FlagDuplicateButton({
         Flag duplicate
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
-        {success ? (
+        {loadingAuth || isLoggedIn === null ? (
+          <DialogHeader>
+            <DialogTitle>Loading…</DialogTitle>
+          </DialogHeader>
+        ) : !isLoggedIn ? (
+          <>
+            <DialogHeader>
+              <DialogTitle>Sign in to flag duplicates</DialogTitle>
+              <DialogDescription>
+                You need an account to report duplicates so admins can follow up
+                with you if needed.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Link href="/login">
+                <Button>Sign in</Button>
+              </Link>
+              <Link href="/register">
+                <Button variant="outline">Create account</Button>
+              </Link>
+            </DialogFooter>
+          </>
+        ) : success ? (
           <DialogHeader>
             <DialogTitle>Flag submitted</DialogTitle>
             <DialogDescription>

@@ -16,7 +16,6 @@ import SpecsTable from "@/components/SpecsTable";
 import { PageTransition } from "@/components/page-transition";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { getCurrentUser } from "@/lib/user-auth";
 import { Suspense } from "react";
 import PriceCard from "@/components/PriceCard";
 import EbayListings from "@/components/EbayListings";
@@ -74,7 +73,6 @@ export default async function LensDetailPage({
       .limit(1);
     if (target) redirect(`/lenses/${target.slug}`);
   }
-  const currentUser = await getCurrentUser();
 
   // Fetch price data
   const [priceEstimate] = await db
@@ -101,7 +99,6 @@ export default async function LensDetailPage({
     ))
     .orderBy(desc(priceHistory.saleDate));
 
-  const allSystems = await db.select({ id: systems.id, name: systems.name }).from(systems).orderBy(systems.name);
   const specs = (lens.specs ?? {}) as Record<string, string>;
   const mountFromSpecs =
     specs["Mount"] ??
@@ -308,7 +305,6 @@ export default async function LensDetailPage({
             entityType="lens"
             entityId={lens.id}
             entitySlug={lens.slug}
-            isLoggedIn={!!currentUser}
             currentValues={{
               name: lens.name,
               url: lens.url,
@@ -341,7 +337,7 @@ export default async function LensDetailPage({
               { name: "name", label: "Name", type: "text" },
               { name: "brand", label: "Brand", type: "text" },
               { name: "description", label: "Description", type: "textarea" },
-              { name: "systemId", label: "Mount System", type: "select", options: allSystems.map((s) => ({ value: s.id, label: s.name })) },
+              { name: "systemId", label: "Mount System", type: "select", optionsSource: "systems" },
               { name: "lensType", label: "Lens Type", type: "text" },
               { name: "era", label: "Era", type: "text" },
               { name: "productionStatus", label: "Production Status", type: "text" },
@@ -371,7 +367,6 @@ export default async function LensDetailPage({
               entityType="lens"
               entityId={lens.id}
               entityName={lens.name}
-              isLoggedIn={!!currentUser}
             />
           </div>
         </div>
