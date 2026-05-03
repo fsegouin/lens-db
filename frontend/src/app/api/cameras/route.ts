@@ -118,33 +118,38 @@ export async function GET(request: NextRequest) {
       ? [sql`${avgPrice} IS NULL`, orderFn(sortCol)]
       : [orderFn(sortCol)];
 
-    const baseQuery = db
+    const itemsPromise = db
       .select({ camera: cameras, system: systems, avgPrice: avgPrice })
       .from(cameras)
       .leftJoin(systems, eq(cameras.systemId, systems.id))
       .leftJoin(priceEstimates, and(
         eq(priceEstimates.entityType, "camera"),
         eq(priceEstimates.entityId, cameras.id),
-      ));
-
-    const [countResult] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(cameras)
-      .leftJoin(systems, eq(cameras.systemId, systems.id))
-      .leftJoin(priceEstimates, and(
-        eq(priceEstimates.entityType, "camera"),
-        eq(priceEstimates.entityId, cameras.id),
       ))
-      .where(where);
-    const total = Number(countResult.count);
-
-    const items = await baseQuery
       .where(where)
       .orderBy(...nullsLast)
       .limit(PAGE_SIZE)
       .offset(cursor);
 
-    const nextCursor = cursor + PAGE_SIZE < total ? cursor + PAGE_SIZE : null;
+    // Total only matters for the SSR-rendered first page (cursor=0).
+    // Cursor pagination from the client already has total from SSR.
+    const countPromise =
+      cursor === 0
+        ? db
+            .select({ count: sql<number>`count(*)` })
+            .from(cameras)
+            .leftJoin(systems, eq(cameras.systemId, systems.id))
+            .leftJoin(priceEstimates, and(
+              eq(priceEstimates.entityType, "camera"),
+              eq(priceEstimates.entityId, cameras.id),
+            ))
+            .where(where)
+        : null;
+
+    const [items, countRows] = await Promise.all([itemsPromise, countPromise]);
+    const total = countRows ? Number(countRows[0].count) : -1;
+    const nextCursor =
+      items.length === PAGE_SIZE ? cursor + PAGE_SIZE : null;
 
     return NextResponse.json({ items, nextCursor, total });
   } catch (error) {
