@@ -24,12 +24,6 @@ import EbayListingsSkeleton from "@/components/EbayListingsSkeleton";
 
 export const revalidate = 604800;
 
-export async function generateStaticParams() {
-  if (process.env.VERCEL_ENV !== "production") return [];
-  const rows = await db.select({ slug: lenses.slug }).from(lenses);
-  return rows.map((r) => ({ slug: r.slug }));
-}
-
 export async function generateMetadata({
   params,
 }: {
