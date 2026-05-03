@@ -20,8 +20,10 @@ type FieldConfig = {
   name: string;
   label: string;
   type: "text" | "number" | "textarea" | "boolean" | "select";
-  options?: { value: string | number; label: string }[];
+  optionsSource?: "systems";
 };
+
+type SelectOption = { value: string | number; label: string };
 
 export default function EditButton({
   entityType,
@@ -29,14 +31,12 @@ export default function EditButton({
   entitySlug,
   currentValues,
   fields,
-  isLoggedIn,
 }: {
   entityType: string;
   entityId: number;
   entitySlug: string;
   currentValues: Record<string, unknown>;
   fields: FieldConfig[];
-  isLoggedIn: boolean;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -46,10 +46,40 @@ export default function EditButton({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  const [loadingContext, setLoadingContext] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
+  const [systemOptions, setSystemOptions] = useState<SelectOption[] | null>(null);
+
+  const needsSystems = fields.some((f) => f.optionsSource === "systems");
+
+  async function loadContext() {
+    setLoadingContext(true);
+    try {
+      const promises: Promise<Response>[] = [fetch("/api/auth/me")];
+      if (needsSystems && systemOptions === null) {
+        promises.push(fetch("/api/systems"));
+      }
+      const [meRes, systemsRes] = await Promise.all(promises);
+      const meData = await meRes.json();
+      setIsLoggedIn(!!meData.user);
+      if (systemsRes) {
+        const systemsData = await systemsRes.json();
+        setSystemOptions(
+          (systemsData.systems as { id: number; name: string }[]).map((s) => ({
+            value: s.id,
+            label: s.name,
+          })),
+        );
+      }
+    } catch {
+      setIsLoggedIn(false);
+    } finally {
+      setLoadingContext(false);
+    }
+  }
 
   function handleOpen(isOpen: boolean) {
     if (isOpen) {
-      // Initialize form with current values
       const init: Record<string, unknown> = {};
       for (const field of fields) {
         init[field.name] = currentValues[field.name] ?? "";
@@ -58,8 +88,14 @@ export default function EditButton({
       setSummary("");
       setError(null);
       setSuccess(false);
+      loadContext();
     }
     setOpen(isOpen);
+  }
+
+  function getOptions(field: FieldConfig): SelectOption[] {
+    if (field.optionsSource === "systems") return systemOptions ?? [];
+    return [];
   }
 
   function computeChanges(): Record<string, unknown> {
@@ -137,7 +173,11 @@ export default function EditButton({
           Edit
         </DialogTrigger>
         <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
-          {!isLoggedIn ? (
+          {loadingContext || isLoggedIn === null ? (
+            <DialogHeader>
+              <DialogTitle>Loading…</DialogTitle>
+            </DialogHeader>
+          ) : !isLoggedIn ? (
             <>
               <DialogHeader>
                 <DialogTitle>Sign in to edit</DialogTitle>
@@ -190,7 +230,7 @@ export default function EditButton({
                         className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                       >
                         <option value="">None</option>
-                        {field.options?.map((opt) => (
+                        {getOptions(field).map((opt) => (
                           <option key={opt.value} value={opt.value}>
                             {opt.label}
                           </option>
