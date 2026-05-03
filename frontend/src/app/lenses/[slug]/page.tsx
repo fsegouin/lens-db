@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { and, desc, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import BackButton from "@/components/BackButton";
 import { db } from "@/db";
-import { lenses, systems, priceEstimates, priceHistory } from "@/db/schema";
+import { lenses, systems } from "@/db/schema";
+import { getEntityPriceEstimate, getEntityPriceHistory } from "@/lib/prices";
 import { formatDescription } from "@/lib/format-description";
 import { formatMagnification } from "@/lib/format-magnification";
 import { getImages } from "@/lib/images";
@@ -74,30 +75,10 @@ export default async function LensDetailPage({
     if (target) redirect(`/lenses/${target.slug}`);
   }
 
-  // Fetch price data
-  const [priceEstimate] = await db
-    .select()
-    .from(priceEstimates)
-    .where(and(
-      eq(priceEstimates.entityType, "lens"),
-      eq(priceEstimates.entityId, lens.id),
-    ))
-    .limit(1);
-
-  const priceHistoryRows = await db
-    .select({
-      saleDate: priceHistory.saleDate,
-      condition: priceHistory.condition,
-      priceUsd: priceHistory.priceUsd,
-      source: priceHistory.source,
-      sourceUrl: priceHistory.sourceUrl,
-    })
-    .from(priceHistory)
-    .where(and(
-      eq(priceHistory.entityType, "lens"),
-      eq(priceHistory.entityId, lens.id),
-    ))
-    .orderBy(desc(priceHistory.saleDate));
+  const [priceEstimate, priceHistoryRows] = await Promise.all([
+    getEntityPriceEstimate("lens", lens.id),
+    getEntityPriceHistory("lens", lens.id),
+  ]);
 
   const specs = (lens.specs ?? {}) as Record<string, string>;
   const mountFromSpecs =

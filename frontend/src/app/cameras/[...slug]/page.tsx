@@ -1,9 +1,10 @@
 import { Suspense } from "react";
 import { notFound, redirect } from "next/navigation";
-import { eq, and, desc } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import BackButton from "@/components/BackButton";
 import { db } from "@/db";
-import { cameras, systems, priceEstimates, priceHistory } from "@/db/schema";
+import { cameras, systems } from "@/db/schema";
+import { getEntityPriceEstimate, getEntityPriceHistory } from "@/lib/prices";
 import ViewTracker from "@/components/ViewTracker";
 import ImageGallery from "@/components/ImageGallery";
 import RatingWidget from "@/components/RatingWidget";
@@ -76,30 +77,10 @@ export default async function CameraDetailPage({
 
   const specs = (camera.specs ?? {}) as Record<string, string>;
 
-  // Fetch price data
-  const [priceEstimate] = await db
-    .select()
-    .from(priceEstimates)
-    .where(and(
-      eq(priceEstimates.entityType, "camera"),
-      eq(priceEstimates.entityId, camera.id),
-    ))
-    .limit(1);
-
-  const priceHistoryRows = await db
-    .select({
-      saleDate: priceHistory.saleDate,
-      condition: priceHistory.condition,
-      priceUsd: priceHistory.priceUsd,
-      source: priceHistory.source,
-      sourceUrl: priceHistory.sourceUrl,
-    })
-    .from(priceHistory)
-    .where(and(
-      eq(priceHistory.entityType, "camera"),
-      eq(priceHistory.entityId, camera.id),
-    ))
-    .orderBy(desc(priceHistory.saleDate));
+  const [priceEstimate, priceHistoryRows] = await Promise.all([
+    getEntityPriceEstimate("camera", camera.id),
+    getEntityPriceHistory("camera", camera.id),
+  ]);
 
   const imagingRows: [string, string | number | null | undefined][] = [
     ["Type", specs["Type"]],
