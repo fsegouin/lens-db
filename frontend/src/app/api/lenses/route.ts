@@ -158,27 +158,7 @@ export async function GET(request: NextRequest) {
 
     const needsSystemJoin = !!system;
 
-    const [countResult] = needsSystemJoin
-      ? await db
-          .select({ count: sql<number>`count(*)` })
-          .from(lenses)
-          .leftJoin(systems, eq(lenses.systemId, systems.id))
-          .leftJoin(priceEstimates, and(
-            eq(priceEstimates.entityType, "lens"),
-            eq(priceEstimates.entityId, lenses.id),
-          ))
-          .where(where)
-      : await db
-          .select({ count: sql<number>`count(*)` })
-          .from(lenses)
-          .leftJoin(priceEstimates, and(
-            eq(priceEstimates.entityType, "lens"),
-            eq(priceEstimates.entityId, lenses.id),
-          ))
-          .where(where);
-    const total = Number(countResult.count);
-
-    const items = await db
+    const itemsPromise = db
       .select({ lens: lenses, system: systems, avgPrice: avgPrice })
       .from(lenses)
       .leftJoin(systems, eq(lenses.systemId, systems.id))
@@ -191,7 +171,38 @@ export async function GET(request: NextRequest) {
       .limit(PAGE_SIZE)
       .offset(cursor);
 
-    const nextCursor = cursor + PAGE_SIZE < total ? cursor + PAGE_SIZE : null;
+    // Total only matters for the SSR-rendered first page (cursor=0).
+    // Cursor pagination from the client already has total from SSR.
+    const countPromise =
+      cursor === 0
+        ? (needsSystemJoin
+            ? db
+                .select({ count: sql<number>`count(*)` })
+                .from(lenses)
+                .leftJoin(systems, eq(lenses.systemId, systems.id))
+                .leftJoin(priceEstimates, and(
+                  eq(priceEstimates.entityType, "lens"),
+                  eq(priceEstimates.entityId, lenses.id),
+                ))
+                .where(where)
+            : db
+                .select({ count: sql<number>`count(*)` })
+                .from(lenses)
+                .leftJoin(priceEstimates, and(
+                  eq(priceEstimates.entityType, "lens"),
+                  eq(priceEstimates.entityId, lenses.id),
+                ))
+                .where(where))
+        : null;
+
+    const [items, countRows] = await Promise.all([
+      itemsPromise,
+      countPromise,
+    ]);
+
+    const total = countRows ? Number(countRows[0].count) : -1;
+    const nextCursor =
+      items.length === PAGE_SIZE ? cursor + PAGE_SIZE : null;
 
     // Fetch series for the returned lenses
     const lensIds = items.map((r) => r.lens.id);
