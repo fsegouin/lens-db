@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { priceHistory, priceEstimates } from "@/db/schema";
-import { eq, and, sql, gt } from "drizzle-orm";
+import { eq, and, sql, gt, inArray, isNull } from "drizzle-orm";
 import type { ClassifiedListing, RawListing } from "@/lib/price-classify";
 
 const GRADE_MAP: Record<string, string> = {
@@ -9,6 +9,8 @@ const GRADE_MAP: Record<string, string> = {
   fair: "C",
 };
 
+type NewRow = typeof priceHistory.$inferInsert;
+
 export async function storeClassifiedSales(
   entityType: string,
   entityId: number,
@@ -16,60 +18,82 @@ export async function storeClassifiedSales(
   raw: RawListing[],
   extractedAt: string,
 ): Promise<number> {
-  let stored = 0;
+  const extractedAtDate = new Date(extractedAt);
+  const withUrl: NewRow[] = [];
+  const withoutUrl: NewRow[] = [];
 
   for (let i = 0; i < classified.length; i++) {
     const cl = classified[i];
     const rawListing = raw[i];
     if (!rawListing) continue;
-
     if (!cl.isRelevant || cl.conditionGrade === "skip") continue;
 
-    const condition = GRADE_MAP[cl.conditionGrade] ?? cl.conditionGrade;
-    const sourceUrl = rawListing.url ?? null;
-
-    // Check for duplicate
-    if (sourceUrl) {
-      const existing = await db
-        .select({ id: priceHistory.id })
-        .from(priceHistory)
-        .where(
-          and(
-            eq(priceHistory.entityType, entityType),
-            eq(priceHistory.entityId, entityId),
-            eq(priceHistory.sourceUrl, sourceUrl),
-          ),
-        )
-        .limit(1);
-      if (existing.length > 0) continue;
-    } else {
-      const existing = await db
-        .select({ id: priceHistory.id })
-        .from(priceHistory)
-        .where(
-          and(
-            eq(priceHistory.entityType, entityType),
-            eq(priceHistory.entityId, entityId),
-            eq(priceHistory.saleDate, rawListing.date),
-            eq(priceHistory.priceUsd, Math.round(cl.effectivePrice)),
-            eq(priceHistory.source, "eBay"),
-          ),
-        )
-        .limit(1);
-      if (existing.length > 0) continue;
-    }
-
-    await db.insert(priceHistory).values({
+    const row: NewRow = {
       entityType,
       entityId,
       saleDate: rawListing.date,
-      condition,
+      condition: GRADE_MAP[cl.conditionGrade] ?? cl.conditionGrade,
       priceUsd: Math.round(cl.effectivePrice),
       source: "eBay",
-      sourceUrl,
-      extractedAt: new Date(extractedAt),
-    });
-    stored++;
+      sourceUrl: rawListing.url ?? null,
+      extractedAt: extractedAtDate,
+    };
+    if (row.sourceUrl) withUrl.push(row);
+    else withoutUrl.push(row);
+  }
+
+  let stored = 0;
+
+  // Bulk path for listings with a sourceUrl: rely on the partial unique
+  // index (uq_price_history_entity_source_url) to skip duplicates.
+  if (withUrl.length > 0) {
+    const inserted = await db
+      .insert(priceHistory)
+      .values(withUrl)
+      .onConflictDoNothing({
+        target: [
+          priceHistory.entityType,
+          priceHistory.entityId,
+          priceHistory.sourceUrl,
+        ],
+        where: sql`source_url IS NOT NULL`,
+      })
+      .returning({ id: priceHistory.id });
+    stored += inserted.length;
+  }
+
+  // Fallback for listings without a sourceUrl (rare for eBay, but
+  // possible from other sources). Pre-fetch existing tuples for this
+  // entity in one query, then bulk insert the new ones.
+  if (withoutUrl.length > 0) {
+    const existing = await db
+      .select({
+        saleDate: priceHistory.saleDate,
+        priceUsd: priceHistory.priceUsd,
+      })
+      .from(priceHistory)
+      .where(
+        and(
+          eq(priceHistory.entityType, entityType),
+          eq(priceHistory.entityId, entityId),
+          eq(priceHistory.source, "eBay"),
+          isNull(priceHistory.sourceUrl),
+          inArray(
+            priceHistory.saleDate,
+            withoutUrl.map((r) => r.saleDate as string),
+          ),
+        ),
+      );
+    const seen = new Set(
+      existing.map((e) => `${e.saleDate}|${e.priceUsd}`),
+    );
+    const fresh = withoutUrl.filter(
+      (r) => !seen.has(`${r.saleDate}|${r.priceUsd}`),
+    );
+    if (fresh.length > 0) {
+      await db.insert(priceHistory).values(fresh);
+      stored += fresh.length;
+    }
   }
 
   return stored;
