@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { and, desc, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import BackButton from "@/components/BackButton";
 import { db } from "@/db";
-import { lenses, systems, priceEstimates, priceHistory } from "@/db/schema";
+import { lenses, systems } from "@/db/schema";
+import { getEntityPriceEstimate, getEntityPriceHistory } from "@/lib/prices";
 import { formatDescription } from "@/lib/format-description";
 import { formatMagnification } from "@/lib/format-magnification";
 import { getImages } from "@/lib/images";
@@ -16,19 +17,12 @@ import SpecsTable from "@/components/SpecsTable";
 import { PageTransition } from "@/components/page-transition";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { getCurrentUser } from "@/lib/user-auth";
 import { Suspense } from "react";
 import PriceCard from "@/components/PriceCard";
 import EbayListings from "@/components/EbayListings";
 import EbayListingsSkeleton from "@/components/EbayListingsSkeleton";
 
 export const revalidate = 604800;
-
-export async function generateStaticParams() {
-  if (process.env.VERCEL_ENV !== "production") return [];
-  const rows = await db.select({ slug: lenses.slug }).from(lenses);
-  return rows.map((r) => ({ slug: r.slug }));
-}
 
 export async function generateMetadata({
   params,
@@ -74,34 +68,12 @@ export default async function LensDetailPage({
       .limit(1);
     if (target) redirect(`/lenses/${target.slug}`);
   }
-  const currentUser = await getCurrentUser();
 
-  // Fetch price data
-  const [priceEstimate] = await db
-    .select()
-    .from(priceEstimates)
-    .where(and(
-      eq(priceEstimates.entityType, "lens"),
-      eq(priceEstimates.entityId, lens.id),
-    ))
-    .limit(1);
+  const [priceEstimate, priceHistoryRows] = await Promise.all([
+    getEntityPriceEstimate("lens", lens.id),
+    getEntityPriceHistory("lens", lens.id),
+  ]);
 
-  const priceHistoryRows = await db
-    .select({
-      saleDate: priceHistory.saleDate,
-      condition: priceHistory.condition,
-      priceUsd: priceHistory.priceUsd,
-      source: priceHistory.source,
-      sourceUrl: priceHistory.sourceUrl,
-    })
-    .from(priceHistory)
-    .where(and(
-      eq(priceHistory.entityType, "lens"),
-      eq(priceHistory.entityId, lens.id),
-    ))
-    .orderBy(desc(priceHistory.saleDate));
-
-  const allSystems = await db.select({ id: systems.id, name: systems.name }).from(systems).orderBy(systems.name);
   const specs = (lens.specs ?? {}) as Record<string, string>;
   const mountFromSpecs =
     specs["Mount"] ??
@@ -308,7 +280,6 @@ export default async function LensDetailPage({
             entityType="lens"
             entityId={lens.id}
             entitySlug={lens.slug}
-            isLoggedIn={!!currentUser}
             currentValues={{
               name: lens.name,
               url: lens.url,
@@ -341,7 +312,7 @@ export default async function LensDetailPage({
               { name: "name", label: "Name", type: "text" },
               { name: "brand", label: "Brand", type: "text" },
               { name: "description", label: "Description", type: "textarea" },
-              { name: "systemId", label: "Mount System", type: "select", options: allSystems.map((s) => ({ value: s.id, label: s.name })) },
+              { name: "systemId", label: "Mount System", type: "select", optionsSource: "systems" },
               { name: "lensType", label: "Lens Type", type: "text" },
               { name: "era", label: "Era", type: "text" },
               { name: "productionStatus", label: "Production Status", type: "text" },
@@ -371,7 +342,6 @@ export default async function LensDetailPage({
               entityType="lens"
               entityId={lens.id}
               entityName={lens.name}
-              isLoggedIn={!!currentUser}
             />
           </div>
         </div>

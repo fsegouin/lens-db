@@ -40,6 +40,26 @@ interface EbaySearchResponse {
 
 const EBAY_CAMPAIGN_ID = process.env.EBAY_CAMPAIGN_ID ?? "";
 
+// ISO 3166-1 alpha-2 country code -> eBay Browse API marketplace ID.
+// The marketplace determines both inventory and currency. Countries
+// not listed here fall back to EBAY_US (USD).
+const MARKETPLACE_BY_COUNTRY: Record<string, string> = {
+  US: "EBAY_US",
+  GB: "EBAY_GB",
+  DE: "EBAY_DE",
+  FR: "EBAY_FR",
+  IT: "EBAY_IT",
+  ES: "EBAY_ES",
+  AT: "EBAY_AT",
+  CH: "EBAY_CH",
+  BE: "EBAY_BE",
+  NL: "EBAY_NL",
+  IE: "EBAY_IE",
+  PL: "EBAY_PL",
+  AU: "EBAY_AU",
+  CA: "EBAY_CA",
+};
+
 function affiliateUrl(searchQuery: string): string {
   if (!EBAY_CAMPAIGN_ID) {
     return `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(searchQuery)}`;
@@ -47,7 +67,12 @@ function affiliateUrl(searchQuery: string): string {
   return `https://rover.ebay.com/rover/1/711-53200-19255-0/1?campid=${EBAY_CAMPAIGN_ID}&toolid=10001&mpre=${encodeURIComponent(`https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(searchQuery)}`)}`;
 }
 
-async function fetchListings(query: string, countryCode: string, entityType: "camera" | "lens" = "camera"): Promise<EbayListing[]> {
+async function fetchListings(
+  query: string,
+  countryCode: string,
+  marketplaceId: string,
+  entityType: "camera" | "lens" = "camera",
+): Promise<EbayListing[]> {
   if (!process.env.EBAY_APP_ID || !process.env.EBAY_CERT_ID) return [];
 
   try {
@@ -66,7 +91,7 @@ async function fetchListings(query: string, countryCode: string, entityType: "ca
 
     const headers: Record<string, string> = {
       Authorization: `Bearer ${token}`,
-      "X-EBAY-C-MARKETPLACE-ID": "EBAY_US",
+      "X-EBAY-C-MARKETPLACE-ID": marketplaceId,
     };
 
     if (EBAY_CAMPAIGN_ID) {
@@ -102,10 +127,24 @@ async function fetchListings(query: string, countryCode: string, entityType: "ca
   }
 }
 
+function formatCurrency(value: string, currency: string): string {
+  const num = parseFloat(value);
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency,
+      maximumFractionDigits: 2,
+    }).format(num);
+  } catch {
+    return `${currency} ${num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
+}
+
 export default async function EbayListings({ query, entityType = "camera", entitySlug }: EbayListingsProps) {
   const hdrs = await headers();
-  const countryCode = hdrs.get("x-vercel-ip-country") ?? "US";
-  const listings = await fetchListings(query, countryCode, entityType);
+  const countryCode = (hdrs.get("x-vercel-ip-country") ?? "US").toUpperCase();
+  const marketplaceId = MARKETPLACE_BY_COUNTRY[countryCode] ?? "EBAY_US";
+  const listings = await fetchListings(query, countryCode, marketplaceId, entityType);
 
   if (listings.length === 0) return null;
 
@@ -146,6 +185,7 @@ export default async function EbayListings({ query, entityType = "camera", entit
             className="flex gap-3 rounded-lg border border-zinc-200 p-3 transition-colors hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900/50"
           >
             {listing.imageUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={listing.imageUrl}
                 alt=""
@@ -159,13 +199,15 @@ export default async function EbayListings({ query, entityType = "camera", entit
               </p>
               <div className="mt-1 flex flex-wrap items-center gap-1.5">
                 <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                  ${parseFloat(listing.price.value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {formatCurrency(listing.price.value, listing.price.currency)}
                 </span>
                 {listing.shippingCost === "0.00" && (
                   <Badge variant="outline" className="text-[10px]">Free shipping</Badge>
                 )}
                 {listing.shippingCost && listing.shippingCost !== "0.00" && (
-                  <span className="text-xs text-zinc-400">+${listing.shippingCost} shipping</span>
+                  <span className="text-xs text-zinc-400">
+                    + {formatCurrency(listing.shippingCost, listing.price.currency)} shipping
+                  </span>
                 )}
               </div>
               <div className="mt-1 flex items-center gap-2">
@@ -178,7 +220,6 @@ export default async function EbayListings({ query, entityType = "camera", entit
           </EbayTrackedLink>
         ))}
       </div>
-
     </div>
   );
 }

@@ -1,9 +1,10 @@
 import { Suspense } from "react";
 import { notFound, redirect } from "next/navigation";
-import { eq, and, desc } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import BackButton from "@/components/BackButton";
 import { db } from "@/db";
-import { cameras, systems, priceEstimates, priceHistory } from "@/db/schema";
+import { cameras, systems } from "@/db/schema";
+import { getEntityPriceEstimate, getEntityPriceHistory } from "@/lib/prices";
 import ViewTracker from "@/components/ViewTracker";
 import ImageGallery from "@/components/ImageGallery";
 import RatingWidget from "@/components/RatingWidget";
@@ -18,15 +19,8 @@ import { formatDescription } from "@/lib/format-description";
 import { PageTransition } from "@/components/page-transition";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { getCurrentUser } from "@/lib/user-auth";
 
 export const revalidate = 604800;
-
-export async function generateStaticParams() {
-  if (process.env.VERCEL_ENV !== "production") return [];
-  const rows = await db.select({ slug: cameras.slug }).from(cameras);
-  return rows.map((r) => ({ slug: r.slug.split("/") }));
-}
 
 export async function generateMetadata({
   params,
@@ -75,34 +69,12 @@ export default async function CameraDetailPage({
     if (target) redirect(`/cameras/${target.slug}`);
   }
 
-  const currentUser = await getCurrentUser();
-  const allSystems = await db.select({ id: systems.id, name: systems.name }).from(systems).orderBy(systems.name);
   const specs = (camera.specs ?? {}) as Record<string, string>;
 
-  // Fetch price data
-  const [priceEstimate] = await db
-    .select()
-    .from(priceEstimates)
-    .where(and(
-      eq(priceEstimates.entityType, "camera"),
-      eq(priceEstimates.entityId, camera.id),
-    ))
-    .limit(1);
-
-  const priceHistoryRows = await db
-    .select({
-      saleDate: priceHistory.saleDate,
-      condition: priceHistory.condition,
-      priceUsd: priceHistory.priceUsd,
-      source: priceHistory.source,
-      sourceUrl: priceHistory.sourceUrl,
-    })
-    .from(priceHistory)
-    .where(and(
-      eq(priceHistory.entityType, "camera"),
-      eq(priceHistory.entityId, camera.id),
-    ))
-    .orderBy(desc(priceHistory.saleDate));
+  const [priceEstimate, priceHistoryRows] = await Promise.all([
+    getEntityPriceEstimate("camera", camera.id),
+    getEntityPriceHistory("camera", camera.id),
+  ]);
 
   const imagingRows: [string, string | number | null | undefined][] = [
     ["Type", specs["Type"]],
@@ -245,7 +217,6 @@ export default async function CameraDetailPage({
             entityType="camera"
             entityId={camera.id}
             entitySlug={camera.slug}
-            isLoggedIn={!!currentUser}
             currentValues={{
               name: camera.name,
               url: camera.url,
@@ -264,7 +235,7 @@ export default async function CameraDetailPage({
               { name: "name", label: "Name", type: "text" },
               { name: "alias", label: "Also known as", type: "text" },
               { name: "description", label: "Description", type: "textarea" },
-              { name: "systemId", label: "Mount System", type: "select", options: allSystems.map((s) => ({ value: s.id, label: s.name })) },
+              { name: "systemId", label: "Mount System", type: "select", optionsSource: "systems" },
               { name: "sensorType", label: "Sensor Type", type: "text" },
               { name: "sensorSize", label: "Sensor Size", type: "text" },
               { name: "megapixels", label: "Megapixels", type: "number" },
@@ -280,7 +251,6 @@ export default async function CameraDetailPage({
               entityType="camera"
               entityId={camera.id}
               entityName={camera.name}
-              isLoggedIn={!!currentUser}
             />
           </div>
         </div>
