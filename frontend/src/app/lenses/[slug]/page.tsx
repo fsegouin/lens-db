@@ -17,8 +17,10 @@ import SpecsTable from "@/components/SpecsTable";
 import { PageTransition } from "@/components/page-transition";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Suspense } from "react";
 import PriceCard from "@/components/PriceCard";
 import EbayListings from "@/components/EbayListings";
+import EbayListingsSkeleton from "@/components/EbayListingsSkeleton";
 
 export const revalidate = 604800;
 
@@ -224,7 +226,9 @@ export default async function LensDetailPage({
           history={priceHistoryRows}
         />
 
-        <EbayListings query={lens.name} entityType="lens" entitySlug={lens.slug} />
+        <Suspense fallback={<EbayListingsSkeleton />}>
+          <EbayListings query={lens.name} entityType="lens" entitySlug={lens.slug} />
+        </Suspense>
 
         <div className="space-y-5">
           <div>
