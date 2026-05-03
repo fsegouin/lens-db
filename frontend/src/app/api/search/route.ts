@@ -1,10 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
+import { sql, type SQL } from "drizzle-orm";
 import { db } from "@/db";
 import { lenses, cameras, systems, collections } from "@/db/schema";
-import { and, or } from "drizzle-orm";
 import { getClientIP, rateLimitedResponse } from "@/lib/api-utils";
 import { rateLimiters } from "@/lib/rate-limit";
 import { buildNameSearch } from "@/lib/search";
+
+type ResultRow = {
+  id: number;
+  name: string;
+  slug: string;
+  type: "lens" | "camera" | "system" | "collection";
+};
+
+function combine(conditions: SQL[]): SQL | null {
+  if (conditions.length === 0) return null;
+  return sql.join(conditions, sql` AND `);
+}
 
 export async function GET(request: NextRequest) {
   const ip = getClientIP(request);
@@ -16,63 +28,55 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ lenses: [], cameras: [], systems: [], collections: [] });
   }
 
-  const lensWhere = buildNameSearch(lenses.name, q);
-  const cameraNameWhere = buildNameSearch(cameras.name, q);
-  const cameraAliasWhere = buildNameSearch(cameras.alias, q);
-  const systemNameWhere = buildNameSearch(systems.name, q);
-  const systemMfrWhere = buildNameSearch(systems.manufacturer, q);
-  const collectionWhere = buildNameSearch(collections.name, q);
+  const lensCond = combine(buildNameSearch(lenses.name, q));
+  const cameraNameCond = combine(buildNameSearch(cameras.name, q));
+  const cameraAliasCond = combine(buildNameSearch(cameras.alias, q));
+  const systemNameCond = combine(buildNameSearch(systems.name, q));
+  const systemMfrCond = combine(buildNameSearch(systems.manufacturer, q));
+  const collectionCond = combine(buildNameSearch(collections.name, q));
 
-  const [lensResults, cameraResults, systemResults, collectionResults] =
-    await Promise.all([
-      lensWhere.length > 0
-        ? db
-            .select({ id: lenses.id, name: lenses.name, slug: lenses.slug })
-            .from(lenses)
-            .where(and(...lensWhere))
-            .limit(5)
-        : [],
-      cameraNameWhere.length > 0 || cameraAliasWhere.length > 0
-        ? db
-            .select({ id: cameras.id, name: cameras.name, slug: cameras.slug })
-            .from(cameras)
-            .where(
-              or(
-                cameraNameWhere.length > 0 ? and(...cameraNameWhere) : undefined,
-                cameraAliasWhere.length > 0 ? and(...cameraAliasWhere) : undefined
-              )
-            )
-            .limit(5)
-        : [],
-      systemNameWhere.length > 0 || systemMfrWhere.length > 0
-        ? db
-            .select({ id: systems.id, name: systems.name, slug: systems.slug })
-            .from(systems)
-            .where(
-              or(
-                systemNameWhere.length > 0 ? and(...systemNameWhere) : undefined,
-                systemMfrWhere.length > 0 ? and(...systemMfrWhere) : undefined
-              )
-            )
-            .limit(5)
-        : [],
-      collectionWhere.length > 0
-        ? db
-            .select({
-              id: collections.id,
-              name: collections.name,
-              slug: collections.slug,
-            })
-            .from(collections)
-            .where(and(...collectionWhere))
-            .limit(5)
-        : [],
-    ]);
+  const branches: SQL[] = [];
 
-  return NextResponse.json({
-    lenses: lensResults,
-    cameras: cameraResults,
-    systems: systemResults,
-    collections: collectionResults,
-  });
+  if (lensCond) {
+    branches.push(sql`(SELECT id, name, slug, 'lens' AS type FROM ${lenses} WHERE ${lensCond} LIMIT 5)`);
+  }
+  const cameraCond =
+    cameraNameCond && cameraAliasCond
+      ? sql`((${cameraNameCond}) OR (${cameraAliasCond}))`
+      : (cameraNameCond ?? cameraAliasCond);
+  if (cameraCond) {
+    branches.push(sql`(SELECT id, name, slug, 'camera' AS type FROM ${cameras} WHERE ${cameraCond} LIMIT 5)`);
+  }
+  const systemCond =
+    systemNameCond && systemMfrCond
+      ? sql`((${systemNameCond}) OR (${systemMfrCond}))`
+      : (systemNameCond ?? systemMfrCond);
+  if (systemCond) {
+    branches.push(sql`(SELECT id, name, slug, 'system' AS type FROM ${systems} WHERE ${systemCond} LIMIT 5)`);
+  }
+  if (collectionCond) {
+    branches.push(sql`(SELECT id, name, slug, 'collection' AS type FROM ${collections} WHERE ${collectionCond} LIMIT 5)`);
+  }
+
+  if (branches.length === 0) {
+    return NextResponse.json({ lenses: [], cameras: [], systems: [], collections: [] });
+  }
+
+  const result = await db.execute(sql.join(branches, sql` UNION ALL `));
+  const rows = result.rows as unknown as ResultRow[];
+
+  const out = {
+    lenses: [] as ResultRow[],
+    cameras: [] as ResultRow[],
+    systems: [] as ResultRow[],
+    collections: [] as ResultRow[],
+  };
+  for (const row of rows) {
+    if (row.type === "lens") out.lenses.push(row);
+    else if (row.type === "camera") out.cameras.push(row);
+    else if (row.type === "system") out.systems.push(row);
+    else if (row.type === "collection") out.collections.push(row);
+  }
+
+  return NextResponse.json(out);
 }
