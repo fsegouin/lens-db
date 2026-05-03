@@ -10,6 +10,7 @@ import {
   date,
   primaryKey,
   index,
+  uniqueIndex,
   unique,
   check,
 } from "drizzle-orm/pg-core";
@@ -442,5 +443,8 @@ export const priceHistory = pgTable(
   },
   (table) => [
     index("idx_price_history_entity").on(table.entityType, table.entityId),
+    uniqueIndex("uq_price_history_entity_source_url")
+      .on(table.entityType, table.entityId, table.sourceUrl)
+      .where(sql`source_url IS NOT NULL`),
   ]
 );
