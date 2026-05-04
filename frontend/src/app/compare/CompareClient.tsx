@@ -1345,16 +1345,16 @@ function SummaryFooter({
   summary: { aWins: number; bWins: number; differences: number; matches: number };
   rows: SpecRow[];
 }) {
-  const aName = item1.data.name.split(" ")[0];
-  const bName = item2.data.name.split(" ")[0];
+  const aName = item1.data.name;
+  const bName = item2.data.name;
   const verdict =
     summary.differences === 0
       ? "These two are functionally identical across the recorded specs."
       : summary.aWins > summary.bWins
-        ? `A · ${aName} edges ahead on ${summary.aWins} ${summary.aWins === 1 ? "metric" : "metrics"}.`
+        ? `${aName} edges ahead on ${summary.aWins} ${summary.aWins === 1 ? "metric" : "metrics"}.`
         : summary.bWins > summary.aWins
-          ? `B · ${bName} edges ahead on ${summary.bWins} ${summary.bWins === 1 ? "metric" : "metrics"}.`
-          : `Trade-offs: ${summary.aWins} for A · ${aName}, ${summary.bWins} for B · ${bName}.`;
+          ? `${bName} edges ahead on ${summary.bWins} ${summary.bWins === 1 ? "metric" : "metrics"}.`
+          : `Trade-offs: ${summary.aWins} for ${aName}, ${summary.bWins} for ${bName}.`;
 
   const diffLabels = rows
     .filter((r) => r.value1 !== r.value2 && r.value1 !== EM_DASH && r.value2 !== EM_DASH)
