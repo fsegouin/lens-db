@@ -1,16 +1,10 @@
 import fs from "fs";
 import path from "path";
+import { isAllowedImageSrc } from "./image-utils";
+
+export { firstImageSrc, isAllowedImageSrc } from "./image-utils";
 
 type ImageData = { src: string; alt: string };
-
-const ALLOWED_PREFIXES = [
-  "/images/",
-  "https://pub-452f806914084c1384d3fafe70f6be32.r2.dev/",
-];
-
-export function isAllowedImageSrc(src: string): boolean {
-  return ALLOWED_PREFIXES.some((prefix) => src.startsWith(prefix));
-}
 
 /**
  * Get images for a lens or camera, preferring local files over remote URLs.

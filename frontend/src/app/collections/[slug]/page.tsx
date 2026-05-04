@@ -3,8 +3,10 @@ import { notFound } from "next/navigation";
 import { asc, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { collections, lensCollections, lenses, systems } from "@/db/schema";
+import { firstImageSrc } from "@/lib/images";
 import { PageTransition } from "@/components/page-transition";
 import { TopBar } from "@/components/app-shell/top-bar";
+import { MediaThumb } from "@/components/media-thumb";
 
 export const revalidate = 604800;
 
@@ -194,14 +196,7 @@ function LensTable({ rows }: { rows: LensRow[] }) {
             href={`/lenses/${lens.slug}`}
             className="grid cursor-pointer grid-cols-[56px_2.6fr_1fr_0.9fr_0.6fr_0.7fr_0.7fr_36px] items-center gap-3 border-b border-[var(--line-soft)] px-3.5 py-3 transition-colors last:border-b-0 hover:bg-[var(--surface-soft)]"
           >
-            <div
-              className="relative h-11 w-11 overflow-hidden rounded bg-[var(--surface-sunk)]"
-              style={{
-                backgroundImage:
-                  "repeating-linear-gradient(-45deg, transparent 0 4px, color-mix(in oklch, var(--fg) 5%, transparent) 4px 5px)",
-              }}
-              aria-hidden="true"
-            />
+            <MediaThumb src={firstImageSrc(lens.images)} alt={lens.name} />
             <div className="min-w-0">
               <div className="truncate text-[13.5px] font-medium leading-[1.3] -tracking-[0.01em]">
                 {lens.name}

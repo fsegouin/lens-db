@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Search, X } from "lucide-react";
 import { toast } from "sonner";
 import { formatMagnification } from "@/lib/format-magnification";
+import { firstImageSrc } from "@/lib/image-utils";
 import { trackEvent } from "@/lib/analytics";
 import { useEntitySearch, type EntityType } from "@/hooks/use-entity-search";
 import {
@@ -46,6 +48,7 @@ type Lens = {
   era: string | null;
   productionStatus: string | null;
   specs: Record<string, string> | null;
+  images: unknown;
 };
 
 type Camera = {
@@ -60,6 +63,7 @@ type Camera = {
   bodyType: string | null;
   weightG: number | null;
   specs: Record<string, string> | null;
+  images: unknown;
 };
 
 type SelectedItem =
@@ -569,13 +573,7 @@ function BenchSlot({
 
       {item ? (
         <div className="grid grid-cols-[110px_1fr] items-stretch gap-3.5">
-          <div className="flex items-center justify-center rounded-lg border border-border bg-[var(--surface-soft)] p-1.5">
-            {item.type === "lens" ? (
-              <LensSilhouette />
-            ) : (
-              <CameraSilhouette />
-            )}
-          </div>
+          <BenchMedia item={item} />
           <QuickSpecs item={item} />
         </div>
       ) : (
@@ -628,6 +626,27 @@ function BenchQS({ label, value, unit }: { label: string; value: string; unit?: 
         <span className="text-[13px] font-medium text-foreground">{value}</span>
         {unit && <span className="ml-[1px] text-[10px] text-[var(--fg-dim)]">{unit}</span>}
       </span>
+    </div>
+  );
+}
+
+function BenchMedia({ item }: { item: SelectedItem }) {
+  const src = firstImageSrc(item.data.images);
+  return (
+    <div className="relative flex items-center justify-center overflow-hidden rounded-lg border border-border bg-[var(--surface-soft)] p-1.5">
+      {src ? (
+        <Image
+          src={src}
+          alt={item.data.name}
+          fill
+          className="object-contain p-2"
+          sizes="110px"
+        />
+      ) : item.type === "lens" ? (
+        <LensSilhouette />
+      ) : (
+        <CameraSilhouette />
+      )}
     </div>
   );
 }

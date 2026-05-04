@@ -7,6 +7,8 @@ import type { cameras, systems } from "@/db/schema";
 import { Search } from "lucide-react";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { trackEvent } from "@/lib/analytics";
+import { firstImageSrc } from "@/lib/image-utils";
+import { MediaThumb } from "@/components/media-thumb";
 
 type CameraRow = {
   camera: typeof cameras.$inferSelect;
@@ -537,7 +539,12 @@ export default function CameraList({
                   href={`/cameras/${camera.slug}`}
                   className="group flex flex-col bg-background p-5 transition-colors hover:bg-[var(--surface-soft)]"
                 >
-                  <div className="hatch relative mb-3.5 aspect-[4/3] rounded-md bg-[var(--surface-sunk)]" />
+                  <MediaThumb
+                    src={firstImageSrc(camera.images)}
+                    alt={camera.name}
+                    className="mb-3.5 aspect-[4/3] w-full rounded-md"
+                    sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
+                  />
                   <div className="mono mb-2 truncate text-[10px] uppercase tracking-[0.08em] text-[var(--fg-faint)]">
                     {sys?.name ?? "—"}
                     {category && <> · {category}</>}

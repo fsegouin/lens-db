@@ -7,6 +7,8 @@ import type { lenses, systems } from "@/db/schema";
 import { ChevronDown, ChevronUp, ChevronsUpDown, ChevronRight, Search, Star } from "lucide-react";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { trackEvent } from "@/lib/analytics";
+import { firstImageSrc } from "@/lib/image-utils";
+import { MediaThumb } from "@/components/media-thumb";
 
 type SeriesInfo = { name: string; slug: string };
 type LensRow = {
@@ -722,7 +724,7 @@ export default function LensList({
                     className="grid cursor-pointer items-center gap-3 border-b border-[var(--line-soft)] px-3.5 py-3 transition-colors last:border-b-0 hover:bg-[var(--surface-soft)]"
                     style={{ gridTemplateColumns: gridTemplate }}
                   >
-                    <div className="hatch hatch-dense relative size-11 shrink-0 overflow-hidden rounded bg-[var(--surface-sunk)]" />
+                    <MediaThumb src={firstImageSrc(lens.images)} alt={lens.name} className="size-11 rounded" />
                     <div className="min-w-0">
                       <div className="truncate text-[13.5px] font-medium -tracking-[0.01em]">
                         {lens.name}
