@@ -57,6 +57,7 @@ type SearchParams = Promise<{
   productionStatus?: string;
   coverage?: string;
   series?: string;
+  hasAutofocus?: string;
   priceMin?: string;
   priceMax?: string;
   sort?: string;
@@ -145,6 +146,9 @@ export default async function LensesPage({
     }
     if (params.productionStatus) {
       conditions.push(eq(lenses.productionStatus, params.productionStatus));
+    }
+    if (params.hasAutofocus === "true") {
+      conditions.push(eq(lenses.hasAutofocus, true));
     }
     if (params.series) {
       conditions.push(
@@ -267,6 +271,7 @@ export default async function LensesPage({
         : `${params.minFocal ?? params.maxFocal}mm`,
     );
   if (params.minAperture) activeFilterSummary.push(`ƒ/${params.minAperture}+`);
+  if (params.hasAutofocus === "true") activeFilterSummary.push("autofocus");
 
   return (
     <PageTransition>

@@ -130,6 +130,7 @@ export default function LensList({
   const productionStatus = searchParams.get("productionStatus") || "";
   const coverage = searchParams.get("coverage") || "";
   const series = searchParams.get("series") || "";
+  const hasAutofocus = searchParams.get("hasAutofocus") === "true";
   const sort = searchParams.get("sort") || "";
   const order = searchParams.get("order") || "";
   const priceMin = searchParams.get("priceMin") || "";
@@ -186,6 +187,7 @@ export default function LensList({
       if (productionStatus) params.set("productionStatus", productionStatus);
       if (coverage) params.set("coverage", coverage);
       if (series) params.set("series", series);
+      if (hasAutofocus) params.set("hasAutofocus", "true");
       if (sort) params.set("sort", sort);
       if (order) params.set("order", order);
       if (priceMin) params.set("priceMin", priceMin);
@@ -193,7 +195,7 @@ export default function LensList({
       params.set("cursor", String(cursor));
       return `/api/lenses?${params.toString()}`;
     },
-    [q, brand, system, type, minFocal, maxFocal, minAperture, maxAperture, year, lensType, era, productionStatus, coverage, series, sort, order, priceMin, priceMax],
+    [q, brand, system, type, minFocal, maxFocal, minAperture, maxAperture, year, lensType, era, productionStatus, coverage, series, hasAutofocus, sort, order, priceMin, priceMax],
   );
 
   const loadMore = useCallback(async () => {
@@ -241,6 +243,7 @@ export default function LensList({
     productionStatus?: string;
     coverage?: string;
     series?: string;
+    hasAutofocus?: boolean;
     sort?: string;
     order?: string;
     priceMin?: string;
@@ -263,6 +266,7 @@ export default function LensList({
     const productionStatusVal = overrides?.productionStatus ?? productionStatus;
     const coverageVal = overrides?.coverage ?? coverage;
     const seriesVal = overrides?.series ?? series;
+    const hasAutofocusVal = overrides?.hasAutofocus ?? hasAutofocus;
     const sortVal = overrides?.sort ?? sort;
     const orderVal = overrides?.order ?? order;
     const priceMinVal = overrides?.priceMin ?? formPriceMin;
@@ -281,6 +285,7 @@ export default function LensList({
     if (productionStatusVal) params.set("productionStatus", productionStatusVal);
     if (coverageVal) params.set("coverage", coverageVal);
     if (seriesVal) params.set("series", seriesVal);
+    if (hasAutofocusVal) params.set("hasAutofocus", "true");
     if (sortVal) params.set("sort", sortVal);
     if (orderVal) params.set("order", orderVal);
     if (priceMinVal) params.set("priceMin", priceMinVal);
@@ -314,6 +319,7 @@ export default function LensList({
     !!productionStatus ||
     !!coverage ||
     !!series ||
+    hasAutofocus ||
     !!minFocal ||
     !!maxFocal ||
     !!minAperture ||
@@ -430,6 +436,31 @@ export default function LensList({
               }`}
             >
               Teleconverter
+            </button>
+          </div>
+        </FilterGroup>
+
+        <FilterGroup
+          label="Features"
+          clearable={hasAutofocus}
+          onClear={() => applyFilters({ hasAutofocus: false })}
+        >
+          <div className="flex flex-wrap gap-1.5">
+            <button
+              onClick={() => {
+                trackEvent("lens_filter_apply", {
+                  filter: "hasAutofocus",
+                  value: hasAutofocus ? "false" : "true",
+                });
+                applyFilters({ hasAutofocus: !hasAutofocus });
+              }}
+              className={`mono rounded-full border px-2.5 py-1 text-[11px] transition-colors ${
+                hasAutofocus
+                  ? "border-foreground bg-foreground text-background"
+                  : "border-border bg-background text-[var(--fg-mid)] hover:border-[var(--line-strong)] hover:text-foreground"
+              }`}
+            >
+              Autofocus
             </button>
           </div>
         </FilterGroup>

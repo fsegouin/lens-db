@@ -29,6 +29,7 @@ export async function GET(request: NextRequest) {
   const era = searchParams.get("era") || undefined;
   const productionStatus = searchParams.get("productionStatus") || undefined;
   const series = searchParams.get("series") || undefined;
+  const hasAutofocus = searchParams.get("hasAutofocus") === "true";
   const priceMin = searchParams.get("priceMin") || undefined;
   const priceMax = searchParams.get("priceMax") || undefined;
   const sort = searchParams.get("sort") || undefined;
@@ -108,6 +109,9 @@ export async function GET(request: NextRequest) {
     }
     if (productionStatus) {
       conditions.push(eq(lenses.productionStatus, productionStatus));
+    }
+    if (hasAutofocus) {
+      conditions.push(eq(lenses.hasAutofocus, true));
     }
     if (priceMin) {
       const val = parseInt(priceMin);
