@@ -26,15 +26,6 @@ export async function generateMetadata({
   };
 }
 
-function deriveMountEm(name: string): string {
-  const trimmed = name.trim();
-  const tokens = trimmed.split(/\s+/);
-  const last = tokens[tokens.length - 1];
-  if (last.length <= 4) return last;
-  const initials = trimmed.split(/[\s/]+/).map((w) => w[0]).filter(Boolean).join("");
-  return initials.length <= 4 ? initials.toUpperCase() : initials.slice(0, 3).toUpperCase();
-}
-
 function splitTitleEm(name: string): { main: string; em: string } {
   const trimmed = name.trim();
   const spaceIdx = trimmed.lastIndexOf(" ");
@@ -129,7 +120,6 @@ export default async function SystemDetailPage({
   const tab: Tab = TABS.includes(rawTab as Tab) ? (rawTab as Tab) : "lenses";
 
   const ldbId = `LDB SYS-${String(system.id).padStart(3, "0")}`;
-  const em = deriveMountEm(system.name);
   const title = splitTitleEm(system.name);
   const { heights: focalHeights, total: focalTotal } = computeFocalDistribution(focalRows);
   const peakBuckets = new Set(
@@ -185,34 +175,30 @@ export default async function SystemDetailPage({
           </div>
         </header>
 
-        <div className="mb-10 grid gap-8 lg:grid-cols-[360px_1fr]">
-          <MountDiagram em={em} systemName={system.name} />
+        <div className="mb-10 space-y-6">
+          {system.description && (
+            <p className="max-w-[720px] text-[15px] leading-[1.65] text-[var(--fg-mid)]">
+              {system.description}
+            </p>
+          )}
 
-          <div className="space-y-6">
-            {system.description && (
-              <p className="max-w-[640px] text-[15px] leading-[1.65] text-[var(--fg-mid)]">
-                {system.description}
-              </p>
-            )}
-
-            <div className="grid grid-cols-2 gap-px overflow-hidden rounded-[10px] border border-border bg-border md:grid-cols-3">
-              <Stat label="Lenses" value={lensCount.toLocaleString()} />
-              <Stat label="Cameras" value={cameraCount.toLocaleString()} />
-              <Stat label="Manufacturers" value={makerCount.toLocaleString()} />
-            </div>
-
-            {focalTotal > 0 && (
-              <div className="overflow-hidden rounded-[10px] border border-border">
-                <div className="flex items-center justify-between border-b border-border bg-[var(--surface-soft)] px-4 py-2.5">
-                  <h3 className="text-[13px] font-medium">Focal length distribution</h3>
-                  <span className="mono text-[10px] uppercase tracking-[0.08em] text-[var(--fg-faint)]">
-                    {focalTotal.toLocaleString()} indexed
-                  </span>
-                </div>
-                <FocalChart heights={focalHeights} peakBuckets={peakBuckets} />
-              </div>
-            )}
+          <div className="grid grid-cols-2 gap-px overflow-hidden rounded-[10px] border border-border bg-border md:grid-cols-3">
+            <Stat label="Lenses" value={lensCount.toLocaleString()} />
+            <Stat label="Cameras" value={cameraCount.toLocaleString()} />
+            <Stat label="Manufacturers" value={makerCount.toLocaleString()} />
           </div>
+
+          {focalTotal > 0 && (
+            <div className="overflow-hidden rounded-[10px] border border-border">
+              <div className="flex items-center justify-between border-b border-border bg-[var(--surface-soft)] px-4 py-2.5">
+                <h3 className="text-[13px] font-medium">Focal length distribution</h3>
+                <span className="mono text-[10px] uppercase tracking-[0.08em] text-[var(--fg-faint)]">
+                  {focalTotal.toLocaleString()} indexed
+                </span>
+              </div>
+              <FocalChart heights={focalHeights} peakBuckets={peakBuckets} />
+            </div>
+          )}
         </div>
 
         <div className="mb-6 flex gap-0.5 border-b border-border">
@@ -229,65 +215,6 @@ export default async function SystemDetailPage({
         <ViewTracker type="system" id={system.id} />
       </div>
     </PageTransition>
-  );
-}
-
-function MountDiagram({ em, systemName }: { em: string; systemName: string }) {
-  const fontSize = em.length > 3 ? 9 : 14;
-  return (
-    <div className="overflow-hidden rounded-[10px] border border-border">
-      <div className="flex items-center justify-between border-b border-border bg-[var(--surface-soft)] px-4 py-2.5">
-        <h3 className="text-[13px] font-medium">Mount geometry</h3>
-        <span className="mono text-[10px] uppercase tracking-[0.08em] text-[var(--fg-faint)]">
-          schematic
-        </span>
-      </div>
-      <div className="flex items-center justify-center bg-background p-6">
-        <svg viewBox="0 0 260 200" className="w-full max-w-[260px]" aria-hidden="true">
-          <circle cx="130" cy="100" r="84" fill="none" stroke="var(--line-strong)" strokeWidth="1" />
-          <circle cx="130" cy="100" r="76" fill="var(--surface-soft)" stroke="var(--line)" strokeWidth="0.6" />
-          <circle cx="130" cy="100" r="42" fill="var(--surface-sunk)" stroke="var(--line-strong)" strokeWidth="0.8" />
-          <text
-            x="130"
-            y="105"
-            fontFamily="Geist Mono, monospace"
-            fontSize={fontSize}
-            fill="var(--fg)"
-            textAnchor="middle"
-            fontWeight="600"
-          >
-            {em}
-          </text>
-          <g stroke="var(--fg-faint)" strokeWidth="0.5" strokeDasharray="2 2" fill="none">
-            <line x1="30" y1="100" x2="46" y2="100" />
-            <line x1="30" y1="16" x2="30" y2="184" />
-            <line x1="30" y1="16" x2="46" y2="16" />
-            <line x1="30" y1="184" x2="46" y2="184" />
-          </g>
-          <text
-            x="18"
-            y="104"
-            fontFamily="Geist Mono, monospace"
-            fontSize="9"
-            fill="var(--fg-dim)"
-            textAnchor="middle"
-            transform="rotate(-90 18 104)"
-          >
-            throat
-          </text>
-          <text
-            x="230"
-            y="100"
-            fontFamily="Geist Mono, monospace"
-            fontSize="9"
-            fill="var(--fg-dim)"
-            textAnchor="middle"
-          >
-            {systemName.toUpperCase().slice(0, 16)}
-          </text>
-        </svg>
-      </div>
-    </div>
   );
 }
 
