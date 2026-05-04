@@ -46,20 +46,15 @@ function formatTime(date: Date): string {
 
 function AssistantAvatar() {
   return (
-    <div className="flex h-7 w-7 items-center justify-center rounded-full border border-[var(--line-strong)] bg-[var(--surface-sunk)] text-[var(--fg)]">
-      <svg width="14" height="14" viewBox="0 0 28 28" fill="none" aria-hidden="true">
-        <circle cx="14" cy="14" r="11" stroke="currentColor" strokeWidth="1.25" />
-        <g stroke="currentColor" strokeWidth="0.9">
-          <path d="M14 4 L17 10" />
-          <path d="M23 8 L16 12" />
-          <path d="M21 21 L15 15" />
-          <path d="M8 23 L12 16" />
-          <path d="M4 15 L10 14" />
-          <path d="M6 6 L13 11" />
-        </g>
-        <circle cx="14" cy="14" r="2" fill="currentColor" />
-      </svg>
-    </div>
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src="/icon.svg"
+      alt=""
+      width={28}
+      height={28}
+      className="h-7 w-7 rounded-full"
+      aria-hidden="true"
+    />
   );
 }
 
