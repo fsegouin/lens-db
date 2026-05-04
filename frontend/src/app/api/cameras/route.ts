@@ -2,7 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { cameras, systems, priceEstimates } from "@/db/schema";
 import { asc, desc, eq, and, or, sql, isNull } from "drizzle-orm";
-import { getClientIP, rateLimitedResponse } from "@/lib/api-utils";
+import {
+  escapeLikeMetachars,
+  getClientIP,
+  parseMultiValueParam,
+  rateLimitedResponse,
+} from "@/lib/api-utils";
 import { rateLimiters } from "@/lib/rate-limit";
 
 const PAGE_SIZE = 50;
@@ -19,7 +24,7 @@ export async function GET(request: NextRequest) {
   const system = searchParams.get("system") || undefined;
   const type = searchParams.get("type") || undefined;
   const model = searchParams.get("model") || undefined;
-  const filmType = searchParams.get("filmType") || undefined;
+  const filmTypeList = parseMultiValueParam(searchParams.get("filmType"));
   const sensorSize = searchParams.get("sensorSize") || undefined;
   const sensorType = searchParams.get("sensorType") || undefined;
   const cropFactor = searchParams.get("cropFactor") || undefined;
@@ -69,8 +74,15 @@ export async function GET(request: NextRequest) {
         sql`${cameras.specs}->>'Model' LIKE ${model + "%"}`
       );
     }
-    if (filmType) {
-      conditions.push(sql`${cameras.specs}->>'Film type' = ${filmType}`);
+    if (filmTypeList.length > 0) {
+      conditions.push(
+        or(
+          ...filmTypeList.map(
+            (v) =>
+              sql`${cameras.specs}->>'Film type' ILIKE ${"%" + escapeLikeMetachars(v) + "%"}`,
+          ),
+        ),
+      );
     }
     if (sensorSize) {
       conditions.push(eq(cameras.sensorSize, sensorSize));

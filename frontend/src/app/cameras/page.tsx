@@ -1,4 +1,5 @@
 import { db } from "@/db";
+import { escapeLikeMetachars, parseMultiValueParam } from "@/lib/api-utils";
 import { cameras, systems, priceEstimates } from "@/db/schema";
 import { asc, desc, eq, and, or, sql } from "drizzle-orm";
 import { unstable_cache } from "next/cache";
@@ -35,7 +36,12 @@ const getCachedDropdownData = unstable_cache(
           modelSet.add("Mechanical");
         else modelSet.add(s["Model"]);
       }
-      if (s["Film type"]) filmTypeSet.add(s["Film type"]);
+      if (s["Film type"]) {
+        for (const part of s["Film type"].split(";")) {
+          const v = part.trim();
+          if (v) filmTypeSet.add(v);
+        }
+      }
       if (s["Crop factor"]) cropFactorSet.add(s["Crop factor"]);
       if (r.sensorType) sensorTypeSet.add(r.sensorType);
       if (r.sensorSize) sensorSizeSet.add(r.sensorSize);
@@ -142,9 +148,15 @@ export default async function CamerasPage({
         sql`${cameras.specs}->>'Model' LIKE ${params.model + "%"}`
       );
     }
-    if (params.filmType) {
+    const filmTypeList = parseMultiValueParam(params.filmType);
+    if (filmTypeList.length > 0) {
       conditions.push(
-        sql`${cameras.specs}->>'Film type' = ${params.filmType}`
+        or(
+          ...filmTypeList.map(
+            (v) =>
+              sql`${cameras.specs}->>'Film type' ILIKE ${"%" + escapeLikeMetachars(v) + "%"}`,
+          ),
+        ),
       );
     }
     if (params.sensorType) {
