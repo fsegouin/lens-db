@@ -2,6 +2,7 @@ import { Metadata } from "next";
 import { Suspense } from "react";
 import CompareClient from "./CompareClient";
 import { PageTransition } from "@/components/page-transition";
+import { TopBar } from "@/components/app-shell/top-bar";
 
 export const metadata: Metadata = {
   title: "Compare | The Lens DB",
@@ -11,16 +12,11 @@ export const metadata: Metadata = {
 export default function ComparePage() {
   return (
     <PageTransition>
-      <div className="mx-auto max-w-5xl space-y-8">
-        <div>
-          <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100">
-            Compare
-          </h1>
-          <p className="mt-2 text-zinc-500 dark:text-zinc-400">
-            Search for a lens or camera to start comparing specifications side by
-            side.
-          </p>
-        </div>
+      <TopBar crumbs={[{ label: "home", href: "/" }, { label: "compare" }]}>
+        <span>side by side</span>
+      </TopBar>
+
+      <div className="mx-auto w-full max-w-[1320px] px-6 pb-24 pt-10 lg:px-10">
         <Suspense>
           <CompareClient />
         </Suspense>
