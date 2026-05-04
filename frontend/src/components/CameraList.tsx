@@ -4,11 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import type { cameras, systems } from "@/db/schema";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
-import { TableSkeleton } from "@/components/table-skeleton";
+import { Search } from "lucide-react";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { trackEvent } from "@/lib/analytics";
 
@@ -49,6 +45,44 @@ type FilterOverrides = {
   order?: string;
 };
 
+function FilterGroup({
+  label,
+  clearable,
+  onClear,
+  children,
+}: {
+  label: string;
+  clearable?: boolean;
+  onClear?: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="mb-[22px]">
+      <div className="mono mb-2.5 flex items-center justify-between text-[10px] uppercase tracking-[0.1em] text-[var(--fg-faint)]">
+        <span>{label}</span>
+        {clearable && (
+          <button
+            type="button"
+            onClick={onClear}
+            className="text-[10px] normal-case tracking-normal text-[var(--fg-dim)] hover:text-foreground"
+          >
+            clear
+          </button>
+        )}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function filterSelectClass(active: boolean) {
+  return `filter-select w-full rounded-md border px-2.5 py-2 text-[13px] ${
+    active
+      ? "border-[var(--line-strong)] bg-background text-foreground"
+      : "border-border bg-background text-[var(--fg-mid)]"
+  } focus:border-foreground focus:outline-none`;
+}
+
 export default function CameraList({
   initialItems,
   initialTotal,
@@ -70,7 +104,6 @@ export default function CameraList({
   const [loading, setLoading] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
-  // Current filter values from URL
   const q = searchParams.get("q") || "";
   const system = searchParams.get("system") || "";
   const sensorSize = searchParams.get("sensorSize") || "";
@@ -86,35 +119,18 @@ export default function CameraList({
   const sort = searchParams.get("sort") || "";
   const order = searchParams.get("order") || "";
 
-  // Form state
   const [formQ, setFormQ] = useState(q);
-  const [formSystem, setFormSystem] = useState(system);
-  const [formSensorSize, setFormSensorSize] = useState(sensorSize);
-  const [formType, setFormType] = useState(type);
-  const [formModel, setFormModel] = useState(model);
-  const [formFilmType, setFormFilmType] = useState(filmType);
-  const [formSensorType, setFormSensorType] = useState(sensorType);
-  const [formCropFactor, setFormCropFactor] = useState(cropFactor);
   const [formYear, setFormYear] = useState(year);
   const [formPriceMin, setFormPriceMin] = useState(priceMin);
   const [formPriceMax, setFormPriceMax] = useState(priceMax);
 
-  // Sync form state when URL params change (back/forward navigation)
   useEffect(() => {
     setFormQ(q);
-    setFormSystem(system);
-    setFormSensorSize(sensorSize);
-    setFormType(type);
-    setFormModel(model);
-    setFormFilmType(filmType);
-    setFormSensorType(sensorType);
-    setFormCropFactor(cropFactor);
     setFormYear(year);
     setFormPriceMin(priceMin);
     setFormPriceMax(priceMax);
-  }, [q, system, sensorSize, type, model, filmType, sensorType, cropFactor, year, priceMin, priceMax]);
+  }, [q, year, priceMin, priceMax]);
 
-  // Reset list when initial data changes (filters applied via server component)
   useEffect(() => {
     setItems(initialItems);
     setNextCursor(initialNextCursor);
@@ -140,7 +156,7 @@ export default function CameraList({
       params.set("cursor", String(cursor));
       return `/api/cameras?${params.toString()}`;
     },
-    [q, system, sensorSize, type, model, filmType, sensorType, cropFactor, year, priceMin, priceMax, sort, order]
+    [q, system, sensorSize, type, model, filmType, sensorType, cropFactor, year, priceMin, priceMax, sort, order],
   );
 
   const loadMore = useCallback(async () => {
@@ -159,20 +175,15 @@ export default function CameraList({
     }
   }, [loading, nextCursor, buildApiUrl]);
 
-  // IntersectionObserver for infinite scroll
   useEffect(() => {
     const sentinel = sentinelRef.current;
     if (!sentinel) return;
-
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting) {
-          loadMore();
-        }
+        if (entries[0].isIntersecting) loadMore();
       },
-      { rootMargin: "200px" }
+      { rootMargin: "200px" },
     );
-
     observer.observe(sentinel);
     return () => observer.disconnect();
   }, [loadMore]);
@@ -182,13 +193,13 @@ export default function CameraList({
   function applyFilters(overrides: FilterOverrides = {}) {
     const params = new URLSearchParams();
     const qVal = overrides.q ?? formQ;
-    const systemVal = overrides.system ?? formSystem;
-    const sensorSizeVal = overrides.sensorSize ?? formSensorSize;
-    const typeVal = overrides.type ?? formType;
-    const modelVal = overrides.model ?? formModel;
-    const filmTypeVal = overrides.filmType ?? formFilmType;
-    const sensorTypeVal = overrides.sensorType ?? formSensorType;
-    const cropFactorVal = overrides.cropFactor ?? formCropFactor;
+    const systemVal = overrides.system ?? system;
+    const sensorSizeVal = overrides.sensorSize ?? sensorSize;
+    const typeVal = overrides.type ?? type;
+    const modelVal = overrides.model ?? model;
+    const filmTypeVal = overrides.filmType ?? filmType;
+    const sensorTypeVal = overrides.sensorType ?? sensorType;
+    const cropFactorVal = overrides.cropFactor ?? cropFactor;
     const yearVal = overrides.year ?? formYear;
     const priceMinVal = overrides.priceMin ?? formPriceMin;
     const priceMaxVal = overrides.priceMax ?? formPriceMax;
@@ -216,41 +227,47 @@ export default function CameraList({
     debounceRef.current = setTimeout(() => applyFilters(overrides), 700);
   }
 
-  function handleSort(column: string) {
-    const nextOrder = sort === column ? (order === "asc" ? "desc" : "asc") : "asc";
-    trackEvent("camera_sort_change", { column, order: nextOrder });
-    applyFilters({ sort: column, order: nextOrder });
+  function clearAll() {
+    router.push("/cameras");
   }
 
-  function handleSearchChange(value: string) {
-    setFormQ(value);
-    debouncedApply({ q: value });
-  }
+  const anyFilterActive =
+    !!q ||
+    !!system ||
+    !!sensorSize ||
+    !!type ||
+    !!model ||
+    !!filmType ||
+    !!sensorType ||
+    !!cropFactor ||
+    !!year ||
+    !!priceMin ||
+    !!priceMax;
 
-  const clearAll: FilterOverrides = { q: "", system: "", sensorSize: "", type: "", model: "", filmType: "", sensorType: "", cropFactor: "", year: "", priceMin: "", priceMax: "" };
+  const SORT_OPTIONS = [
+    { label: "Name", key: "name" },
+    { label: "Year", key: "year" },
+    { label: "Megapixels", key: "megapixels" },
+    { label: "Weight", key: "weight" },
+    { label: "Price", key: "price" },
+  ];
 
   return (
-    <>
-      {/* Filters */}
-      <div className="flex flex-wrap gap-3">
-        <div>
-          <label className="sr-only" htmlFor="camera-search">Search cameras</label>
-          <Input
-            id="camera-search"
-            type="text"
-            placeholder="Search cameras..."
-            value={formQ}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            className="h-10"
-          />
-        </div>
-        <div>
-          <label className="sr-only" htmlFor="camera-system">System</label>
+    <div className="grid grid-cols-1 gap-8 lg:grid-cols-[240px_minmax(0,1fr)] lg:gap-8">
+      {/* Filters sidebar */}
+      <aside className="lg:sticky lg:top-[72px] lg:max-h-[calc(100dvh-90px)] lg:overflow-y-auto lg:pr-2">
+        <FilterGroup
+          label="Mount system"
+          clearable={!!system}
+          onClear={() => applyFilters({ system: "" })}
+        >
           <select
-            id="camera-system"
-            value={formSystem}
-            onChange={(e) => { setFormSystem(e.target.value); trackEvent("camera_filter_apply", { filter: "system", value: e.target.value }); applyFilters({ system: e.target.value }); }}
-            className="filter-select h-10 rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+            value={system}
+            onChange={(e) => {
+              trackEvent("camera_filter_apply", { filter: "system", value: e.target.value });
+              applyFilters({ system: e.target.value });
+            }}
+            className={filterSelectClass(!!system)}
           >
             <option value="">All systems</option>
             {systemOptions.map((s) => (
@@ -259,51 +276,84 @@ export default function CameraList({
               </option>
             ))}
           </select>
-        </div>
-        <div>
-          <label className="sr-only" htmlFor="camera-sensor-size">Sensor size</label>
+        </FilterGroup>
+
+        <FilterGroup
+          label="Sensor size"
+          clearable={!!sensorSize}
+          onClear={() => applyFilters({ sensorSize: "" })}
+        >
           <select
-            id="camera-sensor-size"
-            value={formSensorSize}
-            onChange={(e) => { setFormSensorSize(e.target.value); trackEvent("camera_filter_apply", { filter: "sensorSize", value: e.target.value }); applyFilters({ sensorSize: e.target.value }); }}
-            className="filter-select h-10 rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+            value={sensorSize}
+            onChange={(e) => {
+              trackEvent("camera_filter_apply", { filter: "sensorSize", value: e.target.value });
+              applyFilters({ sensorSize: e.target.value });
+            }}
+            className={filterSelectClass(!!sensorSize)}
           >
-            <option value="">All sensor sizes</option>
+            <option value="">Any sensor size</option>
             {sensorSizes.map((s) => (
-              <option key={s} value={s}>{s}</option>
+              <option key={s} value={s}>
+                {s}
+              </option>
             ))}
           </select>
-        </div>
-        <div>
-          <label className="sr-only" htmlFor="camera-type">Type</label>
-          <select
-            id="camera-type"
-            value={formType}
-            onChange={(e) => { setFormType(e.target.value); trackEvent("camera_filter_apply", { filter: "type", value: e.target.value }); applyFilters({ type: e.target.value }); }}
-            className="filter-select h-10 rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+        </FilterGroup>
+
+        {types.length > 0 && (
+          <FilterGroup
+            label="Type"
+            clearable={!!type}
+            onClear={() => applyFilters({ type: "" })}
           >
-            <option value="">All types</option>
-            {types.map((t) => (
-              <option key={t} value={t}>{t}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="sr-only" htmlFor="camera-model">Model</label>
-          <select
-            id="camera-model"
-            value={formModel}
-            onChange={(e) => { setFormModel(e.target.value); applyFilters({ model: e.target.value }); }}
-            className="filter-select h-10 rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+            <div className="flex flex-wrap gap-1.5">
+              {types.map((t) => {
+                const active = type === t;
+                return (
+                  <button
+                    key={t}
+                    onClick={() => applyFilters({ type: active ? "" : t })}
+                    className={`mono rounded-full border px-2.5 py-1 text-[11px] transition-colors ${
+                      active
+                        ? "border-foreground bg-foreground text-background"
+                        : "border-border bg-background text-[var(--fg-mid)] hover:border-[var(--line-strong)] hover:text-foreground"
+                    }`}
+                  >
+                    {t}
+                  </button>
+                );
+              })}
+            </div>
+          </FilterGroup>
+        )}
+
+        {models.length > 0 && (
+          <FilterGroup
+            label="Shutter model"
+            clearable={!!model}
+            onClear={() => applyFilters({ model: "" })}
           >
-            <option value="">All models</option>
-            {models.map((m) => (
-              <option key={m} value={m}>{m}</option>
-            ))}
-          </select>
-        </div>
+            <select
+              value={model}
+              onChange={(e) => applyFilters({ model: e.target.value })}
+              className={filterSelectClass(!!model)}
+            >
+              <option value="">All models</option>
+              {models.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+            </select>
+          </FilterGroup>
+        )}
+
         {filmTypes.length > 0 && (
-          <div role="group" aria-label="Film type">
+          <FilterGroup
+            label="Film type"
+            clearable={!!filmType}
+            onClear={() => applyFilters({ filmType: "" })}
+          >
             <div className="flex flex-wrap gap-1.5">
               {filmTypes.map((f) => {
                 const active = filmTypeList.includes(f);
@@ -317,17 +367,13 @@ export default function CameraList({
                         ? filmTypeList.filter((v) => v !== f)
                         : [...filmTypeList, f];
                       const value = next.join(",");
-                      setFormFilmType(value);
-                      trackEvent("camera_filter_apply", {
-                        filter: "filmType",
-                        value,
-                      });
+                      trackEvent("camera_filter_apply", { filter: "filmType", value });
                       applyFilters({ filmType: value });
                     }}
-                    className={`rounded-full border px-2.5 py-1 text-[11px] transition-colors ${
+                    className={`mono rounded-full border px-2.5 py-1 text-[11px] transition-colors ${
                       active
                         ? "border-foreground bg-foreground text-background"
-                        : "border-border bg-background text-zinc-600 hover:border-zinc-500 hover:text-foreground dark:text-zinc-400 dark:hover:border-zinc-400"
+                        : "border-border bg-background text-[var(--fg-mid)] hover:border-[var(--line-strong)] hover:text-foreground"
                     }`}
                   >
                     {f}
@@ -335,215 +381,216 @@ export default function CameraList({
                 );
               })}
             </div>
-          </div>
+          </FilterGroup>
         )}
-        <div>
-          <label className="sr-only" htmlFor="camera-sensor-type">Sensor type</label>
-          <select
-            id="camera-sensor-type"
-            value={formSensorType}
-            onChange={(e) => { setFormSensorType(e.target.value); trackEvent("camera_filter_apply", { filter: "sensorType", value: e.target.value }); applyFilters({ sensorType: e.target.value }); }}
-            className="filter-select h-10 rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-          >
-            <option value="">All sensors</option>
-            {sensorTypes.map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="sr-only" htmlFor="camera-crop-factor">Crop factor</label>
-          <select
-            id="camera-crop-factor"
-            value={formCropFactor}
-            onChange={(e) => { setFormCropFactor(e.target.value); trackEvent("camera_filter_apply", { filter: "cropFactor", value: e.target.value }); applyFilters({ cropFactor: e.target.value }); }}
-            className="filter-select h-10 rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-          >
-            <option value="">All crop factors</option>
-            {cropFactors.map((c) => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="sr-only" htmlFor="camera-year">Year</label>
-          <Input
-            id="camera-year"
-            type="number"
-            placeholder="Year"
-            value={formYear}
-            onChange={(e) => { setFormYear(e.target.value); debouncedApply({ year: e.target.value }); }}
-            className="h-10 w-28"
-          />
-        </div>
-        <div>
-          <label className="sr-only" htmlFor="camera-price-min">Min price</label>
-          <Input
-            id="camera-price-min"
-            type="number"
-            placeholder="Min $"
-            value={formPriceMin}
-            onChange={(e) => { setFormPriceMin(e.target.value); debouncedApply({ priceMin: e.target.value }); }}
-            className="h-10 w-24"
-          />
-        </div>
-        <div>
-          <label className="sr-only" htmlFor="camera-price-max">Max price</label>
-          <Input
-            id="camera-price-max"
-            type="number"
-            placeholder="Max $"
-            value={formPriceMax}
-            onChange={(e) => { setFormPriceMax(e.target.value); debouncedApply({ priceMax: e.target.value }); }}
-            className="h-10 w-24"
-          />
-        </div>
-      </div>
 
-      {/* Results */}
-      {items.length > 0 ? (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              {[
-                { key: "name", label: "Name" },
-                { key: "system", label: "System" },
-                { key: "sensorSize", label: "Sensor Size", sortable: false },
-                { key: "model", label: "Model", sortable: false },
-                { key: "filmType", label: "Film Type", sortable: false },
-                { key: "year", label: "Year" },
-                { key: "price", label: "Avg Price" },
-                { key: "weight", label: "Weight" },
-              ].map((col) => (
-                <TableHead
-                  key={col.key}
-                  scope="col"
-                  className={col.sortable !== false ? "cursor-pointer select-none hover:text-zinc-900 dark:hover:text-zinc-100" : ""}
-                  onClick={col.sortable !== false ? () => handleSort(col.key) : undefined}
-                  tabIndex={col.sortable !== false ? 0 : -1}
-                  aria-sort={
-                    col.sortable === false
-                      ? undefined
-                      : sort === col.key
-                        ? order === "desc"
-                          ? "descending"
-                          : "ascending"
-                        : "none"
-                  }
-                  onKeyDown={
-                    col.sortable !== false
-                      ? (e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            handleSort(col.key);
-                          }
-                        }
-                      : undefined
-                  }
-                >
-                  {col.label}
-                  {col.sortable !== false && (
-                    sort === col.key
-                      ? (order === "desc" ? <ChevronDown className="ml-1 inline h-3 w-3" /> : <ChevronUp className="ml-1 inline h-3 w-3" />)
-                      : <ChevronsUpDown className="ml-1 inline h-3 w-3 text-muted-foreground/50" />
-                  )}
-                </TableHead>
+        {sensorTypes.length > 0 && (
+          <FilterGroup
+            label="Sensor type"
+            clearable={!!sensorType}
+            onClear={() => applyFilters({ sensorType: "" })}
+          >
+            <select
+              value={sensorType}
+              onChange={(e) => applyFilters({ sensorType: e.target.value })}
+              className={filterSelectClass(!!sensorType)}
+            >
+              <option value="">All sensors</option>
+              {sensorTypes.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
               ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+            </select>
+          </FilterGroup>
+        )}
+
+        {cropFactors.length > 0 && (
+          <FilterGroup
+            label="Crop factor"
+            clearable={!!cropFactor}
+            onClear={() => applyFilters({ cropFactor: "" })}
+          >
+            <select
+              value={cropFactor}
+              onChange={(e) => applyFilters({ cropFactor: e.target.value })}
+              className={filterSelectClass(!!cropFactor)}
+            >
+              <option value="">Any crop factor</option>
+              {cropFactors.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </FilterGroup>
+        )}
+
+        <FilterGroup
+          label="Year / price"
+          clearable={!!formYear || !!formPriceMin || !!formPriceMax}
+          onClear={() => {
+            setFormYear("");
+            setFormPriceMin("");
+            setFormPriceMax("");
+            applyFilters({ year: "", priceMin: "", priceMax: "" });
+          }}
+        >
+          <div className="mono space-y-2 text-[11px]">
+            <input
+              type="number"
+              value={formYear}
+              placeholder="Introduced (year)"
+              onChange={(e) => {
+                setFormYear(e.target.value);
+                debouncedApply({ year: e.target.value });
+              }}
+              className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-foreground outline-none focus:border-foreground"
+            />
+            <div className="flex items-center gap-1.5">
+              <input
+                type="number"
+                value={formPriceMin}
+                placeholder="Min $"
+                onChange={(e) => {
+                  setFormPriceMin(e.target.value);
+                  debouncedApply({ priceMin: e.target.value });
+                }}
+                className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-foreground outline-none focus:border-foreground"
+              />
+              <span className="text-[var(--fg-faint)]">–</span>
+              <input
+                type="number"
+                value={formPriceMax}
+                placeholder="Max $"
+                onChange={(e) => {
+                  setFormPriceMax(e.target.value);
+                  debouncedApply({ priceMax: e.target.value });
+                }}
+                className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-foreground outline-none focus:border-foreground"
+              />
+            </div>
+          </div>
+        </FilterGroup>
+
+        {anyFilterActive && (
+          <button
+            onClick={clearAll}
+            className="mono w-full rounded-md border border-border bg-background px-3 py-2 text-[11px] text-[var(--fg-mid)] transition-colors hover:border-[var(--line-strong)] hover:text-foreground"
+          >
+            Clear all filters
+          </button>
+        )}
+      </aside>
+
+      {/* Right: toolbar + card grid */}
+      <div className="min-w-0">
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <div className="flex min-w-[240px] flex-1 items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-2.5">
+            <Search className="size-4 text-[var(--fg-dim)]" strokeWidth={1.75} />
+            <input
+              value={formQ}
+              onChange={(e) => {
+                setFormQ(e.target.value);
+                debouncedApply({ q: e.target.value });
+              }}
+              placeholder={`Filter within ${initialTotal.toLocaleString()} cameras…`}
+              className="min-w-0 flex-1 bg-transparent text-[13px] text-foreground outline-none placeholder:text-[var(--fg-faint)]"
+            />
+            <span className="mono text-[10px] text-[var(--fg-faint)]">/</span>
+          </div>
+          <div className="mono inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-2.5 text-[11px] text-[var(--fg-mid)]">
+            <span className="text-[var(--fg-faint)]">sort</span>
+            <select
+              value={sort ? `${sort}:${order || "asc"}` : ""}
+              onChange={(e) => {
+                if (!e.target.value) {
+                  applyFilters({ sort: "", order: "" });
+                  return;
+                }
+                const [key, ord] = e.target.value.split(":");
+                applyFilters({ sort: key, order: ord });
+              }}
+              className="filter-select cursor-pointer appearance-none border-none bg-transparent pr-5 text-[11px] text-foreground focus:outline-none"
+            >
+              <option value="">Default</option>
+              {SORT_OPTIONS.flatMap((opt) => [
+                { label: `${opt.label} ↑`, value: `${opt.key}:asc` },
+                { label: `${opt.label} ↓`, value: `${opt.key}:desc` },
+              ]).map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {items.length > 0 ? (
+          <div className="grid grid-cols-1 gap-px overflow-hidden rounded-xl border border-border bg-border sm:grid-cols-2 xl:grid-cols-3">
             {items.map(({ camera, system: sys, avgPrice }) => {
               const specs = (camera.specs ?? {}) as Record<string, string>;
+              const category = specs["Type"] ?? specs["Model"] ?? null;
               return (
-                <TableRow key={camera.id}>
-                  <TableCell className="max-w-[22rem] whitespace-normal">
-                    <Link
-                      href={`/cameras/${camera.slug}`}
-                      className="block break-words leading-snug font-medium text-zinc-900 hover:underline line-clamp-2 dark:text-zinc-100"
-                    >
-                      {camera.name}
-                    </Link>
-                  </TableCell>
-                  <TableCell className="text-zinc-500">
-                    {sys ? (
-                      <button
-                        onClick={() => applyFilters({ ...clearAll, system: sys.slug })}
-                        className="text-left hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
-                      >
-                        {sys.name}
-                      </button>
-                    ) : "\u2014"}
-                  </TableCell>
-                  <TableCell className="text-zinc-600 dark:text-zinc-400">
-                    {camera.sensorSize || "\u2014"}
-                  </TableCell>
-                  <TableCell className="text-zinc-600 dark:text-zinc-400">
-                    {specs["Model"] ? (
-                      <button
-                        onClick={() => {
-                          const prefix = specs["Model"].startsWith("Electronically controlled")
-                            ? "Electronically controlled"
-                            : specs["Model"].startsWith("Mechanical")
-                            ? "Mechanical"
-                            : specs["Model"];
-                          applyFilters({ ...clearAll, model: prefix });
-                        }}
-                        className="text-left hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
-                      >
-                        {specs["Model"]}
-                      </button>
-                    ) : "\u2014"}
-                  </TableCell>
-                  <TableCell className="text-zinc-600 dark:text-zinc-400">
-                    {specs["Film type"] ? (
-                      <button
-                        onClick={() => applyFilters({ ...clearAll, filmType: specs["Film type"] })}
-                        className="text-left hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
-                      >
-                        {specs["Film type"]}
-                      </button>
-                    ) : "\u2014"}
-                  </TableCell>
-                  <TableCell className="text-zinc-600 dark:text-zinc-400">
-                    {camera.yearIntroduced ? (
-                      <button
-                        onClick={() => applyFilters({ ...clearAll, year: String(camera.yearIntroduced) })}
-                        className="text-left hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
-                      >
-                        {camera.yearIntroduced}
-                      </button>
-                    ) : "\u2014"}
-                  </TableCell>
-                  <TableCell className="text-zinc-600 dark:text-zinc-400">
-                    {avgPrice != null
-                      ? `$${avgPrice.toLocaleString()}`
-                      : "\u2014"}
-                  </TableCell>
-                  <TableCell className="text-zinc-600 dark:text-zinc-400">
-                    {camera.weightG ? `${camera.weightG}g` : "\u2014"}
-                  </TableCell>
-                </TableRow>
+                <Link
+                  key={camera.id}
+                  href={`/cameras/${camera.slug}`}
+                  className="group flex flex-col bg-background p-5 transition-colors hover:bg-[var(--surface-soft)]"
+                >
+                  <div className="hatch relative mb-3.5 aspect-[4/3] rounded-md bg-[var(--surface-sunk)]" />
+                  <div className="mono mb-2 truncate text-[10px] uppercase tracking-[0.08em] text-[var(--fg-faint)]">
+                    {sys?.name ?? "—"}
+                    {category && <> · {category}</>}
+                  </div>
+                  <div className="text-[16px] font-medium leading-[1.25] -tracking-[0.015em] group-hover:underline">
+                    {camera.name}
+                  </div>
+                  <div className="mt-3 grid grid-cols-3 gap-2.5 border-t border-border pt-3">
+                    <Spec label="MP" value={camera.megapixels != null ? `${camera.megapixels}` : null} />
+                    <Spec label="Year" value={camera.yearIntroduced != null ? `${camera.yearIntroduced}` : null} />
+                    <Spec
+                      label={avgPrice != null ? "Price" : "Weight"}
+                      value={
+                        avgPrice != null
+                          ? `$${avgPrice.toLocaleString()}`
+                          : camera.weightG != null
+                            ? `${Math.round(camera.weightG)}g`
+                            : null
+                      }
+                    />
+                  </div>
+                </Link>
               );
             })}
-            {loading && <TableSkeleton columns={8} rows={3} />}
-            {nextCursor !== null && (
-              <TableRow>
-                <TableCell colSpan={8} className="p-0">
-                  <div ref={sentinelRef} className="h-px w-full" />
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      ) : (
-        <div className="rounded-xl border border-dashed border-zinc-300 p-12 text-center dark:border-zinc-700">
-          <p className="text-zinc-500">
-            No cameras found.
-          </p>
-        </div>
-      )}
+            {nextCursor !== null && <div ref={sentinelRef} className="col-span-full h-px w-full" />}
+          </div>
+        ) : (
+          <div className="mono rounded-[10px] border border-dashed border-border px-6 py-12 text-center text-[11px] text-[var(--fg-dim)]">
+            No cameras match those filters.
+          </div>
+        )}
 
-      <ScrollToTop />
-    </>
+        <div className="mono mt-4 flex items-center justify-between px-1 text-[11px] text-[var(--fg-dim)]">
+          <span>
+            Showing <span className="text-foreground">{items.length.toLocaleString()}</span> of{" "}
+            {initialTotal.toLocaleString()}
+          </span>
+          {loading && <span>Loading more…</span>}
+        </div>
+
+        <ScrollToTop />
+      </div>
+    </div>
+  );
+}
+
+function Spec({ label, value }: { label: string; value: string | null }) {
+  return (
+    <div>
+      <div className="mono mb-0.5 text-[9px] uppercase tracking-[0.08em] text-[var(--fg-faint)]">
+        {label}
+      </div>
+      <div className="mono text-[12px] text-foreground">{value ?? "—"}</div>
+    </div>
   );
 }

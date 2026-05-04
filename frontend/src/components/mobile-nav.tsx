@@ -17,7 +17,6 @@ const navLinks = [
   { href: "/compare", label: "Compare" },
   { href: "/submit", label: "Submit" },
   { href: "/chat", label: "Chat" },
-  { href: "/search", label: "Search" },
 ];
 
 export function MobileNav() {

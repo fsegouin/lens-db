@@ -5,6 +5,7 @@ import { asc, desc, eq, and, or, sql } from "drizzle-orm";
 import { unstable_cache } from "next/cache";
 import CameraList from "@/components/CameraList";
 import { PageTransition } from "@/components/page-transition";
+import { TopBar } from "@/components/app-shell/top-bar";
 
 const getCachedDropdownData = unstable_cache(
   async () => {
@@ -232,28 +233,33 @@ export default async function CamerasPage({
 
   return (
     <PageTransition>
-      <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100">
-          Cameras
-        </h1>
-        <p className="mt-2 text-zinc-600 dark:text-zinc-400">
-          {total > 0 ? `${total} cameras found` : "Browse camera bodies"}
-        </p>
-      </div>
+      <TopBar crumbs={[{ label: "home", href: "/" }, { label: "cameras" }]}>
+        <span className="mono">{total.toLocaleString()} bodies</span>
+      </TopBar>
 
-      <CameraList
-        initialItems={initialItems}
-        initialTotal={total}
-        initialNextCursor={nextCursor}
-        systems={systemList}
-        sensorSizes={sensorSizes}
-        types={types}
-        models={models}
-        filmTypes={filmTypes}
-        sensorTypes={sensorTypes}
-        cropFactors={cropFactors}
-      />
+      <div className="mx-auto w-full max-w-[1320px] px-6 pb-24 pt-10 lg:px-10">
+        <div className="mb-6 grid items-end gap-6 border-b border-border pb-5 lg:grid-cols-[1fr_auto]">
+          <div>
+            <h1 className="text-[36px] font-medium leading-none -tracking-[0.025em]">Cameras</h1>
+            <div className="mono mt-2.5 text-[12px] text-[var(--fg-dim)]">
+              <span className="text-foreground">{total.toLocaleString()}</span> bodies across{" "}
+              <span className="text-foreground">{systemList.length.toLocaleString()}</span> mount systems
+            </div>
+          </div>
+        </div>
+
+        <CameraList
+          initialItems={initialItems}
+          initialTotal={total}
+          initialNextCursor={nextCursor}
+          systems={systemList}
+          sensorSizes={sensorSizes}
+          types={types}
+          models={models}
+          filmTypes={filmTypes}
+          sensorTypes={sensorTypes}
+          cropFactors={cropFactors}
+        />
       </div>
     </PageTransition>
   );

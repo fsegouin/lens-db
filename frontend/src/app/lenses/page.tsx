@@ -5,6 +5,8 @@ import { unstable_cache } from "next/cache";
 import Link from "next/link";
 import LensList from "@/components/LensList";
 import { PageTransition } from "@/components/page-transition";
+import { TopBar } from "@/components/app-shell/top-bar";
+import { ArrowRight } from "lucide-react";
 
 const getCachedDropdownData = unstable_cache(
   async () => {
@@ -254,32 +256,65 @@ export default async function LensesPage({
 
   const nextCursor = PAGE_SIZE < total ? PAGE_SIZE : null;
 
+  const activeFilterSummary: string[] = [];
+  if (params.type) activeFilterSummary.push(params.type);
+  if (params.coverage) activeFilterSummary.push(params.coverage.replace(/-/g, " "));
+  if (params.brand) activeFilterSummary.push(params.brand);
+  if (params.minFocal || params.maxFocal)
+    activeFilterSummary.push(
+      params.minFocal && params.maxFocal
+        ? `${params.minFocal}–${params.maxFocal}mm`
+        : `${params.minFocal ?? params.maxFocal}mm`,
+    );
+  if (params.minAperture) activeFilterSummary.push(`ƒ/${params.minAperture}+`);
+
   return (
     <PageTransition>
-      <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100">
-          Lenses
-        </h1>
-        <p className="mt-2 text-zinc-600 dark:text-zinc-400">
-          {total > 0
-            ? `${total} lenses found`
-            : "Search and filter 7,400+ camera lenses"}
-          {" · "}
-          <Link href="/lenses/series" className="text-zinc-900 underline hover:text-zinc-700 dark:text-zinc-100 dark:hover:text-zinc-300">
-            Browse by series
-          </Link>
-        </p>
-      </div>
+      <TopBar crumbs={[{ label: "home", href: "/" }, { label: "lenses" }]} />
 
-      <LensList
-        initialItems={initialItems}
-        initialTotal={total}
-        initialNextCursor={nextCursor}
-        brands={brands}
-        systems={systemList}
-        seriesOptions={seriesList}
-      />
+      <div className="mx-auto w-full max-w-[1320px] px-6 pb-24 pt-10 lg:px-10">
+        <div className="mb-6 grid items-end gap-6 border-b border-border pb-5 lg:grid-cols-[1fr_auto]">
+          <div>
+            <h1 className="text-[36px] font-medium leading-none -tracking-[0.025em]">Lenses</h1>
+            <div className="mono mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-[var(--fg-dim)]">
+              <span>
+                <span className="text-foreground">{total.toLocaleString()}</span>{" "}
+                {total === 1 ? "result" : "results"}
+              </span>
+              {activeFilterSummary.length > 0 && (
+                <>
+                  <span className="text-[var(--fg-faint)]">·</span>
+                  <span>
+                    filtered by{" "}
+                    <span className="text-foreground">
+                      {activeFilterSummary.join(" · ")}
+                    </span>
+                  </span>
+                </>
+              )}
+              <span className="text-[var(--fg-faint)]">·</span>
+              <span>
+                Browse by{" "}
+                <Link
+                  href="/lenses/series"
+                  className="text-foreground underline decoration-[var(--line-strong)] underline-offset-[3px] hover:decoration-foreground"
+                >
+                  series
+                  <ArrowRight className="ml-0.5 inline size-3" />
+                </Link>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <LensList
+          initialItems={initialItems}
+          initialTotal={total}
+          initialNextCursor={nextCursor}
+          brands={brands}
+          systems={systemList}
+          seriesOptions={seriesList}
+        />
       </div>
     </PageTransition>
   );

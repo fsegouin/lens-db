@@ -29,10 +29,12 @@ export default function FlagDuplicateButton({
   entityType,
   entityId,
   entityName,
+  isLoggedIn: isLoggedInProp,
 }: {
   entityType: "lens" | "camera";
   entityId: number;
   entityName: string;
+  isLoggedIn?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [popoverOpen, setPopoverOpen] = useState(false);
@@ -43,9 +45,12 @@ export default function FlagDuplicateButton({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [loadingAuth, setLoadingAuth] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(
+    isLoggedInProp ?? null,
+  );
 
   async function loadAuth() {
+    if (isLoggedInProp !== undefined) return;
     setLoadingAuth(true);
     try {
       const res = await fetch("/api/auth/me");

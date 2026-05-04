@@ -16,14 +16,15 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import Link from "next/link";
 
+type SelectOption = { value: string | number; label: string };
+
 type FieldConfig = {
   name: string;
   label: string;
   type: "text" | "number" | "textarea" | "boolean" | "select";
   optionsSource?: "systems";
+  options?: SelectOption[];
 };
-
-type SelectOption = { value: string | number; label: string };
 
 export default function EditButton({
   entityType,
@@ -31,12 +32,14 @@ export default function EditButton({
   entitySlug,
   currentValues,
   fields,
+  isLoggedIn: isLoggedInProp,
 }: {
   entityType: string;
   entityId: number;
   entitySlug: string;
   currentValues: Record<string, unknown>;
   fields: FieldConfig[];
+  isLoggedIn?: boolean;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -47,23 +50,31 @@ export default function EditButton({
   const [success, setSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [loadingContext, setLoadingContext] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(
+    isLoggedInProp ?? null,
+  );
   const [systemOptions, setSystemOptions] = useState<SelectOption[] | null>(null);
 
   const needsSystems = fields.some((f) => f.optionsSource === "systems");
 
   async function loadContext() {
+    const needsAuth = isLoggedInProp === undefined;
+    if (!needsAuth && !(needsSystems && systemOptions === null)) return;
     setLoadingContext(true);
     try {
-      const promises: Promise<Response>[] = [fetch("/api/auth/me")];
+      const promises: Promise<Response>[] = [];
+      if (needsAuth) promises.push(fetch("/api/auth/me"));
       if (needsSystems && systemOptions === null) {
         promises.push(fetch("/api/systems"));
       }
-      const [meRes, systemsRes] = await Promise.all(promises);
-      const meData = await meRes.json();
-      setIsLoggedIn(!!meData.user);
-      if (systemsRes) {
-        const systemsData = await systemsRes.json();
+      const responses = await Promise.all(promises);
+      let idx = 0;
+      if (needsAuth) {
+        const meData = await responses[idx++].json();
+        setIsLoggedIn(!!meData.user);
+      }
+      if (needsSystems && systemOptions === null) {
+        const systemsData = await responses[idx++].json();
         setSystemOptions(
           (systemsData.systems as { id: number; name: string }[]).map((s) => ({
             value: s.id,
@@ -72,7 +83,7 @@ export default function EditButton({
         );
       }
     } catch {
-      setIsLoggedIn(false);
+      if (needsAuth) setIsLoggedIn(false);
     } finally {
       setLoadingContext(false);
     }
@@ -94,6 +105,7 @@ export default function EditButton({
   }
 
   function getOptions(field: FieldConfig): SelectOption[] {
+    if (field.options) return field.options;
     if (field.optionsSource === "systems") return systemOptions ?? [];
     return [];
   }

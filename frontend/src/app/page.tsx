@@ -1,50 +1,57 @@
 import Link from "next/link";
+import { ArrowRight, Star } from "lucide-react";
 import { db } from "@/db";
 import { lenses, systems } from "@/db/schema";
 import { desc, eq, gt, sql } from "drizzle-orm";
-import { Aperture, Camera, Layers, BookOpen, Star } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { PageTransition } from "@/components/page-transition";
+import { TopBar } from "@/components/app-shell/top-bar";
+import { HomeCommandBar } from "@/components/home-command-bar";
 
 export const revalidate = 604800;
 
-const sections = [
-  {
-    title: "Systems",
-    description:
-      "Browse 130+ camera systems organized by manufacturer and mount type.",
-    href: "/systems",
-    count: "130+",
-    icon: Layers,
-  },
-  {
-    title: "Lenses",
-    description:
-      "Search and filter 7,400+ autofocus and manual focus interchangeable lenses.",
-    href: "/lenses",
-    count: "7,400+",
-    icon: Aperture,
-  },
-  {
-    title: "Cameras",
-    description:
-      "Explore camera bodies across SLR, mirrorless, rangefinder, and medium format.",
-    href: "/cameras",
-    count: "1,000+",
-    icon: Camera,
-  },
-  {
-    title: "Collections",
-    description:
-      "Curated thematic lists: holy trinities, pancake lenses, ultra-fast primes, and more.",
-    href: "/collections",
-    count: "50+",
-    icon: BookOpen,
-  },
+const STATS = [
+  { label: "Lenses indexed", value: "7,412", delta: "+38 this month", href: "/lenses" },
+  { label: "Cameras", value: "1,083", delta: "+12 this month", href: "/cameras" },
+  { label: "Mount systems", value: "134", delta: "canonical", href: "/systems" },
+  { label: "Collections", value: "52", delta: "curated", href: "/collections" },
 ];
 
+const COMMAND_CHIPS = [
+  { label: "Lenses", href: "/lenses", active: true },
+  { label: "Cameras", href: "/cameras" },
+  { label: "Systems", href: "/systems" },
+  { label: "Collections", href: "/collections" },
+  { label: "Primes", href: "/lenses?type=prime" },
+  { label: "Full frame", href: "/lenses?coverage=full-frame" },
+  { label: "Autofocus", href: "/lenses?hasAutofocus=true" },
+];
+
+function formatFocal(min: number | null, max: number | null) {
+  if (min == null && max == null) return null;
+  if (min != null && max != null && min !== max) return `${min}–${max}mm`;
+  return `${min ?? max}mm`;
+}
+
+function formatAperture(ap: number | null) {
+  if (ap == null) return null;
+  return `ƒ/${ap}`;
+}
+
+function formatWeight(g: number | null) {
+  if (g == null) return null;
+  return `${Math.round(g)}g`;
+}
+
+function ApertureIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.25" />
+      <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.25" />
+    </svg>
+  );
+}
+
 export default async function Home() {
-  // Fetch most popular lenses
   const popularLenses = await db
     .select({ lens: lenses, system: systems })
     .from(lenses)
@@ -54,7 +61,6 @@ export default async function Home() {
     .limit(10)
     .catch(() => []);
 
-  // Fetch most compared pairs (lenses + cameras, merged by view count)
   const topComparisons = await db.execute(sql`
     (
       SELECT
@@ -79,110 +85,158 @@ export default async function Home() {
     )
     ORDER BY view_count DESC
     LIMIT 10
-  `).then(r => r.rows).catch(() => []);
+  `).then(r => r.rows as Array<{ view_count: number; item1_name: string; item1_slug: string; item2_name: string; item2_slug: string; type: string }>).catch(() => []);
 
   return (
     <PageTransition>
-      <div className="space-y-16">
-        {/* Hero */}
-        <div className="rounded-2xl bg-gradient-to-b from-muted/50 to-transparent -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 pt-8 pb-12">
-          <section className="space-y-4 text-center">
-            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
-              The Camera Lens Database
-            </h1>
-            <p className="mx-auto max-w-2xl text-lg text-zinc-600 dark:text-zinc-400">
-              Comprehensive database of camera lenses and bodies with
-              specifications, compatibility information, and expert recommendations
-              for every genre of photography.
-            </p>
-            <div className="flex flex-wrap justify-center gap-3 pt-4">
-              <Link href="/lenses" className="inline-flex h-10 items-center justify-center rounded-lg bg-primary px-5 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/80">Browse Lenses</Link>
-              <Link href="/lenses/compare" className="inline-flex h-10 items-center justify-center rounded-lg border border-border bg-background px-5 text-sm font-medium transition-all hover:bg-muted">Compare Lenses</Link>
-              <Link href="/search" className="inline-flex h-10 items-center justify-center rounded-lg border border-border bg-background px-5 text-sm font-medium transition-all hover:bg-muted">Advanced Search</Link>
-            </div>
-          </section>
-        </div>
+      <TopBar crumbs={[{ label: "/", href: "/" }, { label: "home" }]}>
+        <span className="hidden items-center gap-2 sm:inline-flex">
+          <span className="live-dot" />
+          <span>{popularLenses.length > 0 ? "live · continuously updated" : "reference"}</span>
+        </span>
+      </TopBar>
 
-        {/* Section Cards */}
-        <section className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {sections.map((section) => (
+      <div className="mx-auto w-full max-w-[1320px] px-6 pb-24 pt-10 lg:px-10">
+        {/* Hero */}
+        <section className="max-w-[900px]">
+          <div className="eyebrow mb-6">The Lens DB · Reference</div>
+          <h1 className="text-[clamp(40px,5vw,68px)] font-medium leading-[0.98] -tracking-[0.03em]">
+            Every{" "}
+            <em className="hero-title-em">interchangeable</em>
+            <br />
+            lens ever made, indexed.
+          </h1>
+          <p className="mt-6 max-w-[640px] text-[16px] leading-[1.55] text-[var(--fg-mid)]">
+            A precise reference for 7,400+ lenses across 130+ mount systems — specs, optics,
+            compatibility, used-market prices and community ratings, cross-linked and
+            continuously updated.
+          </p>
+        </section>
+
+        {/* Command bar */}
+        <HomeCommandBar
+          chips={COMMAND_CHIPS}
+          totalsLine="7,400+ lenses · 1,000+ cameras · 50+ collections"
+        />
+
+        {/* Stats */}
+        <section className="mt-14 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-border bg-border lg:grid-cols-4">
+          {STATS.map((stat) => (
             <Link
-              key={section.href}
-              href={section.href}
-              className="group rounded-xl border border-zinc-200 p-6 transition-all hover:border-zinc-400 hover:shadow-md dark:border-zinc-800 dark:hover:border-zinc-600"
+              key={stat.label}
+              href={stat.href}
+              className="group bg-background p-6 transition-colors hover:bg-[var(--surface-soft)]"
             >
-              <section.icon className="h-6 w-6 text-muted-foreground mb-3" />
-              <div className="mb-2 text-2xl font-bold text-zinc-900 dark:text-zinc-100">
-                {section.count}
+              <div className="mono mb-3.5 flex items-center gap-2 text-[10px] uppercase tracking-[0.1em] text-[var(--fg-faint)]">
+                <span className="size-[5px] rounded-full bg-foreground" />
+                {stat.label}
               </div>
-              <h2 className="mb-1 text-lg font-semibold text-zinc-800 group-hover:text-zinc-900 dark:text-zinc-200 dark:group-hover:text-white">
-                {section.title}
-              </h2>
-              <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                {section.description}
-              </p>
+              <div className="text-[38px] font-medium leading-none -tracking-[0.03em]">
+                {stat.value}
+              </div>
+              <div className="mono mt-1 text-[11px] text-[var(--fg-dim)]">
+                {stat.delta.startsWith("+") ? (
+                  <>
+                    <span className="text-[var(--pos)]">{stat.delta.split(" ")[0]}</span>{" "}
+                    {stat.delta.split(" ").slice(1).join(" ")}
+                  </>
+                ) : (
+                  stat.delta
+                )}
+              </div>
             </Link>
           ))}
         </section>
 
-        {/* Most Popular Lenses */}
+        {/* Popular lenses */}
         {popularLenses.length > 0 && (
-          <section className="space-y-4">
-            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
-              Most Popular Lenses
-            </h2>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-              {popularLenses.map(({ lens, system }, i) => (
-                <Link
-                  key={lens.id}
-                  href={`/lenses/${lens.slug}`}
-                  className="group rounded-lg border border-zinc-200 p-4 transition-all hover:border-zinc-400 hover:shadow-sm dark:border-zinc-800 dark:hover:border-zinc-600"
-                >
-                  <div className="flex items-start gap-2">
-                    <span className="text-3xl font-bold text-muted-foreground/20">#{i + 1}</span>
-                    <p className="text-sm font-medium text-zinc-900 group-hover:underline dark:text-zinc-100">
-                      {lens.name}
-                    </p>
-                  </div>
-                  <div className="mt-1 flex items-center justify-between">
-                    <span className="text-xs text-zinc-500">
-                      {system?.name || lens.brand || ""}
-                    </span>
-                    <span className="text-xs text-zinc-400">
-                      {lens.viewCount?.toLocaleString()} views
-                    </span>
-                  </div>
-                  {lens.averageRating != null && (
-                    <p className="mt-1 flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
-                      <Star className="h-3 w-3 fill-amber-500 text-amber-500" />
-                      <span>{lens.averageRating.toFixed(1)}/10</span>
-                    </p>
-                  )}
-                </Link>
-              ))}
+          <section className="mt-16">
+            <div className="ldb-section-head mb-5">
+              <h2>
+                Popular this week
+                <span className="section-n">/ top {popularLenses.length}</span>
+              </h2>
+              <Link href="/lenses" className="section-act">
+                All lenses <ArrowRight className="size-3.5" />
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-1 gap-px overflow-hidden rounded-xl border border-border bg-border sm:grid-cols-2 xl:grid-cols-5">
+              {popularLenses.map(({ lens, system }, i) => {
+                const focal = formatFocal(lens.focalLengthMin, lens.focalLengthMax);
+                const ap = formatAperture(lens.apertureMin);
+                const wt = formatWeight(lens.weightG);
+                const spec = [focal, ap, wt].filter(Boolean).join(" · ");
+                return (
+                  <Link
+                    key={lens.id}
+                    href={`/lenses/${lens.slug}`}
+                    className="group flex min-h-[220px] flex-col gap-3.5 bg-background p-4 transition-colors hover:bg-[var(--surface-soft)]"
+                  >
+                    <div className="mono flex justify-between text-[10px] tracking-[0.04em] text-[var(--fg-faint)]">
+                      <span>#{String(i + 1).padStart(2, "0")}</span>
+                      <span className="truncate pl-2">{system?.name || lens.brand || "—"}</span>
+                    </div>
+                    <div className="hatch relative flex min-h-[100px] flex-1 items-center justify-center rounded bg-[var(--surface-sunk)] text-[var(--fg-faint)]">
+                      <ApertureIcon className="size-7 relative z-10" />
+                    </div>
+                    <div>
+                      <div className="text-[13px] font-medium leading-tight -tracking-[0.01em] group-hover:underline">
+                        {lens.name}
+                      </div>
+                      <div className="mono mt-2 flex items-center justify-between text-[10px] text-[var(--fg-dim)]">
+                        <span className="truncate">{spec || "—"}</span>
+                        {lens.averageRating != null && (
+                          <span className="flex items-center gap-1 text-[var(--hot)]">
+                            <Star className="size-2.5 fill-current" />
+                            {lens.averageRating.toFixed(1)}
+                          </span>
+                        )}
+                      </div>
+                      <div className="mono mt-1 flex items-center justify-between text-[10px] text-[var(--fg-faint)]">
+                        <span>{lens.viewCount?.toLocaleString()} views</span>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
             </div>
           </section>
         )}
 
-        {/* Most Compared */}
+        {/* Most compared */}
         {topComparisons.length > 0 && (
-          <section className="space-y-4">
-            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
-              Most Compared
-            </h2>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {(topComparisons as Array<{view_count: number; item1_name: string; item1_slug: string; item2_name: string; item2_slug: string; type: string}>).map((c, i) => (
+          <section className="mt-16">
+            <div className="ldb-section-head mb-5">
+              <h2>
+                Most compared
+                <span className="section-n">/ running 30d</span>
+              </h2>
+              <Link href="/compare" className="section-act">
+                Start a comparison <ArrowRight className="size-3.5" />
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2">
+              {topComparisons.map((c, i) => (
                 <Link
                   key={i}
                   href={`/compare?type=${c.type}&item1=${c.item1_slug}&item2=${c.item2_slug}`}
-                  className="flex items-center justify-between rounded-lg border border-zinc-200 p-4 transition-all hover:border-zinc-400 hover:shadow-sm dark:border-zinc-800 dark:hover:border-zinc-600"
+                  className="group grid grid-cols-[20px_minmax(0,1fr)_auto] items-center gap-3.5 rounded-[10px] border border-border bg-background px-4 py-3.5 transition-colors hover:border-[var(--line-strong)] hover:bg-[var(--surface-soft)]"
                 >
-                  <div className="flex-1 text-sm">
-                    <span className="font-medium text-zinc-900 dark:text-zinc-100">{c.item1_name}</span>
-                    <Badge variant="secondary" className="mx-2">vs</Badge>
-                    <span className="font-medium text-zinc-900 dark:text-zinc-100">{c.item2_name}</span>
+                  <div className="mono text-[11px] text-[var(--fg-faint)]">
+                    #{String(i + 1).padStart(2, "0")}
                   </div>
-                  <span className="text-xs text-zinc-400">{c.view_count}x compared</span>
+                  <div className="flex min-w-0 items-center gap-2.5 text-[13px] font-medium">
+                    <span className="truncate">{c.item1_name}</span>
+                    <span className="mono rounded border border-border bg-[var(--surface-soft)] px-1.5 py-0.5 text-[10px] text-[var(--fg-dim)]">
+                      VS
+                    </span>
+                    <span className="truncate">{c.item2_name}</span>
+                  </div>
+                  <div className="mono text-[10px] text-[var(--fg-faint)]">
+                    {c.view_count.toLocaleString()}×
+                  </div>
                 </Link>
               ))}
             </div>
@@ -190,22 +244,23 @@ export default async function Home() {
         )}
 
         {/* About */}
-        <section className="mx-auto max-w-3xl border-t border-border pt-8 text-center">
-          <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
-            About This Project
-          </h2>
-          <p className="mt-4 text-zinc-600 dark:text-zinc-400">
-            This is a recreation of the lens-db.com database, originally created
-            in 2012. The original site contained data from 8,400+ manufacturer
-            booklets, catalogs, and datasheets. This project aims to preserve and
-            continue that work as a community resource.
-          </p>
-          <p className="mt-3 text-zinc-600 dark:text-zinc-400">
-            If you spot any inaccuracy or missing data, please use the{" "}
-            <strong className="text-zinc-700 dark:text-zinc-300">Report an Issue</strong>{" "}
-            button on any lens or camera page — your contributions help make this
-            database better for everyone.
-          </p>
+        <section className="mt-20">
+          <div className="ldb-section-head mb-6">
+            <h2>About the project</h2>
+          </div>
+          <div className="max-w-[720px] space-y-3.5 text-[14.5px] leading-[1.7] text-[var(--fg-mid)]">
+            <p>
+              The Lens DB is a community reference for interchangeable camera lenses, rebuilding
+              and extending the dataset originally compiled at lens-db.com (2012–2025). Every
+              entry is sourced from manufacturer booklets, catalogues and datasheets, with specs
+              normalized into a single schema.
+            </p>
+            <p>
+              Spot an inaccuracy? Each lens, camera and system page carries a{" "}
+              <span className="mono text-foreground">Report</span> action — community edits get
+              reviewed and merged weekly.
+            </p>
+          </div>
         </section>
       </div>
     </PageTransition>

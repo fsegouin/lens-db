@@ -10,6 +10,7 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-serif: var(--font-fraunces);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -58,7 +59,7 @@ select.filter-select {
 }
 
 :root {
-  --background: oklch(1 0 0);
+  --background: oklch(0.985 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
@@ -90,11 +91,25 @@ select.filter-select {
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  /* Lens DB "Optical Instrument" design tokens */
+  --surface-soft: oklch(0.970 0 0);
+  --surface-sunk: oklch(0.955 0 0);
+  --fg-mid: oklch(0.420 0 0);
+  --fg-dim: oklch(0.580 0 0);
+  --fg-faint: oklch(0.720 0 0);
+  --line-soft: oklch(0.930 0 0);
+  --line-strong: oklch(0.800 0 0);
+  --hot: oklch(0.58 0.16 35);
+  --hot-soft: oklch(0.58 0.16 35 / 0.10);
+  --pos: oklch(0.55 0.13 160);
+  --grain-op: 0.035;
+  --shadow-panel: 0 1px 0 oklch(0.145 0 0 / 0.04), 0 1px 3px oklch(0.145 0 0 / 0.05);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
+  --background: oklch(0.155 0 0);
+  --foreground: oklch(0.980 0 0);
   --card: oklch(0.205 0 0);
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.205 0 0);
@@ -124,6 +139,20 @@ select.filter-select {
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+
+  /* Lens DB "Optical Instrument" design tokens — dark */
+  --surface-soft: oklch(0.195 0 0);
+  --surface-sunk: oklch(0.130 0 0);
+  --fg-mid: oklch(0.720 0 0);
+  --fg-dim: oklch(0.580 0 0);
+  --fg-faint: oklch(0.440 0 0);
+  --line-soft: oklch(1 0 0 / 0.05);
+  --line-strong: oklch(1 0 0 / 0.22);
+  --hot: oklch(0.70 0.15 38);
+  --hot-soft: oklch(0.70 0.15 38 / 0.14);
+  --pos: oklch(0.72 0.14 160);
+  --grain-op: 0.06;
+  --shadow-panel: 0 1px 0 oklch(0 0 0 / 0.2), 0 1px 3px oklch(0 0 0 / 0.3);
 }
 
 @layer base {
@@ -132,8 +161,248 @@ select.filter-select {
   }
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: "ss01", "ss02", "cv11";
+    letter-spacing: -0.005em;
+    position: relative;
   }
   html {
     @apply font-sans;
+  }
+
+  /* subtle grain overlay — the defining "optical instrument" texture */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1000;
+    opacity: var(--grain-op);
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+    mix-blend-mode: multiply;
+  }
+  .dark body::before {
+    mix-blend-mode: screen;
+  }
+}
+
+@layer components {
+  /* Typography utilities for the optical-instrument system */
+  .mono {
+    font-family: var(--font-geist-mono), ui-monospace, monospace;
+    font-feature-settings: "ss01", "ss02", "zero", "tnum";
+  }
+  .serif {
+    font-family: var(--font-fraunces), Georgia, serif;
+  }
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Eyebrow: monospace uppercase micro-label with leading tick */
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--font-geist-mono), ui-monospace, monospace;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--fg-dim);
+  }
+  .eyebrow::before {
+    content: "";
+    width: 14px;
+    height: 1px;
+    background: currentColor;
+    opacity: 0.5;
+  }
+
+  /* Hero title italic serif accent */
+  .hero-title-em {
+    font-family: var(--font-fraunces), Georgia, serif;
+    font-style: italic;
+    font-weight: 400;
+    color: var(--fg-mid);
+  }
+
+  /* Badges — small monospace pill with colored dot prefix */
+  .ldb-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 7px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-family: var(--font-geist-mono), monospace;
+    font-size: 10px;
+    color: var(--fg-mid);
+    letter-spacing: 0.02em;
+    background: var(--surface-soft);
+    text-transform: uppercase;
+    line-height: 1.3;
+  }
+  .ldb-badge::before {
+    content: "";
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--fg-dim);
+    flex-shrink: 0;
+  }
+  .ldb-badge.is-brand::before { background: var(--foreground); }
+  .ldb-badge.is-system::before { background: oklch(0.55 0.13 240); }
+  .ldb-badge.is-era::before { background: oklch(0.55 0.13 80); }
+  .ldb-badge.is-type::before { background: oklch(0.55 0.13 160); }
+  .ldb-badge.is-status::before { background: var(--hot); }
+  .ldb-badge.is-plain { padding: 3px 7px; }
+  .ldb-badge.is-plain::before { display: none; }
+
+  /* Spec block — monospace heading + rows */
+  .spec-block {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--background);
+  }
+  .spec-block + .spec-block {
+    margin-top: 14px;
+  }
+  .spec-head {
+    padding: 12px 16px;
+    background: var(--surface-soft);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .spec-head h3 {
+    margin: 0;
+    font-family: var(--font-geist-mono), monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--foreground);
+  }
+  .spec-head .spec-count {
+    font-family: var(--font-geist-mono), monospace;
+    font-size: 10px;
+    color: var(--fg-faint);
+  }
+  .spec-rows {
+    padding: 4px 0;
+  }
+  .spec-row {
+    display: grid;
+    grid-template-columns: 46% 1fr;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--line-soft);
+    gap: 10px;
+    align-items: baseline;
+  }
+  .spec-row:last-child {
+    border-bottom: none;
+  }
+  .spec-row .spec-k {
+    font-family: var(--font-geist-mono), monospace;
+    font-size: 12px;
+    color: var(--fg-dim);
+    letter-spacing: 0.01em;
+    font-feature-settings: "ss01", "ss02", "zero";
+    position: relative;
+    padding-left: 10px;
+  }
+  .spec-row .spec-k::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 7px;
+    width: 4px;
+    height: 1px;
+    background: var(--fg-faint);
+  }
+  .spec-row .spec-v {
+    font-family: var(--font-geist-mono), monospace;
+    font-size: 12.5px;
+    color: var(--foreground);
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "ss01", "ss02", "zero", "tnum";
+    font-weight: 400;
+  }
+  .spec-row .spec-v .unit {
+    color: var(--fg-dim);
+    font-weight: 400;
+    margin-left: 2px;
+  }
+
+  /* Section heading with monospace caption and underline */
+  .ldb-section-head {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .ldb-section-head h2 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+  }
+  .ldb-section-head .section-n {
+    font-family: var(--font-geist-mono), monospace;
+    font-size: 11px;
+    color: var(--fg-faint);
+    font-weight: 400;
+    letter-spacing: 0.08em;
+  }
+  .ldb-section-head .section-act {
+    font-family: var(--font-geist-mono), monospace;
+    font-size: 11px;
+    color: var(--fg-mid);
+    letter-spacing: 0.04em;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .ldb-section-head .section-act:hover {
+    color: var(--foreground);
+  }
+
+  /* Diagonal hatch surface — used for image placeholders */
+  .hatch {
+    position: relative;
+    overflow: hidden;
+  }
+  .hatch::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      -45deg,
+      transparent 0 6px,
+      color-mix(in oklch, var(--foreground) 4%, transparent) 6px 7px
+    );
+    pointer-events: none;
+  }
+  .hatch-dense::after {
+    background: repeating-linear-gradient(
+      -45deg,
+      transparent 0 4px,
+      color-mix(in oklch, var(--foreground) 5%, transparent) 4px 5px
+    );
+  }
+
+  /* Live signal dot (pulsing green) */
+  .live-dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--pos);
+    box-shadow: 0 0 0 3px color-mix(in oklch, var(--pos) 25%, transparent);
   }
 }

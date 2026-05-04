@@ -153,7 +153,7 @@ export default async function EbayListings({ query, entityType = "camera", entit
     : buildEbaySearchQuery(query);
 
   return (
-    <div className="space-y-4">
+    <div className="@container space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold tracking-wider text-muted-foreground uppercase">
           eBay Listings
@@ -168,7 +168,7 @@ export default async function EbayListings({ query, entityType = "camera", entit
         </EbayTrackedLink>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 @[28rem]:grid-cols-2">
         {listings.map((listing) => (
           <EbayTrackedLink
             key={listing.itemId}
@@ -182,7 +182,7 @@ export default async function EbayListings({ query, entityType = "camera", entit
               condition: listing.condition,
               listing_type: listing.listingType,
             }}
-            className="flex gap-3 rounded-lg border border-zinc-200 p-3 transition-colors hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900/50"
+            className="flex gap-3 overflow-hidden rounded-lg border border-zinc-200 p-3 transition-colors hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900/50"
           >
             {listing.imageUrl && (
               // eslint-disable-next-line @next/next/no-img-element
@@ -193,16 +193,16 @@ export default async function EbayListings({ query, entityType = "camera", entit
                 loading="lazy"
               />
             )}
-            <div className="flex min-w-0 flex-1 flex-col justify-between">
+            <div className="flex min-w-0 flex-1 flex-col justify-between gap-1">
               <p className="line-clamp-2 text-sm font-medium leading-snug text-zinc-900 dark:text-zinc-100">
                 {listing.title}
               </p>
-              <div className="mt-1 flex flex-wrap items-center gap-1.5">
+              <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
                 <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
                   {formatCurrency(listing.price.value, listing.price.currency)}
                 </span>
                 {listing.shippingCost === "0.00" && (
-                  <Badge variant="outline" className="text-[10px]">Free shipping</Badge>
+                  <Badge variant="outline" className="text-[10px]">Free ship</Badge>
                 )}
                 {listing.shippingCost && listing.shippingCost !== "0.00" && (
                   <span className="text-xs text-zinc-400">
@@ -210,9 +210,9 @@ export default async function EbayListings({ query, entityType = "camera", entit
                   </span>
                 )}
               </div>
-              <div className="mt-1 flex items-center gap-2">
+              <div className="flex min-w-0 items-center gap-2">
                 <Badge variant="outline" className="text-[10px]">{listing.listingType}</Badge>
-                <span className="text-xs text-zinc-400">
+                <span className="truncate text-xs text-zinc-400">
                   {listing.seller.username} ({listing.seller.feedbackPercentage}%)
                 </span>
               </div>
