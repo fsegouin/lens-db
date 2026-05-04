@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { eq, and, gte, lte, sql, asc } from "drizzle-orm";
+import { and, asc, eq, gte, isNull, lte, ne, or, sql } from "drizzle-orm";
 import { getDb, schema } from "../db";
 import { buildSearchPatterns } from "../search";
 
@@ -69,7 +69,18 @@ export async function searchLenses(params: SearchLensesParams) {
     conditions.push(eq(lenses.hasStabilization, params.hasStabilization));
   }
   if (params.coverage) {
-    conditions.push(eq(lenses.coverage, params.coverage));
+    // Only aps-c and micro-four-thirds are positively tagged in the data;
+    // full-frame is treated as "not a smaller format" so untagged lenses qualify.
+    if (params.coverage === "full-frame") {
+      conditions.push(
+        or(
+          isNull(lenses.coverage),
+          and(ne(lenses.coverage, "aps-c"), ne(lenses.coverage, "micro-four-thirds"))
+        )!
+      );
+    } else {
+      conditions.push(eq(lenses.coverage, params.coverage));
+    }
   }
   if (params.yearFrom) {
     conditions.push(gte(lenses.yearIntroduced, params.yearFrom));
