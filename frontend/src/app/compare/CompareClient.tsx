@@ -1241,10 +1241,31 @@ function CompareHeader({
   pin: "A" | "B";
   lastCol?: boolean;
 }) {
+  const src = firstImageSrc(item.data.images);
   return (
     <div
       className={`flex flex-col border-b ${lastCol ? "" : "border-r"} border-border bg-[var(--surface-soft)] p-5`}
     >
+      {src ? (
+        <div className="relative mb-3 aspect-[4/3] w-full overflow-hidden rounded-md border border-border bg-background">
+          <Image
+            src={src}
+            alt={item.data.name}
+            fill
+            className="object-contain p-3"
+            sizes="(max-width: 1024px) 50vw, 360px"
+          />
+        </div>
+      ) : (
+        <div
+          className="mb-3 aspect-[4/3] w-full overflow-hidden rounded-md border border-border bg-[var(--surface-sunk)]"
+          style={{
+            backgroundImage:
+              "repeating-linear-gradient(-45deg, transparent 0 4px, color-mix(in oklch, var(--fg) 5%, transparent) 4px 5px)",
+          }}
+          aria-hidden="true"
+        />
+      )}
       <div className="mono mb-2 text-[9px] uppercase tracking-[0.1em] text-[var(--fg-faint)]">
         {pin} · pinned
       </div>
