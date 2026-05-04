@@ -77,6 +77,7 @@ export default function CameraList({
   const type = searchParams.get("type") || "";
   const model = searchParams.get("model") || "";
   const filmType = searchParams.get("filmType") || "";
+  const filmTypeList = filmType ? filmType.split(",").filter(Boolean) : [];
   const sensorType = searchParams.get("sensorType") || "";
   const cropFactor = searchParams.get("cropFactor") || "";
   const year = searchParams.get("year") || "";
@@ -301,20 +302,41 @@ export default function CameraList({
             ))}
           </select>
         </div>
-        <div>
-          <label className="sr-only" htmlFor="camera-film-type">Film type</label>
-          <select
-            id="camera-film-type"
-            value={formFilmType}
-            onChange={(e) => { setFormFilmType(e.target.value); trackEvent("camera_filter_apply", { filter: "filmType", value: e.target.value }); applyFilters({ filmType: e.target.value }); }}
-            className="filter-select h-10 rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-          >
-            <option value="">All film types</option>
-            {filmTypes.map((f) => (
-              <option key={f} value={f}>{f}</option>
-            ))}
-          </select>
-        </div>
+        {filmTypes.length > 0 && (
+          <div role="group" aria-label="Film type">
+            <div className="flex flex-wrap gap-1.5">
+              {filmTypes.map((f) => {
+                const active = filmTypeList.includes(f);
+                return (
+                  <button
+                    key={f}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => {
+                      const next = active
+                        ? filmTypeList.filter((v) => v !== f)
+                        : [...filmTypeList, f];
+                      const value = next.join(",");
+                      setFormFilmType(value);
+                      trackEvent("camera_filter_apply", {
+                        filter: "filmType",
+                        value,
+                      });
+                      applyFilters({ filmType: value });
+                    }}
+                    className={`rounded-full border px-2.5 py-1 text-[11px] transition-colors ${
+                      active
+                        ? "border-foreground bg-foreground text-background"
+                        : "border-border bg-background text-zinc-600 hover:border-zinc-500 hover:text-foreground dark:text-zinc-400 dark:hover:border-zinc-400"
+                    }`}
+                  >
+                    {f}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
         <div>
           <label className="sr-only" htmlFor="camera-sensor-type">Sensor type</label>
           <select

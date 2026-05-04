@@ -33,3 +33,28 @@ export function rateLimitedResponse() {
     { status: 429 }
   );
 }
+
+/**
+ * Escape PostgreSQL LIKE/ILIKE metacharacters in a value so it can be
+ * safely interpolated into a `%${value}%` substring pattern.
+ * Drizzle's tagged template handles SQL injection — this guards
+ * against pattern injection (e.g. a value containing `%` or `_`).
+ */
+export function escapeLikeMetachars(value: string): string {
+  return value.replace(/[\\%_]/g, "\\$&");
+}
+
+/**
+ * Parse a comma-separated multi-value query param.
+ * Trims, drops empties, dedupes, and caps at 20 entries.
+ */
+export function parseMultiValueParam(raw: string | null | undefined): string[] {
+  if (!raw) return [];
+  const seen = new Set<string>();
+  for (const part of raw.split(",")) {
+    const v = part.trim();
+    if (v && !seen.has(v)) seen.add(v);
+    if (seen.size >= 20) break;
+  }
+  return Array.from(seen);
+}
