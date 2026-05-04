@@ -218,9 +218,6 @@ export function HomeCommandBar({
             placeholder="Search lenses, cameras, systems, collections…"
             className="flex-1 bg-transparent text-[18px] -tracking-[0.01em] text-foreground outline-none placeholder:text-[var(--fg-faint)]"
           />
-          <span className="mono rounded-[5px] border border-border bg-[var(--surface-soft)] px-[7px] py-1 text-[10px] text-[var(--fg-dim)]">
-            ⌘ K
-          </span>
         </label>
 
         <div className="flex flex-wrap gap-2 border-b border-border bg-[var(--surface-soft)] px-5 py-3">
