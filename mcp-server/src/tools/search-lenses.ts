@@ -69,13 +69,17 @@ export async function searchLenses(params: SearchLensesParams) {
     conditions.push(eq(lenses.hasStabilization, params.hasStabilization));
   }
   if (params.coverage) {
-    // Only aps-c and micro-four-thirds are positively tagged in the data;
-    // full-frame is treated as "not a smaller format" so untagged lenses qualify.
+    // full-frame is treated as "not a smaller or larger format" so untagged
+    // lenses qualify; aps-c, micro-four-thirds and medium-format are excluded.
     if (params.coverage === "full-frame") {
       conditions.push(
         or(
           isNull(lenses.coverage),
-          and(ne(lenses.coverage, "aps-c"), ne(lenses.coverage, "micro-four-thirds"))
+          and(
+            ne(lenses.coverage, "aps-c"),
+            ne(lenses.coverage, "micro-four-thirds"),
+            ne(lenses.coverage, "medium-format"),
+          )
         )!
       );
     } else {

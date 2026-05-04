@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { lenses, systems, lensSeries, lensSeriesMemberships, priceEstimates } from "@/db/schema";
-import { asc, desc, eq, and, gte, lte, sql, inArray, isNull } from "drizzle-orm";
+import { asc, desc, eq, and, gte, lte, ne, or, sql, inArray, isNull } from "drizzle-orm";
 import { getClientIP, rateLimitedResponse } from "@/lib/api-utils";
 import { rateLimiters } from "@/lib/rate-limit";
 
@@ -72,7 +72,20 @@ export async function GET(request: NextRequest) {
       conditions.push(eq(systems.slug, system));
     }
     if (coverage) {
-      conditions.push(eq(lenses.coverage, coverage));
+      if (coverage === "full-frame") {
+        conditions.push(
+          or(
+            isNull(lenses.coverage),
+            and(
+              ne(lenses.coverage, "aps-c"),
+              ne(lenses.coverage, "micro-four-thirds"),
+              ne(lenses.coverage, "medium-format"),
+            ),
+          )!
+        );
+      } else {
+        conditions.push(eq(lenses.coverage, coverage));
+      }
     }
     if (type === "zoom") {
       conditions.push(eq(lenses.isZoom, true));
