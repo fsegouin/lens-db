@@ -1024,12 +1024,9 @@ function WeightDeltaCard({
   const aPct = (aWeight! / max) * 100;
   const bPct = (bWeight! / max) * 100;
   const delta = aWeight! - bWeight!;
-  const deltaText =
-    delta === 0
-      ? "● equal"
-      : delta > 0
-        ? `● ${Math.abs(delta)}g Δ`
-        : `● ${Math.abs(delta)}g Δ`;
+  const aWins = delta < 0;
+  const bWins = delta > 0;
+  const deltaText = delta === 0 ? "● equal" : `● ${Math.abs(delta)}g Δ`;
   const deltaColor = delta === 0 ? "var(--pos)" : "var(--hot)";
   return (
     <VizCard title="Weight & size" status={deltaText} statusColor={deltaColor}>
@@ -1037,16 +1034,16 @@ function WeightDeltaCard({
         <WeightBar
           label={`${aLabel} · ${aWeight}g`}
           pct={aPct}
-          color="var(--fg)"
-          tag={delta > 0 ? `+${delta}g` : delta < 0 ? "★ lighter" : "—"}
-          tagColor={delta > 0 ? "var(--fg-faint)" : delta < 0 ? "var(--pos)" : undefined}
+          color={aWins ? "var(--pos)" : "var(--fg)"}
+          tag={aWins ? "★ lighter" : bWins ? `+${delta}g` : "—"}
+          tagColor={aWins ? "var(--pos)" : bWins ? "var(--fg-faint)" : undefined}
         />
         <WeightBar
           label={`${bLabel} · ${bWeight}g`}
           pct={bPct}
-          color="var(--pos)"
-          tag={delta < 0 ? `+${Math.abs(delta)}g` : delta > 0 ? "★ lighter" : "—"}
-          tagColor={delta < 0 ? "var(--fg-faint)" : delta > 0 ? "var(--pos)" : undefined}
+          color={bWins ? "var(--pos)" : "var(--fg)"}
+          tag={bWins ? "★ lighter" : aWins ? `+${Math.abs(delta)}g` : "—"}
+          tagColor={bWins ? "var(--pos)" : aWins ? "var(--fg-faint)" : undefined}
         />
         <div className="mono flex justify-between border-t border-[var(--line-soft)] pt-1.5 text-[9px] tracking-[0.1em] text-[var(--fg-faint)]">
           <span>0g</span>
@@ -1098,24 +1095,27 @@ function MegapixelCompareCard({ a, b }: { a: Camera; b: Camera }) {
   const max = Math.max(60, a.megapixels!, b.megapixels!);
   const aPct = (a.megapixels! / max) * 100;
   const bPct = (b.megapixels! / max) * 100;
-  const delta = (a.megapixels! - b.megapixels!).toFixed(1).replace(/\.0$/, "");
+  const diff = a.megapixels! - b.megapixels!;
+  const aWins = diff > 0;
+  const bWins = diff < 0;
+  const delta = Math.abs(diff).toFixed(1).replace(/\.0$/, "");
   return (
     <VizCard
       title="Megapixels"
       status={`Δ ${delta}MP`}
-      statusColor={delta === "0" ? "var(--pos)" : "var(--hot)"}
+      statusColor={diff === 0 ? "var(--pos)" : "var(--hot)"}
     >
       <div className="flex flex-col gap-3 px-4 py-4">
         <WeightBar
           label={`A · ${a.megapixels}MP`}
           pct={aPct}
-          color="var(--fg)"
+          color={aWins ? "var(--pos)" : "var(--fg)"}
           tag=""
         />
         <WeightBar
           label={`B · ${b.megapixels}MP`}
           pct={bPct}
-          color="var(--pos)"
+          color={bWins ? "var(--pos)" : "var(--fg)"}
           tag=""
         />
       </div>
