@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { Send } from "lucide-react";
@@ -9,14 +9,14 @@ import remarkGfm from "remark-gfm";
 
 const transport = new DefaultChatTransport({ api: "/api/chat" });
 
-/**
- * Pre-process LLM text so it renders well as markdown.
- * Gemini often outputs lists as consecutive bold-started lines
- * without using markdown list syntax. This detects runs of 2+
- * consecutive lines starting with ** and converts them to bullet lists.
- */
+const STARTER_PROMPTS = [
+  "What's the lightest 85mm ƒ/1.4 for full frame?",
+  "Compare Sigma Art vs Sony GM primes",
+  "Manual-focus 50mm under 250g",
+  "Which E-mount wide primes are weather sealed?",
+];
+
 function formatForMarkdown(text: string): string {
-  // Split into lines, detect consecutive bold-started lines, convert to bullets
   const lines = text.split("\n");
   const result: string[] = [];
 
@@ -28,107 +28,244 @@ function formatForMarkdown(text: string): string {
       i < lines.length - 1 && /^\*\*/.test(lines[i + 1].trim());
 
     if (isBoldLine && (prevIsBoldLine || nextIsBoldLine)) {
-      // Part of a consecutive bold run — convert to bullet
-      if (!prevIsBoldLine) {
-        // First in the run — add blank line before list
-        result.push("");
-      }
+      if (!prevIsBoldLine) result.push("");
       result.push(`- ${line.trim()}`);
-      if (!nextIsBoldLine) {
-        // Last in the run — add blank line after list
-        result.push("");
-      }
+      if (!nextIsBoldLine) result.push("");
     } else {
       result.push(line);
     }
   }
-
   return result.join("\n").replace(/\n{3,}/g, "\n\n");
+}
+
+function formatTime(date: Date): string {
+  return `${String(date.getHours()).padStart(2, "0")}:${String(
+    date.getMinutes(),
+  ).padStart(2, "0")}`;
+}
+
+function AssistantAvatar() {
+  return (
+    <div className="flex h-7 w-7 items-center justify-center rounded-full border border-[var(--line-strong)] bg-[var(--surface-sunk)] text-[var(--fg)]">
+      <svg width="14" height="14" viewBox="0 0 28 28" fill="none" aria-hidden="true">
+        <circle cx="14" cy="14" r="11" stroke="currentColor" strokeWidth="1.25" />
+        <g stroke="currentColor" strokeWidth="0.9">
+          <path d="M14 4 L17 10" />
+          <path d="M23 8 L16 12" />
+          <path d="M21 21 L15 15" />
+          <path d="M8 23 L12 16" />
+          <path d="M4 15 L10 14" />
+          <path d="M6 6 L13 11" />
+        </g>
+        <circle cx="14" cy="14" r="2" fill="currentColor" />
+      </svg>
+    </div>
+  );
+}
+
+function UserAvatar() {
+  return (
+    <div className="mono flex h-7 w-7 items-center justify-center rounded-full border border-border bg-[var(--surface-soft)] text-[10px] tracking-[0.04em] text-[var(--fg-mid)]">
+      YOU
+    </div>
+  );
 }
 
 export default function ChatInterface() {
   const { messages, sendMessage, status, error } = useChat({ transport });
   const [input, setInput] = useState("");
+  const [sessionId] = useState(() =>
+    Math.random().toString(36).slice(2, 6).toUpperCase(),
+  );
+  const startTime = useRef<number>(Date.now());
+  const inputRef = useRef<HTMLInputElement>(null);
+  const threadEndRef = useRef<HTMLDivElement>(null);
 
   const isLoading = status === "submitted" || status === "streaming";
+
+  useEffect(() => {
+    threadEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [messages, isLoading]);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
+    startTime.current = Date.now();
     sendMessage({ text: input });
     setInput("");
   }
 
-  return (
-    <div className="flex flex-col flex-1 min-h-0 max-w-3xl mx-auto w-full">
-      {/* Messages */}
-      <div className={`flex-1 overflow-y-auto pb-20 ${messages.length === 0 ? "flex items-center justify-center" : "space-y-4"}`}>
-        {messages.length === 0 && (
-          <div className="text-center text-zinc-500 dark:text-zinc-400">
-            <p className="text-lg font-medium mb-2">Ask me anything about cameras and lenses</p>
-            <div className="space-y-1 text-sm">
-              <p>&ldquo;Which Nikon F camera was the first with autofocus?&rdquo;</p>
-              <p>&ldquo;What&apos;s the cheapest Sony E mount camera on the second-hand market?&rdquo;</p>
-              <p>&ldquo;Compare 50mm f/1.4 lenses for Canon EF&rdquo;</p>
-            </div>
-          </div>
-        )}
-        {messages.map((message) => (
-          <div
-            key={message.id}
-            className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
-          >
-            <div
-              className={`max-w-[85%] rounded-lg ${
-                message.role === "user"
-                  ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 whitespace-pre-wrap px-4 py-2 text-sm"
-                  : "bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100 px-5 py-4 prose prose-zinc dark:prose-invert prose-p:leading-relaxed prose-a:text-blue-500 prose-a:no-underline hover:prose-a:underline max-w-none text-[0.9rem] [&>*:first-child]:mt-0 [&>*:last-child]:mb-0"
-              }`}
-            >
-              {message.role === "user"
-                ? message.parts
-                    .filter((p) => p.type === "text")
-                    .map((p, i) => <span key={i}>{p.text}</span>)
-                : message.parts
-                    .filter((p) => p.type === "text")
-                    .map((p, i) => <Markdown key={i} remarkPlugins={[remarkGfm]}>{formatForMarkdown(p.text)}</Markdown>)}
-            </div>
-          </div>
-        ))}
-        {isLoading && messages[messages.length - 1]?.role === "user" && (
-          <div className="flex justify-start">
-            <div className="bg-zinc-100 dark:bg-zinc-800 rounded-lg px-4 py-2 text-sm text-zinc-500">
-              Thinking...
-            </div>
-          </div>
-        )}
-      </div>
+  function submitPrompt(text: string) {
+    if (isLoading) return;
+    startTime.current = Date.now();
+    sendMessage({ text });
+    setInput("");
+    inputRef.current?.focus();
+  }
 
-      {/* Input — floating at bottom */}
-      <div className="fixed bottom-4 left-0 right-0 z-10 px-4">
-        <div className="mx-auto max-w-3xl">
-          {error && (
-            <div className="text-red-500 text-sm mb-2 text-center">
-              Something went wrong. Please try again.
+  return (
+    <div className="mx-auto w-full max-w-[900px] px-6 pb-44 pt-10 lg:px-10">
+      <header className="mb-6 border-b border-border pb-4">
+        <div className="mono mb-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] tracking-[0.02em] text-[var(--fg-dim)]">
+          <span>
+            <span className="text-[var(--fg-faint)]">LDB</span> CHAT · session{" "}
+            {sessionId}
+          </span>
+          <span className="text-[var(--fg-faint)]">·</span>
+          <span>grounded retrieval</span>
+          <span className="ml-auto inline-flex items-center gap-1.5 text-[var(--pos)]">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--pos)]" />
+            {isLoading ? "thinking" : "listening"}
+          </span>
+        </div>
+        <h1 className="text-[34px] font-medium leading-[1.05] -tracking-[0.025em]">
+          Ask the <em className="hero-title-em">DB</em>
+        </h1>
+        <div className="mono mt-2 text-[12px] text-[var(--fg-dim)]">
+          Conversational interface, grounded on the full database. Answers can
+          cite specific lenses and cameras.
+        </div>
+      </header>
+
+      {messages.length === 0 && (
+        <div className="mb-8 grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {STARTER_PROMPTS.map((prompt, i) => (
+            <button
+              key={prompt}
+              type="button"
+              onClick={() => submitPrompt(prompt)}
+              disabled={isLoading}
+              className="flex items-center gap-3 rounded-[10px] border border-border bg-background px-4 py-3.5 text-left text-[13px] text-[var(--fg-mid)] transition-colors hover:border-[var(--line-strong)] hover:bg-[var(--surface-soft)] hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <span className="mono shrink-0 rounded border border-border bg-[var(--surface-soft)] px-1.5 py-0.5 text-[9px] tracking-[0.1em] text-[var(--fg-faint)]">
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              {prompt}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="flex flex-col gap-8">
+        {messages.map((message, idx) => {
+          const isUser = message.role === "user";
+          const text = message.parts
+            .filter((p) => p.type === "text")
+            .map((p) => p.text)
+            .join("");
+          const isLast = idx === messages.length - 1;
+          const elapsed = isLast && !isUser
+            ? Date.now() - startTime.current
+            : null;
+          return (
+            <div key={message.id} className="flex flex-col gap-2.5">
+              <div className="mono flex items-center gap-2.5 text-[10px] tracking-[0.04em] text-[var(--fg-faint)]">
+                {isUser ? <UserAvatar /> : <AssistantAvatar />}
+                <span>
+                  {isUser ? "you" : "lens-db"} · {formatTime(new Date())}
+                  {elapsed != null && elapsed < 60_000 && (
+                    <> · {elapsed}ms</>
+                  )}
+                </span>
+              </div>
+              {isUser ? (
+                <div className="ml-9 max-w-[640px] rounded-[10px] border border-border bg-[var(--surface-soft)] px-4 py-2.5 text-[14px] leading-[1.55] text-foreground">
+                  {text}
+                </div>
+              ) : (
+                <div className="prose prose-zinc dark:prose-invert ml-9 max-w-none text-[14px] leading-[1.55] prose-p:my-3 prose-a:text-foreground prose-a:underline prose-a:underline-offset-2 prose-a:decoration-[var(--line-strong)] hover:prose-a:decoration-foreground prose-strong:font-medium prose-strong:text-foreground prose-li:my-1">
+                  <Markdown remarkPlugins={[remarkGfm]}>
+                    {formatForMarkdown(text)}
+                  </Markdown>
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        {isLoading &&
+          (messages.length === 0 ||
+            messages[messages.length - 1]?.role === "user") && (
+            <div className="flex flex-col gap-2.5">
+              <div className="mono flex items-center gap-2.5 text-[10px] tracking-[0.04em] text-[var(--fg-faint)]">
+                <AssistantAvatar />
+                <span className="animate-pulse">lens-db · waiting</span>
+              </div>
+              <div className="mono ml-9 text-[12px] text-[var(--fg-faint)]">
+                ▌ thinking…
+              </div>
             </div>
           )}
-          <form onSubmit={handleSubmit} className="relative">
+
+        <div ref={threadEndRef} />
+      </div>
+
+      {error && (
+        <div className="mono mt-6 text-center text-[12px] text-[var(--hot)]">
+          ● Something went wrong. Please try again.
+        </div>
+      )}
+
+      <ChatComposer
+        input={input}
+        setInput={setInput}
+        onSubmit={handleSubmit}
+        isLoading={isLoading}
+        inputRef={inputRef}
+      />
+    </div>
+  );
+}
+
+function ChatComposer({
+  input,
+  setInput,
+  onSubmit,
+  isLoading,
+  inputRef,
+}: {
+  input: string;
+  setInput: (v: string) => void;
+  onSubmit: (e: React.FormEvent) => void;
+  isLoading: boolean;
+  inputRef: React.RefObject<HTMLInputElement | null>;
+}) {
+  return (
+    <div className="fixed bottom-0 left-0 right-0 z-10 border-t border-border bg-background/85 backdrop-blur-xl lg:left-[var(--app-rail-width,0px)]">
+      <div className="mx-auto w-full max-w-[900px] px-6 py-4 lg:px-10">
+        <form onSubmit={onSubmit}>
+          <div className="flex items-center gap-2 rounded-[10px] border border-border bg-[var(--surface-soft)] px-3 py-2 transition-colors focus-within:border-[var(--line-strong)]">
+            <span className="mono text-[10px] tracking-[0.1em] text-[var(--fg-faint)]">
+              {">"}
+            </span>
             <input
+              ref={inputRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask about cameras, lenses, prices..."
-              className="w-full rounded-full border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 pl-5 pr-12 py-3 text-base md:text-sm shadow-lg focus:outline-none focus:ring-2 focus:ring-zinc-400 dark:focus:ring-zinc-500"
+              placeholder="Ask about lenses, cameras, mount systems…"
               disabled={isLoading}
+              className="min-w-0 flex-1 bg-transparent text-[13px] text-foreground outline-none placeholder:text-[var(--fg-faint)] disabled:opacity-60"
             />
+            <span className="mono hidden rounded border border-border bg-background px-1.5 py-0.5 text-[10px] tracking-[0.04em] text-[var(--fg-faint)] sm:inline">
+              ⌘ ↵
+            </span>
             <button
               type="submit"
               disabled={isLoading || !input.trim()}
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-zinc-900 dark:bg-zinc-100 p-2 text-white dark:text-zinc-900 hover:bg-zinc-700 dark:hover:bg-zinc-300 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="mono flex items-center gap-1 rounded-md bg-foreground px-3 py-1.5 text-[12px] font-medium text-background transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-30"
             >
-              <Send className="w-4 h-4" />
+              Send
+              <Send className="h-3 w-3" strokeWidth={2} />
             </button>
-          </form>
-        </div>
+          </div>
+          <div className="mono mt-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-[10px] tracking-[0.02em] text-[var(--fg-faint)]">
+            <span className="flex items-center gap-1.5">
+              <span className="text-[var(--pos)]">●</span> grounded on LDB ·
+              7,400+ lenses · 1,000+ cameras
+            </span>
+            <span className="hidden sm:inline">↵ send · esc clear</span>
+          </div>
+        </form>
       </div>
     </div>
   );
