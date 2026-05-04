@@ -122,14 +122,6 @@ export default async function SystemDetailPage({
   const ldbId = `LDB SYS-${String(system.id).padStart(3, "0")}`;
   const title = splitTitleEm(system.name);
   const { heights: focalHeights, total: focalTotal } = computeFocalDistribution(focalRows);
-  const peakBuckets = new Set(
-    focalHeights
-      .map((h, i) => ({ h, i }))
-      .sort((a, b) => b.h - a.h)
-      .slice(0, 3)
-      .filter((x) => x.h > 0)
-      .map((x) => x.i),
-  );
 
   return (
     <PageTransition>
@@ -196,7 +188,7 @@ export default async function SystemDetailPage({
                   {focalTotal.toLocaleString()} indexed
                 </span>
               </div>
-              <FocalChart heights={focalHeights} peakBuckets={peakBuckets} />
+              <FocalChart heights={focalHeights} />
             </div>
           )}
         </div>
@@ -218,13 +210,7 @@ export default async function SystemDetailPage({
   );
 }
 
-function FocalChart({
-  heights,
-  peakBuckets,
-}: {
-  heights: number[];
-  peakBuckets: Set<number>;
-}) {
+function FocalChart({ heights }: { heights: number[] }) {
   const labelOrder = FOCAL_LABEL_POINTS.map((f) => focalToBucket(f));
   return (
     <div className="px-4 py-4">
@@ -232,11 +218,10 @@ function FocalChart({
         {heights.map((h, i) => (
           <div
             key={i}
-            className="flex-1 rounded-t-[1px]"
+            className="flex-1 rounded-t-[1px] bg-foreground"
             style={{
               height: `${Math.max(3, h * 100)}%`,
               minHeight: 2,
-              background: peakBuckets.has(i) ? "var(--hot)" : "var(--fg)",
             }}
             aria-hidden="true"
           />
