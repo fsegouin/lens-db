@@ -1,28 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import BackButton from "@/components/BackButton";
-import { asc, eq, sql } from "drizzle-orm";
+import { asc, eq, isNull, and, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { cameras, lenses, systems } from "@/db/schema";
 import ViewTracker from "@/components/ViewTracker";
 import { PageTransition } from "@/components/page-transition";
-import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { TopBar } from "@/components/app-shell/top-bar";
 
 export const revalidate = 604800;
-
-export async function generateStaticParams() {
-  if (process.env.VERCEL_ENV !== "production") return [];
-  const rows = await db.select({ slug: systems.slug }).from(systems);
-  return rows.map((r) => ({ slug: r.slug }));
-}
 
 export async function generateMetadata({
   params,
@@ -41,12 +26,66 @@ export async function generateMetadata({
   };
 }
 
+function deriveMountEm(name: string): string {
+  const trimmed = name.trim();
+  const tokens = trimmed.split(/\s+/);
+  const last = tokens[tokens.length - 1];
+  if (last.length <= 4) return last;
+  const initials = trimmed.split(/[\s/]+/).map((w) => w[0]).filter(Boolean).join("");
+  return initials.length <= 4 ? initials.toUpperCase() : initials.slice(0, 3).toUpperCase();
+}
+
+function splitTitleEm(name: string): { main: string; em: string } {
+  const trimmed = name.trim();
+  const spaceIdx = trimmed.lastIndexOf(" ");
+  if (spaceIdx > 0) {
+    return { main: trimmed.slice(0, spaceIdx + 1), em: trimmed.slice(spaceIdx + 1) };
+  }
+  return { main: "", em: trimmed };
+}
+
+const FOCAL_BUCKETS = 42;
+const FOCAL_MIN = 8;
+const FOCAL_MAX = 800;
+const FOCAL_LOG_RATIO = Math.log(FOCAL_MAX / FOCAL_MIN);
+const FOCAL_LABEL_POINTS: number[] = [8, 14, 24, 35, 50, 85, 135, 200, 400, 800];
+
+function focalToBucket(focal: number): number {
+  const idx = Math.floor((Math.log(focal / FOCAL_MIN) / FOCAL_LOG_RATIO) * FOCAL_BUCKETS);
+  return Math.max(0, Math.min(FOCAL_BUCKETS - 1, idx));
+}
+
+function computeFocalDistribution(
+  rows: { min: number | null; max: number | null }[],
+): { heights: number[]; total: number } {
+  const counts = new Array<number>(FOCAL_BUCKETS).fill(0);
+  let total = 0;
+  for (const r of rows) {
+    if (!r.min) continue;
+    const max = r.max ?? r.min;
+    if (max <= 0) continue;
+    const repFocal = Math.sqrt(r.min * max);
+    const bucket = focalToBucket(repFocal);
+    counts[bucket]++;
+    total++;
+  }
+  const peak = Math.max(1, ...counts);
+  const heights = counts.map((c) => c / peak);
+  return { heights, total };
+}
+
+type Tab = "lenses" | "cameras";
+const TABS: Tab[] = ["lenses", "cameras"];
+
 export default async function SystemDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ tab?: string }>;
 }) {
   const { slug } = await params;
+  const { tab: rawTab } = await searchParams;
 
   const [result] = await db
     .select({ system: systems })
@@ -55,150 +94,415 @@ export default async function SystemDetailPage({
     .limit(1);
 
   if (!result) notFound();
-
   const { system } = result;
 
-  const systemLenses = await db
-    .select()
-    .from(lenses)
-    .where(eq(lenses.systemId, system.id))
-    .orderBy(asc(sql`regexp_replace(${lenses.name}, '\\d+(\\.\\d+)?mm.*$', '')`), asc(lenses.focalLengthMin), asc(lenses.apertureMin))
-    .limit(500);
+  const [lensRows, cameraRows, focalRows, makerRows] = await Promise.all([
+    db
+      .select()
+      .from(lenses)
+      .where(and(eq(lenses.systemId, system.id), isNull(lenses.mergedIntoId)))
+      .orderBy(
+        asc(sql`regexp_replace(${lenses.name}, '\\d+(\\.\\d+)?mm.*$', '')`),
+        asc(lenses.focalLengthMin),
+        asc(lenses.apertureMin),
+      )
+      .limit(500),
+    db
+      .select()
+      .from(cameras)
+      .where(and(eq(cameras.systemId, system.id), isNull(cameras.mergedIntoId)))
+      .orderBy(asc(cameras.name))
+      .limit(500),
+    db
+      .select({ min: lenses.focalLengthMin, max: lenses.focalLengthMax })
+      .from(lenses)
+      .where(and(eq(lenses.systemId, system.id), isNull(lenses.mergedIntoId))),
+    db
+      .selectDistinct({ brand: lenses.brand })
+      .from(lenses)
+      .where(and(eq(lenses.systemId, system.id), isNull(lenses.mergedIntoId))),
+  ]);
 
-  const systemCameras = await db
-    .select()
-    .from(cameras)
-    .where(eq(cameras.systemId, system.id))
-    .orderBy(asc(cameras.name))
-    .limit(500);
+  const lensCount = lensRows.length;
+  const cameraCount = cameraRows.length;
+  const makerCount = makerRows.filter((m) => m.brand).length;
+  const tab: Tab = TABS.includes(rawTab as Tab) ? (rawTab as Tab) : "lenses";
+
+  const ldbId = `LDB SYS-${String(system.id).padStart(3, "0")}`;
+  const em = deriveMountEm(system.name);
+  const title = splitTitleEm(system.name);
+  const { heights: focalHeights, total: focalTotal } = computeFocalDistribution(focalRows);
+  const peakBuckets = new Set(
+    focalHeights
+      .map((h, i) => ({ h, i }))
+      .sort((a, b) => b.h - a.h)
+      .slice(0, 3)
+      .filter((x) => x.h > 0)
+      .map((x) => x.i),
+  );
 
   return (
     <PageTransition>
-      <div className="mx-auto max-w-4xl space-y-8">
-        <BackButton fallbackHref="/systems" label="Back to systems" />
+      <TopBar
+        crumbs={[
+          { label: "home", href: "/" },
+          { label: "systems", href: "/systems" },
+          { label: system.name.toLowerCase() },
+        ]}
+      >
+        <span>entry {String(system.id).padStart(5, "0")}</span>
+      </TopBar>
 
-        <div>
-          <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100">{system.name}</h1>
-          <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
-            {system.manufacturer && <Badge variant="outline">{system.manufacturer}</Badge>}
-            {system.mountType && <Badge variant="system">{system.mountType}</Badge>}
-            <Badge variant="secondary">
-              {systemLenses.length} lenses, {systemCameras.length} cameras
-            </Badge>
+      <div className="mx-auto w-full max-w-[1200px] px-6 pb-24 pt-10 lg:px-10">
+        <header className="mb-10 border-b border-border pb-7">
+          <div className="mono mb-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] tracking-[0.02em] text-[var(--fg-dim)]">
+            <span>
+              <span className="text-[var(--fg-faint)]">LDB</span> {ldbId.replace("LDB ", "")}
+            </span>
             {(system.viewCount ?? 0) > 0 && (
-              <span className="text-zinc-400">{system.viewCount!.toLocaleString()} views</span>
+              <>
+                <span className="text-[var(--fg-faint)]">·</span>
+                <span>{system.viewCount!.toLocaleString()} views</span>
+              </>
+            )}
+          </div>
+          <h1 className="text-[44px] font-medium leading-[1.05] -tracking-[0.025em]">
+            {title.main}
+            <em className="hero-title-em">{title.em}</em>{" "}
+            <span className="text-[var(--fg-mid)]">mount system</span>
+          </h1>
+          <div className="mt-5 flex flex-wrap gap-2">
+            {system.manufacturer && (
+              <span className="mono rounded border border-border bg-[var(--surface-soft)] px-2 py-1 text-[10px] uppercase tracking-[0.06em] text-[var(--fg-dim)]">
+                {system.manufacturer}
+              </span>
+            )}
+            {system.mountType && (
+              <span className="mono rounded border border-border bg-[var(--surface-soft)] px-2 py-1 text-[10px] uppercase tracking-[0.06em] text-[var(--fg-dim)]">
+                {system.mountType}
+              </span>
+            )}
+          </div>
+        </header>
+
+        <div className="mb-10 grid gap-8 lg:grid-cols-[360px_1fr]">
+          <MountDiagram em={em} systemName={system.name} />
+
+          <div className="space-y-6">
+            {system.description && (
+              <p className="max-w-[640px] text-[15px] leading-[1.65] text-[var(--fg-mid)]">
+                {system.description}
+              </p>
+            )}
+
+            <div className="grid grid-cols-2 gap-px overflow-hidden rounded-[10px] border border-border bg-border md:grid-cols-3">
+              <Stat label="Lenses" value={lensCount.toLocaleString()} />
+              <Stat label="Cameras" value={cameraCount.toLocaleString()} />
+              <Stat label="Manufacturers" value={makerCount.toLocaleString()} />
+            </div>
+
+            {focalTotal > 0 && (
+              <div className="overflow-hidden rounded-[10px] border border-border">
+                <div className="flex items-center justify-between border-b border-border bg-[var(--surface-soft)] px-4 py-2.5">
+                  <h3 className="text-[13px] font-medium">Focal length distribution</h3>
+                  <span className="mono text-[10px] uppercase tracking-[0.08em] text-[var(--fg-faint)]">
+                    {focalTotal.toLocaleString()} indexed
+                  </span>
+                </div>
+                <FocalChart heights={focalHeights} peakBuckets={peakBuckets} />
+              </div>
             )}
           </div>
         </div>
 
-        {system.description && <p className="leading-relaxed text-zinc-600 dark:text-zinc-400">{system.description}</p>}
+        <div className="mb-6 flex gap-0.5 border-b border-border">
+          <TabLink slug={system.slug} value="lenses" label="Lenses" count={lensCount} active={tab === "lenses"} />
+          <TabLink slug={system.slug} value="cameras" label="Cameras" count={cameraCount} active={tab === "cameras"} />
+        </div>
 
-        {systemLenses.length > 0 && (
-          <div>
-            <h2 className="mb-3 text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-              Lenses ({systemLenses.length})
-            </h2>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead scope="col">Name</TableHead>
-                    <TableHead scope="col">Brand</TableHead>
-                    <TableHead scope="col">Focal Length</TableHead>
-                    <TableHead scope="col">Aperture</TableHead>
-                    <TableHead scope="col">Type</TableHead>
-                    <TableHead scope="col">Year</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {systemLenses.map((lens) => (
-                    <TableRow key={lens.id}>
-                      <TableCell>
-                        <Link
-                          href={`/lenses/${lens.slug}`}
-                          className="font-medium text-zinc-900 hover:underline dark:text-zinc-100"
-                        >
-                          {lens.name}
-                        </Link>
-                      </TableCell>
-                      <TableCell className="text-zinc-500">{lens.brand || "\u2014"}</TableCell>
-                      <TableCell className="text-zinc-600 dark:text-zinc-400">
-                        {lens.focalLengthMin
-                          ? lens.focalLengthMin === lens.focalLengthMax
-                            ? `${lens.focalLengthMin}mm`
-                            : `${lens.focalLengthMin}-${lens.focalLengthMax}mm`
-                          : "\u2014"}
-                      </TableCell>
-                      <TableCell className="text-zinc-600 dark:text-zinc-400">
-                        {lens.apertureMin ? `f/${lens.apertureMin}` : "\u2014"}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          {lens.isZoom && <Badge variant="zoom">Zoom</Badge>}
-                          {lens.isPrime && <Badge variant="prime">Prime</Badge>}
-                          {lens.isMacro && <Badge variant="macro">Macro</Badge>}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-zinc-600 dark:text-zinc-400">
-                        {lens.yearIntroduced || "\u2014"}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
-        )}
-
-        {systemCameras.length > 0 && (
-          <div>
-            <h2 className="mb-3 text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-              Cameras ({systemCameras.length})
-            </h2>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead scope="col">Name</TableHead>
-                    <TableHead scope="col">Sensor Type</TableHead>
-                    <TableHead scope="col">Sensor Size</TableHead>
-                    <TableHead scope="col">Megapixels</TableHead>
-                    <TableHead scope="col">Year</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {systemCameras.map((camera) => (
-                    <TableRow key={camera.id}>
-                      <TableCell>
-                        <Link
-                          href={`/cameras/${camera.slug}`}
-                          className="font-medium text-zinc-900 hover:underline dark:text-zinc-100"
-                        >
-                          {camera.name}
-                        </Link>
-                      </TableCell>
-                      <TableCell className="text-zinc-500">
-                        {camera.sensorType || "\u2014"}
-                      </TableCell>
-                      <TableCell className="text-zinc-500">
-                        {camera.sensorSize || "\u2014"}
-                      </TableCell>
-                      <TableCell className="text-zinc-600 dark:text-zinc-400">
-                        {camera.megapixels ? `${camera.megapixels} MP` : "\u2014"}
-                      </TableCell>
-                      <TableCell className="text-zinc-600 dark:text-zinc-400">
-                        {camera.yearIntroduced || "\u2014"}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
+        {tab === "lenses" ? (
+          <LensTable rows={lensRows} />
+        ) : (
+          <CameraTable rows={cameraRows} />
         )}
 
         <ViewTracker type="system" id={system.id} />
       </div>
     </PageTransition>
+  );
+}
+
+function MountDiagram({ em, systemName }: { em: string; systemName: string }) {
+  const fontSize = em.length > 3 ? 9 : 14;
+  return (
+    <div className="overflow-hidden rounded-[10px] border border-border">
+      <div className="flex items-center justify-between border-b border-border bg-[var(--surface-soft)] px-4 py-2.5">
+        <h3 className="text-[13px] font-medium">Mount geometry</h3>
+        <span className="mono text-[10px] uppercase tracking-[0.08em] text-[var(--fg-faint)]">
+          schematic
+        </span>
+      </div>
+      <div className="flex items-center justify-center bg-background p-6">
+        <svg viewBox="0 0 260 200" className="w-full max-w-[260px]" aria-hidden="true">
+          <circle cx="130" cy="100" r="84" fill="none" stroke="var(--line-strong)" strokeWidth="1" />
+          <circle cx="130" cy="100" r="76" fill="var(--surface-soft)" stroke="var(--line)" strokeWidth="0.6" />
+          <circle cx="130" cy="100" r="42" fill="var(--surface-sunk)" stroke="var(--line-strong)" strokeWidth="0.8" />
+          <text
+            x="130"
+            y="105"
+            fontFamily="Geist Mono, monospace"
+            fontSize={fontSize}
+            fill="var(--fg)"
+            textAnchor="middle"
+            fontWeight="600"
+          >
+            {em}
+          </text>
+          <g stroke="var(--fg-faint)" strokeWidth="0.5" strokeDasharray="2 2" fill="none">
+            <line x1="30" y1="100" x2="46" y2="100" />
+            <line x1="30" y1="16" x2="30" y2="184" />
+            <line x1="30" y1="16" x2="46" y2="16" />
+            <line x1="30" y1="184" x2="46" y2="184" />
+          </g>
+          <text
+            x="18"
+            y="104"
+            fontFamily="Geist Mono, monospace"
+            fontSize="9"
+            fill="var(--fg-dim)"
+            textAnchor="middle"
+            transform="rotate(-90 18 104)"
+          >
+            throat
+          </text>
+          <text
+            x="230"
+            y="100"
+            fontFamily="Geist Mono, monospace"
+            fontSize="9"
+            fill="var(--fg-dim)"
+            textAnchor="middle"
+          >
+            {systemName.toUpperCase().slice(0, 16)}
+          </text>
+        </svg>
+      </div>
+    </div>
+  );
+}
+
+function FocalChart({
+  heights,
+  peakBuckets,
+}: {
+  heights: number[];
+  peakBuckets: Set<number>;
+}) {
+  const labelOrder = FOCAL_LABEL_POINTS.map((f) => focalToBucket(f));
+  return (
+    <div className="px-4 py-4">
+      <div className="flex h-[110px] items-end gap-[2px]">
+        {heights.map((h, i) => (
+          <div
+            key={i}
+            className="flex-1 rounded-t-[1px]"
+            style={{
+              height: `${Math.max(3, h * 100)}%`,
+              minHeight: 2,
+              background: peakBuckets.has(i) ? "var(--hot)" : "var(--fg)",
+            }}
+            aria-hidden="true"
+          />
+        ))}
+      </div>
+      <div className="mono relative mt-2 text-[10px] tracking-[0.04em] text-[var(--fg-faint)]">
+        {FOCAL_LABEL_POINTS.map((label, idx) => {
+          const bucket = labelOrder[idx];
+          const left = (bucket / (FOCAL_BUCKETS - 1)) * 100;
+          return (
+            <span
+              key={label}
+              className="absolute top-0 -translate-x-1/2"
+              style={{ left: `${left}%` }}
+            >
+              {label}
+            </span>
+          );
+        })}
+        <span className="invisible block">8</span>
+      </div>
+    </div>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="bg-background p-4">
+      <div className="mono text-[10px] uppercase tracking-[0.08em] text-[var(--fg-faint)]">
+        {label}
+      </div>
+      <div className="mt-1 text-[28px] font-medium leading-none -tracking-[0.02em] tabular-nums">
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function TabLink({
+  slug,
+  value,
+  label,
+  count,
+  active,
+}: {
+  slug: string;
+  value: Tab;
+  label: string;
+  count: number;
+  active: boolean;
+}) {
+  return (
+    <Link
+      href={value === "lenses" ? `/systems/${slug}` : `/systems/${slug}?tab=${value}`}
+      scroll={false}
+      className={`-mb-px flex items-center gap-2 px-4 pb-2.5 pt-2.5 text-[13px] font-medium transition-colors ${
+        active
+          ? "border-b-2 border-foreground text-foreground"
+          : "border-b-2 border-transparent text-[var(--fg-dim)] hover:text-[var(--fg-mid)]"
+      }`}
+    >
+      {label}
+      <span className="mono rounded bg-[var(--surface-sunk)] px-1.5 py-[1px] text-[10px] text-[var(--fg-faint)]">
+        {count.toLocaleString()}
+      </span>
+    </Link>
+  );
+}
+
+function LensTable({ rows }: { rows: (typeof lenses.$inferSelect)[] }) {
+  if (rows.length === 0) {
+    return (
+      <div className="rounded-xl border border-dashed border-border p-12 text-center text-[var(--fg-dim)]">
+        No lenses indexed yet.
+      </div>
+    );
+  }
+  return (
+    <div className="overflow-hidden rounded-[10px] border border-border bg-background">
+      <div className="mono grid grid-cols-[56px_2.6fr_1fr_0.9fr_0.6fr_0.7fr_0.7fr_36px] items-center gap-3 border-b border-border bg-[var(--surface-soft)] px-3.5 py-2.5 text-[10px] uppercase tracking-[0.1em] text-[var(--fg-dim)]">
+        <span />
+        <span>Lens</span>
+        <span>Brand</span>
+        <span>Focal</span>
+        <span>ƒ</span>
+        <span>Year</span>
+        <span>Rating</span>
+        <span />
+      </div>
+      {rows.map((lens) => {
+        const focal = lens.focalLengthMin
+          ? lens.focalLengthMin === lens.focalLengthMax
+            ? `${lens.focalLengthMin}mm`
+            : `${lens.focalLengthMin}–${lens.focalLengthMax}mm`
+          : null;
+        const aperture = lens.apertureMin ? `f/${lens.apertureMin}` : null;
+        return (
+          <Link
+            key={lens.id}
+            href={`/lenses/${lens.slug}`}
+            className="grid cursor-pointer grid-cols-[56px_2.6fr_1fr_0.9fr_0.6fr_0.7fr_0.7fr_36px] items-center gap-3 border-b border-[var(--line-soft)] px-3.5 py-3 transition-colors last:border-b-0 hover:bg-[var(--surface-soft)]"
+          >
+            <div
+              className="relative h-11 w-11 overflow-hidden rounded bg-[var(--surface-sunk)]"
+              style={{
+                backgroundImage:
+                  "repeating-linear-gradient(-45deg, transparent 0 4px, color-mix(in oklch, var(--fg) 5%, transparent) 4px 5px)",
+              }}
+              aria-hidden="true"
+            />
+            <div className="min-w-0">
+              <div className="truncate text-[13.5px] font-medium leading-[1.3] -tracking-[0.01em]">
+                {lens.name}
+              </div>
+              <div className="mono mt-0.5 text-[10px] tracking-[0.02em] text-[var(--fg-faint)]">
+                LDB 06-{String(lens.id).padStart(5, "0")}
+              </div>
+            </div>
+            <span className="mono truncate text-[12px] text-[var(--fg-mid)]">
+              {lens.brand ?? "—"}
+            </span>
+            <span className="mono text-[12px] text-foreground">{focal ?? "—"}</span>
+            <span className="mono text-[12px] text-foreground">{aperture ?? "—"}</span>
+            <span className="mono text-[12px] text-[var(--fg-mid)]">
+              {lens.yearIntroduced ?? "—"}
+            </span>
+            <span className="mono text-[12px] text-[var(--hot)]">
+              {lens.averageRating ? `★ ${lens.averageRating.toFixed(1)}` : "—"}
+            </span>
+            <span aria-hidden="true" className="text-[var(--fg-faint)]">›</span>
+          </Link>
+        );
+      })}
+    </div>
+  );
+}
+
+function CameraTable({ rows }: { rows: (typeof cameras.$inferSelect)[] }) {
+  if (rows.length === 0) {
+    return (
+      <div className="rounded-xl border border-dashed border-border p-12 text-center text-[var(--fg-dim)]">
+        No cameras indexed yet.
+      </div>
+    );
+  }
+  return (
+    <div className="overflow-hidden rounded-[10px] border border-border bg-background">
+      <div className="mono grid grid-cols-[56px_2.4fr_1.1fr_0.9fr_0.7fr_0.7fr_36px] items-center gap-3 border-b border-border bg-[var(--surface-soft)] px-3.5 py-2.5 text-[10px] uppercase tracking-[0.1em] text-[var(--fg-dim)]">
+        <span />
+        <span>Camera</span>
+        <span>Sensor</span>
+        <span>Size</span>
+        <span>MP</span>
+        <span>Year</span>
+        <span />
+      </div>
+      {rows.map((camera) => (
+        <Link
+          key={camera.id}
+          href={`/cameras/${camera.slug}`}
+          className="grid cursor-pointer grid-cols-[56px_2.4fr_1.1fr_0.9fr_0.7fr_0.7fr_36px] items-center gap-3 border-b border-[var(--line-soft)] px-3.5 py-3 transition-colors last:border-b-0 hover:bg-[var(--surface-soft)]"
+        >
+          <div
+            className="relative h-11 w-11 overflow-hidden rounded bg-[var(--surface-sunk)]"
+            style={{
+              backgroundImage:
+                "repeating-linear-gradient(-45deg, transparent 0 4px, color-mix(in oklch, var(--fg) 5%, transparent) 4px 5px)",
+            }}
+            aria-hidden="true"
+          />
+          <div className="min-w-0">
+            <div className="truncate text-[13.5px] font-medium leading-[1.3] -tracking-[0.01em]">
+              {camera.name}
+            </div>
+            <div className="mono mt-0.5 text-[10px] tracking-[0.02em] text-[var(--fg-faint)]">
+              LDB 02-{String(camera.id).padStart(5, "0")}
+            </div>
+          </div>
+          <span className="mono truncate text-[12px] text-[var(--fg-mid)]">
+            {camera.sensorType ?? "—"}
+          </span>
+          <span className="mono truncate text-[12px] text-[var(--fg-mid)]">
+            {camera.sensorSize ?? "—"}
+          </span>
+          <span className="mono text-[12px] text-foreground">
+            {camera.megapixels ? `${camera.megapixels}` : "—"}
+          </span>
+          <span className="mono text-[12px] text-[var(--fg-mid)]">
+            {camera.yearIntroduced ?? "—"}
+          </span>
+          <span aria-hidden="true" className="text-[var(--fg-faint)]">›</span>
+        </Link>
+      ))}
+    </div>
   );
 }
