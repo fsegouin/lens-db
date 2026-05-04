@@ -93,6 +93,8 @@ select.filter-select {
   --sidebar-ring: oklch(0.708 0 0);
 
   /* Lens DB "Optical Instrument" design tokens */
+  --fg: var(--foreground);
+  --bg: var(--background);
   --surface-soft: oklch(0.970 0 0);
   --surface-sunk: oklch(0.955 0 0);
   --fg-mid: oklch(0.420 0 0);
