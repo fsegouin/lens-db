@@ -3,11 +3,12 @@ import { notFound, redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import BackButton from "@/components/BackButton";
 import { db } from "@/db";
-import { lenses, systems } from "@/db/schema";
+import { lenses } from "@/db/schema";
 import { getEntityPriceEstimate, getEntityPriceHistory } from "@/lib/prices";
 import { formatDescription } from "@/lib/format-description";
 import { formatMagnification } from "@/lib/format-magnification";
 import { getImages } from "@/lib/images";
+import { getLensBySlug } from "@/lib/lenses";
 import ViewTracker from "@/components/ViewTracker";
 import RatingWidget from "@/components/RatingWidget";
 import ImageGallery from "@/components/ImageGallery";
@@ -30,11 +31,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const [result] = await db
-    .select({ lens: lenses })
-    .from(lenses)
-    .where(eq(lenses.slug, slug))
-    .limit(1);
+  const result = await getLensBySlug(slug);
 
   return {
     title: result ? `${result.lens.name} | The Lens DB` : "Lens Not Found",
@@ -48,12 +45,7 @@ export default async function LensDetailPage({
 }) {
   const { slug } = await params;
 
-  const [result] = await db
-    .select({ lens: lenses, system: systems })
-    .from(lenses)
-    .leftJoin(systems, eq(lenses.systemId, systems.id))
-    .where(eq(lenses.slug, slug))
-    .limit(1);
+  const result = await getLensBySlug(slug);
 
   if (!result) notFound();
 
