@@ -159,7 +159,11 @@ export default async function CameraDetailPage({
           <EbayListings query={camera.name} entitySlug={camera.slug} />
         </Suspense>
 
-        <RatingWidget cameraId={camera.id} />
+        <RatingWidget
+          cameraId={camera.id}
+          initialAverage={camera.averageRating}
+          initialCount={camera.ratingCount ?? 0}
+        />
 
         <div className="space-y-5">
           <div>
