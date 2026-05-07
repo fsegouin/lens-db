@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { db } from "@/db";
 import { lenses, systems } from "@/db/schema";
 import { requireAdminAPI, getAdminUserFromToken } from "@/lib/admin-auth";
@@ -120,6 +120,7 @@ export async function PUT(
   });
 
   revalidatePath(`/lenses/${updated.slug}`);
+  revalidateTag("lenses", "max");
 
   return NextResponse.json(updated);
 }
@@ -140,6 +141,7 @@ export async function DELETE(
 
   if (deleted) {
     revalidatePath(`/lenses/${deleted.slug}`);
+    revalidateTag("lenses", "max");
   }
 
   return NextResponse.json({ success: true });
