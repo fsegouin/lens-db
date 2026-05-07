@@ -64,14 +64,6 @@ export async function GET(request: NextRequest) {
     const cfg = getConfig(type);
     const ipHash = await hashIP(ip);
 
-    const [entity] = await db
-      .select({
-        averageRating: cfg.avgColumn,
-        ratingCount: cfg.countColumn,
-      })
-      .from(cfg.entityTable)
-      .where(eq(cfg.entityIdColumn, entityId));
-
     const [userRow] = await db
       .select({ rating: cfg.ratingColumn })
       .from(cfg.ratingsTable)
@@ -80,8 +72,6 @@ export async function GET(request: NextRequest) {
       );
 
     return NextResponse.json({
-      averageRating: entity?.averageRating ?? null,
-      ratingCount: entity?.ratingCount ?? 0,
       userRating: userRow?.rating ?? null,
     });
   } catch (error) {

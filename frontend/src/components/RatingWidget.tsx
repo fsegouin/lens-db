@@ -4,16 +4,20 @@ import { useCallback, useEffect, useState } from "react";
 import { motion } from "motion/react";
 import { toast } from "sonner";
 
-type RatingWidgetProps =
+type RatingWidgetProps = (
   | { lensId: number; cameraId?: never }
-  | { cameraId: number; lensId?: never };
+  | { cameraId: number; lensId?: never }
+) & {
+  initialAverage: number | null;
+  initialCount: number;
+};
 
 export default function RatingWidget(props: RatingWidgetProps) {
   const type = props.lensId != null ? "lens" : "camera";
   const entityId = props.lensId ?? props.cameraId!;
 
-  const [avg, setAvg] = useState<number | null>(null);
-  const [count, setCount] = useState(0);
+  const [avg, setAvg] = useState<number | null>(props.initialAverage);
+  const [count, setCount] = useState(props.initialCount);
   const [userRating, setUserRating] = useState<number | null>(null);
   const [hovering, setHovering] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -22,8 +26,6 @@ export default function RatingWidget(props: RatingWidgetProps) {
     fetch(`/api/ratings?type=${type}&entityId=${entityId}`)
       .then((r) => r.json())
       .then((data) => {
-        setAvg(data.averageRating);
-        setCount(data.ratingCount);
         setUserRating(data.userRating);
       })
       .catch(() => {
