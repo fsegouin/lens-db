@@ -1,14 +1,5 @@
 import { Ratelimit } from "@upstash/ratelimit";
-import { Redis } from "@upstash/redis";
-
-const isDev = process.env.NODE_ENV === "development";
-
-const redis = isDev
-  ? null
-  : new Redis({
-      url: process.env.KV_REST_API_URL!,
-      token: process.env.KV_REST_API_TOKEN!,
-    });
+import { redis } from "./redis";
 
 /** No-op limiter that always allows requests in development */
 const noopLimiter = {

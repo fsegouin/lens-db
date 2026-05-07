@@ -205,7 +205,11 @@ export default async function LensDetailPage({
           </div>
         )}
 
-        <RatingWidget lensId={lens.id} />
+        <RatingWidget
+          lensId={lens.id}
+          initialAverage={lens.averageRating}
+          initialCount={lens.ratingCount ?? 0}
+        />
 
         <PriceCard
           estimate={priceEstimate ?? null}

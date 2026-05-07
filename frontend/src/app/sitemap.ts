@@ -1,7 +1,30 @@
 import type { MetadataRoute } from "next";
+import { unstable_cache } from "next/cache";
 import { db } from "@/db";
 import { lenses, cameras, systems, collections, lensSeries } from "@/db/schema";
 import { isNull } from "drizzle-orm";
+
+const getSitemapSlugs = unstable_cache(
+  async () => {
+    const [lensRows, cameraRows, systemRows, collectionRows, seriesRows] =
+      await Promise.all([
+        db
+          .select({ slug: lenses.slug })
+          .from(lenses)
+          .where(isNull(lenses.mergedIntoId)),
+        db
+          .select({ slug: cameras.slug })
+          .from(cameras)
+          .where(isNull(cameras.mergedIntoId)),
+        db.select({ slug: systems.slug }).from(systems),
+        db.select({ slug: collections.slug }).from(collections),
+        db.select({ slug: lensSeries.slug }).from(lensSeries),
+      ]);
+    return { lensRows, cameraRows, systemRows, collectionRows, seriesRows };
+  },
+  ["sitemap-slugs"],
+  { revalidate: 86400, tags: ["lenses"] },
+);
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = "https://thelensdb.com";
@@ -18,21 +41,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${baseUrl}/search`, changeFrequency: "monthly", priority: 0.6 },
   ];
 
-  // Fetch all slugs in parallel (only non-merged entities)
-  const [lensRows, cameraRows, systemRows, collectionRows, seriesRows] =
-    await Promise.all([
-      db
-        .select({ slug: lenses.slug })
-        .from(lenses)
-        .where(isNull(lenses.mergedIntoId)),
-      db
-        .select({ slug: cameras.slug })
-        .from(cameras)
-        .where(isNull(cameras.mergedIntoId)),
-      db.select({ slug: systems.slug }).from(systems),
-      db.select({ slug: collections.slug }).from(collections),
-      db.select({ slug: lensSeries.slug }).from(lensSeries),
-    ]);
+  const { lensRows, cameraRows, systemRows, collectionRows, seriesRows } =
+    await getSitemapSlugs();
 
   const lensPages: MetadataRoute.Sitemap = lensRows.map((r) => ({
     url: `${baseUrl}/lenses/${r.slug}`,
