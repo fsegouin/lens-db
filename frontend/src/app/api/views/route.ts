@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/db";
-import { lenses, cameras, systems } from "@/db/schema";
-import { eq, sql } from "drizzle-orm";
 import { getClientIP, rateLimitedResponse } from "@/lib/api-utils";
 import { rateLimiters } from "@/lib/rate-limit";
+import { bumpViewCount, type ViewType } from "@/lib/view-counts";
 
 const VALID_TYPES = ["lens", "camera", "system"] as const;
-type ViewType = (typeof VALID_TYPES)[number];
 
 export async function POST(request: NextRequest) {
   try {
@@ -26,13 +23,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid request" }, { status: 400 });
     }
 
-    const table =
-      type === "lens" ? lenses : type === "camera" ? cameras : systems;
-
-    await db
-      .update(table)
-      .set({ viewCount: sql`${table.viewCount} + 1` })
-      .where(eq(table.id, id));
+    await bumpViewCount(type as ViewType, id);
 
     return NextResponse.json({ success: true });
   } catch (error) {
