@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { db } from "@/db";
 import {
   pendingEdits,
@@ -214,6 +214,9 @@ export async function POST(
       series: "/lenses/series",
     };
     revalidatePath(`${pathPrefixes[entityType]}/${entity.slug}`);
+    if (entityType === "lens") {
+      revalidateTag("lenses", "max");
+    }
   }
 
   return NextResponse.json({ success: true, action: "approved" });
