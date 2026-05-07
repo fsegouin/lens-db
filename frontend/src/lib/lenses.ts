@@ -1,9 +1,10 @@
 import { unstable_cache } from "next/cache";
+import { cache } from "react";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { lenses, systems } from "@/db/schema";
 
-export const getLensBySlug = unstable_cache(
+const _getLensBySlug = unstable_cache(
   async (slug: string) => {
     const [result] = await db
       .select({ lens: lenses, system: systems })
@@ -16,3 +17,5 @@ export const getLensBySlug = unstable_cache(
   ["lens-by-slug"],
   { revalidate: 604800, tags: ["lenses"] },
 );
+
+export const getLensBySlug = cache(_getLensBySlug);
