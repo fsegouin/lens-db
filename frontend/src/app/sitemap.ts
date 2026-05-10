@@ -23,7 +23,7 @@ const getSitemapSlugs = unstable_cache(
     return { lensRows, cameraRows, systemRows, collectionRows, seriesRows };
   },
   ["sitemap-slugs"],
-  { revalidate: 86400, tags: ["lenses"] },
+  { revalidate: 604800, tags: ["lenses"] },
 );
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
