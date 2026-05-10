@@ -18,7 +18,7 @@ export const getEntityPriceEstimate = unstable_cache(
     return estimate ?? null;
   },
   ["entity-price-estimate"],
-  { revalidate: 86400, tags: ["prices"] },
+  { revalidate: 2592000, tags: ["prices"] },
 );
 
 export const getEntityPriceHistory = unstable_cache(
@@ -41,5 +41,5 @@ export const getEntityPriceHistory = unstable_cache(
       .orderBy(desc(priceHistory.saleDate));
   },
   ["entity-price-history"],
-  { revalidate: 86400, tags: ["prices"] },
+  { revalidate: 2592000, tags: ["prices"] },
 );
