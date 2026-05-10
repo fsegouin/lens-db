@@ -1,3 +1,4 @@
+import { revalidateTag } from "next/cache";
 import { db } from "@/db";
 import { priceHistory, priceEstimates } from "@/db/schema";
 import { eq, and, sql, gt, inArray, isNull } from "drizzle-orm";
@@ -149,6 +150,7 @@ export async function recomputePriceEstimates(
         target: [priceEstimates.entityType, priceEstimates.entityId],
         set: { extractedAt: now },
       });
+    revalidateTag("prices", "max");
     return;
   }
 
@@ -252,4 +254,6 @@ export async function recomputePriceEstimates(
         extractedAt: now,
       },
     });
+
+  revalidateTag("prices", "max");
 }
