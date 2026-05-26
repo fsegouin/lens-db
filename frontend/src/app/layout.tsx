@@ -80,7 +80,6 @@ export default function RootLayout({
               <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-2">
                 <p className="text-center text-sm text-zinc-500">
                   The Lens DB &mdash; A community-driven camera lens database.
-                  Originally inspired by lens-db.com (2012&ndash;2025).
                 </p>
                 <p className="text-center text-xs text-zinc-400">
                   As an eBay Partner Network affiliate, The Lens DB earns from
