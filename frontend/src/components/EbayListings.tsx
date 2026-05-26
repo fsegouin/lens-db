@@ -220,6 +220,11 @@ export default async function EbayListings({ query, entityType = "camera", entit
           </EbayTrackedLink>
         ))}
       </div>
+
+      <p className="text-right text-[10px] text-zinc-400">
+        As an eBay Partner Network affiliate, The Lens DB earns from qualifying
+        purchases.
+      </p>
     </div>
   );
 }
