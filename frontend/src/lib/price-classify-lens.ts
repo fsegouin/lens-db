@@ -1,7 +1,7 @@
 import { generateText, Output } from "ai";
 import { z } from "zod";
 
-export const ClassifiedLensListingSchema = z.object({
+const ClassifiedLensListingSchema = z.object({
   listings: z.array(
     z.object({
       isRelevant: z.boolean().describe(
@@ -32,6 +32,7 @@ export async function classifyLensListings(
   listings: { title: string; price: number; date: string; condition?: string; description?: string; url?: string }[],
 ): Promise<ClassifiedLensListing[]> {
   const allClassified: ClassifiedLensListing[] = [];
+  let lastError: unknown;
 
   for (let i = 0; i < listings.length; i += BATCH_SIZE) {
     const batch = listings.slice(i, i + BATCH_SIZE);
@@ -69,7 +70,7 @@ ${listingLines}`;
 
     try {
       const { output } = await generateText({
-        model: "google/gemini-2.0-flash-lite",
+        model: "google/gemini-3.1-flash-lite",
         output: Output.object({ schema: ClassifiedLensListingSchema }),
         prompt,
       });
@@ -79,7 +80,17 @@ ${listingLines}`;
       }
     } catch (error) {
       console.error(`Classification error (batch ${Math.floor(i / BATCH_SIZE) + 1}):`, error);
+      lastError = error;
     }
+  }
+
+  // If every batch failed, surface the error instead of returning [] —
+  // an empty result here would be indistinguishable from "no relevant listings"
+  // and the caller would wrongly mark the lens as freshly scraped.
+  if (listings.length > 0 && allClassified.length === 0 && lastError !== undefined) {
+    throw new Error(`Classification failed for all batches of "${lensName}"`, {
+      cause: lastError,
+    });
   }
 
   return allClassified;
