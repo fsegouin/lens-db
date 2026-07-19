@@ -23,13 +23,14 @@ export async function getSystemInfo(params: GetSystemInfoParams) {
     return { error: `System not found with slug: ${params.slug}` };
   }
 
+  // count(*) comes back as a string over the Neon HTTP driver (bigint), hence Number() below
   const [cameraCount] = await db
-    .select({ count: sql<number>`count(*)` })
+    .select({ count: sql<string>`count(*)` })
     .from(cameras)
     .where(eq(cameras.systemId, system.id));
 
   const [lensCount] = await db
-    .select({ count: sql<number>`count(*)` })
+    .select({ count: sql<string>`count(*)` })
     .from(lenses)
     .where(eq(lenses.systemId, system.id));
 

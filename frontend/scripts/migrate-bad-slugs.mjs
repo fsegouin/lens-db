@@ -147,7 +147,6 @@ async function main() {
       `;
     }
   }
-  seriesCreated += 0; // systems, not series
 
   // Delete ALL remaining system/ entries and /full-list entries
   const allSystemEntries = await sql`SELECT id FROM lenses WHERE slug LIKE 'system/%'`;

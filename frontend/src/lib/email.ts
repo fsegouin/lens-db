@@ -1,5 +1,10 @@
 import { Resend } from "resend";
 
+/** Mask an email address for logging (avoid PII in logs): "florent@example.com" -> "f***@example.com" */
+export function maskEmail(email: string): string {
+  return email.replace(/^(.).*?(@.*)$/, "$1***$2");
+}
+
 let _resend: Resend | null = null;
 function getResend() {
   if (!_resend) {
@@ -48,7 +53,7 @@ export async function sendVerificationEmail(
   });
 
   if (error) {
-    console.error(`[email] Failed to send verification email to ${email}:`, JSON.stringify(error));
+    console.error(`[email] Failed to send verification email to ${maskEmail(email)}:`, JSON.stringify(error));
     throw new Error(`Resend API error: ${error.message}`);
   }
 }

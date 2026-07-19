@@ -75,10 +75,6 @@ type SelectedItem =
   | { type: "lens"; data: Lens }
   | { type: "camera"; data: Camera };
 
-type SearchResultItem =
-  | { type: "lens"; lens: Lens; system: { name: string } | null }
-  | { type: "camera"; camera: Camera; system: { name: string } | null };
-
 const LENS_SPEC_ROWS: { label: string; getValue: (l: Lens) => string }[] = [
   { label: "Brand", getValue: (l) => l.brand || "\u2014" },
   { label: "Type", getValue: (l) => l.lensType || "\u2014" },

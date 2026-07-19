@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { lenses, systems, lensSeries, lensSeriesMemberships, priceEstimates } from "@/db/schema";
-import { asc, desc, eq, and, gte, lte, sql, inArray, isNull } from "drizzle-orm";
+import { asc, desc, eq, and, gte, lte, sql, inArray, isNull, type AnyColumn } from "drizzle-orm";
 import { getClientIP, rateLimitedResponse } from "@/lib/api-utils";
 import { rateLimiters } from "@/lib/rate-limit";
 
@@ -131,8 +131,7 @@ export async function GET(request: NextRequest) {
 
     const where = conditions.length > 0 ? and(...conditions) : undefined;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const sortColumns: Record<string, any> = {
+    const sortColumns: Record<string, AnyColumn> = {
       name: lenses.name,
       brand: lenses.brand,
       system: systems.name,

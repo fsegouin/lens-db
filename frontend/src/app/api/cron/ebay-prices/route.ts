@@ -97,8 +97,10 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  const cameraBatch = await getCameraBatch();
-  const stats = await getCameraRotationStats(staleBefore);
+  const [cameraBatch, stats] = await Promise.all([
+    getCameraBatch(),
+    getCameraRotationStats(staleBefore),
+  ]);
 
   return NextResponse.json({ cameras: cameraBatch, stats });
 }

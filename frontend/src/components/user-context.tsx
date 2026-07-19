@@ -43,9 +43,9 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   }, [refresh]);
 
   return (
-    <UserContext.Provider value={{ user, loading, refresh }}>
+    <UserContext value={{ user, loading, refresh }}>
       {children}
-    </UserContext.Provider>
+    </UserContext>
   );
 }
 

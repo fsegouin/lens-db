@@ -63,6 +63,8 @@ export default function AdminTable({
     () => Object.fromEntries(filters.map((filter) => [filter.key, ""]))
   );
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Monotonic id so a slow earlier response can't overwrite a newer one
+  const fetchIdRef = useRef(0);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [bulkLoading, setBulkLoading] = useState(false);
 
@@ -121,6 +123,7 @@ export default function AdminTable({
   }, [search]);
 
   const fetchData = useCallback(async () => {
+    const fetchId = ++fetchIdRef.current;
     setLoading(true);
     const params = new URLSearchParams();
     if (debouncedSearch) params.set("q", debouncedSearch);
@@ -134,6 +137,7 @@ export default function AdminTable({
     }
     try {
       const res = await fetch(`${apiPath}?${params}`);
+      if (fetchId !== fetchIdRef.current) return;
       if (!res.ok) {
         if (res.status === 401) {
           window.location.href = "/admin/login";
@@ -144,12 +148,13 @@ export default function AdminTable({
         return;
       }
       const data = await res.json();
+      if (fetchId !== fetchIdRef.current) return;
       setItems(data.items || []);
       setTotal(data.total || 0);
     } catch {
-      setItems([]);
+      if (fetchId === fetchIdRef.current) setItems([]);
     } finally {
-      setLoading(false);
+      if (fetchId === fetchIdRef.current) setLoading(false);
     }
   }, [apiPath, debouncedSearch, filterValues, page, sort, order]);
 

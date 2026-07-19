@@ -65,8 +65,10 @@ export async function POST(request: NextRequest) {
 
   // Verify both entities exist
   const table = sourceEntityType === "lens" ? lenses : cameras;
-  const [source] = await db.select({ id: table.id }).from(table).where(eq(table.id, sourceEntityId)).limit(1);
-  const [target] = await db.select({ id: table.id }).from(table).where(eq(table.id, targetEntityId)).limit(1);
+  const [[source], [target]] = await Promise.all([
+    db.select({ id: table.id }).from(table).where(eq(table.id, sourceEntityId)).limit(1),
+    db.select({ id: table.id }).from(table).where(eq(table.id, targetEntityId)).limit(1),
+  ]);
 
   if (!source || !target) {
     return NextResponse.json({ error: "One or both entities not found" }, { status: 404 });

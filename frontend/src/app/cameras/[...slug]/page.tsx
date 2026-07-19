@@ -220,7 +220,6 @@ export default async function CameraDetailPage({
           <EditButton
             entityType="camera"
             entityId={camera.id}
-            entitySlug={camera.slug}
             currentValues={{
               name: camera.name,
               url: camera.url,

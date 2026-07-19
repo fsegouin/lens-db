@@ -66,7 +66,7 @@ for (let i = 0; i < cameras.length; i++) {
       const filename = `${j + 1}.${ext}`;
       fs.writeFileSync(path.join(dir, filename), buffer);
       downloaded++;
-    } catch (err) {
+    } catch {
       errors++;
     }
   }

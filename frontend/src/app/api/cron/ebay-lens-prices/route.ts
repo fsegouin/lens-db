@@ -97,8 +97,10 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  const lensBatch = await getLensBatch();
-  const stats = await getLensRotationStats(staleBefore);
+  const [lensBatch, stats] = await Promise.all([
+    getLensBatch(),
+    getLensRotationStats(staleBefore),
+  ]);
 
   return NextResponse.json({ lenses: lensBatch, stats });
 }

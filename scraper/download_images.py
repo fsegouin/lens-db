@@ -79,8 +79,7 @@ def download_image(url: str, dest: Path, backoff: float = 1.0) -> tuple[bool, fl
                 # Image was never archived and lens-db.com is offline
                 return False, backoff
 
-            download_url = wayback_url
-            resp = SESSION.get(download_url, timeout=30, stream=True)
+            resp = SESSION.get(wayback_url, timeout=30, stream=True)
 
             if resp.status_code == 200:
                 content_type = resp.headers.get("content-type", "")

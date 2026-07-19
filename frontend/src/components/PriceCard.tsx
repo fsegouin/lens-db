@@ -98,9 +98,11 @@ function RarityDiamonds({ label }: { label: string }) {
 export default function PriceCard({ estimate, history }: PriceCardProps) {
   if (!estimate && history.length === 0) return null;
 
-  const hasEstimate =
-    estimate &&
-    (estimate.priceAverageLow != null || estimate.priceVeryGoodLow != null);
+  const shownEstimate =
+    estimate != null &&
+    (estimate.priceAverageLow != null || estimate.priceVeryGoodLow != null)
+      ? estimate
+      : null;
 
   return (
     <div className="space-y-4">
@@ -108,7 +110,7 @@ export default function PriceCard({ estimate, history }: PriceCardProps) {
         Price Guide
       </h3>
 
-      {hasEstimate && (
+      {shownEstimate && (
         <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 overflow-hidden">
           <div className="grid grid-cols-3 divide-x divide-zinc-200 dark:divide-zinc-800">
             <div className="p-4 text-center">
@@ -116,7 +118,7 @@ export default function PriceCard({ estimate, history }: PriceCardProps) {
                 Fair
               </div>
               <div className="mt-1 text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-                {formatPrice(estimate!.priceAverageLow, estimate!.priceAverageHigh)}
+                {formatPrice(shownEstimate.priceAverageLow, shownEstimate.priceAverageHigh)}
               </div>
             </div>
             <div className="p-4 text-center">
@@ -124,7 +126,7 @@ export default function PriceCard({ estimate, history }: PriceCardProps) {
                 Good
               </div>
               <div className="mt-1 text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-                {formatPrice(estimate!.priceVeryGoodLow, estimate!.priceVeryGoodHigh)}
+                {formatPrice(shownEstimate.priceVeryGoodLow, shownEstimate.priceVeryGoodHigh)}
               </div>
             </div>
             <div className="p-4 text-center bg-zinc-50 dark:bg-zinc-900/50">
@@ -132,30 +134,30 @@ export default function PriceCard({ estimate, history }: PriceCardProps) {
                 Excellent
               </div>
               <div className="mt-1 text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-                {formatPrice(estimate!.priceMintLow, estimate!.priceMintHigh)}
+                {formatPrice(shownEstimate.priceMintLow, shownEstimate.priceMintHigh)}
               </div>
             </div>
           </div>
 
-          {(estimate!.rarity || estimate!.sourceUrl) && (
+          {(shownEstimate.rarity || shownEstimate.sourceUrl) && (
             <div className="border-t border-zinc-200 dark:border-zinc-800 px-4 py-3 flex items-center justify-between">
-              {estimate!.rarity && (
+              {shownEstimate.rarity && (
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase">
                     Rarity
                   </span>
-                  <RarityDiamonds label={estimate!.rarity} />
-                  {estimate!.rarityVotes != null && estimate!.rarityVotes > 0 && (
+                  <RarityDiamonds label={shownEstimate.rarity} />
+                  {shownEstimate.rarityVotes != null && shownEstimate.rarityVotes > 0 && (
                     <span className="text-xs text-zinc-400">
-                      ({estimate!.rarityVotes} sold in last 90 days)
+                      ({shownEstimate.rarityVotes} sold in last 90 days)
                     </span>
                   )}
                 </div>
               )}
               <span className="text-xs text-zinc-400">
-                Based on recent {estimate!.sourceName || "eBay"} sales
+                Based on recent {shownEstimate.sourceName || "eBay"} sales
                 {" · "}
-                {new Date(estimate!.extractedAt).toLocaleDateString("en-US", {
+                {new Date(shownEstimate.extractedAt).toLocaleDateString("en-US", {
                   month: "short",
                   year: "numeric",
                 })}

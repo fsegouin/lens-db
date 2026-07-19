@@ -12,6 +12,8 @@ interface Series {
   name: string;
 }
 
+type BulkModalType = "addTags" | "removeTags" | "addToSeries" | "setField";
+
 /**
  * Hook that provides bulk action definitions for the lens admin table.
  * Returns the bulkActions array and a modal element to render.
@@ -20,7 +22,7 @@ export function useBulkLensActions() {
   const [tags, setTags] = useState<Tag[]>([]);
   const [seriesList, setSeriesList] = useState<Series[]>([]);
   const [modal, setModal] = useState<{
-    type: "addTags" | "removeTags" | "addToSeries" | "setField";
+    type: BulkModalType;
     ids: number[];
     resolve: (ok: boolean) => void;
   } | null>(null);
@@ -31,7 +33,7 @@ export function useBulkLensActions() {
     fetch("/api/admin/series").then((r) => r.json()).then((d) => setSeriesList(d.items || [])).catch(() => {});
   }, []);
 
-  function openModal(type: typeof modal extends null ? never : NonNullable<typeof modal>["type"], ids: number[]): Promise<boolean> {
+  function openModal(type: BulkModalType, ids: number[]): Promise<boolean> {
     return new Promise((resolve) => {
       setModal({ type, ids, resolve });
     });

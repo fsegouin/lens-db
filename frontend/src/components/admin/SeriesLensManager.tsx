@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 
 interface LensItem {
   id: number;
@@ -23,9 +23,12 @@ export default function SeriesLensManager({
   const [searching, setSearching] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  // Monotonic id so a slow earlier response can't overwrite a newer one
+  const searchIdRef = useRef(0);
 
   const searchLenses = useCallback(
     async (q: string) => {
+      const searchId = ++searchIdRef.current;
       if (!q.trim()) {
         setSearchResults([]);
         return;
@@ -35,6 +38,7 @@ export default function SeriesLensManager({
       try {
         const res = await fetch(`/api/admin/lenses?q=${encodeURIComponent(q)}`);
         const data = await res.json();
+        if (searchId !== searchIdRef.current) return;
         const ids = new Set(currentLenses.map((l) => l.id));
         setSearchResults(
           (data.items || []).filter(
@@ -42,9 +46,9 @@ export default function SeriesLensManager({
           )
         );
       } catch {
-        setSearchResults([]);
+        if (searchId === searchIdRef.current) setSearchResults([]);
       } finally {
-        setSearching(false);
+        if (searchId === searchIdRef.current) setSearching(false);
       }
     },
     [currentLenses]

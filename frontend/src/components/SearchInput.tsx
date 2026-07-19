@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,11 @@ export default function SearchInput({ defaultValue }: { defaultValue?: string })
   const router = useRouter();
   const [value, setValue] = useState(defaultValue || "");
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  // Cancel the pending navigation if the input unmounts first
+  useEffect(() => {
+    return () => clearTimeout(debounceRef.current);
+  }, []);
 
   function handleChange(v: string) {
     setValue(v);

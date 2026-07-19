@@ -89,18 +89,18 @@ async function fetchListings(
       sort: "newlyListed",
     });
 
-    const headers: Record<string, string> = {
+    const requestHeaders: Record<string, string> = {
       Authorization: `Bearer ${token}`,
       "X-EBAY-C-MARKETPLACE-ID": marketplaceId,
     };
 
     if (EBAY_CAMPAIGN_ID) {
-      headers["X-EBAY-C-ENDUSERCTX"] = `affiliateCampaignId=${EBAY_CAMPAIGN_ID}`;
+      requestHeaders["X-EBAY-C-ENDUSERCTX"] = `affiliateCampaignId=${EBAY_CAMPAIGN_ID}`;
     }
 
     const res = await fetch(
       `https://api.ebay.com/buy/browse/v1/item_summary/search?${params}`,
-      { headers },
+      { headers: requestHeaders },
     );
 
     if (!res.ok) {

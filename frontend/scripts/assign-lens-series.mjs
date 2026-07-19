@@ -197,7 +197,7 @@ if (!dryRun) {
     try {
       await sql`INSERT INTO lens_series_memberships (lens_id, series_id) VALUES (${a.lensId}, ${series.id}) ON CONFLICT DO NOTHING`;
       added++;
-    } catch (err) {
+    } catch {
       skipped++;
     }
   }
@@ -210,7 +210,7 @@ if (!dryRun) {
   }
   console.log('\nAssignments by series:');
   Object.entries(bySeriesName).sort((a, b) => b[1] - a[1]).forEach(([name, count]) => {
-    const isNew = seriesToCreate.has(name.toLowerCase().replace(/\s+/g, '-'));
+    const isNew = [...seriesToCreate.values()].some((s) => s.name === name);
     console.log(`  ${name}: ${count}${isNew ? ' (NEW)' : ''}`);
   });
 }

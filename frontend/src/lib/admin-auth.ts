@@ -15,20 +15,7 @@ const SESSION_COOKIE = "user_session";
  */
 async function getAdminUser(): Promise<{ id: number; role: string } | null> {
   const cookieStore = await cookies();
-  const token = cookieStore.get(SESSION_COOKIE)?.value;
-  if (!token) return null;
-
-  const session = await validateUserSession(token);
-  if (!session) return null;
-
-  const [user] = await db
-    .select({ id: users.id, role: users.role, isBanned: users.isBanned })
-    .from(users)
-    .where(eq(users.id, session.userId))
-    .limit(1);
-
-  if (!user || user.isBanned || user.role !== "admin") return null;
-  return { id: user.id, role: user.role };
+  return getAdminUserFromToken(cookieStore.get(SESSION_COOKIE)?.value);
 }
 
 /**

@@ -51,6 +51,13 @@ function useSearchLogic() {
   const abortRef = useRef<AbortController | null>(null);
   const router = useRouter();
 
+  useEffect(() => {
+    return () => {
+      clearTimeout(debounceRef.current);
+      abortRef.current?.abort();
+    };
+  }, []);
+
   const fetchResults = useCallback(async (q: string) => {
     if (abortRef.current) abortRef.current.abort();
     if (q.length < 2) {
@@ -101,7 +108,7 @@ function useSearchLogic() {
   }
 
   const hasResults =
-    results &&
+    results !== null &&
     (results.lenses.length > 0 ||
       results.cameras.length > 0 ||
       results.systems.length > 0 ||
@@ -120,7 +127,7 @@ function SearchDropdown({
 }: {
   loading: boolean;
   results: SearchResults | null;
-  hasResults: boolean | SearchResults | null;
+  hasResults: boolean;
   query: string;
   handleClose: () => void;
 }) {
@@ -297,9 +304,9 @@ export function HeaderSearchExpanded() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (open) {
-      setTimeout(() => inputRef.current?.focus(), 50);
-    }
+    if (!open) return;
+    const timer = setTimeout(() => inputRef.current?.focus(), 50);
+    return () => clearTimeout(timer);
   }, [open]);
 
   return (

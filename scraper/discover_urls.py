@@ -9,7 +9,6 @@ Usage:
 import argparse
 import json
 import re
-import time
 import requests
 
 CDX_API = "https://web.archive.org/cdx/search/cdx"

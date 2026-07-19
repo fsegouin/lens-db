@@ -23,14 +23,18 @@ export default function RatingWidget(props: RatingWidgetProps) {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
     fetch(`/api/ratings?type=${type}&entityId=${entityId}`)
       .then((r) => r.json())
       .then((data) => {
-        setUserRating(data.userRating);
+        if (!cancelled) setUserRating(data.userRating);
       })
       .catch(() => {
-        toast.error("Could not load ratings");
+        if (!cancelled) toast.error("Could not load ratings");
       });
+    return () => {
+      cancelled = true;
+    };
   }, [type, entityId]);
 
   const submit = useCallback(

@@ -61,6 +61,7 @@ export default function FlagDuplicateButton({
   const { query, results, handleQueryChange, reset: resetSearch } = useEntitySearch({
     types: [entityType],
     excludeId: entityId,
+    excludeType: entityType,
     maxResults: 10,
   });
 

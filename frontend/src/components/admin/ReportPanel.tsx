@@ -25,7 +25,8 @@ export default function ReportPanel() {
     if (!reportId) return;
     fetch(`/api/admin/reports/${reportId}`)
       .then((r) => (r.ok ? r.json() : null))
-      .then((data) => { if (data) setReport(data); });
+      .then((data) => { if (data) setReport(data); })
+      .catch(() => {});
   }, [reportId]);
 
   async function updateStatus(status: string) {

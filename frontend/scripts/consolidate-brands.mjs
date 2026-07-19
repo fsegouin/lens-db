@@ -122,14 +122,6 @@ const BRAND_UPDATES = [
 console.log(`\n=== Brand Consolidation Migration ${dryRun ? '(DRY RUN)' : ''} ===\n`);
 
 // Step 1: Show current state
-const beforeCounts = await sql`
-  SELECT brand, COUNT(*)::int AS cnt
-  FROM lenses
-  GROUP BY brand
-  ORDER BY brand
-`;
-const brandMap = new Map(beforeCounts.map(r => [r.brand, r.cnt]));
-
 let totalUpdated = 0;
 
 for (const [desc, whereClause, targetBrand] of BRAND_UPDATES) {

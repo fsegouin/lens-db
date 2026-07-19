@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { lenses, systems, lensSeries, lensSeriesMemberships, priceEstimates } from "@/db/schema";
-import { asc, desc, eq, and, gte, lte, sql, inArray } from "drizzle-orm";
+import { asc, desc, eq, and, gte, lte, sql, inArray, type AnyColumn } from "drizzle-orm";
 import { unstable_cache } from "next/cache";
 import Link from "next/link";
 import LensList from "@/components/LensList";
@@ -166,8 +166,7 @@ export default async function LensesPage({
 
     const where = conditions.length > 0 ? and(...conditions) : undefined;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const sortColumns: Record<string, any> = {
+    const sortColumns: Record<string, AnyColumn> = {
       name: lenses.name,
       brand: lenses.brand,
       system: systems.name,
@@ -192,8 +191,8 @@ export default async function LensesPage({
     // When filtering by system, we need a join for the WHERE clause
     const needsSystemJoin = !!params.system;
 
-    const [countResult] = needsSystemJoin
-      ? await db
+    const countPromise = needsSystemJoin
+      ? db
           .select({ count: sql<number>`count(*)` })
           .from(lenses)
           .leftJoin(systems, eq(lenses.systemId, systems.id))
@@ -202,7 +201,7 @@ export default async function LensesPage({
             eq(priceEstimates.entityId, lenses.id),
           ))
           .where(where)
-      : await db
+      : db
           .select({ count: sql<number>`count(*)` })
           .from(lenses)
           .leftJoin(priceEstimates, and(
@@ -210,20 +209,23 @@ export default async function LensesPage({
             eq(priceEstimates.entityId, lenses.id),
           ))
           .where(where);
-    total = Number(countResult.count);
 
-    const rawItems = await db
-      .select({ lens: lenses, system: systems, avgPrice: avgPrice })
-      .from(lenses)
-      .leftJoin(systems, eq(lenses.systemId, systems.id))
-      .leftJoin(priceEstimates, and(
-        eq(priceEstimates.entityType, "lens"),
-        eq(priceEstimates.entityId, lenses.id),
-      ))
-      .where(where)
-      .orderBy(...orderClauses)
-      .limit(PAGE_SIZE)
-      .offset(0);
+    const [[countResult], rawItems] = await Promise.all([
+      countPromise,
+      db
+        .select({ lens: lenses, system: systems, avgPrice: avgPrice })
+        .from(lenses)
+        .leftJoin(systems, eq(lenses.systemId, systems.id))
+        .leftJoin(priceEstimates, and(
+          eq(priceEstimates.entityType, "lens"),
+          eq(priceEstimates.entityId, lenses.id),
+        ))
+        .where(where)
+        .orderBy(...orderClauses)
+        .limit(PAGE_SIZE)
+        .offset(0),
+    ]);
+    total = Number(countResult.count);
 
     // Fetch series for the returned lenses
     const lensIds = rawItems.map((r) => r.lens.id);

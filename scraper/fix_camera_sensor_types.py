@@ -11,7 +11,6 @@ This script:
 
 import json
 import os
-import re
 
 import psycopg2
 from dotenv import load_dotenv
