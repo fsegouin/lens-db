@@ -36,8 +36,24 @@ def get_connection():
 BATCH_SIZE = 20  # Max listings per LLM call to avoid schema errors
 
 
+def placeholder_listing() -> dict:
+    """Placeholder classification that keeps positional alignment with raw
+    listings when a batch fails or the LLM returns a different count.
+    isRelevant=False + conditionGrade="skip" guarantees it is never stored."""
+    return {
+        "isRelevant": False,
+        "conditionGrade": "skip",
+        "conditionNotes": "classification unavailable",
+        "effectivePrice": 0,
+    }
+
+
 def classify_listings(camera_name: str, listings: list[dict]) -> list[dict]:
-    """Send listings to the classify API in batches and return classified results."""
+    """Send listings to the classify API in batches and return classified results.
+
+    Always returns exactly len(listings) entries so positional joins with the
+    raw listings stay aligned — failed/short batches are padded with
+    placeholder entries."""
     import requests
 
     all_classified = []
@@ -50,10 +66,14 @@ def classify_listings(camera_name: str, listings: list[dict]) -> list[dict]:
 
         if resp.status_code != 200:
             print(f"    Classification error (batch {i // BATCH_SIZE + 1}): {resp.status_code} {resp.text[:200]}")
+            all_classified.extend(placeholder_listing() for _ in batch)
             continue
 
         data = resp.json()
-        all_classified.extend(data.get("classified", []))
+        # Pad/truncate to exactly len(batch) to preserve alignment
+        results = data.get("classified", [])[:len(batch)]
+        results.extend(placeholder_listing() for _ in range(len(batch) - len(results)))
+        all_classified.extend(results)
 
     return all_classified
 

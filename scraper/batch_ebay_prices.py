@@ -174,19 +174,33 @@ def fetch_ebay_sold(query: str, session: requests.Session) -> list[dict]:
 
 
 def classify_listings(camera_name: str, listings: list[dict]) -> list[dict]:
-    """Classify listings via the LLM API in batches."""
+    """Classify listings via the LLM API in batches.
+
+    Always returns exactly len(listings) entries so positional joins with the
+    raw listings stay aligned — failed/short batches are padded with
+    placeholder entries (isRelevant=False, conditionGrade="skip")."""
+    from process_ebay_prices import placeholder_listing
+
     all_classified = []
     for i in range(0, len(listings), BATCH_SIZE):
         batch = listings[i:i + BATCH_SIZE]
+        batch_num = i // BATCH_SIZE + 1
         try:
             resp = requests.post(CLASSIFY_URL, json={
                 "cameraName": camera_name,
                 "listings": batch,
             }, timeout=120)
             if resp.status_code == 200:
-                all_classified.extend(resp.json().get("classified", []))
-        except requests.RequestException:
-            pass
+                # Pad/truncate to exactly len(batch) to preserve alignment
+                results = resp.json().get("classified", [])[:len(batch)]
+                results.extend(placeholder_listing() for _ in range(len(batch) - len(results)))
+                all_classified.extend(results)
+                continue
+            print(f"\n    Classification error (batch {batch_num}): {resp.status_code} {resp.text[:200]}", flush=True)
+        except requests.RequestException as e:
+            print(f"\n    Classification request failed (batch {batch_num}): {e}", flush=True)
+        # Failed batch: keep alignment with one placeholder per raw listing
+        all_classified.extend(placeholder_listing() for _ in batch)
     return all_classified
 
 

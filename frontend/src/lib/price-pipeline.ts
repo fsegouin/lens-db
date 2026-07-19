@@ -2,7 +2,7 @@ import { revalidateTag } from "next/cache";
 import { db } from "@/db";
 import { priceHistory, priceEstimates } from "@/db/schema";
 import { eq, and, sql, gt, inArray, isNull } from "drizzle-orm";
-import type { ClassifiedListing, RawListing } from "@/lib/price-classify";
+import type { RawListing } from "@/lib/price-classify";
 
 const GRADE_MAP: Record<string, string> = {
   excellent: "A",
@@ -12,10 +12,19 @@ const GRADE_MAP: Record<string, string> = {
 
 type NewRow = typeof priceHistory.$inferInsert;
 
+// Minimal structural view of a classified listing — only the fields this
+// function reads. Both camera (ClassifiedListing) and lens
+// (ClassifiedLensListing) classification results satisfy it.
+export interface ClassifiedSaleInput {
+  isRelevant: boolean;
+  conditionGrade: string;
+  effectivePrice: number;
+}
+
 export async function storeClassifiedSales(
   entityType: string,
   entityId: number,
-  classified: ClassifiedListing[],
+  classified: ClassifiedSaleInput[],
   raw: RawListing[],
   extractedAt: string,
 ): Promise<number> {
