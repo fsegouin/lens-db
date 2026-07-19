@@ -1,8 +1,11 @@
 import AdminTable from "@/components/admin/AdminTable";
+import { requireAdmin } from "@/lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 
-export default function AdminCollectionsPage() {
+export default async function AdminCollectionsPage() {
+  await requireAdmin();
+
   return (
     <AdminTable
       title="Collections"

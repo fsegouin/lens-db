@@ -90,11 +90,11 @@ function useSearchLogic() {
     debounceRef.current = setTimeout(() => fetchResults(value.trim()), 300);
   }
 
-  function handleClose() {
+  const handleClose = useCallback(() => {
     setOpen(false);
     setQuery("");
     setResults(null);
-  }
+  }, [setOpen]);
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Escape") {
@@ -202,10 +202,10 @@ export default function HeaderSearch() {
   const inputRef = useRef<HTMLInputElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
-  function handleOpen() {
+  const handleOpen = useCallback(() => {
     setOpen(true);
     setTimeout(() => inputRef.current?.focus(), 0);
-  }
+  }, [setOpen]);
 
   // Close on click outside (check both mobile overlay and desktop expanded search)
   useEffect(() => {
@@ -219,7 +219,7 @@ export default function HeaderSearch() {
     }
     if (open) document.addEventListener("mousedown", onClickOutside);
     return () => document.removeEventListener("mousedown", onClickOutside);
-  }, [open]);
+  }, [open, handleClose]);
 
   // Keyboard shortcut: "/" to open search
   useEffect(() => {
@@ -236,7 +236,7 @@ export default function HeaderSearch() {
     }
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [open]);
+  }, [open, handleOpen]);
 
   return (
     <div ref={wrapperRef} data-search-area className="relative h-9 w-9">

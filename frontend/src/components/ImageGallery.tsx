@@ -44,21 +44,72 @@ export default function ImageGallery({ images }: { images: ImageData[] }) {
 
   if (safeImages.length === 0) return null;
 
+  const lightbox = (
+    <Dialog open={lightboxIdx !== null} onOpenChange={(open) => !open && setLightboxIdx(null)}>
+      <DialogContent className="max-h-[90vh] max-w-[90vw] border-none bg-transparent p-2 shadow-none [&>button]:hidden">
+        <DialogTitle className="sr-only">Image {(lightboxIdx ?? 0) + 1} of {safeImages.length}</DialogTitle>
+        <Button
+          variant="secondary"
+          size="icon"
+          className="absolute right-2 top-2 z-10 h-11 w-11 rounded-full"
+          onClick={() => setLightboxIdx(null)}
+          aria-label="Close gallery"
+        >
+          <X className="h-5 w-5" />
+        </Button>
+        <AnimatePresence mode="wait">
+          {lightboxIdx !== null && (
+            <motion.div
+              key={lightboxIdx}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <Image
+                src={safeImages[lightboxIdx].src}
+                alt={safeImages[lightboxIdx].alt || "Image"}
+                width={1200}
+                height={900}
+                className="max-h-[85vh] max-w-full rounded-lg object-contain"
+                sizes="90vw"
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+        {lightboxIdx !== null && safeImages.length > 1 && (
+          <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-2">
+            <Button variant="secondary" size="icon" className="h-11 w-11 rounded-full" onClick={() => setLightboxIdx((lightboxIdx - 1 + safeImages.length) % safeImages.length)} aria-label="Previous image">
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+            <span className="flex items-center rounded-full bg-secondary px-3 py-1 text-sm">{lightboxIdx + 1} / {safeImages.length}</span>
+            <Button variant="secondary" size="icon" className="h-11 w-11 rounded-full" onClick={() => setLightboxIdx((lightboxIdx + 1) % safeImages.length)} aria-label="Next image">
+              <ChevronRight className="h-5 w-5" />
+            </Button>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+
   // Single image - simple display
   if (safeImages.length === 1) {
     return (
-      <button
-        onClick={() => setLightboxIdx(0)}
-        className="group relative mx-auto block aspect-[4/3] w-full max-w-md overflow-hidden rounded-lg border border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900"
-      >
-        <Image
-          src={safeImages[0].src}
-          alt={safeImages[0].alt || "Image"}
-          fill
-          className="object-contain p-4"
-          sizes="(max-width: 640px) 100vw, 448px"
-        />
-      </button>
+      <>
+        <button
+          onClick={() => setLightboxIdx(0)}
+          className="group relative mx-auto block aspect-[4/3] w-full max-w-md overflow-hidden rounded-lg border border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900"
+        >
+          <Image
+            src={safeImages[0].src}
+            alt={safeImages[0].alt || "Image"}
+            fill
+            className="object-contain p-4"
+            sizes="(max-width: 640px) 100vw, 448px"
+          />
+        </button>
+        {lightbox}
+      </>
     );
   }
 
@@ -126,51 +177,7 @@ export default function ImageGallery({ images }: { images: ImageData[] }) {
       </div>
 
       {/* Lightbox */}
-      <Dialog open={lightboxIdx !== null} onOpenChange={(open) => !open && setLightboxIdx(null)}>
-        <DialogContent className="max-h-[90vh] max-w-[90vw] border-none bg-transparent p-2 shadow-none [&>button]:hidden">
-          <DialogTitle className="sr-only">Image {(lightboxIdx ?? 0) + 1} of {safeImages.length}</DialogTitle>
-          <Button
-            variant="secondary"
-            size="icon"
-            className="absolute right-2 top-2 z-10 h-11 w-11 rounded-full"
-            onClick={() => setLightboxIdx(null)}
-            aria-label="Close gallery"
-          >
-            <X className="h-5 w-5" />
-          </Button>
-          <AnimatePresence mode="wait">
-            {lightboxIdx !== null && (
-              <motion.div
-                key={lightboxIdx}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
-              >
-                <Image
-                  src={safeImages[lightboxIdx].src}
-                  alt={safeImages[lightboxIdx].alt || "Image"}
-                  width={1200}
-                  height={900}
-                  className="max-h-[85vh] max-w-full rounded-lg object-contain"
-                  sizes="90vw"
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
-          {lightboxIdx !== null && (
-            <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-2">
-              <Button variant="secondary" size="icon" className="h-11 w-11 rounded-full" onClick={() => setLightboxIdx((lightboxIdx - 1 + safeImages.length) % safeImages.length)} aria-label="Previous image">
-                <ChevronLeft className="h-5 w-5" />
-              </Button>
-              <span className="flex items-center rounded-full bg-secondary px-3 py-1 text-sm">{lightboxIdx + 1} / {safeImages.length}</span>
-              <Button variant="secondary" size="icon" className="h-11 w-11 rounded-full" onClick={() => setLightboxIdx((lightboxIdx + 1) % safeImages.length)} aria-label="Next image">
-                <ChevronRight className="h-5 w-5" />
-              </Button>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      {lightbox}
     </>
   );
 }

@@ -57,6 +57,7 @@ export default function LensForm({ lens, systems, tags }: LensFormProps) {
 
   const [name, setName] = useState(lens?.name ?? "");
   const [slug, setSlug] = useState(lens?.slug ?? "");
+  const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
   const [brand, setBrand] = useState(lens?.brand ?? "");
   const [systemId, setSystemId] = useState<string>(
     lens?.systemId ? String(lens.systemId) : ""
@@ -133,9 +134,14 @@ export default function LensForm({ lens, systems, tags }: LensFormProps) {
 
   function handleNameChange(value: string) {
     setName(value);
-    if (!isEdit) {
+    if (!isEdit && !slugManuallyEdited) {
       setSlug(generateSlug(value));
     }
+  }
+
+  function handleSlugChange(value: string) {
+    setSlug(value);
+    setSlugManuallyEdited(true);
   }
 
   function parseNum(val: string): number | null {
@@ -221,10 +227,11 @@ export default function LensForm({ lens, systems, tags }: LensFormProps) {
     if (!window.confirm("Are you sure you want to delete this lens?")) return;
 
     try {
-      await fetch(`/api/admin/lenses/${lens.id}`, { method: "DELETE" });
+      const res = await fetch(`/api/admin/lenses/${lens.id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete");
       router.push("/admin/lenses");
     } catch {
-      setError("Failed to delete");
+      setError("Failed to delete lens");
     }
   }
 
@@ -255,7 +262,7 @@ export default function LensForm({ lens, systems, tags }: LensFormProps) {
             <input
               type="text"
               value={slug}
-              onChange={(e) => setSlug(e.target.value)}
+              onChange={(e) => handleSlugChange(e.target.value)}
               className={`w-full ${inputClass}`}
             />
           </div>

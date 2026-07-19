@@ -16,6 +16,12 @@ function LoginForm() {
   const { refresh: refreshUser } = useUser();
   const verified = searchParams.get("verified") === "true";
   const tokenError = searchParams.get("error");
+  const rawNext = searchParams.get("next");
+  // Only allow same-origin relative paths to avoid open redirects
+  const next =
+    rawNext && rawNext.startsWith("/") && !rawNext.startsWith("//") && !rawNext.startsWith("/\\")
+      ? rawNext
+      : null;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -31,7 +37,7 @@ function LoginForm() {
       const data = await res.json();
       if (res.ok) {
         await refreshUser();
-        router.push("/");
+        router.push(next || "/");
       } else {
         setError(data.error || "Login failed");
         setErrorCode(data.code || "");

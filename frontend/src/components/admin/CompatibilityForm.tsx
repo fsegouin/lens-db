@@ -9,11 +9,20 @@ interface SearchItem {
 }
 
 function useEntitySearch(apiPath: string) {
-  const [query, setQuery] = useState("");
+  const [query, setQueryState] = useState("");
   const [results, setResults] = useState<SearchItem[]>([]);
   const [selected, setSelected] = useState<SearchItem | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Clear stale results when the query is emptied
+  const setQuery = useCallback((value: string) => {
+    setQueryState(value);
+    if (!value) {
+      setResults([]);
+      setShowDropdown(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (!query || query.length < 1) {
@@ -44,14 +53,14 @@ function useEntitySearch(apiPath: string) {
 
   const select = useCallback((item: SearchItem) => {
     setSelected(item);
-    setQuery("");
+    setQueryState("");
     setShowDropdown(false);
     setResults([]);
   }, []);
 
   const clear = useCallback(() => {
     setSelected(null);
-    setQuery("");
+    setQueryState("");
     setResults([]);
     setShowDropdown(false);
   }, []);

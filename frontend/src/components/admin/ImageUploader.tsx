@@ -71,58 +71,71 @@ export default function ImageUploader({
     [onChange],
   );
 
+  // Serialize uploads: each response contains the full image list, so
+  // concurrent requests would otherwise clobber each other (last response wins)
+  const uploadQueueRef = useRef<Promise<void>>(Promise.resolve());
+
+  const enqueueUpload = useCallback((task: () => Promise<void>) => {
+    const next = uploadQueueRef.current.then(task, task);
+    uploadQueueRef.current = next;
+    return next;
+  }, []);
+
   const uploadFile = useCallback(
-    async (file: File) => {
+    (file: File) => {
       if (!ALLOWED_TYPES.has(file.type)) {
         setError(`Unsupported type ${file.type}`);
-        return;
+        return Promise.resolve();
       }
       if (file.size > 10 * 1024 * 1024) {
         setError("File too large (max 10 MB)");
-        return;
+        return Promise.resolve();
       }
-      setBusy(true);
-      setError(null);
-      try {
-        const resized = await resizeImageBlob(file);
-        const formData = new FormData();
-        formData.append("file", resized, "upload.webp");
-        const resp = await fetch(`/api/admin/${entityType}/${entityId}/images`, {
-          method: "POST",
-          body: formData,
-        });
-        if (!resp.ok) throw new Error((await resp.json().catch(() => ({}))).error || `HTTP ${resp.status}`);
-        const data = await resp.json();
-        updateImages(data.images);
-      } catch (e) {
-        setError((e as Error).message);
-      } finally {
-        setBusy(false);
-      }
+      return enqueueUpload(async () => {
+        setBusy(true);
+        setError(null);
+        try {
+          const resized = await resizeImageBlob(file);
+          const formData = new FormData();
+          formData.append("file", resized, "upload.webp");
+          const resp = await fetch(`/api/admin/${entityType}/${entityId}/images`, {
+            method: "POST",
+            body: formData,
+          });
+          if (!resp.ok) throw new Error((await resp.json().catch(() => ({}))).error || `HTTP ${resp.status}`);
+          const data = await resp.json();
+          updateImages(data.images);
+        } catch (e) {
+          setError((e as Error).message);
+        } finally {
+          setBusy(false);
+        }
+      });
     },
-    [entityType, entityId, updateImages],
+    [entityType, entityId, updateImages, enqueueUpload],
   );
 
   const uploadUrl = useCallback(
-    async (url: string) => {
-      setBusy(true);
-      setError(null);
-      try {
-        const resp = await fetch(`/api/admin/${entityType}/${entityId}/images`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url }),
-        });
-        if (!resp.ok) throw new Error((await resp.json().catch(() => ({}))).error || `HTTP ${resp.status}`);
-        const data = await resp.json();
-        updateImages(data.images);
-      } catch (e) {
-        setError((e as Error).message);
-      } finally {
-        setBusy(false);
-      }
-    },
-    [entityType, entityId, updateImages],
+    (url: string) =>
+      enqueueUpload(async () => {
+        setBusy(true);
+        setError(null);
+        try {
+          const resp = await fetch(`/api/admin/${entityType}/${entityId}/images`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ url }),
+          });
+          if (!resp.ok) throw new Error((await resp.json().catch(() => ({}))).error || `HTTP ${resp.status}`);
+          const data = await resp.json();
+          updateImages(data.images);
+        } catch (e) {
+          setError((e as Error).message);
+        } finally {
+          setBusy(false);
+        }
+      }),
+    [entityType, entityId, updateImages, enqueueUpload],
   );
 
   const readFromClipboard = useCallback(async () => {

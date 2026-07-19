@@ -39,7 +39,7 @@ function entityBackLink(entityType: EntityType, slug: string): string {
     case "camera": return `/cameras/${slug}`;
     case "system": return `/systems/${slug}`;
     case "collection": return `/collections/${slug}`;
-    case "series": return `/series/${slug}`;
+    case "series": return `/lenses/series/${slug}`;
   }
 }
 

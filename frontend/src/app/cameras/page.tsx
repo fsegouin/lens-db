@@ -1,7 +1,7 @@
 import { db } from "@/db";
 import { escapeLikeMetachars, parseMultiValueParam } from "@/lib/api-utils";
 import { cameras, systems, priceEstimates } from "@/db/schema";
-import { asc, desc, eq, and, or, sql, type AnyColumn } from "drizzle-orm";
+import { asc, desc, eq, and, or, sql, isNull, type AnyColumn } from "drizzle-orm";
 import { unstable_cache } from "next/cache";
 import CameraList from "@/components/CameraList";
 import { PageTransition } from "@/components/page-transition";
@@ -115,7 +115,7 @@ export default async function CamerasPage({
     sensorSizes = dropdownData.sensorSizes;
     cropFactors = dropdownData.cropFactors;
 
-    const conditions = [];
+    const conditions: ReturnType<typeof and>[] = [isNull(cameras.mergedIntoId)];
 
     if (params.q) {
       const words = params.q.trim().split(/\s+/).filter(Boolean);

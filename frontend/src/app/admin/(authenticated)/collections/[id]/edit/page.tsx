@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import CollectionForm from "@/components/admin/CollectionForm";
 import CollectionLensManager from "@/components/admin/CollectionLensManager";
 import EditPageWithReport from "@/components/admin/EditPageWithReport";
+import { requireAdmin } from "@/lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +14,8 @@ export default async function EditCollectionPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await requireAdmin();
+
   const { id } = await params;
   const collection = await db
     .select()

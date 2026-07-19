@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { lenses, systems, lensSeries, lensSeriesMemberships, priceEstimates } from "@/db/schema";
-import { asc, desc, eq, and, gte, lte, sql, inArray, type AnyColumn } from "drizzle-orm";
+import { asc, desc, eq, and, gte, lte, sql, inArray, isNull, type AnyColumn } from "drizzle-orm";
 import { unstable_cache } from "next/cache";
 import Link from "next/link";
 import LensList from "@/components/LensList";
@@ -90,7 +90,7 @@ export default async function LensesPage({
 
     const avgPrice = priceEstimates.medianPrice;
 
-    const conditions = [];
+    const conditions: ReturnType<typeof and>[] = [isNull(lenses.mergedIntoId)];
 
     if (params.q) {
       const words = params.q.trim().split(/\s+/).filter(Boolean);

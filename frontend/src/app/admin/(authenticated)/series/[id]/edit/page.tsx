@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import SeriesForm from "@/components/admin/SeriesForm";
 import SeriesLensManager from "@/components/admin/SeriesLensManager";
 import EditPageWithReport from "@/components/admin/EditPageWithReport";
+import { requireAdmin } from "@/lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +14,8 @@ export default async function EditSeriesPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await requireAdmin();
+
   const { id } = await params;
   const series = await db
     .select()

@@ -2,10 +2,13 @@ import Link from "next/link";
 import { db } from "@/db";
 import { lenses, cameras, systems, collections, lensCompatibility } from "@/db/schema";
 import { sql } from "drizzle-orm";
+import { requireAdmin } from "@/lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminDashboard() {
+  await requireAdmin();
+
   const [lensCount, cameraCount, systemCount, collectionCount, compatCount] = await Promise.all([
     db.select({ count: sql<number>`count(*)::integer` }).from(lenses).then((r) => r[0].count),
     db.select({ count: sql<number>`count(*)::integer` }).from(cameras).then((r) => r[0].count),
