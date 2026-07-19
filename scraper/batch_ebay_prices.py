@@ -10,7 +10,6 @@ Usage:
 """
 
 import argparse
-import json
 import os
 import re
 import ssl
@@ -82,8 +81,8 @@ def build_search_query(camera_name: str) -> str:
 def fetch_ebay_sold(query: str, session: requests.Session) -> list[dict]:
     """Fetch sold listings from eBay search results page.
 
-    Note: eBay renders sold dates via JavaScript, so we use the _fcid=51 parameter
-    and parse the server-rendered JSON data embedded in the page.
+    Note: eBay renders sold dates via JavaScript, so plain-HTTP parsing may
+    miss them — missing dates fall back to today's date downstream.
     """
     url = f"https://www.ebay.com/sch/i.html?_nkw={quote_plus(query)}&_sop=13&rt=nc&LH_Sold=1&LH_Complete=1"
 
@@ -103,26 +102,9 @@ def fetch_ebay_sold(query: str, session: requests.Session) -> list[dict]:
         'Sep': '09', 'Oct': '10', 'Nov': '11', 'Dec': '12',
     }
 
-    # eBay embeds listing data in JSON within <script> tags
-    # Try to find the srp-results data
     soup = BeautifulSoup(text, "lxml")
 
-    # Method 1: Parse from inline JSON data (s-item data)
-    for script in soup.find_all("script"):
-        script_text = script.string or ""
-        if '"itemId"' in script_text and '"soldDate"' not in script_text:
-            continue
-        if '"listingId"' in script_text or '"RESULTS"' in script_text:
-            # Try to extract JSON
-            try:
-                # Find JSON objects with listing data
-                for match in re.finditer(r'"itemId"\s*:\s*"(\d+)"', script_text):
-                    # This approach is fragile — fall back to method 2
-                    pass
-            except Exception:
-                pass
-
-    # Method 2: Parse the visible text for "Sold" patterns
+    # Parse the visible text for "Sold" patterns
     # eBay server-renders the item titles and prices but not sold dates in plain HTTP
     # However, some data is in aria labels and data attributes
     item_data = {}
@@ -208,7 +190,7 @@ def classify_listings(camera_name: str, listings: list[dict]) -> list[dict]:
     return all_classified
 
 
-def store_and_compute(conn, camera_id: int, camera_name: str,
+def store_and_compute(conn, camera_id: int,
                        classified: list[dict], raw: list[dict]):
     """Store classified sales and recompute price estimates."""
     from process_ebay_prices import store_classified_sales, recompute_price_estimates
@@ -289,10 +271,11 @@ def main():
             continue
 
         # Store
-        stored = store_and_compute(conn, cam["id"], cam["name"], classified, listings)
+        stored = store_and_compute(conn, cam["id"], classified, listings)
         total_stored += stored
 
-    print(f"\r{'\u2588' * 30} {len(cameras)}/{len(cameras)} Done{' ' * 40}")
+    full_bar = "\u2588" * 30
+    print(f"\r{full_bar} {len(cameras)}/{len(cameras)} Done{' ' * 40}")
     print(f"\nProcessed {len(cameras)} cameras, stored {total_stored} price records")
 
     conn.close()

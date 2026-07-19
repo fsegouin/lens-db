@@ -10,11 +10,14 @@ const noopLimiter = {
  * Create a rate limiter backed by Upstash Redis.
  * Disabled in development (always allows requests).
  */
-export function createRateLimit(maxRequests: number, window: string) {
+export function createRateLimit(
+  maxRequests: number,
+  window: Parameters<typeof Ratelimit.slidingWindow>[1],
+) {
   if (!redis) return noopLimiter;
   return new Ratelimit({
     redis,
-    limiter: Ratelimit.slidingWindow(maxRequests, window as Parameters<typeof Ratelimit.slidingWindow>[1]),
+    limiter: Ratelimit.slidingWindow(maxRequests, window),
     analytics: true,
     prefix: "lens-db",
   });

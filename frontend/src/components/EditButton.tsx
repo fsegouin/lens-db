@@ -28,13 +28,11 @@ type SelectOption = { value: string | number; label: string };
 export default function EditButton({
   entityType,
   entityId,
-  entitySlug,
   currentValues,
   fields,
 }: {
   entityType: string;
   entityId: number;
-  entitySlug: string;
   currentValues: Record<string, unknown>;
   fields: FieldConfig[];
 }) {

@@ -48,7 +48,7 @@ def extract_listings(text: str) -> list[dict]:
         rest = part[date_match.end():]
 
         # Find title — first substantial text line
-        lines = [l.strip() for l in rest.split('\n') if l.strip()]
+        lines = [ln.strip() for ln in rest.split('\n') if ln.strip()]
         title = ''
         for line in lines:
             # Skip common noise

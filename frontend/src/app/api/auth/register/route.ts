@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 import { getClientIP, rateLimitedResponse } from "@/lib/api-utils";
 import { createRateLimit } from "@/lib/rate-limit";
 import { hashPassword } from "@/lib/user-auth";
-import { sendVerificationEmail } from "@/lib/email";
+import { sendVerificationEmail, maskEmail } from "@/lib/email";
 
 const registerLimiter = createRateLimit(5, "60 s");
 
@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
     try {
       await sendVerificationEmail(normalizedEmail, token);
     } catch (err) {
-      console.error(`[register] Failed to send verification email to ${normalizedEmail}:`, err);
+      console.error(`[register] Failed to send verification email to ${maskEmail(normalizedEmail)}:`, err);
     }
 
     // Do NOT create a session — require email verification first

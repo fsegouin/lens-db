@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 
 type Revision = {
   id: number;
@@ -78,15 +77,7 @@ const fieldLabels: Record<string, string> = {
   mountType: "Mount Type",
 };
 
-export default function RevisionList({
-  revisions,
-  entityType,
-  entityId,
-}: {
-  revisions: Revision[];
-  entityType: string;
-  entityId: number;
-}) {
+export default function RevisionList({ revisions }: { revisions: Revision[] }) {
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [diffData, setDiffData] = useState<Record<number, DiffEntry[]>>({});
   const [loading, setLoading] = useState<number | null>(null);

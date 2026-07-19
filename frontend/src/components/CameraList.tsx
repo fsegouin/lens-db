@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import type { cameras, systems } from "@/db/schema";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 import { TableSkeleton } from "@/components/table-skeleton";
@@ -66,9 +65,10 @@ export default function CameraList({
 
   const [items, setItems] = useState<CameraRow[]>(initialItems);
   const [nextCursor, setNextCursor] = useState<number | null>(initialNextCursor);
-  const [, setTotal] = useState(initialTotal);
   const [loading, setLoading] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
+  // Bumped whenever the list resets so late loadMore responses are discarded
+  const listGenRef = useRef(0);
 
   // Current filter values from URL
   const q = searchParams.get("q") || "";
@@ -116,9 +116,9 @@ export default function CameraList({
 
   // Reset list when initial data changes (filters applied via server component)
   useEffect(() => {
+    listGenRef.current += 1;
     setItems(initialItems);
     setNextCursor(initialNextCursor);
-    setTotal(initialTotal);
   }, [initialItems, initialNextCursor, initialTotal]);
 
   const buildApiUrl = useCallback(
@@ -145,13 +145,14 @@ export default function CameraList({
 
   const loadMore = useCallback(async () => {
     if (loading || nextCursor === null) return;
+    const gen = listGenRef.current;
     setLoading(true);
     try {
       const res = await fetch(buildApiUrl(nextCursor));
       const data = await res.json();
+      if (gen !== listGenRef.current) return;
       setItems((prev) => [...prev, ...data.items]);
       setNextCursor(data.nextCursor);
-      setTotal(data.total);
     } catch {
       // ignore
     } finally {
@@ -178,6 +179,10 @@ export default function CameraList({
   }, [loadMore]);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  useEffect(() => {
+    return () => clearTimeout(debounceRef.current);
+  }, []);
 
   function applyFilters(overrides: FilterOverrides = {}) {
     const params = new URLSearchParams();

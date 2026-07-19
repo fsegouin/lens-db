@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { cameras, systems, priceEstimates } from "@/db/schema";
-import { asc, desc, eq, and, or, sql, isNull } from "drizzle-orm";
+import { asc, desc, eq, and, or, sql, isNull, type AnyColumn } from "drizzle-orm";
 import {
   escapeLikeMetachars,
   getClientIP,
@@ -113,8 +113,7 @@ export async function GET(request: NextRequest) {
 
     const where = conditions.length > 0 ? and(...conditions) : undefined;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const sortColumns: Record<string, any> = {
+    const sortColumns: Record<string, AnyColumn> = {
       name: cameras.name,
       system: systems.name,
       year: cameras.yearIntroduced,

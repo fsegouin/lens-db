@@ -47,6 +47,8 @@ export default function LensList({
   const [nextCursor, setNextCursor] = useState<number | null>(initialNextCursor);
   const [loading, setLoading] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
+  // Bumped whenever the list resets so late loadMore responses are discarded
+  const listGenRef = useRef(0);
 
   // Current filter values from URL
   const q = searchParams.get("q") || "";
@@ -107,6 +109,7 @@ export default function LensList({
 
   // Reset list when initial data changes (filters applied via server component)
   useEffect(() => {
+    listGenRef.current += 1;
     setItems(dedupeLensRows(initialItems));
     setNextCursor(initialNextCursor);
   }, [initialItems, initialNextCursor, initialTotal]);
@@ -140,10 +143,12 @@ export default function LensList({
 
   const loadMore = useCallback(async () => {
     if (loading || nextCursor === null) return;
+    const gen = listGenRef.current;
     setLoading(true);
     try {
       const res = await fetch(buildApiUrl(nextCursor));
       const data = await res.json();
+      if (gen !== listGenRef.current) return;
       setItems((prev) => dedupeLensRows([...prev, ...data.items]));
       setNextCursor(data.nextCursor);
     } catch {
@@ -172,6 +177,10 @@ export default function LensList({
   }, [loadMore]);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  useEffect(() => {
+    return () => clearTimeout(debounceRef.current);
+  }, []);
 
   function applyFilters(overrides: { q?: string; brand?: string; system?: string; type?: string; minFocal?: string; maxFocal?: string; minAperture?: string; maxAperture?: string; year?: string; lensType?: string; era?: string; productionStatus?: string; coverage?: string; series?: string; sort?: string; order?: string; priceMin?: string; priceMax?: string } = {}) {
     const params = new URLSearchParams();

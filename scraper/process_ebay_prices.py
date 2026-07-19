@@ -12,16 +12,12 @@ Usage:
     # Process a single camera with manual eBay data:
     DATABASE_URL="..." python process_ebay_prices.py --camera "Canon AE-1" --input ebay_canon_ae1.json
 
-    # Process all cameras (requires eBay API keys):
-    DATABASE_URL="..." python process_ebay_prices.py --all --type cameras
-
     # Recompute price estimates from existing history (no scraping):
     DATABASE_URL="..." python process_ebay_prices.py --recompute --type cameras
 """
 
 import argparse
 import json
-import math
 import os
 import time
 
@@ -187,7 +183,6 @@ def recompute_price_estimates(conn, entity_type: str, entity_id: int):
             mint_low, mint_high = p75, p95
 
         # Compute median price — prefer recent sales (90 days), fall back to 1 year
-        all_prices = sorted([price for _, price, _ in rows])
         cur.execute("""
             SELECT price_usd FROM price_history
             WHERE entity_type = %s AND entity_id = %s
@@ -338,7 +333,7 @@ def main():
             """, (camera_id,))
             pe = cur.fetchone()
             if pe:
-                print(f"  Price estimates:")
+                print("  Price estimates:")
                 print(f"    Average:   ${pe[0] or '?'}-${pe[1] or '?'}")
                 print(f"    Very Good: ${pe[2] or '?'}-${pe[3] or '?'}")
                 print(f"    Mint:      ${pe[4] or '?'}-${pe[5] or '?'}")

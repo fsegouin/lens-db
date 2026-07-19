@@ -58,19 +58,20 @@ export default async function SystemDetailPage({
 
   const { system } = result;
 
-  const systemLenses = await db
-    .select()
-    .from(lenses)
-    .where(eq(lenses.systemId, system.id))
-    .orderBy(asc(sql`regexp_replace(${lenses.name}, '\\d+(\\.\\d+)?mm.*$', '')`), asc(lenses.focalLengthMin), asc(lenses.apertureMin))
-    .limit(500);
-
-  const systemCameras = await db
-    .select()
-    .from(cameras)
-    .where(eq(cameras.systemId, system.id))
-    .orderBy(asc(cameras.name))
-    .limit(500);
+  const [systemLenses, systemCameras] = await Promise.all([
+    db
+      .select()
+      .from(lenses)
+      .where(eq(lenses.systemId, system.id))
+      .orderBy(asc(sql`regexp_replace(${lenses.name}, '\\d+(\\.\\d+)?mm.*$', '')`), asc(lenses.focalLengthMin), asc(lenses.apertureMin))
+      .limit(500),
+    db
+      .select()
+      .from(cameras)
+      .where(eq(cameras.systemId, system.id))
+      .orderBy(asc(cameras.name))
+      .limit(500),
+  ]);
 
   return (
     <PageTransition>

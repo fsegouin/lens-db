@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import ImageUploader from "@/components/admin/ImageUploader";
+import { generateSlug } from "./generate-slug";
 
 interface CameraData {
   id: number;
@@ -33,13 +34,6 @@ const inputClass =
   "rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100";
 const labelClass = "block text-sm font-medium text-zinc-700 dark:text-zinc-300";
 const sectionClass = "text-lg font-semibold text-zinc-900 dark:text-zinc-100";
-
-function generateSlug(name: string) {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
-}
 
 export default function CameraForm({ camera, systems }: CameraFormProps) {
   const router = useRouter();

@@ -70,10 +70,13 @@ export default async function HistoryPage({
   const entityId = parseInt(entityIdStr, 10);
   if (isNaN(entityId)) notFound();
 
-  const entity = await getEntityName(type, entityId);
+  const [entity, history] = await Promise.all([
+    getEntityName(type, entityId),
+    getRevisionHistory(type, entityId, 1, 100),
+  ]);
   if (!entity) notFound();
 
-  const { revisions, total } = await getRevisionHistory(type, entityId, 1, 100);
+  const { revisions, total } = history;
 
   return (
     <PageTransition>
@@ -103,11 +106,7 @@ export default async function HistoryPage({
             No revision history available yet.
           </p>
         ) : (
-          <RevisionList
-            revisions={revisions}
-            entityType={type}
-            entityId={entityId}
-          />
+          <RevisionList revisions={revisions} />
         )}
       </div>
     </PageTransition>

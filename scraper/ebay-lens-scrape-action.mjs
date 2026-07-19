@@ -28,10 +28,6 @@ function buildSearchQuery(lensName) {
   return name;
 }
 
-async function getLensBatch() {
-  return getLensBatchState();
-}
-
 async function getLensBatchState(staleBefore) {
   const headers = {};
   if (CRON_SECRET) headers["Authorization"] = `Bearer ${CRON_SECRET}`;
@@ -149,7 +145,7 @@ async function main() {
 
   const rotationStartedAt = new Date().toISOString();
   console.log(`Fetching lens batch from ${API_URL}...`);
-  const batchState = await getLensBatch();
+  const batchState = await getLensBatchState();
   const lenses = batchState.lenses;
   console.log(`Got ${lenses.length} lenses to process\n`);
 

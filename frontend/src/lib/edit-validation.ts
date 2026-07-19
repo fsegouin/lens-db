@@ -87,7 +87,7 @@ export async function validateEdit({
   }
 
   // URL protocol validation
-  if (newData.url != null && newData.url !== "" && newData.url !== null) {
+  if (newData.url != null && newData.url !== "") {
     const url = String(newData.url);
     if (!/^https?:\/\//i.test(url)) {
       return "URL must start with http:// or https://";

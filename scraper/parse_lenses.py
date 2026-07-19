@@ -44,7 +44,6 @@ def _parse_spec_table(table: Tag) -> dict:
     - 1-cell rows without colspan as continuation values for the previous key
     """
     specs = {}
-    current_section = ""
     last_key = ""
 
     for row in table.find_all("tr"):
@@ -55,10 +54,8 @@ def _parse_spec_table(table: Tag) -> dict:
             text = cell.get_text(strip=True)
             if not text:
                 continue
-            # Section header (has colspan) vs continuation value
-            if cell.get("colspan"):
-                current_section = text.rstrip(":")
-            else:
+            # Section headers (colspan) carry no key/value data — skip them
+            if not cell.get("colspan"):
                 # Continuation value — append to the previous key
                 if last_key and last_key in specs:
                     specs[last_key] += f"; {text}"
@@ -68,7 +65,6 @@ def _parse_spec_table(table: Tag) -> dict:
             value = cells[1].get_text(strip=True)
             if not key:
                 continue
-            # Prefix with section for disambiguation if useful
             specs[key] = value
             last_key = key
 
@@ -445,7 +441,7 @@ def main():
             parse_errors += 1
             print(f"  ERROR parsing {filename}: {e}")
 
-    print(f"\nParsed data:")
+    print("\nParsed data:")
     for key, items in results.items():
         print(f"  {key}: {len(items)}")
     if parse_errors:

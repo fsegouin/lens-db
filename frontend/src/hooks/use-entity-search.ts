@@ -1,8 +1,10 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export type EntityType = "lens" | "camera";
+
+const DEFAULT_TYPES: EntityType[] = ["lens", "camera"];
 
 export interface EntitySearchResult {
   id: number;
@@ -17,8 +19,9 @@ export interface EntitySearchResult {
  * Used by the comparison search and duplicate flag components.
  */
 export function useEntitySearch({
-  types = ["lens", "camera"],
+  types = DEFAULT_TYPES,
   excludeId,
+  excludeType,
   debounceMs = 300,
   maxResults = 20,
 }: {
@@ -26,6 +29,8 @@ export function useEntitySearch({
   types?: EntityType[];
   /** Exclude an entity ID from results (e.g. the current lens). */
   excludeId?: number;
+  /** Entity type the excluded ID belongs to. Without it, the ID is excluded across all searched types (lens and camera IDs are independent sequences, so pass this when searching both). */
+  excludeType?: EntityType;
   /** Debounce delay in ms. Defaults to 300. */
   debounceMs?: number;
   /** Max total results. Defaults to 20. */
@@ -35,9 +40,16 @@ export function useEntitySearch({
   const [results, setResults] = useState<EntitySearchResult[]>([]);
   const [searching, setSearching] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  // Monotonic id so a slow earlier response can't overwrite a newer one
+  const searchIdRef = useRef(0);
+
+  useEffect(() => {
+    return () => clearTimeout(debounceRef.current);
+  }, []);
 
   const search = useCallback(
     async (q: string) => {
+      const searchId = ++searchIdRef.current;
       if (q.length < 2) {
         setResults([]);
         return;
@@ -84,17 +96,20 @@ export function useEntitySearch({
           });
 
         const all = [...lenses, ...cameras]
-          .filter((r) => !(excludeId && r.id === excludeId))
+          .filter(
+            (r) =>
+              !(excludeId && r.id === excludeId && (!excludeType || r.type === excludeType)),
+          )
           .slice(0, maxResults);
 
-        setResults(all);
+        if (searchId === searchIdRef.current) setResults(all);
       } catch {
-        setResults([]);
+        if (searchId === searchIdRef.current) setResults([]);
       } finally {
-        setSearching(false);
+        if (searchId === searchIdRef.current) setSearching(false);
       }
     },
-    [types, excludeId, maxResults]
+    [types, excludeId, excludeType, maxResults]
   );
 
   function handleQueryChange(value: string) {

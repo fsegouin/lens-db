@@ -45,7 +45,7 @@ const sections = [
 
 export default async function Home() {
   // Fetch most popular lenses
-  const popularLenses = await db
+  const popularLensesPromise = db
     .select({ lens: lenses, system: systems })
     .from(lenses)
     .leftJoin(systems, eq(lenses.systemId, systems.id))
@@ -55,7 +55,7 @@ export default async function Home() {
     .catch(() => []);
 
   // Fetch most compared pairs (lenses + cameras, merged by view count)
-  const topComparisons = await db.execute(sql`
+  const topComparisonsPromise = db.execute(sql`
     (
       SELECT
         c.view_count,
@@ -80,6 +80,11 @@ export default async function Home() {
     ORDER BY view_count DESC
     LIMIT 10
   `).then(r => r.rows).catch(() => []);
+
+  const [popularLenses, topComparisons] = await Promise.all([
+    popularLensesPromise,
+    topComparisonsPromise,
+  ]);
 
   return (
     <PageTransition>

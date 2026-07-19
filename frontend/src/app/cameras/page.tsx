@@ -1,7 +1,7 @@
 import { db } from "@/db";
 import { escapeLikeMetachars, parseMultiValueParam } from "@/lib/api-utils";
 import { cameras, systems, priceEstimates } from "@/db/schema";
-import { asc, desc, eq, and, or, sql } from "drizzle-orm";
+import { asc, desc, eq, and, or, sql, type AnyColumn } from "drizzle-orm";
 import { unstable_cache } from "next/cache";
 import CameraList from "@/components/CameraList";
 import { PageTransition } from "@/components/page-transition";
@@ -185,8 +185,7 @@ export default async function CamerasPage({
 
     const where = conditions.length > 0 ? and(...conditions) : undefined;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const sortColumns: Record<string, any> = {
+    const sortColumns: Record<string, AnyColumn> = {
       name: cameras.name,
       system: systems.name,
       year: cameras.yearIntroduced,
@@ -201,29 +200,31 @@ export default async function CamerasPage({
       ? [sql`${avgPrice} IS NULL`, orderFn(sortCol)]
       : [orderFn(sortCol)];
 
-    const [countResult] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(cameras)
-      .leftJoin(systems, eq(cameras.systemId, systems.id))
-      .leftJoin(priceEstimates, and(
-        eq(priceEstimates.entityType, "camera"),
-        eq(priceEstimates.entityId, cameras.id),
-      ))
-      .where(where);
+    const [[countResult], items] = await Promise.all([
+      db
+        .select({ count: sql<number>`count(*)` })
+        .from(cameras)
+        .leftJoin(systems, eq(cameras.systemId, systems.id))
+        .leftJoin(priceEstimates, and(
+          eq(priceEstimates.entityType, "camera"),
+          eq(priceEstimates.entityId, cameras.id),
+        ))
+        .where(where),
+      db
+        .select({ camera: cameras, system: systems, avgPrice: avgPrice })
+        .from(cameras)
+        .leftJoin(systems, eq(cameras.systemId, systems.id))
+        .leftJoin(priceEstimates, and(
+          eq(priceEstimates.entityType, "camera"),
+          eq(priceEstimates.entityId, cameras.id),
+        ))
+        .where(where)
+        .orderBy(...nullsLast)
+        .limit(PAGE_SIZE)
+        .offset(0),
+    ]);
     total = Number(countResult.count);
-
-    initialItems = await db
-      .select({ camera: cameras, system: systems, avgPrice: avgPrice })
-      .from(cameras)
-      .leftJoin(systems, eq(cameras.systemId, systems.id))
-      .leftJoin(priceEstimates, and(
-        eq(priceEstimates.entityType, "camera"),
-        eq(priceEstimates.entityId, cameras.id),
-      ))
-      .where(where)
-      .orderBy(...nullsLast)
-      .limit(PAGE_SIZE)
-      .offset(0);
+    initialItems = items;
   } catch {
     // DB not connected
   }

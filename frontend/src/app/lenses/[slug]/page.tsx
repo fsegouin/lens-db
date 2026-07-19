@@ -275,7 +275,6 @@ export default async function LensDetailPage({
           <EditButton
             entityType="lens"
             entityId={lens.id}
-            entitySlug={lens.slug}
             currentValues={{
               name: lens.name,
               url: lens.url,

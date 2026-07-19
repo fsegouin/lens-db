@@ -1,5 +1,4 @@
-import { sql, type SQL } from "drizzle-orm";
-import type { AnyColumn } from "drizzle-orm";
+import { sql, type SQL, type AnyColumn } from "drizzle-orm";
 
 function escapeRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");

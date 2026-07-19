@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { users, revisions } from "@/db/schema";
 import { requireAdminAPI } from "@/lib/admin-auth";
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 
 export async function GET(
   request: NextRequest,

@@ -321,7 +321,7 @@ def main():
             for score, donor in scored[1:]:
                 print(f"  DEL:  [{donor['id']}] {donor['name']} (score={score})")
 
-        print(f"\nDry run complete. Run with --merge to apply changes.")
+        print("\nDry run complete. Run with --merge to apply changes.")
         return
 
     # Merge

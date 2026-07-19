@@ -55,17 +55,22 @@ export async function GET(request: NextRequest) {
 
   // Fetch entity names for display
   const entityNames: Record<string, string> = {};
+  const tables = { lens: lenses, camera: cameras, system: systems, collection: collections, series: lensSeries } as const;
+  const uniqueEntities = new Map<string, { table: (typeof tables)[keyof typeof tables]; entityType: string; entityId: number }>();
   for (const item of items) {
     const key = `${item.entityType}:${item.entityId}`;
-    if (entityNames[key]) continue;
-
-    const tables = { lens: lenses, camera: cameras, system: systems, collection: collections, series: lensSeries } as const;
+    if (uniqueEntities.has(key)) continue;
     const table = tables[item.entityType as keyof typeof tables];
     if (table) {
-      const [row] = await db.select({ name: table.name }).from(table).where(eq(table.id, item.entityId)).limit(1);
-      entityNames[key] = row?.name || `Unknown ${item.entityType}`;
+      uniqueEntities.set(key, { table, entityType: item.entityType, entityId: item.entityId });
     }
   }
+  await Promise.all(
+    [...uniqueEntities].map(async ([key, { table, entityType: type, entityId }]) => {
+      const [row] = await db.select({ name: table.name }).from(table).where(eq(table.id, entityId)).limit(1);
+      entityNames[key] = row?.name || `Unknown ${type}`;
+    })
+  );
 
   const enriched = items.map((item) => ({
     ...item,

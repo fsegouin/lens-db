@@ -22,19 +22,22 @@ function useEntitySearch(apiPath: string) {
 
     if (timerRef.current) clearTimeout(timerRef.current);
 
+    let stale = false;
     timerRef.current = setTimeout(async () => {
       try {
         const res = await fetch(`${apiPath}?q=${encodeURIComponent(query)}`);
-        if (!res.ok) return;
+        if (!res.ok || stale) return;
         const data = await res.json();
+        if (stale) return;
         setResults(data.items || []);
         setShowDropdown(true);
       } catch {
-        setResults([]);
+        if (!stale) setResults([]);
       }
     }, 300);
 
     return () => {
+      stale = true;
       if (timerRef.current) clearTimeout(timerRef.current);
     };
   }, [query, apiPath]);

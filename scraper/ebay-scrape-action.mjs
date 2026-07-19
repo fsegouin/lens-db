@@ -34,10 +34,6 @@ function buildSearchQuery(cameraName) {
   return name;
 }
 
-async function getCameraBatch() {
-  return getCameraBatchState();
-}
-
 async function getCameraBatchState(staleBefore) {
   const headers = {};
   if (CRON_SECRET) headers["Authorization"] = `Bearer ${CRON_SECRET}`;
@@ -155,7 +151,7 @@ async function main() {
 
   const rotationStartedAt = new Date().toISOString();
   console.log(`Fetching camera batch from ${API_URL}...`);
-  const batchState = await getCameraBatch();
+  const batchState = await getCameraBatchState();
   const cameras = batchState.cameras;
   console.log(`Got ${cameras.length} cameras to process\n`);
 

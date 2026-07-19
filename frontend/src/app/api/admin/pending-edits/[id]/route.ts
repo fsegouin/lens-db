@@ -145,8 +145,7 @@ export async function POST(
 
     const [created] = await db
       .insert(table)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .values(insertData as any)
+      .values(insertData as never)
       .returning({ id: table.id });
     targetEntityId = created.id;
   } else {

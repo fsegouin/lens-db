@@ -5,10 +5,13 @@ The Lens DB is a camera and lens database project built from archived `lens-db.c
 ## Repo Layout
 
 - `frontend/`
-  Next.js application for browsing lenses, cameras, systems, collections, comparisons, ratings, submissions, and admin workflows.
+  Next.js application for browsing lenses, cameras, systems, collections, comparisons, ratings, submissions, user accounts, AI chat, eBay price history, and admin workflows.
+
+- `mcp-server/`
+  TypeScript MCP server exposing lens/camera search, detail, price, and compatibility tools. Its tool implementations are also consumed by the frontend chat via the `lens-db-mcp-server` workspace dependency.
 
 - `scraper/`
-  Python tools for discovering archived pages, downloading them from the Wayback Machine, parsing structured data, and importing it into PostgreSQL.
+  Python tools for discovering archived pages, downloading them from the Wayback Machine, parsing structured data, and importing it into PostgreSQL, plus eBay price-scraping scripts.
 
 - `docs/`
   Project notes and implementation plans.
@@ -24,24 +27,29 @@ The frontend lives in [`frontend/`](frontend/) and uses:
 - Neon PostgreSQL
 - Tailwind CSS v4
 - Upstash Redis for rate limiting
+- Vercel AI SDK (AI Gateway) for chat and price classification
+- Resend for verification emails
+- Cloudflare R2 for image storage
 
-See [`frontend/README.md`](frontend/README.md) for architecture and app-specific details.
+See [`frontend/CLAUDE.md`](frontend/CLAUDE.md) for architecture and app-specific details.
 
 ### Run Locally
 
 ```bash
+pnpm install   # from the repo root (pnpm workspace: frontend + mcp-server)
 cd frontend
-pnpm install
 pnpm dev
 ```
 
 Required environment variables include:
 
 - `DATABASE_URL`
+- `SESSION_SECRET`
 - `RATE_HASH_SALT`
 - `KV_REST_API_URL`
 - `KV_REST_API_TOKEN`
-- `ADMIN_PASSWORD`
+
+See [`frontend/.env.example`](frontend/.env.example) for the full list.
 
 ## Scraper
 

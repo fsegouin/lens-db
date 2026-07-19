@@ -83,7 +83,6 @@ async function downloadResizeUpload(sourceUrl, r2Key) {
 let totalUploaded = 0;
 let totalSkipped = 0;
 let totalErrors = 0;
-let totalBytesUploaded = 0;
 const updatedCameras = [];
 
 for (let i = 0; i < cameras.length; i++) {
