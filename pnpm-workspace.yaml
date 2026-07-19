@@ -1,3 +1,13 @@
 packages:
   - "frontend"
   - "mcp-server"
+overrides:
+  drizzle-orm: 0.45.2
+peerDependencyRules:
+  allowedVersions:
+    "drizzle-orm>@types/pg": "*"
+allowBuilds:
+  esbuild: true
+  msw: true
+  sharp: true
+  unrs-resolver: true
