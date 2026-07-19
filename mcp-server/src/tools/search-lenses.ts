@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { eq, and, gte, lte, sql, asc } from "drizzle-orm";
+import { eq, and, gte, lte, sql, asc, isNull } from "drizzle-orm";
 import { getDb, schema } from "../db";
-import { buildSearchPatterns } from "../search";
+import { buildSearchPatterns, escapeLikeMetachars } from "../search";
 
 const { lenses, systems, priceEstimates } = schema;
 
@@ -29,20 +29,25 @@ export type SearchLensesParams = z.infer<typeof searchLensesSchema>;
 
 export async function searchLenses(params: SearchLensesParams) {
   const db = getDb();
-  const conditions = [];
+  const conditions = [isNull(lenses.mergedIntoId)];
 
   if (params.query) {
-    for (const pattern of buildSearchPatterns(params.query)) {
+    const patterns = buildSearchPatterns(params.query);
+    if (patterns.length === 0) {
+      // Every word was stripped (non-Latin text, symbols): no matches.
+      return { returned: 0, hasMore: false, lenses: [] };
+    }
+    for (const pattern of patterns) {
       conditions.push(
         sql`regexp_replace(${lenses.name}, '[^a-zA-Z0-9. ]', '', 'g') ~* ${pattern}`
       );
     }
   }
   if (params.system) {
-    conditions.push(sql`${systems.name} ILIKE ${params.system}`);
+    conditions.push(sql`${systems.name} ILIKE ${escapeLikeMetachars(params.system)}`);
   }
   if (params.brand) {
-    conditions.push(sql`${lenses.brand} ILIKE ${params.brand}`);
+    conditions.push(sql`${lenses.brand} ILIKE ${escapeLikeMetachars(params.brand)}`);
   }
   if (params.focalLengthMin) {
     conditions.push(gte(lenses.focalLengthMin, params.focalLengthMin));

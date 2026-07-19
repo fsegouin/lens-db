@@ -161,10 +161,11 @@ def find_duplicate_groups(conn) -> list[list[dict]]:
         """)
         all_lenses = cur.fetchall()
 
-    # Group by canonical name
-    groups: dict[str, list[dict]] = {}
+    # Group by (system_id, canonical name) so identical names on different
+    # mounts are never merged together
+    groups: dict[tuple, list[dict]] = {}
     for lens in all_lenses:
-        canon = canonical_name(lens["name"])
+        canon = (lens["system_id"], canonical_name(lens["name"]))
         groups.setdefault(canon, []).append(lens)
 
     # Return only groups with duplicates

@@ -1,6 +1,7 @@
 import { z } from "zod";
-import { eq, sql } from "drizzle-orm";
+import { eq, and, isNull, sql } from "drizzle-orm";
 import { getDb, schema } from "../db";
+import { escapeLikeMetachars } from "../search";
 
 const { lenses, systems } = schema;
 
@@ -50,18 +51,22 @@ export async function getLensDetails(params: GetLensDetailsParams) {
     .select(LENS_FIELDS)
     .from(lenses)
     .leftJoin(systems, eq(lenses.systemId, systems.id))
-    .where(eq(lenses.slug, params.slug))
+    .where(and(eq(lenses.slug, params.slug), isNull(lenses.mergedIntoId)))
     .limit(1);
 
   if (exact) return exact;
 
   // Fallback: fuzzy match on slug or name, prefer shortest slug (most likely the base model)
+  const fuzzyPattern = '%' + escapeLikeMetachars(params.slug) + '%';
   const [fuzzy] = await db
     .select(LENS_FIELDS)
     .from(lenses)
     .leftJoin(systems, eq(lenses.systemId, systems.id))
     .where(
-      sql`${lenses.slug} ILIKE ${'%' + params.slug + '%'} OR ${lenses.name} ILIKE ${'%' + params.slug + '%'}`
+      and(
+        sql`(${lenses.slug} ILIKE ${fuzzyPattern} OR ${lenses.name} ILIKE ${fuzzyPattern})`,
+        isNull(lenses.mergedIntoId)
+      )
     )
     .orderBy(sql`length(${lenses.slug})`)
     .limit(1);

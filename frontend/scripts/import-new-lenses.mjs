@@ -61,18 +61,31 @@ const MOUNT_MAP = {
   'hasselblad x': 'hasselblad x',
 };
 
+function lookupSystemByName(sysName) {
+  // Exact-match pass first so e.g. 'canon ef' never resolves to 'canon ef-m'
+  for (const [name, sys] of systemsByName) {
+    if (name === sysName) return sys.id;
+  }
+  for (const [name, sys] of systemsByName) {
+    if (name.includes(sysName)) return sys.id;
+  }
+  return null;
+}
+
 function findSystemId(mount) {
   if (!mount) return null;
   const mountLower = mount.toLowerCase();
   // Take first mount if multi-mount
   const firstMount = mountLower.split(',')[0].trim();
+  // Exact mount-key pass before the order-dependent substring pass
+  if (MOUNT_MAP[firstMount]) {
+    const id = lookupSystemByName(MOUNT_MAP[firstMount]);
+    if (id) return id;
+  }
   for (const [key, sysName] of Object.entries(MOUNT_MAP)) {
     if (firstMount.includes(key)) {
-      for (const [name, sys] of systemsByName) {
-        if (name === sysName || name.includes(sysName)) {
-          return sys.id;
-        }
-      }
+      const id = lookupSystemByName(sysName);
+      if (id) return id;
     }
   }
   return null;
@@ -127,7 +140,9 @@ function extractBrand(name) {
 
 function parseAperture(str) {
   if (!str) return null;
-  const m = str.match(/[fF]\/?\s*(\d+\.?\d*)/);
+  // Require the slash so the "F" in mount prefixes (RF/EF/AF) followed by a
+  // focal length ("RF 50mm") is never parsed as an aperture
+  const m = str.match(/[fF]\/\s*(\d+\.?\d*)/);
   return m ? parseFloat(m[1]) : null;
 }
 
@@ -192,8 +207,8 @@ for (let i = 0; i < lenses.length; i++) {
   const weight = parseWeight(lens.specs?.Weight);
   const minFocus = parseMinFocus(lens.specs?.['Min focus']);
   const systemId = findSystemId(lens.lensMount);
-  const isZoom = focal && focal.min !== focal.max;
-  const isPrime = focal && focal.min === focal.max;
+  const isZoom = focal ? focal.min !== focal.max : false;
+  const isPrime = focal ? focal.min === focal.max : false;
   const isMacro = lens.name.toLowerCase().includes('macro');
   const hasAF = lens.name.toLowerCase().includes(' af ') ||
                 (lens.specs?.['Autofocus'] && lens.specs['Autofocus'] !== 'No');

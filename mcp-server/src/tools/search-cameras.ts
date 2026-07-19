@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { eq, and, gte, lte, sql, asc } from "drizzle-orm";
+import { eq, and, gte, lte, sql, asc, isNull } from "drizzle-orm";
 import { getDb, schema } from "../db";
-import { buildSearchPatterns } from "../search";
+import { buildSearchPatterns, escapeLikeMetachars } from "../search";
 
 const { cameras, systems, priceEstimates } = schema;
 
@@ -24,10 +24,15 @@ export type SearchCamerasParams = z.infer<typeof searchCamerasSchema>;
 
 export async function searchCameras(params: SearchCamerasParams) {
   const db = getDb();
-  const conditions = [];
+  const conditions = [isNull(cameras.mergedIntoId)];
 
   if (params.query) {
-    for (const pattern of buildSearchPatterns(params.query)) {
+    const patterns = buildSearchPatterns(params.query);
+    if (patterns.length === 0) {
+      // Every word was stripped (non-Latin text, symbols): no matches.
+      return { returned: 0, hasMore: false, cameras: [] };
+    }
+    for (const pattern of patterns) {
       conditions.push(
         sql`regexp_replace(${cameras.name}, '[^a-zA-Z0-9. ]', '', 'g') ~* ${pattern}`
       );
@@ -35,12 +40,12 @@ export async function searchCameras(params: SearchCamerasParams) {
   }
   if (params.system) {
     conditions.push(
-      sql`${systems.name} ILIKE ${params.system}`
+      sql`${systems.name} ILIKE ${escapeLikeMetachars(params.system)}`
     );
   }
   if (params.brand) {
     conditions.push(
-      sql`${cameras.name} ILIKE ${params.brand + '%'}`
+      sql`${cameras.name} ILIKE ${escapeLikeMetachars(params.brand) + '%'}`
     );
   }
   if (params.yearFrom) {

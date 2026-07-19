@@ -102,9 +102,16 @@ async function generateDescription({ apiKey, model, row }) {
   }
 
   const data = await response.json();
-  const text = compactSpace(data.output_text || "");
+  // `output_text` is an SDK-only convenience property — it never exists on the
+  // raw Responses API JSON. Extract the text from output[].content[] instead.
+  const rawText = (data.output ?? [])
+    .flatMap((item) => item.content ?? [])
+    .filter((part) => part.type === "output_text")
+    .map((part) => part.text ?? "")
+    .join("");
+  const text = compactSpace(rawText);
   if (!text) {
-    throw new Error("OpenAI returned empty output_text");
+    throw new Error("OpenAI returned empty output text");
   }
 
   return text;

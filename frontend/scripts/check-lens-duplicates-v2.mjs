@@ -100,7 +100,7 @@ if (exactDupeList.length > 0) {
 console.log('\n=== CLOSE MATCH CHECK (focal + aperture + brand word) ===');
 function extractSpecs(name) {
   const focal = name.match(/(\d+)(?:\s*-\s*(\d+))?\s*mm/i);
-  const aperture = name.match(/[fF]\/?\s*(\d+\.?\d*)/);
+  const aperture = name.match(/[fF]\/\s*(\d+\.?\d*)/);
   const brandWord = name.split(/\s+/)[0].toLowerCase()
     .replace('carl', 'zeiss').replace('venus', 'laowa')
     .replace('fujinon', 'fujifilm').replace('smc', 'pentax')

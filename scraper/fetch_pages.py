@@ -21,11 +21,13 @@ WAYBACK_BASE = "https://web.archive.org/web"
 
 
 def safe_filename(url: str) -> str:
-    """Convert a URL to a safe filename."""
+    """Convert a URL to a safe filename (scheme-aware so http/https snapshots don't collide)."""
+    scheme_prefix = "http__" if url.startswith("http://") else ""
     path = url.replace("https://lens-db.com/", "").replace("http://lens-db.com/", "")
     path = path.strip("/").replace("/", "__")
     if not path:
         path = "index"
+    path = scheme_prefix + path
     if len(path) > 200:
         path = path[:180] + "_" + hashlib.md5(path.encode()).hexdigest()[:12]
     return path + ".html"
