@@ -3,7 +3,7 @@ import { db } from "@/db";
 import { duplicateFlags, lenses, cameras } from "@/db/schema";
 import { requireUserAPI } from "@/lib/user-auth";
 import { createRateLimit } from "@/lib/rate-limit";
-import { eq, and } from "drizzle-orm";
+import { eq, and, or } from "drizzle-orm";
 
 const validTypes = new Set(["lens", "camera"]);
 const flagLimiter = createRateLimit(10, "3600 s"); // 10 flags per hour
@@ -52,9 +52,17 @@ export async function POST(request: NextRequest) {
     .where(
       and(
         eq(duplicateFlags.sourceEntityType, sourceEntityType),
-        eq(duplicateFlags.sourceEntityId, sourceEntityId),
-        eq(duplicateFlags.targetEntityId, targetEntityId),
-        eq(duplicateFlags.status, "pending")
+        eq(duplicateFlags.status, "pending"),
+        or(
+          and(
+            eq(duplicateFlags.sourceEntityId, sourceEntityId),
+            eq(duplicateFlags.targetEntityId, targetEntityId)
+          ),
+          and(
+            eq(duplicateFlags.sourceEntityId, targetEntityId),
+            eq(duplicateFlags.targetEntityId, sourceEntityId)
+          )
+        )
       )
     )
     .limit(1);

@@ -25,6 +25,7 @@ const lensFields = [
   "lensElements", "lensGroups", "diaphragmBlades",
   "yearIntroduced", "yearDiscontinued",
   "isZoom", "isMacro", "isPrime", "hasStabilization", "hasAutofocus",
+  "coverage",
 ];
 
 const cameraFields = [
@@ -155,6 +156,7 @@ export async function POST(request: NextRequest) {
 
   // Auto-create for trusted users
   let created: { id: number; slug: string };
+  try {
   if (entityType === "lens") {
     const [row] = await db
       .insert(lenses)
@@ -186,6 +188,7 @@ export async function POST(request: NextRequest) {
         isPrime: (entityData.isPrime as boolean) ?? false,
         hasStabilization: (entityData.hasStabilization as boolean) ?? false,
         hasAutofocus: (entityData.hasAutofocus as boolean) ?? false,
+        coverage: (entityData.coverage as string) || null,
         specs: {},
         images: [],
       })
@@ -213,6 +216,16 @@ export async function POST(request: NextRequest) {
       })
       .returning({ id: cameras.id, slug: cameras.slug });
     created = row;
+  }
+  } catch (error) {
+    // Postgres unique violation (duplicate name/slug)
+    if ((error as { code?: string })?.code === "23505") {
+      return NextResponse.json(
+        { error: "An entity with this name or slug already exists" },
+        { status: 409 }
+      );
+    }
+    throw error;
   }
 
   const isAdmin = user.role === "admin";

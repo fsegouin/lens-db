@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { classifyListings } from "@/lib/price-classify";
+import { requireAdminAPI } from "@/lib/admin-auth";
 
 export async function POST(request: NextRequest) {
+  const token = request.cookies.get("user_session")?.value;
+  const authError = await requireAdminAPI(token);
+  if (authError) return authError;
+
   const body = await request.json();
   const { cameraName, listings } = body as {
     cameraName: string;
@@ -22,9 +27,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("Classification error:", error);
-    return NextResponse.json(
-      { error: "Classification failed", details: String(error) },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Classification failed" }, { status: 500 });
   }
 }

@@ -122,6 +122,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ comparisons });
   } catch (error) {
     console.error("GET /api/comparisons error:", error);
-    return NextResponse.json({ comparisons: [] });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

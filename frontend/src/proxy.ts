@@ -27,7 +27,16 @@ export function proxy(request: NextRequest) {
     const host = request.headers.get("host");
 
     if (origin && host) {
-      const originHost = new URL(origin).host;
+      let originHost: string;
+      try {
+        originHost = new URL(origin).host;
+      } catch {
+        // Malformed Origin (e.g. "null" from sandboxed iframes) — reject
+        return NextResponse.json(
+          { error: "Forbidden" },
+          { status: 403 }
+        );
+      }
       if (originHost !== host) {
         return NextResponse.json(
           { error: "Forbidden" },

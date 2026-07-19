@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import BackButton from "@/components/BackButton";
-import { asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { cameras, lenses, systems } from "@/db/schema";
 import ViewTracker from "@/components/ViewTracker";
@@ -62,13 +62,13 @@ export default async function SystemDetailPage({
     db
       .select()
       .from(lenses)
-      .where(eq(lenses.systemId, system.id))
+      .where(and(eq(lenses.systemId, system.id), isNull(lenses.mergedIntoId)))
       .orderBy(asc(sql`regexp_replace(${lenses.name}, '\\d+(\\.\\d+)?mm.*$', '')`), asc(lenses.focalLengthMin), asc(lenses.apertureMin))
       .limit(500),
     db
       .select()
       .from(cameras)
-      .where(eq(cameras.systemId, system.id))
+      .where(and(eq(cameras.systemId, system.id), isNull(cameras.mergedIntoId)))
       .orderBy(asc(cameras.name))
       .limit(500),
   ]);

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { and, or } from "drizzle-orm";
+import { and, isNull, or } from "drizzle-orm";
 import { db } from "@/db";
 import { cameras, lenses, systems } from "@/db/schema";
 import SearchInput from "@/components/SearchInput";
@@ -38,16 +38,19 @@ export default async function SearchPage({
 
       [lensResults, cameraResults, systemResults] = await Promise.all([
         lensWhere.length > 0
-          ? db.select().from(lenses).where(and(...lensWhere)).limit(20)
+          ? db.select().from(lenses).where(and(...lensWhere, isNull(lenses.mergedIntoId))).limit(20)
           : [],
         cameraNameWhere.length > 0 || cameraAliasWhere.length > 0
           ? db
               .select()
               .from(cameras)
               .where(
-                or(
-                  cameraNameWhere.length > 0 ? and(...cameraNameWhere) : undefined,
-                  cameraAliasWhere.length > 0 ? and(...cameraAliasWhere) : undefined
+                and(
+                  or(
+                    cameraNameWhere.length > 0 ? and(...cameraNameWhere) : undefined,
+                    cameraAliasWhere.length > 0 ? and(...cameraAliasWhere) : undefined
+                  ),
+                  isNull(cameras.mergedIntoId)
                 )
               )
               .limit(20)
