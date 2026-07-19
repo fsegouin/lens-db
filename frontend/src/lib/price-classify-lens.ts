@@ -27,11 +27,25 @@ export type ClassifiedLensListing = z.infer<typeof ClassifiedLensListingSchema>[
 
 const BATCH_SIZE = 20;
 
+// Placeholder used to keep positional alignment with the raw listings when a
+// batch fails or the LLM returns a different number of entries than requested.
+// isRelevant=false + conditionGrade="skip" guarantees it is never stored.
+function placeholderListing(): ClassifiedLensListing {
+  return {
+    isRelevant: false,
+    isLensOnly: false,
+    conditionGrade: "skip",
+    conditionNotes: "classification unavailable",
+    effectivePrice: 0,
+  };
+}
+
 export async function classifyLensListings(
   lensName: string,
   listings: { title: string; price: number; date: string; condition?: string; description?: string; url?: string }[],
 ): Promise<ClassifiedLensListing[]> {
   const allClassified: ClassifiedLensListing[] = [];
+  let anyBatchSucceeded = false;
   let lastError: unknown;
 
   for (let i = 0; i < listings.length; i += BATCH_SIZE) {
@@ -75,19 +89,28 @@ ${listingLines}`;
         prompt,
       });
 
-      if (output?.listings) {
-        allClassified.push(...output.listings);
+      // Pad/truncate to exactly batch.length so downstream positional joins
+      // (classified[i] ↔ raw[i]) never shift when the LLM miscounts.
+      const results = (output?.listings ?? []).slice(0, batch.length);
+      while (results.length < batch.length) {
+        results.push(placeholderListing());
       }
+      allClassified.push(...results);
+      anyBatchSucceeded = true;
     } catch (error) {
       console.error(`Classification error (batch ${Math.floor(i / BATCH_SIZE) + 1}):`, error);
       lastError = error;
+      // Preserve alignment: emit one placeholder per raw listing in the failed batch.
+      for (let j = 0; j < batch.length; j++) {
+        allClassified.push(placeholderListing());
+      }
     }
   }
 
   // If every batch failed, surface the error instead of returning [] —
   // an empty result here would be indistinguishable from "no relevant listings"
   // and the caller would wrongly mark the lens as freshly scraped.
-  if (listings.length > 0 && allClassified.length === 0 && lastError !== undefined) {
+  if (listings.length > 0 && !anyBatchSucceeded && lastError !== undefined) {
     throw new Error(`Classification failed for all batches of "${lensName}"`, {
       cause: lastError,
     });

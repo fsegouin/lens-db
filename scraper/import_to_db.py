@@ -787,6 +787,7 @@ def import_lenses(conn, lenses: list[dict]):
     rows = [_lens_row_to_tuple(r) for r in prepared]
     batch_size = 500
     imported = 0
+    failed = 0
     with conn.cursor() as cur:
         for batch_start in range(0, len(rows), batch_size):
             batch = rows[batch_start : batch_start + batch_size]
@@ -822,14 +823,17 @@ def import_lenses(conn, lenses: list[dict]):
                     batch,
                     page_size=100,
                 )
+                # Commit per batch so a later failure only loses that batch,
+                # not everything inserted so far.
+                conn.commit()
                 imported += len(batch)
                 print(f"  Lenses: {imported}/{len(rows)} inserted", flush=True)
             except Exception as e:
                 print(f"  Error at batch {batch_start}: {e}", flush=True)
                 conn.rollback()
+                failed += len(batch)
 
-    conn.commit()
-    print(f"  Lenses done: {imported} imported, {skipped} skipped", flush=True)
+    print(f"  Lenses done: {imported} imported, {failed} failed, {skipped} skipped", flush=True)
     return system_cache
 
 
@@ -911,6 +915,7 @@ def import_cameras(conn, cameras: list[dict], system_cache: dict[str, int]):
     print("  Phase 3: Batch inserting...", flush=True)
     batch_size = 500
     imported = 0
+    failed = 0
     with conn.cursor() as cur:
         for batch_start in range(0, len(rows), batch_size):
             batch = rows[batch_start : batch_start + batch_size]
@@ -934,14 +939,17 @@ def import_cameras(conn, cameras: list[dict], system_cache: dict[str, int]):
                     batch,
                     page_size=100,
                 )
+                # Commit per batch so a later failure only loses that batch,
+                # not everything inserted so far.
+                conn.commit()
                 imported += len(batch)
                 print(f"  Cameras: {imported}/{len(rows)} inserted", flush=True)
             except Exception as e:
                 print(f"  Error at batch {batch_start}: {e}", flush=True)
                 conn.rollback()
+                failed += len(batch)
 
-    conn.commit()
-    print(f"  Cameras done: {imported} imported, {skipped} skipped", flush=True)
+    print(f"  Cameras done: {imported} imported, {failed} failed, {skipped} skipped", flush=True)
 
 
 def import_collections(conn, collections_data: list[dict]):

@@ -113,6 +113,13 @@
       "when": 1777818439066,
       "tag": "0015_optimize_price_history_dedupe",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1784485748656,
+      "tag": "0016_reset-broken-classifier-estimates",
+      "breakpoints": true
     }
   ]
 }
