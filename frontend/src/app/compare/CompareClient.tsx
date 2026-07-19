@@ -311,14 +311,11 @@ export default function CompareClient() {
   }, [item1, item2, router]);
   useEffect(() => {
     if (initRef.current) return;
+    initRef.current = true;
     const slug1 = searchParams.get("item1") || searchParams.get("lens1");
     const slug2 = searchParams.get("item2") || searchParams.get("lens2");
-    if (!slug1 && !slug2) {
-      initRef.current = true;
-      return;
-    }
+    if (!slug1 && !slug2) return;
     if (!urlType) return;
-    initRef.current = true;
 
     async function fetchBySlug<T>(kind: ItemType, slug: string): Promise<T | null> {
       try {

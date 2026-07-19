@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -47,6 +47,11 @@ export default function EditButton({
   const [loadingContext, setLoadingContext] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
   const [systemOptions, setSystemOptions] = useState<SelectOption[] | null>(null);
+  const successTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  useEffect(() => {
+    return () => clearTimeout(successTimerRef.current);
+  }, []);
 
   const needsSystems = fields.some((f) => f.optionsSource === "systems");
 
@@ -149,7 +154,8 @@ export default function EditButton({
           ? "Your edit has been submitted for review. An admin will approve it shortly."
           : "Your changes have been saved. Thank you for contributing!"
       );
-      setTimeout(() => {
+      clearTimeout(successTimerRef.current);
+      successTimerRef.current = setTimeout(() => {
         setOpen(false);
         if (!data.pending) router.refresh();
       }, 2000);

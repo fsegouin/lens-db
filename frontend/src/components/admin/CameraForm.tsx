@@ -42,6 +42,7 @@ export default function CameraForm({ camera, systems }: CameraFormProps) {
 
   const [name, setName] = useState(camera?.name ?? "");
   const [slug, setSlug] = useState(camera?.slug ?? "");
+  const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
   const [url, setUrl] = useState(camera?.url ?? "");
   const [systemId, setSystemId] = useState<number | "">(camera?.systemId ?? "");
   const [description, setDescription] = useState(camera?.description ?? "");
@@ -65,9 +66,14 @@ export default function CameraForm({ camera, systems }: CameraFormProps) {
 
   function handleNameChange(value: string) {
     setName(value);
-    if (!isEdit) {
+    if (!isEdit && !slugManuallyEdited) {
       setSlug(generateSlug(value));
     }
+  }
+
+  function handleSlugChange(value: string) {
+    setSlug(value);
+    setSlugManuallyEdited(true);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -124,10 +130,11 @@ export default function CameraForm({ camera, systems }: CameraFormProps) {
     if (!confirm("Are you sure you want to delete this camera?")) return;
 
     try {
-      await fetch(`/api/admin/cameras/${camera!.id}`, { method: "DELETE" });
+      const res = await fetch(`/api/admin/cameras/${camera!.id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete");
       router.push("/admin/cameras");
     } catch {
-      setError("Failed to delete");
+      setError("Failed to delete camera");
     }
   }
 
@@ -158,7 +165,7 @@ export default function CameraForm({ camera, systems }: CameraFormProps) {
             <input
               type="text"
               value={slug}
-              onChange={(e) => setSlug(e.target.value)}
+              onChange={(e) => handleSlugChange(e.target.value)}
               className={`w-full ${inputClass}`}
             />
           </div>

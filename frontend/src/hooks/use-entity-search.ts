@@ -119,8 +119,12 @@ export function useEntitySearch({
   }
 
   function reset() {
+    clearTimeout(debounceRef.current);
+    // Invalidate any in-flight search so its response can't repopulate results
+    searchIdRef.current++;
     setQuery("");
     setResults([]);
+    setSearching(false);
   }
 
   return { query, results, searching, handleQueryChange, setQuery, setResults, reset };

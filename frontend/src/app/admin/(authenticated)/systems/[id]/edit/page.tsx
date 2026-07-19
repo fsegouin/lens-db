@@ -4,6 +4,7 @@ import { systems } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import SystemForm from "@/components/admin/SystemForm";
 import EditPageWithReport from "@/components/admin/EditPageWithReport";
+import { requireAdmin } from "@/lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +13,8 @@ export default async function EditSystemPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await requireAdmin();
+
   const { id } = await params;
   const system = await db
     .select()

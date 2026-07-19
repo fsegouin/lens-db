@@ -2,10 +2,13 @@ import { db } from "@/db";
 import { systems } from "@/db/schema";
 import { asc } from "drizzle-orm";
 import CameraForm from "@/components/admin/CameraForm";
+import { requireAdmin } from "@/lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function NewCameraPage() {
+  await requireAdmin();
+
   const allSystems = await db
     .select({ id: systems.id, name: systems.name })
     .from(systems)

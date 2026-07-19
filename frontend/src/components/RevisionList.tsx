@@ -81,8 +81,31 @@ export default function RevisionList({ revisions }: { revisions: Revision[] }) {
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [diffData, setDiffData] = useState<Record<number, DiffEntry[]>>({});
   const [loading, setLoading] = useState<number | null>(null);
+  const [failedIds, setFailedIds] = useState<Set<number>>(new Set());
 
-  async function toggleDiff(revisionId: number) {
+  async function fetchDiff(revisionId: number) {
+    setLoading(revisionId);
+    setFailedIds((prev) => {
+      const next = new Set(prev);
+      next.delete(revisionId);
+      return next;
+    });
+    try {
+      const res = await fetch(`/api/revisions/${revisionId}`);
+      if (!res.ok) throw new Error(`Error ${res.status}`);
+      const data = await res.json();
+      setDiffData((prev) => ({
+        ...prev,
+        [revisionId]: data.diff || [],
+      }));
+    } catch {
+      setFailedIds((prev) => new Set(prev).add(revisionId));
+    } finally {
+      setLoading(null);
+    }
+  }
+
+  function toggleDiff(revisionId: number) {
     if (expandedId === revisionId) {
       setExpandedId(null);
       return;
@@ -92,19 +115,7 @@ export default function RevisionList({ revisions }: { revisions: Revision[] }) {
 
     if (diffData[revisionId]) return;
 
-    setLoading(revisionId);
-    try {
-      const res = await fetch(`/api/revisions/${revisionId}`);
-      const data = await res.json();
-      setDiffData((prev) => ({
-        ...prev,
-        [revisionId]: data.diff || [],
-      }));
-    } catch {
-      // silently fail
-    } finally {
-      setLoading(null);
-    }
+    fetchDiff(revisionId);
   }
 
   return (
@@ -153,6 +164,16 @@ export default function RevisionList({ revisions }: { revisions: Revision[] }) {
               <div className="border-t border-zinc-200 bg-zinc-50/50 p-3 dark:border-zinc-800 dark:bg-zinc-900/30">
                 {loading === rev.id ? (
                   <p className="text-xs text-muted-foreground">Loading diff...</p>
+                ) : failedIds.has(rev.id) ? (
+                  <p className="text-xs text-muted-foreground">
+                    Failed to load diff.{" "}
+                    <button
+                      onClick={() => fetchDiff(rev.id)}
+                      className="underline hover:text-zinc-900 dark:hover:text-zinc-100"
+                    >
+                      Retry
+                    </button>
+                  </p>
                 ) : rev.revisionNumber === 1 ? (
                   <p className="text-xs text-muted-foreground">
                     Initial revision — no previous version to compare against.

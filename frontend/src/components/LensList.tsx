@@ -147,12 +147,13 @@ export default function LensList({
     setLoading(true);
     try {
       const res = await fetch(buildApiUrl(nextCursor));
+      if (!res.ok) throw new Error(`Error ${res.status}`);
       const data = await res.json();
       if (gen !== listGenRef.current) return;
       setItems((prev) => dedupeLensRows([...prev, ...data.items]));
       setNextCursor(data.nextCursor);
-    } catch {
-      // ignore
+    } catch (err) {
+      console.error("Failed to load more lenses:", err);
     } finally {
       setLoading(false);
     }
