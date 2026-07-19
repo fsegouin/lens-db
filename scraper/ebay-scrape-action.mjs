@@ -118,7 +118,7 @@ async function scrapeSoldListings(page, cameraName) {
       const priceText = priceEl?.textContent?.trim() ?? "";
       const priceMatch = priceText.match(/([\d,]+\.\d{2})/);
       if (!priceMatch) continue;
-      const price = parseFloat(priceMatch[1].replace(",", ""));
+      const price = parseFloat(priceMatch[1].replace(/,/g, ""));
       if (price <= 0) continue;
 
       const condEl = card.querySelector(".s-card__subtitle .su-styled-text");

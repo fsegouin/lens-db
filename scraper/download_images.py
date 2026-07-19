@@ -141,11 +141,13 @@ def download_for_table(conn, table: str, limit: int | None = None):
     out_dir = BASE_DIR / category
 
     query = f"SELECT slug, name, images FROM {table} WHERE images IS NOT NULL AND images != '[]'::jsonb"
+    query_params: tuple = ()
     if limit:
-        query += f" LIMIT {limit}"
+        query += " LIMIT %s"
+        query_params = (limit,)
 
     with conn.cursor() as cur:
-        cur.execute(query)
+        cur.execute(query, query_params)
         rows = cur.fetchall()
 
     print(f"Found {len(rows)} {category} with images")

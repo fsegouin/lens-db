@@ -6,6 +6,7 @@ const { cameras, lenses, lensCompatibility, systems } = schema;
 
 export const getCompatibleLensesSchema = z.object({
   cameraSlug: z.string().describe("Camera slug"),
+  limit: z.number().min(1).max(100).default(50).describe("Max results to return"),
 });
 
 export type GetCompatibleLensesParams = z.infer<typeof getCompatibleLensesSchema>;
@@ -39,11 +40,16 @@ export async function getCompatibleLenses(params: GetCompatibleLensesParams) {
     .innerJoin(lenses, eq(lensCompatibility.lensId, lenses.id))
     .leftJoin(systems, eq(lenses.systemId, systems.id))
     .where(eq(lensCompatibility.cameraId, camera.id))
-    .orderBy(asc(lenses.name));
+    .orderBy(asc(lenses.name))
+    .limit(params.limit + 1);
+
+  const hasMore = results.length > params.limit;
+  const trimmed = hasMore ? results.slice(0, params.limit) : results;
 
   return {
     camera: camera.name,
-    count: results.length,
-    lenses: results,
+    count: trimmed.length,
+    hasMore,
+    lenses: trimmed,
   };
 }

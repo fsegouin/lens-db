@@ -63,16 +63,29 @@ const MOUNT_MAP = {
   'hasselblad x': 'hasselblad x',
 };
 
+function lookupSystemByName(sysName) {
+  // Exact-match pass first so e.g. 'canon ef' never resolves to 'canon ef-m'
+  for (const [name, sys] of systemsByName) {
+    if (name === sysName) return sys.id;
+  }
+  for (const [name, sys] of systemsByName) {
+    if (name.includes(sysName)) return sys.id;
+  }
+  return null;
+}
+
 function findSystemId(mount) {
   if (!mount) return null;
   const mountLower = mount.toLowerCase();
+  // Exact mount-key pass before the order-dependent substring pass
+  if (MOUNT_MAP[mountLower]) {
+    const id = lookupSystemByName(MOUNT_MAP[mountLower]);
+    if (id) return id;
+  }
   for (const [key, sysName] of Object.entries(MOUNT_MAP)) {
     if (mountLower.includes(key)) {
-      for (const [name, sys] of systemsByName) {
-        if (name === sysName || name.includes(sysName)) {
-          return sys.id;
-        }
-      }
+      const id = lookupSystemByName(sysName);
+      if (id) return id;
     }
   }
   return null;

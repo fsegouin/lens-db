@@ -54,11 +54,11 @@ def main():
         specs = specs_json if isinstance(specs_json, dict) else json.loads(specs_json or "{}")
         correct_type = extract_sensor_type(specs)
 
-        # Flag wrong sensor_type values
+        # Flag wrong sensor_type values (fix even when the correct value is
+        # NULL — previously those were reported but never queued for update)
         if sensor_type and sensor_type not in VALID_SENSOR_TYPES:
             oddities.append((camera_id, name, sensor_type, correct_type))
-            if correct_type:
-                fixes.append((camera_id, name, sensor_type, correct_type))
+            fixes.append((camera_id, name, sensor_type, correct_type))
 
         # Flag cameras where sensor_type is None but we can extract from specs
         elif sensor_type is None and correct_type:
@@ -73,7 +73,7 @@ def main():
     if fixes:
         print(f"=== {len(fixes)} CAMERAS TO FIX ===")
         for camera_id, name, current, correct in fixes:
-            print(f"  [{camera_id}] {name}: '{current}' → '{correct}'")
+            print(f"  [{camera_id}] {name}: '{current}' → '{correct or 'NULL'}'")
 
         response = input(f"\nApply {len(fixes)} fixes? [y/N] ")
         if response.lower() == "y":

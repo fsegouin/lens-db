@@ -30,7 +30,7 @@ const normalizeName = s => s.toLowerCase().replace(/[^a-z0-9]/g, '');
 // Extract key specs from lens name: focal length(s) and max aperture
 function extractKeySpecs(name) {
   const focal = name.match(/(\d+)(?:-(\d+))?\s*mm/i);
-  const aperture = name.match(/[fF]\/?\s*(\d+\.?\d*)/);
+  const aperture = name.match(/[fF]\/\s*(\d+\.?\d*)/);
   return {
     focalMin: focal ? parseInt(focal[1]) : null,
     focalMax: focal ? (focal[2] ? parseInt(focal[2]) : parseInt(focal[1])) : null,

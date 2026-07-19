@@ -1,6 +1,7 @@
 import { z } from "zod";
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, desc, isNull, sql } from "drizzle-orm";
 import { getDb, schema } from "../db";
+import { escapeLikeMetachars } from "../search";
 
 const { cameras, lenses, priceEstimates, priceHistory } = schema;
 
@@ -19,15 +20,19 @@ export async function getPrice(params: GetPriceParams) {
   let [entity] = await db
     .select({ id: table.id, name: table.name })
     .from(table)
-    .where(eq(table.slug, params.slug))
+    .where(and(eq(table.slug, params.slug), isNull(table.mergedIntoId)))
     .limit(1);
 
   if (!entity) {
+    const fuzzyPattern = '%' + escapeLikeMetachars(params.slug) + '%';
     [entity] = await db
       .select({ id: table.id, name: table.name })
       .from(table)
       .where(
-        sql`${table.slug} ILIKE ${'%' + params.slug + '%'} OR ${table.name} ILIKE ${'%' + params.slug + '%'}`
+        and(
+          sql`(${table.slug} ILIKE ${fuzzyPattern} OR ${table.name} ILIKE ${fuzzyPattern})`,
+          isNull(table.mergedIntoId)
+        )
       )
       .orderBy(sql`length(${table.slug})`)
       .limit(1);

@@ -97,8 +97,10 @@ const SERIES_RULES = [
   [/\bLeica\b.*\bAPO\b/i, 'Leica APO', 'leica-apo'],
 
   // Pentax
-  [/\b(?:Pentax|smc Pentax|HD Pentax)\b.*\bDA\*\b/i, 'Pentax DA Star', 'pentax-da-star'],
-  [/\b(?:Pentax|smc Pentax|HD Pentax)\b.*\bD FA\*\b/i, 'Pentax D FA Star', 'pentax-d-fa-star'],
+  // NB: \b after '*' can never match ("DA* 16-50" has no word char after '*');
+  // use a lookahead for whitespace/end instead.
+  [/\b(?:Pentax|smc Pentax|HD Pentax)\b.*\bDA\*(?=\s|$)/i, 'Pentax DA Star', 'pentax-da-star'],
+  [/\b(?:Pentax|smc Pentax|HD Pentax)\b.*\bD FA\*(?=\s|$)/i, 'Pentax D FA Star', 'pentax-d-fa-star'],
   [/\b(?:Pentax|smc Pentax|HD Pentax)\b.*\bD FA\b/i, 'Pentax D FA', 'pentax-d-fa'],
   [/\b(?:Pentax|smc Pentax|HD Pentax)\b.*\bDA\b/i, 'Pentax DA', 'pentax-da'],
   [/\b(?:Pentax|smc Pentax|HD Pentax)\b.*\bFA\b/i, 'Pentax FA', 'pentax-fa'],
