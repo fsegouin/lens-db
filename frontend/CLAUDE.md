@@ -136,13 +136,13 @@ Rules:
 | `/api/chat` | POST | 10/60s | AI chat (streamed) |
 | `/api/auth/login` | POST | 10/60s | User login |
 | `/api/auth/register` | POST | 5/60s | User registration |
-| `/api/edits` | — | 30/3600s | User-submitted edits |
+| `/api/edits` | POST | 30/3600s (per user) | User-submitted edits |
 | `/api/submissions` | POST | 10/3600s | New entity submissions |
 | `/api/duplicates` | POST | 10/3600s | Flag duplicates |
 
-`/api/cron/*` routes are protected by `CRON_SECRET` instead of rate limiting.
+`/api/cron/*` routes are protected by `CRON_SECRET` instead of rate limiting (fail-closed: requests are rejected when `CRON_SECRET` is unset).
 
-All API routes return JSON. Error responses: 400 (validation), 429 (rate limit), 500 (server).
+All API routes return JSON. Error responses: 400 (validation), 401 (auth), 409 (conflict), 429 (rate limit), 500 (server).
 
 ## Code Patterns
 
