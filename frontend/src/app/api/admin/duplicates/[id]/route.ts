@@ -39,6 +39,13 @@ export async function PUT(
   }
 
   if (action === "confirm") {
+    if (keepEntityId !== flag.sourceEntityId && keepEntityId !== flag.targetEntityId) {
+      return NextResponse.json(
+        { error: "keepEntityId must be one of the flagged entities" },
+        { status: 400 }
+      );
+    }
+
     // Determine which entity to keep and which to merge
     const mergeId =
       keepEntityId === flag.sourceEntityId

@@ -8,6 +8,11 @@ import { verifyPassword, createUserSession, userSessionCookieOptions } from "@/l
 
 const loginLimiter = createRateLimit(10, "60 s");
 
+// Well-formed "salt:hash" value used to equalize response timing when the
+// account doesn't exist (prevents user-enumeration via timing side-channel).
+const DUMMY_PASSWORD_HASH =
+  "00000000000000000000000000000000:0000000000000000000000000000000000000000000000000000000000000000";
+
 export async function POST(request: NextRequest) {
   try {
     const ip = getClientIP(request);
@@ -42,6 +47,9 @@ export async function POST(request: NextRequest) {
       .limit(1);
 
     if (!user) {
+      // Burn the same PBKDF2 cost as a real comparison so timing doesn't
+      // reveal whether the account exists.
+      await verifyPassword(password, DUMMY_PASSWORD_HASH);
       return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
     }
 

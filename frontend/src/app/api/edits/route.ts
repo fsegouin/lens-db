@@ -5,7 +5,10 @@ import { requireUserAPI } from "@/lib/user-auth";
 import { createRevision, type EntityType } from "@/lib/revisions";
 import { validateEdit, getUserTier } from "@/lib/edit-validation";
 import { getClientIP, hashIP } from "@/lib/api-utils";
+import { createRateLimit } from "@/lib/rate-limit";
 import { eq } from "drizzle-orm";
+
+const editLimiter = createRateLimit(30, "3600 s"); // 30 edits per hour
 
 const entityTables = {
   lens: lenses,
@@ -60,6 +63,12 @@ export async function POST(request: NextRequest) {
   const authResult = await requireUserAPI(token);
   if (authResult instanceof NextResponse) return authResult;
   const { user } = authResult;
+
+  // Rate limit per user
+  const { success: rateLimitOk } = await editLimiter.limit(`edit:${user.id}`);
+  if (!rateLimitOk) {
+    return NextResponse.json({ error: "Too many edits. Please wait before editing again." }, { status: 429 });
+  }
 
   const body = await request.json();
   const { entityType, entityId, summary, changes } = body as {

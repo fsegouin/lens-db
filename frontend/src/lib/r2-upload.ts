@@ -52,11 +52,77 @@ export async function processAndUpload(buffer: Buffer, r2Key: string): Promise<s
   return publicUrlFor(r2Key);
 }
 
+const FETCH_TIMEOUT_MS = 15_000;
+const MAX_FETCH_BYTES = 20 * 1024 * 1024; // 20 MB
+
+/** Reject loopback, RFC1918, link-local (incl. 169.254.169.254), and similar hosts. */
+function isForbiddenHost(hostname: string): boolean {
+  const host = hostname.toLowerCase().replace(/\.$/, "");
+  if (host === "localhost" || host.endsWith(".localhost")) return true;
+  // IPv6 literal (URL.hostname strips the brackets)
+  if (host.includes(":")) {
+    return (
+      host === "::" ||
+      host === "::1" ||
+      host.startsWith("fe80") || // link-local
+      host.startsWith("fc") || // unique-local fc00::/7
+      host.startsWith("fd") ||
+      host.startsWith("::ffff:") // IPv4-mapped
+    );
+  }
+  // IPv4 literal
+  const m = host.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (m) {
+    const a = Number(m[1]);
+    const b = Number(m[2]);
+    if (a === 0 || a === 10 || a === 127) return true; // this-network, private, loopback
+    if (a === 172 && b >= 16 && b <= 31) return true; // private
+    if (a === 192 && b === 168) return true; // private
+    if (a === 169 && b === 254) return true; // link-local (cloud metadata)
+    if (a === 100 && b >= 64 && b <= 127) return true; // CGNAT
+  }
+  return false;
+}
+
 export async function fetchAndUpload(sourceUrl: string, r2Key: string): Promise<string> {
+  let url: URL;
+  try {
+    url = new URL(sourceUrl);
+  } catch {
+    throw new Error("Invalid source URL");
+  }
+  if (url.protocol !== "https:") {
+    throw new Error("Only https:// source URLs are allowed");
+  }
+  if (isForbiddenHost(url.hostname)) {
+    throw new Error("Source URL host is not allowed");
+  }
+
   const resp = await fetch(sourceUrl, {
     headers: { "User-Agent": "lens-db-image-upload/1.0 (https://lens-db.com)" },
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   });
   if (!resp.ok) throw new Error(`fetch ${sourceUrl} -> ${resp.status}`);
-  const buffer = Buffer.from(await resp.arrayBuffer());
+
+  const contentLength = Number(resp.headers.get("content-length"));
+  if (Number.isFinite(contentLength) && contentLength > MAX_FETCH_BYTES) {
+    throw new Error(`Source exceeds ${MAX_FETCH_BYTES} byte limit`);
+  }
+
+  if (!resp.body) throw new Error("Empty response body");
+  const reader = resp.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > MAX_FETCH_BYTES) {
+      await reader.cancel();
+      throw new Error(`Source exceeds ${MAX_FETCH_BYTES} byte limit`);
+    }
+    chunks.push(value);
+  }
+  const buffer = Buffer.concat(chunks);
   return processAndUpload(buffer, r2Key);
 }

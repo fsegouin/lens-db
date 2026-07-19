@@ -31,8 +31,28 @@ export async function POST(request: NextRequest) {
   const { success } = await rateLimiters.chat.limit(ip);
   if (!success) return rateLimitedResponse();
 
-  const body = await request.json();
-  const allMessages: UIMessage[] = body.messages ?? [body.message];
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return Response.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+
+  const allMessages: UIMessage[] = Array.isArray(body.messages)
+    ? body.messages
+    : body.message
+      ? [body.message]
+      : [];
+
+  if (allMessages.length === 0) {
+    return Response.json({ error: "messages must be a non-empty array" }, { status: 400 });
+  }
+  if (allMessages.length > 50) {
+    return Response.json({ error: "Too many messages" }, { status: 400 });
+  }
+  if (JSON.stringify(allMessages).length > 32 * 1024) {
+    return Response.json({ error: "Messages payload too large" }, { status: 400 });
+  }
 
   const result = streamText({
     model: gateway("google/gemini-2.5-flash"),
@@ -40,6 +60,9 @@ export async function POST(request: NextRequest) {
     messages: await convertToModelMessages(allMessages),
     tools: mcpTools,
     stopWhen: stepCountIs(10),
+    onError: ({ error }) => {
+      console.error("Chat stream error:", error);
+    },
     providerOptions: {
       vertex: {
         thinkingConfig: { thinkingBudget: 0 },

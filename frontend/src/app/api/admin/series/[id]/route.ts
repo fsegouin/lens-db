@@ -52,6 +52,13 @@ export async function PUT(
   const body = await request.json();
   const { name, slug, description, lensIds } = body;
 
+  // Validate everything before the first write (avoid partial updates)
+  if (lensIds !== undefined) {
+    if (!Array.isArray(lensIds) || !lensIds.every((id: unknown) => typeof id === "number" && Number.isInteger(id))) {
+      return NextResponse.json({ error: "lensIds must be an array of integers" }, { status: 400 });
+    }
+  }
+
   const updates: Record<string, unknown> = {};
   if (name !== undefined) updates.name = name;
   if (slug !== undefined) updates.slug = slug;
@@ -68,10 +75,6 @@ export async function PUT(
   }
 
   if (lensIds !== undefined) {
-    if (!Array.isArray(lensIds) || !lensIds.every((id: unknown) => typeof id === "number" && Number.isInteger(id))) {
-      return NextResponse.json({ error: "lensIds must be an array of integers" }, { status: 400 });
-    }
-
     // Delete all existing memberships and insert new ones
     await db
       .delete(lensSeriesMemberships)

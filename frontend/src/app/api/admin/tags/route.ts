@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { tags } from "@/db/schema";
 import { requireAdminAPI } from "@/lib/admin-auth";
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, or } from "drizzle-orm";
 
 export async function GET(request: NextRequest) {
   const token = request.cookies.get("user_session")?.value;
@@ -34,10 +34,19 @@ export async function POST(request: NextRequest) {
     .returning();
 
   if (!created) {
-    const [existing] = await db.select().from(tags).where(
-      eq(tags.name, name.trim())
+    // Conflict on name or slug — return the existing tag if we can find it
+    const [existing] = await db
+      .select()
+      .from(tags)
+      .where(or(eq(tags.name, name.trim()), eq(tags.slug, slug)))
+      .limit(1);
+    if (existing) {
+      return NextResponse.json(existing);
+    }
+    return NextResponse.json(
+      { error: "Tag conflicts with an existing tag" },
+      { status: 409 }
     );
-    return NextResponse.json(existing);
   }
 
   return NextResponse.json(created, { status: 201 });

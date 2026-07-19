@@ -95,6 +95,7 @@ export async function POST(
       "lensElements", "lensGroups", "diaphragmBlades",
       "yearIntroduced", "yearDiscontinued",
       "isZoom", "isMacro", "isPrime", "hasStabilization", "hasAutofocus",
+      "coverage",
     ],
     camera: [
       "name", "url", "description", "alias",
@@ -116,10 +117,11 @@ export async function POST(
     return NextResponse.json({ error: "No valid changes in this edit" }, { status: 400 });
   }
 
-  // Also allow "slug" for new entity creation
-  if (rawChanges.slug) changes.slug = rawChanges.slug;
-
   const isNewEntity = edit.entityId === 0;
+
+  // Also allow "slug" for new entity creation only — never on updates
+  if (isNewEntity && rawChanges.slug) changes.slug = rawChanges.slug;
+
   let targetEntityId: number;
 
   if (isNewEntity) {

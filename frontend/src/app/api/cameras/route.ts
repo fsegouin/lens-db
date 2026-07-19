@@ -165,6 +165,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ items, nextCursor, total });
   } catch (error) {
     console.error("GET /api/cameras error:", error);
-    return NextResponse.json({ items: [], nextCursor: null, total: 0 });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

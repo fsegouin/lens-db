@@ -38,14 +38,14 @@ export async function GET(request: NextRequest) {
   const branches: SQL[] = [];
 
   if (lensCond) {
-    branches.push(sql`(SELECT id, name, slug, 'lens' AS type FROM ${lenses} WHERE ${lensCond} LIMIT 5)`);
+    branches.push(sql`(SELECT id, name, slug, 'lens' AS type FROM ${lenses} WHERE ${lensCond} AND ${lenses.mergedIntoId} IS NULL LIMIT 5)`);
   }
   const cameraCond =
     cameraNameCond && cameraAliasCond
       ? sql`((${cameraNameCond}) OR (${cameraAliasCond}))`
       : (cameraNameCond ?? cameraAliasCond);
   if (cameraCond) {
-    branches.push(sql`(SELECT id, name, slug, 'camera' AS type FROM ${cameras} WHERE ${cameraCond} LIMIT 5)`);
+    branches.push(sql`(SELECT id, name, slug, 'camera' AS type FROM ${cameras} WHERE ${cameraCond} AND ${cameras.mergedIntoId} IS NULL LIMIT 5)`);
   }
   const systemCond =
     systemNameCond && systemMfrCond
