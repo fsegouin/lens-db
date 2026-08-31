@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { db } from "@/db";
 import { cameras } from "@/db/schema";
 import { requireAdminAPI, getAdminUserFromToken } from "@/lib/admin-auth";
@@ -81,6 +81,7 @@ export async function PUT(
   });
 
   revalidatePath(`/cameras/${updated.slug}`);
+  revalidateTag("cameras", "max");
 
   return NextResponse.json(updated);
 }
@@ -101,6 +102,7 @@ export async function DELETE(
 
   if (deleted) {
     revalidatePath(`/cameras/${deleted.slug}`);
+    revalidateTag("cameras", "max");
   }
 
   return NextResponse.json({ success: true });
