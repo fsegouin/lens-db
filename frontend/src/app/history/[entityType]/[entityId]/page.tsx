@@ -8,7 +8,7 @@ import BackButton from "@/components/BackButton";
 import { PageTransition } from "@/components/page-transition";
 import RevisionList from "@/components/RevisionList";
 
-export const revalidate = 3600; // Revision history changes rarely; hourly is fresh enough
+export const revalidate = 86400; // Revision history changes rarely; daily is fresh enough
 
 const validTypes = new Set(["lens", "camera", "system", "collection", "series"]);
 

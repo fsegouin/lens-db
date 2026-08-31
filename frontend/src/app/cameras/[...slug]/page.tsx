@@ -1,11 +1,8 @@
 import { Suspense } from "react";
 import { notFound, redirect } from "next/navigation";
-import { eq } from "drizzle-orm";
 import BackButton from "@/components/BackButton";
-import { db } from "@/db";
-import { cameras } from "@/db/schema";
 import { getEntityPriceEstimate, getEntityPriceHistory } from "@/lib/prices";
-import { getCameraBySlug } from "@/lib/cameras";
+import { getCameraBySlug, getCameraSlugById } from "@/lib/cameras";
 import ViewTracker from "@/components/ViewTracker";
 import ImageGallery from "@/components/ImageGallery";
 import RatingWidget from "@/components/RatingWidget";
@@ -53,12 +50,8 @@ export default async function CameraDetailPage({
 
   // Redirect if this entity was merged into another
   if (camera.mergedIntoId) {
-    const [target] = await db
-      .select({ slug: cameras.slug })
-      .from(cameras)
-      .where(eq(cameras.id, camera.mergedIntoId))
-      .limit(1);
-    if (target) redirect(`/cameras/${target.slug}`);
+    const targetSlug = await getCameraSlugById(camera.mergedIntoId);
+    if (targetSlug) redirect(`/cameras/${targetSlug}`);
   }
 
   const specs = (camera.specs ?? {}) as Record<string, string>;

@@ -19,3 +19,20 @@ const _getCameraBySlug = unstable_cache(
 );
 
 export const getCameraBySlug = cache(_getCameraBySlug);
+
+// Redirect target for merged cameras; cached so crawls of old URLs of
+// merged entities don't query per request.
+const _getCameraSlugById = unstable_cache(
+  async (id: number) => {
+    const [row] = await db
+      .select({ slug: cameras.slug })
+      .from(cameras)
+      .where(eq(cameras.id, id))
+      .limit(1);
+    return row?.slug ?? null;
+  },
+  ["camera-slug-by-id"],
+  { revalidate: 2592000, tags: ["cameras"] },
+);
+
+export const getCameraSlugById = cache(_getCameraSlugById);
