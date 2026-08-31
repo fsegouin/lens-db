@@ -15,7 +15,7 @@ const _getCameraBySlug = unstable_cache(
     return result ?? null;
   },
   ["camera-by-slug"],
-  { revalidate: 604800, tags: ["cameras"] },
+  { revalidate: 2592000, tags: ["cameras"] },
 );
 
 export const getCameraBySlug = cache(_getCameraBySlug);

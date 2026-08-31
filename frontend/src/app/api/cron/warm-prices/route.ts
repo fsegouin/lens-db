@@ -3,13 +3,15 @@ import { isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { lenses, cameras } from "@/db/schema";
 import { getEntityPriceEstimate, getEntityPriceHistory } from "@/lib/prices";
+import { getLensBySlug } from "@/lib/lenses";
+import { getCameraBySlug } from "@/lib/cameras";
 
 export const maxDuration = 300;
 
-// Fills the per-entity price Data Cache in batches so page renders serve
-// prices without touching Postgres. Run after a deploy that cold-starts
-// the price caches: GET ?entityType=lens|camera&offset=N&limit=M until
-// the response reports done: true.
+// Fills the per-entity price and by-slug Data Caches in batches so page
+// renders serve without touching Postgres. Run after a deploy that
+// cold-starts the caches: GET ?entityType=lens|camera&offset=N&limit=M
+// until the response reports done: true.
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET;
@@ -28,7 +30,7 @@ export async function GET(request: NextRequest) {
   try {
     const table = entityType === "camera" ? cameras : lenses;
     const rows = await db
-      .select({ id: table.id })
+      .select({ id: table.id, slug: table.slug })
       .from(table)
       .where(isNull(table.mergedIntoId))
       .orderBy(table.id)
@@ -43,6 +45,7 @@ export async function GET(request: NextRequest) {
           await Promise.all([
             getEntityPriceEstimate(entityType, r.id),
             getEntityPriceHistory(entityType, r.id),
+            entityType === "camera" ? getCameraBySlug(r.slug) : getLensBySlug(r.slug),
           ]);
           warmed++;
         }),

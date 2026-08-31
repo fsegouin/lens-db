@@ -15,7 +15,7 @@ const _getLensBySlug = unstable_cache(
     return result ?? null;
   },
   ["lens-by-slug"],
-  { revalidate: 604800, tags: ["lenses"] },
+  { revalidate: 2592000, tags: ["lenses"] },
 );
 
 export const getLensBySlug = cache(_getLensBySlug);
