@@ -19,3 +19,20 @@ const _getLensBySlug = unstable_cache(
 );
 
 export const getLensBySlug = cache(_getLensBySlug);
+
+// Redirect target for merged lenses; cached so crawls of old URLs of
+// merged entities don't query per request.
+const _getLensSlugById = unstable_cache(
+  async (id: number) => {
+    const [row] = await db
+      .select({ slug: lenses.slug })
+      .from(lenses)
+      .where(eq(lenses.id, id))
+      .limit(1);
+    return row?.slug ?? null;
+  },
+  ["lens-slug-by-id"],
+  { revalidate: 2592000, tags: ["lenses"] },
+);
+
+export const getLensSlugById = cache(_getLensSlugById);

@@ -1,14 +1,11 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { eq } from "drizzle-orm";
 import BackButton from "@/components/BackButton";
-import { db } from "@/db";
-import { lenses } from "@/db/schema";
 import { getEntityPriceEstimate, getEntityPriceHistory } from "@/lib/prices";
 import { formatDescription } from "@/lib/format-description";
 import { formatMagnification } from "@/lib/format-magnification";
 import { getImages } from "@/lib/images";
-import { getLensBySlug } from "@/lib/lenses";
+import { getLensBySlug, getLensSlugById } from "@/lib/lenses";
 import ViewTracker from "@/components/ViewTracker";
 import RatingWidget from "@/components/RatingWidget";
 import ImageGallery from "@/components/ImageGallery";
@@ -53,12 +50,8 @@ export default async function LensDetailPage({
 
   // Redirect if this entity was merged into another
   if (lens.mergedIntoId) {
-    const [target] = await db
-      .select({ slug: lenses.slug })
-      .from(lenses)
-      .where(eq(lenses.id, lens.mergedIntoId))
-      .limit(1);
-    if (target) redirect(`/lenses/${target.slug}`);
+    const targetSlug = await getLensSlugById(lens.mergedIntoId);
+    if (targetSlug) redirect(`/lenses/${targetSlug}`);
   }
 
   const [priceEstimate, priceHistoryRows] = await Promise.all([
