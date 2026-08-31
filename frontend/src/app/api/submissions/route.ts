@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { checkBotId } from "botid/server";
 import { db } from "@/db";
 import { lenses, cameras, pendingEdits } from "@/db/schema";
 import { requireUserAPI } from "@/lib/user-auth";
@@ -44,6 +45,11 @@ const numericFields = new Set([
 ]);
 
 export async function POST(request: NextRequest) {
+  const verification = await checkBotId();
+  if (verification.isBot) {
+    return NextResponse.json({ error: "Access denied" }, { status: 403 });
+  }
+
   const token = request.cookies.get("user_session")?.value;
   const authResult = await requireUserAPI(token);
   if (authResult instanceof NextResponse) return authResult;

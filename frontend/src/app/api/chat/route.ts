@@ -1,5 +1,6 @@
 import { streamText, convertToModelMessages, UIMessage, stepCountIs } from "ai";
 import { gateway } from "@ai-sdk/gateway";
+import { checkBotId } from "botid/server";
 import { NextRequest } from "next/server";
 import { getClientIP, rateLimitedResponse } from "@/lib/api-utils";
 import { rateLimiters } from "@/lib/rate-limit";
@@ -27,6 +28,11 @@ RULES FOR RESPONDING TO THE USER:
 - NEVER invent, guess, or construct a slug from the name. If a lens or camera you mention was not returned by a tool, refer to it in plain text with no link.`;
 
 export async function POST(request: NextRequest) {
+  const verification = await checkBotId();
+  if (verification.isBot) {
+    return Response.json({ error: "Access denied" }, { status: 403 });
+  }
+
   const ip = getClientIP(request);
   const { success } = await rateLimiters.chat.limit(ip);
   if (!success) return rateLimitedResponse();

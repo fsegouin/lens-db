@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { checkBotId } from "botid/server";
 import { db } from "@/db";
 import { users, emailVerificationTokens } from "@/db/schema";
 import { eq } from "drizzle-orm";
@@ -11,6 +12,11 @@ const registerLimiter = createRateLimit(5, "60 s");
 
 export async function POST(request: NextRequest) {
   try {
+    const verification = await checkBotId();
+    if (verification.isBot) {
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    }
+
     const ip = getClientIP(request);
     const { success } = await registerLimiter.limit(`register:${ip}`);
     if (!success) return rateLimitedResponse();
