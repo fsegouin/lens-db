@@ -1,10 +1,10 @@
 import { db } from "@/db";
-import { escapeLikeMetachars, parseMultiValueParam } from "@/lib/api-utils";
-import { cameras, systems, priceEstimates } from "@/db/schema";
-import { asc, desc, eq, and, or, sql, isNull, type AnyColumn } from "drizzle-orm";
+import { cameras, systems } from "@/db/schema";
+import { asc, eq } from "drizzle-orm";
 import { unstable_cache } from "next/cache";
 import CameraList from "@/components/CameraList";
 import { PageTransition } from "@/components/page-transition";
+import { listCameras, type CameraListItem } from "@/lib/camera-list";
 
 const getCachedDropdownData = unstable_cache(
   async () => {
@@ -82,8 +82,6 @@ type SearchParams = Promise<{
   order?: string;
 }>;
 
-const PAGE_SIZE = 50;
-
 export default async function CamerasPage({
   searchParams,
 }: {
@@ -91,12 +89,9 @@ export default async function CamerasPage({
 }) {
   const params = await searchParams;
 
-  let initialItems: {
-    camera: typeof cameras.$inferSelect;
-    system: typeof systems.$inferSelect | null;
-    avgPrice: number | null;
-  }[] = [];
+  let initialItems: CameraListItem[] = [];
   let total = 0;
+  let nextCursor: number | null = null;
   let systemList: { name: string; slug: string }[] = [];
   let types: string[] = [];
   let models: string[] = [];
@@ -115,121 +110,28 @@ export default async function CamerasPage({
     sensorSizes = dropdownData.sensorSizes;
     cropFactors = dropdownData.cropFactors;
 
-    const conditions: ReturnType<typeof and>[] = [isNull(cameras.mergedIntoId)];
-
-    if (params.q) {
-      const words = params.q.trim().split(/\s+/).filter(Boolean);
-      for (const word of words) {
-        const clean = word.replace(/[^a-zA-Z0-9.]/g, "");
-        const escaped = clean.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-        const startsWithDigit = /^\d/.test(clean);
-        const pattern = startsWithDigit ? `\\m${escaped}` : escaped;
-        conditions.push(
-          or(
-            sql`regexp_replace(${cameras.name}, '[^a-zA-Z0-9. ]', '', 'g') ~* ${pattern}`,
-            sql`regexp_replace(${cameras.alias}, '[^a-zA-Z0-9. ]', '', 'g') ~* ${pattern}`
-          )
-        );
-      }
-    }
-    if (params.system) {
-      conditions.push(eq(systems.slug, params.system));
-    }
-    if (params.sensorSize) {
-      conditions.push(eq(cameras.sensorSize, params.sensorSize));
-    }
-    if (params.type) {
-      conditions.push(
-        sql`${cameras.specs}->>'Type' = ${params.type}`
-      );
-    }
-    if (params.model) {
-      conditions.push(
-        sql`${cameras.specs}->>'Model' LIKE ${params.model + "%"}`
-      );
-    }
-    const filmTypeList = parseMultiValueParam(params.filmType);
-    if (filmTypeList.length > 0) {
-      conditions.push(
-        or(
-          ...filmTypeList.map(
-            (v) =>
-              sql`${cameras.specs}->>'Film type' ILIKE ${"%" + escapeLikeMetachars(v) + "%"}`,
-          ),
-        ),
-      );
-    }
-    if (params.sensorType) {
-      conditions.push(eq(cameras.sensorType, params.sensorType));
-    }
-    if (params.cropFactor) {
-      conditions.push(
-        sql`${cameras.specs}->>'Crop factor' = ${params.cropFactor}`
-      );
-    }
-    if (params.year) {
-      conditions.push(eq(cameras.yearIntroduced, parseInt(params.year)));
-    }
-    const avgPrice = priceEstimates.medianPrice;
-
-    if (params.priceMin) {
-      const val = parseInt(params.priceMin);
-      if (Number.isFinite(val))
-        conditions.push(sql`${avgPrice} >= ${val}`);
-    }
-    if (params.priceMax) {
-      const val = parseInt(params.priceMax);
-      if (Number.isFinite(val))
-        conditions.push(sql`${avgPrice} <= ${val}`);
-    }
-
-    const where = conditions.length > 0 ? and(...conditions) : undefined;
-
-    const sortColumns: Record<string, AnyColumn> = {
-      name: cameras.name,
-      system: systems.name,
-      year: cameras.yearIntroduced,
-      megapixels: cameras.megapixels,
-      weight: cameras.weightG,
-      price: avgPrice,
-    };
-    const sortKey = params.sort || "";
-    const sortCol = sortColumns[sortKey] || cameras.name;
-    const orderFn = params.order === "desc" ? desc : asc;
-    const nullsLast = sortKey === "price"
-      ? [sql`${avgPrice} IS NULL`, orderFn(sortCol)]
-      : [orderFn(sortCol)];
-
-    const [[countResult], items] = await Promise.all([
-      db
-        .select({ count: sql<number>`count(*)` })
-        .from(cameras)
-        .leftJoin(systems, eq(cameras.systemId, systems.id))
-        .leftJoin(priceEstimates, and(
-          eq(priceEstimates.entityType, "camera"),
-          eq(priceEstimates.entityId, cameras.id),
-        ))
-        .where(where),
-      db
-        .select({ camera: cameras, system: systems, avgPrice: avgPrice })
-        .from(cameras)
-        .leftJoin(systems, eq(cameras.systemId, systems.id))
-        .leftJoin(priceEstimates, and(
-          eq(priceEstimates.entityType, "camera"),
-          eq(priceEstimates.entityId, cameras.id),
-        ))
-        .where(where)
-        .orderBy(...nullsLast)
-        .limit(PAGE_SIZE)
-        .offset(0),
-    ]);
-    total = Number(countResult.count);
-    initialItems = items;
+    const result = await listCameras({
+      q: params.q,
+      system: params.system,
+      type: params.type,
+      model: params.model,
+      filmType: params.filmType,
+      sensorSize: params.sensorSize,
+      sensorType: params.sensorType,
+      cropFactor: params.cropFactor,
+      year: params.year,
+      priceMin: params.priceMin,
+      priceMax: params.priceMax,
+      sort: params.sort,
+      order: params.order,
+      cursor: 0,
+    });
+    initialItems = result.items;
+    total = result.total;
+    nextCursor = result.nextCursor;
   } catch {
     // DB not connected
   }
-
-  const nextCursor = PAGE_SIZE < total ? PAGE_SIZE : null;
 
   return (
     <PageTransition>

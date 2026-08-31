@@ -1,16 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/db";
-import { cameras, systems, priceEstimates } from "@/db/schema";
-import { asc, desc, eq, and, or, sql, isNull, type AnyColumn } from "drizzle-orm";
-import {
-  escapeLikeMetachars,
-  getClientIP,
-  parseMultiValueParam,
-  rateLimitedResponse,
-} from "@/lib/api-utils";
+import { getClientIP, rateLimitedResponse } from "@/lib/api-utils";
 import { rateLimiters } from "@/lib/rate-limit";
+import { listCameras } from "@/lib/camera-list";
 
-const PAGE_SIZE = 50;
 const MAX_OFFSET = 10_000;
 
 export async function GET(request: NextRequest) {
@@ -19,150 +11,32 @@ export async function GET(request: NextRequest) {
   if (!success) return rateLimitedResponse();
 
   const { searchParams } = request.nextUrl;
-  const q = searchParams.get("q")?.slice(0, 200) || undefined;
-  const slug = searchParams.get("slug") || undefined;
-  const system = searchParams.get("system") || undefined;
-  const type = searchParams.get("type") || undefined;
-  const model = searchParams.get("model") || undefined;
-  const filmTypeList = parseMultiValueParam(searchParams.get("filmType"));
-  const sensorSize = searchParams.get("sensorSize") || undefined;
-  const sensorType = searchParams.get("sensorType") || undefined;
-  const cropFactor = searchParams.get("cropFactor") || undefined;
-  const year = searchParams.get("year") || undefined;
-  const priceMin = searchParams.get("priceMin") || undefined;
-  const priceMax = searchParams.get("priceMax") || undefined;
-  const sort = searchParams.get("sort") || undefined;
-  const order = searchParams.get("order") || undefined;
   const rawCursor = parseInt(searchParams.get("cursor") || "0");
   const cursor = Math.min(
     Math.max(Number.isFinite(rawCursor) ? rawCursor : 0, 0),
     MAX_OFFSET
   );
 
-  const avgPrice = priceEstimates.medianPrice;
-
   try {
-    const conditions: ReturnType<typeof and>[] = [isNull(cameras.mergedIntoId)];
+    const result = await listCameras({
+      q: searchParams.get("q")?.slice(0, 200) || undefined,
+      slug: searchParams.get("slug") || undefined,
+      system: searchParams.get("system") || undefined,
+      type: searchParams.get("type") || undefined,
+      model: searchParams.get("model") || undefined,
+      filmType: searchParams.get("filmType") || undefined,
+      sensorSize: searchParams.get("sensorSize") || undefined,
+      sensorType: searchParams.get("sensorType") || undefined,
+      cropFactor: searchParams.get("cropFactor") || undefined,
+      year: searchParams.get("year") || undefined,
+      priceMin: searchParams.get("priceMin") || undefined,
+      priceMax: searchParams.get("priceMax") || undefined,
+      sort: searchParams.get("sort") || undefined,
+      order: searchParams.get("order") || undefined,
+      cursor,
+    });
 
-    if (q) {
-      const words = q.trim().split(/\s+/).filter(Boolean).slice(0, 10);
-      for (const word of words) {
-        const clean = word.replace(/[^a-zA-Z0-9.]/g, "");
-        if (!clean) continue;
-        const escaped = clean.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-        const startsWithDigit = /^\d/.test(clean);
-        const pattern = startsWithDigit ? `\\m${escaped}` : escaped;
-        conditions.push(
-          or(
-            sql`regexp_replace(${cameras.name}, '[^a-zA-Z0-9. ]', '', 'g') ~* ${pattern}`,
-            sql`regexp_replace(${cameras.alias}, '[^a-zA-Z0-9. ]', '', 'g') ~* ${pattern}`
-          )
-        );
-      }
-    }
-    if (slug) {
-      conditions.push(eq(cameras.slug, slug));
-    }
-    if (system) {
-      conditions.push(eq(systems.slug, system));
-    }
-    if (type) {
-      conditions.push(sql`${cameras.specs}->>'Type' = ${type}`);
-    }
-    if (model) {
-      conditions.push(
-        sql`${cameras.specs}->>'Model' LIKE ${model + "%"}`
-      );
-    }
-    if (filmTypeList.length > 0) {
-      conditions.push(
-        or(
-          ...filmTypeList.map(
-            (v) =>
-              sql`${cameras.specs}->>'Film type' ILIKE ${"%" + escapeLikeMetachars(v) + "%"}`,
-          ),
-        ),
-      );
-    }
-    if (sensorSize) {
-      conditions.push(eq(cameras.sensorSize, sensorSize));
-    }
-    if (sensorType) {
-      conditions.push(eq(cameras.sensorType, sensorType));
-    }
-    if (cropFactor) {
-      conditions.push(
-        sql`${cameras.specs}->>'Crop factor' = ${cropFactor}`
-      );
-    }
-    if (year) {
-      const val = parseInt(year);
-      if (Number.isFinite(val))
-        conditions.push(eq(cameras.yearIntroduced, val));
-    }
-    if (priceMin) {
-      const val = parseInt(priceMin);
-      if (Number.isFinite(val))
-        conditions.push(sql`${avgPrice} >= ${val}`);
-    }
-    if (priceMax) {
-      const val = parseInt(priceMax);
-      if (Number.isFinite(val))
-        conditions.push(sql`${avgPrice} <= ${val}`);
-    }
-
-    const where = conditions.length > 0 ? and(...conditions) : undefined;
-
-    const sortColumns: Record<string, AnyColumn> = {
-      name: cameras.name,
-      system: systems.name,
-      year: cameras.yearIntroduced,
-      megapixels: cameras.megapixels,
-      weight: cameras.weightG,
-      price: avgPrice,
-    };
-    const sortKey = sort || "";
-    const sortCol = sortColumns[sortKey] || cameras.name;
-    const orderFn = order === "desc" ? desc : asc;
-    // For price sorting, push NULLs to the end
-    const nullsLast = sortKey === "price"
-      ? [sql`${avgPrice} IS NULL`, orderFn(sortCol)]
-      : [orderFn(sortCol)];
-
-    const itemsPromise = db
-      .select({ camera: cameras, system: systems, avgPrice: avgPrice })
-      .from(cameras)
-      .leftJoin(systems, eq(cameras.systemId, systems.id))
-      .leftJoin(priceEstimates, and(
-        eq(priceEstimates.entityType, "camera"),
-        eq(priceEstimates.entityId, cameras.id),
-      ))
-      .where(where)
-      .orderBy(...nullsLast)
-      .limit(PAGE_SIZE)
-      .offset(cursor);
-
-    // Total only matters for the SSR-rendered first page (cursor=0).
-    // Cursor pagination from the client already has total from SSR.
-    const countPromise =
-      cursor === 0
-        ? db
-            .select({ count: sql<number>`count(*)` })
-            .from(cameras)
-            .leftJoin(systems, eq(cameras.systemId, systems.id))
-            .leftJoin(priceEstimates, and(
-              eq(priceEstimates.entityType, "camera"),
-              eq(priceEstimates.entityId, cameras.id),
-            ))
-            .where(where)
-        : null;
-
-    const [items, countRows] = await Promise.all([itemsPromise, countPromise]);
-    const total = countRows ? Number(countRows[0].count) : -1;
-    const nextCursor =
-      items.length === PAGE_SIZE ? cursor + PAGE_SIZE : null;
-
-    return NextResponse.json({ items, nextCursor, total });
+    return NextResponse.json(result);
   } catch (error) {
     console.error("GET /api/cameras error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

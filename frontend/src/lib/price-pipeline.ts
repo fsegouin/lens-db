@@ -1,5 +1,6 @@
 import { revalidateTag } from "next/cache";
 import { db } from "@/db";
+import { priceTag } from "@/lib/prices";
 import { priceHistory, priceEstimates } from "@/db/schema";
 import { eq, and, sql, gt, inArray, isNull } from "drizzle-orm";
 import type { RawListing } from "@/lib/price-classify";
@@ -159,7 +160,7 @@ export async function recomputePriceEstimates(
         target: [priceEstimates.entityType, priceEstimates.entityId],
         set: { extractedAt: now },
       });
-    revalidateTag("prices", "max");
+    revalidateTag(priceTag(entityType, entityId), "max");
     return;
   }
 
@@ -264,5 +265,5 @@ export async function recomputePriceEstimates(
       },
     });
 
-  revalidateTag("prices", "max");
+  revalidateTag(priceTag(entityType, entityId), "max");
 }

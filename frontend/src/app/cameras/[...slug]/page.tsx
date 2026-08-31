@@ -3,8 +3,9 @@ import { notFound, redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import BackButton from "@/components/BackButton";
 import { db } from "@/db";
-import { cameras, systems } from "@/db/schema";
+import { cameras } from "@/db/schema";
 import { getEntityPriceEstimate, getEntityPriceHistory } from "@/lib/prices";
+import { getCameraBySlug } from "@/lib/cameras";
 import ViewTracker from "@/components/ViewTracker";
 import ImageGallery from "@/components/ImageGallery";
 import RatingWidget from "@/components/RatingWidget";
@@ -29,11 +30,7 @@ export async function generateMetadata({
 }) {
   const { slug } = await params;
   const fullSlug = slug.join("/");
-  const [result] = await db
-    .select({ camera: cameras })
-    .from(cameras)
-    .where(eq(cameras.slug, fullSlug))
-    .limit(1);
+  const result = await getCameraBySlug(fullSlug);
 
   return {
     title: result ? `${result.camera.name} | The Lens DB` : "Camera Not Found",
@@ -48,12 +45,7 @@ export default async function CameraDetailPage({
   const { slug } = await params;
   const fullSlug = slug.join("/");
 
-  const [result] = await db
-    .select({ camera: cameras, system: systems })
-    .from(cameras)
-    .leftJoin(systems, eq(cameras.systemId, systems.id))
-    .where(eq(cameras.slug, fullSlug))
-    .limit(1);
+  const result = await getCameraBySlug(fullSlug);
 
   if (!result) notFound();
 

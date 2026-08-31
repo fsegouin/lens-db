@@ -1,0 +1,241 @@
+import { unstable_cache } from "next/cache";
+import { db } from "@/db";
+import { lenses, systems, lensSeries, lensSeriesMemberships, priceEstimates } from "@/db/schema";
+import { asc, desc, eq, and, gte, lte, sql, inArray, isNull, type AnyColumn } from "drizzle-orm";
+
+const PAGE_SIZE = 50;
+
+export type LensListParams = {
+  q?: string;
+  slug?: string;
+  brand?: string;
+  system?: string;
+  coverage?: string;
+  type?: string;
+  minFocal?: string;
+  maxFocal?: string;
+  minAperture?: string;
+  maxAperture?: string;
+  year?: string;
+  lensType?: string;
+  era?: string;
+  productionStatus?: string;
+  series?: string;
+  priceMin?: string;
+  priceMax?: string;
+  sort?: string;
+  order?: string;
+  cursor: number;
+};
+
+export type LensListItem = {
+  lens: typeof lenses.$inferSelect;
+  system: typeof systems.$inferSelect | null;
+  avgPrice: number | null;
+  series: { name: string; slug: string }[];
+};
+
+export type LensListResult = {
+  items: LensListItem[];
+  nextCursor: number | null;
+  total: number;
+};
+
+// Shared by the /lenses page and /api/lenses. Cached for an hour so
+// repeated identical requests (list pages are the most-crawled paths)
+// don't each hit Postgres; admin edits bust the "lenses" tag.
+export const listLenses = unstable_cache(
+  async (p: LensListParams): Promise<LensListResult> => {
+    const cursor = p.cursor;
+    const avgPrice = priceEstimates.medianPrice;
+
+    const conditions: ReturnType<typeof and>[] = [isNull(lenses.mergedIntoId)];
+
+    if (p.q) {
+      // Split query into words, match each with word boundaries
+      // Strip punctuation so "f2" matches "F/2", use \m for word boundary so "35mm" doesn't match "135mm"
+      const words = p.q.trim().split(/\s+/).filter(Boolean).slice(0, 10);
+      for (const word of words) {
+        const clean = word.replace(/[^a-zA-Z0-9.]/g, "");
+        if (!clean) continue;
+        // Escape regex special chars in the clean word
+        const escaped = clean.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        // Use \m (word start boundary) when the word starts with a digit to prevent "35" matching inside "135"
+        const startsWithDigit = /^\d/.test(clean);
+        const pattern = startsWithDigit ? `\\m${escaped}` : escaped;
+        conditions.push(
+          sql`regexp_replace(${lenses.name}, '[^a-zA-Z0-9. ]', '', 'g') ~* ${pattern}`
+        );
+      }
+    }
+    if (p.slug) {
+      conditions.push(eq(lenses.slug, p.slug));
+    }
+    if (p.brand) {
+      conditions.push(eq(lenses.brand, p.brand));
+    }
+    if (p.system) {
+      conditions.push(eq(systems.slug, p.system));
+    }
+    if (p.coverage) {
+      conditions.push(eq(lenses.coverage, p.coverage));
+    }
+    if (p.type === "zoom") {
+      conditions.push(eq(lenses.isZoom, true));
+    } else if (p.type === "prime") {
+      conditions.push(eq(lenses.isPrime, true));
+    } else if (p.type === "macro") {
+      conditions.push(eq(lenses.isMacro, true));
+    }
+    if (p.minFocal) {
+      const val = parseFloat(p.minFocal);
+      if (Number.isFinite(val)) conditions.push(gte(lenses.focalLengthMin, val));
+    }
+    if (p.maxFocal) {
+      const val = parseFloat(p.maxFocal);
+      if (Number.isFinite(val)) conditions.push(lte(lenses.focalLengthMax, val));
+    }
+    if (p.minAperture) {
+      const val = parseFloat(p.minAperture);
+      if (Number.isFinite(val)) conditions.push(gte(lenses.apertureMin, val));
+    }
+    if (p.maxAperture) {
+      const val = parseFloat(p.maxAperture);
+      if (Number.isFinite(val)) conditions.push(lte(lenses.apertureMin, val));
+    }
+    if (p.year) {
+      const val = parseInt(p.year);
+      if (Number.isFinite(val)) conditions.push(eq(lenses.yearIntroduced, val));
+    }
+    if (p.lensType) {
+      conditions.push(eq(lenses.lensType, p.lensType));
+    }
+    if (p.era) {
+      conditions.push(eq(lenses.era, p.era));
+    }
+    if (p.productionStatus) {
+      conditions.push(eq(lenses.productionStatus, p.productionStatus));
+    }
+    if (p.priceMin) {
+      const val = parseInt(p.priceMin);
+      if (Number.isFinite(val))
+        conditions.push(sql`${avgPrice} >= ${val}`);
+    }
+    if (p.priceMax) {
+      const val = parseInt(p.priceMax);
+      if (Number.isFinite(val))
+        conditions.push(sql`${avgPrice} <= ${val}`);
+    }
+    if (p.series) {
+      conditions.push(
+        sql`${lenses.id} IN (
+          SELECT ${lensSeriesMemberships.lensId} FROM ${lensSeriesMemberships}
+          JOIN ${lensSeries} ON ${lensSeries.id} = ${lensSeriesMemberships.seriesId}
+          WHERE ${lensSeries.slug} = ${p.series}
+        )`
+      );
+    }
+
+    const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const sortColumns: Record<string, AnyColumn> = {
+      name: lenses.name,
+      brand: lenses.brand,
+      system: systems.name,
+      focalLength: lenses.focalLengthMin,
+      aperture: lenses.apertureMin,
+      year: lenses.yearIntroduced,
+      weight: lenses.weightG,
+      rating: lenses.averageRating,
+      price: avgPrice,
+    };
+    const sortKey = p.sort || "";
+    const sortCol = sortColumns[sortKey] || lenses.name;
+    const orderFn = p.order === "desc" ? desc : asc;
+    const sortByName = sortCol === lenses.name;
+    // When sorting by name, sort by the name prefix (before focal length), then focal length numerically
+    const namePrefix = sql`regexp_replace(${lenses.name}, '\\d+(\\.\\d+)?mm.*$', '')`;
+    // For price sorting, push NULLs to the end
+    const orderClauses = sortByName
+      ? [orderFn(namePrefix), asc(lenses.focalLengthMin), asc(lenses.apertureMin)]
+      : sortKey === "price"
+      ? [sql`${avgPrice} IS NULL`, orderFn(sortCol)]
+      : [orderFn(sortCol)];
+
+    const needsSystemJoin = !!p.system;
+
+    const itemsPromise = db
+      .select({ lens: lenses, system: systems, avgPrice: avgPrice })
+      .from(lenses)
+      .leftJoin(systems, eq(lenses.systemId, systems.id))
+      .leftJoin(priceEstimates, and(
+        eq(priceEstimates.entityType, "lens"),
+        eq(priceEstimates.entityId, lenses.id),
+      ))
+      .where(where)
+      .orderBy(...orderClauses)
+      .limit(PAGE_SIZE)
+      .offset(cursor);
+
+    // Total only matters for the SSR-rendered first page (cursor=0).
+    // Cursor pagination from the client already has total from SSR.
+    const countPromise =
+      cursor === 0
+        ? (needsSystemJoin
+            ? db
+                .select({ count: sql<number>`count(*)` })
+                .from(lenses)
+                .leftJoin(systems, eq(lenses.systemId, systems.id))
+                .leftJoin(priceEstimates, and(
+                  eq(priceEstimates.entityType, "lens"),
+                  eq(priceEstimates.entityId, lenses.id),
+                ))
+                .where(where)
+            : db
+                .select({ count: sql<number>`count(*)` })
+                .from(lenses)
+                .leftJoin(priceEstimates, and(
+                  eq(priceEstimates.entityType, "lens"),
+                  eq(priceEstimates.entityId, lenses.id),
+                ))
+                .where(where))
+        : null;
+
+    const [items, countRows] = await Promise.all([
+      itemsPromise,
+      countPromise,
+    ]);
+
+    const total = countRows ? Number(countRows[0].count) : -1;
+    const nextCursor =
+      items.length === PAGE_SIZE ? cursor + PAGE_SIZE : null;
+
+    // Fetch series for the returned lenses
+    const lensIds = items.map((r) => r.lens.id);
+    const seriesMap: Record<number, { name: string; slug: string }[]> = {};
+    if (lensIds.length > 0) {
+      const seriesRows = await db
+        .select({
+          lensId: lensSeriesMemberships.lensId,
+          name: lensSeries.name,
+          slug: lensSeries.slug,
+        })
+        .from(lensSeriesMemberships)
+        .innerJoin(lensSeries, eq(lensSeriesMemberships.seriesId, lensSeries.id))
+        .where(inArray(lensSeriesMemberships.lensId, lensIds));
+      for (const row of seriesRows) {
+        if (!seriesMap[row.lensId]) seriesMap[row.lensId] = [];
+        seriesMap[row.lensId].push({ name: row.name, slug: row.slug });
+      }
+    }
+
+    const itemsWithSeries = items.map((r) => ({
+      ...r,
+      series: seriesMap[r.lens.id] || [],
+    }));
+
+    return { items: itemsWithSeries, nextCursor, total };
+  },
+  ["lens-list"],
+  { revalidate: 3600, tags: ["lenses"] }
+);
