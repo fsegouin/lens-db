@@ -25,4 +25,5 @@ jobs:
         env:
           API_URL: ${{ secrets.API_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          EBAY_STORAGE_STATE: ${{ secrets.EBAY_STORAGE_STATE }}
         run: node scraper/ebay-lens-scrape-action.mjs
