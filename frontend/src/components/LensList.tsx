@@ -24,8 +24,14 @@ type LensRow = {
 
 type SystemOption = { name: string; slug: string };
 
-// Primary mount plus a "+N" toggle for the rest, so multi-mount lenses don't
-// widen the System column. Every mount is still a clickable filter.
+// Table cells are nowrap, so the System column is capped to a fixed width:
+// the primary mount is shown by its short name (no parenthetical suffix,
+// e.g. "Leica Screw Mount" for "Leica Screw Mount (M39 / LTM)") and
+// truncated with an ellipsis; extra mounts collapse into a "+N" chip that
+// expands on click. The full names sit in the title tooltip, and every
+// mount stays a clickable filter.
+const shortMountName = (name: string) => name.replace(/\s*\([^)]*\)\s*$/, "");
+
 function MountsCell({ mounts, onSelect }: { mounts: SystemOption[]; onSelect: (slug: string) => void }) {
   const [expanded, setExpanded] = useState(false);
   if (mounts.length === 0) return <>{"—"}</>;
@@ -33,11 +39,14 @@ function MountsCell({ mounts, onSelect }: { mounts: SystemOption[]; onSelect: (s
   const hidden = mounts.length - shown.length;
   const linkClass = "text-left hover:text-zinc-900 hover:underline dark:hover:text-zinc-100";
   return (
-    <span className="inline-flex flex-wrap items-baseline gap-x-1">
+    <span
+      className={expanded ? "inline-flex max-w-[11rem] flex-wrap items-baseline gap-x-1 whitespace-normal" : "inline-flex max-w-[11rem] items-baseline gap-x-1"}
+      title={mounts.map((m) => m.name).join(", ")}
+    >
       {shown.map((m, i) => (
-        <span key={m.slug}>
+        <span key={m.slug} className={expanded ? "" : "min-w-0 truncate"}>
           <button type="button" onClick={() => onSelect(m.slug)} className={linkClass}>
-            {m.name}
+            {shortMountName(m.name)}
           </button>
           {i < shown.length - 1 && <span className="text-zinc-400 dark:text-zinc-600">,</span>}
         </span>
@@ -46,8 +55,7 @@ function MountsCell({ mounts, onSelect }: { mounts: SystemOption[]; onSelect: (s
         <button
           type="button"
           onClick={() => setExpanded(true)}
-          title={mounts.slice(1).map((m) => m.name).join(", ")}
-          className="rounded bg-zinc-100 px-1 text-xs text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+          className="shrink-0 rounded bg-zinc-100 px-1 text-xs text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
         >
           +{hidden}
         </button>
