@@ -33,6 +33,14 @@ const nextConfig: NextConfig = {
   transpilePackages: ["lens-db-mcp-server"],
   async redirects() {
     return [
+      // Camera slugs used to carry a literal "camera/" segment from the
+      // original scrape (migration 0023 strips it). Every existing link and
+      // search result points at the old path.
+      {
+        source: "/cameras/camera/:slug",
+        destination: "/cameras/:slug",
+        permanent: true,
+      },
       // Merged Canon EOS system slugs → mount-named equivalents
       { source: "/systems/canon-eos", destination: "/systems/canon-ef", permanent: true },
       { source: "/systems/canon-eos-aps-c", destination: "/systems/canon-ef", permanent: true },

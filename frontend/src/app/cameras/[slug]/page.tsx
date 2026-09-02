@@ -61,17 +61,16 @@ function cameraBrand(name: string, manufacturer: string | null): string | null {
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ slug: string[] }>;
+  params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const fullSlug = slug.join("/");
-  const result = await getCameraBySlug(fullSlug);
+  const result = await getCameraBySlug(slug);
 
   if (!result) return { title: "Camera Not Found" };
 
   const { camera, system } = result;
   const images = absoluteImages(
-    getImages("cameras", fullSlug, (camera.images as { src: string; alt: string }[]) ?? []),
+    getImages("cameras", slug, (camera.images as { src: string; alt: string }[]) ?? []),
   );
 
   return entityMetadata({
@@ -85,12 +84,11 @@ export async function generateMetadata({
 export default async function CameraDetailPage({
   params,
 }: {
-  params: Promise<{ slug: string[] }>;
+  params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const fullSlug = slug.join("/");
 
-  const result = await getCameraBySlug(fullSlug);
+  const result = await getCameraBySlug(slug);
 
   if (!result) notFound();
 
@@ -113,7 +111,7 @@ export default async function CameraDetailPage({
 
   const images = getImages(
     "cameras",
-    fullSlug,
+    slug,
     (camera.images as Array<{ src: string; alt: string }>) || [],
   );
   const leadSentence = cameraLead(camera, system?.name ?? null);
@@ -324,10 +322,11 @@ export default async function CameraDetailPage({
           </ul>
           <p className="mt-3 text-sm">
             <Link
-              href={`/lenses?system=${encodeURIComponent(system.slug)}`}
-              className="text-zinc-700 underline underline-offset-2 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-zinc-100"
+              href={`/cameras/${camera.slug}/lenses`}
+              className="underline underline-offset-2"
             >
-              Browse all {relations.lensCount.toLocaleString()} {system.name} lenses →
+              See all {relations.lensCount.toLocaleString()} lenses that fit the{" "}
+              {camera.name} →
             </Link>
           </p>
         </div>
