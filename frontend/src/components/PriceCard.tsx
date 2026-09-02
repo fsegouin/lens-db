@@ -7,6 +7,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import PriceChart from "@/components/PriceChart";
+import { getPriceDisplay } from "@/lib/price-display";
 
 interface PriceEstimate {
   priceAverageLow: number | null;
@@ -96,26 +97,6 @@ function RarityDiamonds({ label }: { label: string }) {
   );
 }
 
-/**
- * The three condition tiers are computed per condition grade from whatever
- * sales exist, and with a handful of sales they routinely come out unordered:
- * an Irix 11mm showed Fair $199-225, Good $225-280 and Excellent $157. Three
- * tiers that contradict each other are worse than one honest range, so they
- * are only shown when they actually ascend.
- */
-type Tier = { label: string; low: number | null; high: number | null };
-
-function tiersAreOrdered(tiers: Tier[]): boolean {
-  const bounds = tiers.map((t) => t.low ?? t.high).filter((v): v is number => v != null);
-  if (bounds.length < tiers.length) return false;
-  const highs = tiers.map((t) => t.high ?? t.low).filter((v): v is number => v != null);
-  for (let i = 1; i < bounds.length; i++) {
-    if (bounds[i] < bounds[i - 1]) return false;
-    if (highs[i] < highs[i - 1]) return false;
-  }
-  return true;
-}
-
 /** Rarity is a claim about scarcity, so it needs enough sales to stand up. */
 const MIN_SALES_FOR_RARITY = 20;
 
@@ -131,21 +112,10 @@ export default function PriceCard({ estimate, history }: PriceCardProps) {
   // bare "Used prices" heading over an empty box is worse than no section.
   if (!shownEstimate && history.length === 0) return null;
 
-  const tiers: Tier[] = shownEstimate
-    ? [
-        { label: "Fair", low: shownEstimate.priceAverageLow, high: shownEstimate.priceAverageHigh },
-        { label: "Good", low: shownEstimate.priceVeryGoodLow, high: shownEstimate.priceVeryGoodHigh },
-        { label: "Excellent", low: shownEstimate.priceMintLow, high: shownEstimate.priceMintHigh },
-      ]
-    : [];
-  const showTiers = tiers.length > 0 && tiersAreOrdered(tiers);
-
-  // When the tiers disagree, fall back to the span they cover.
-  const allBounds = tiers
-    .flatMap((t) => [t.low, t.high])
-    .filter((v): v is number => v != null && v > 0);
-  const spanLow = allBounds.length ? Math.min(...allBounds) : null;
-  const spanHigh = allBounds.length ? Math.max(...allBounds) : null;
+  const display = getPriceDisplay(shownEstimate);
+  const showTiers = display?.showTiers ?? false;
+  const spanLow = display?.low ?? null;
+  const spanHigh = display?.high ?? null;
 
   const saleCount = shownEstimate?.rarityVotes ?? history.length;
   const showRarity =
