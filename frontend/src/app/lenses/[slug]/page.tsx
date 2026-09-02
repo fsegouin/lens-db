@@ -19,6 +19,7 @@ import SpecsTable from "@/components/SpecsTable";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import PriceCard from "@/components/PriceCard";
+import EntitySummaryLine from "@/components/EntitySummaryLine";
 import EbayListings from "@/components/EbayListings";
 
 export const revalidate = 604800;
@@ -286,7 +287,15 @@ export default async function LensDetailPage({
         </div>
       </div>
 
-      {/* The one-sentence definition: what this thing is, before any commerce. */}
+      <EntitySummaryLine
+        priceRange={priceRange}
+        medianPrice={priceEstimate?.medianPrice ?? null}
+        averageRating={lens.averageRating}
+        ratingCount={lens.ratingCount}
+        saleCount={priceHistoryRows.length}
+      />
+
+      {/* The one-sentence definition: what this thing is. */}
       <p className="text-lg leading-relaxed text-zinc-700 dark:text-zinc-300">
         {leadSentence}
       </p>
@@ -308,7 +317,21 @@ export default async function LensDetailPage({
         </div>
       )}
 
-      {/* Specifications come before prices: this is a reference page first. */}
+      <PriceCard estimate={priceEstimate ?? null} history={priceHistoryRows} />
+
+      <EbayListings query={lens.name} entityType="lens" entitySlug={lens.slug} />
+
+      <div>
+        <h2 className="mb-2 text-sm font-semibold tracking-wider text-muted-foreground uppercase">
+          Rate this lens
+        </h2>
+        <RatingWidget
+          lensId={lens.id}
+          initialAverage={lens.averageRating}
+          initialCount={lens.ratingCount ?? 0}
+        />
+      </div>
+
       <div className="space-y-5">
         <div>
           <h2 className="mb-2 text-sm font-semibold tracking-wider text-muted-foreground uppercase">
@@ -433,25 +456,6 @@ export default async function LensDetailPage({
           </ul>
         </div>
       )}
-
-      <div className="space-y-4">
-        <h2 className="text-sm font-semibold tracking-wider text-muted-foreground uppercase">
-          Used prices
-        </h2>
-        <PriceCard estimate={priceEstimate ?? null} history={priceHistoryRows} />
-        <EbayListings query={lens.name} entityType="lens" entitySlug={lens.slug} />
-      </div>
-
-      <div>
-        <h2 className="mb-2 text-sm font-semibold tracking-wider text-muted-foreground uppercase">
-          Rate this lens
-        </h2>
-        <RatingWidget
-          lensId={lens.id}
-          initialAverage={lens.averageRating}
-          initialCount={lens.ratingCount ?? 0}
-        />
-      </div>
 
       <div className="flex flex-wrap gap-3 text-sm">
         <Link

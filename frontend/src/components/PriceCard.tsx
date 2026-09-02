@@ -107,9 +107,9 @@ export default function PriceCard({ estimate, history }: PriceCardProps) {
 
   return (
     <div className="space-y-4">
-      <h3 className="text-sm font-semibold tracking-wider text-muted-foreground uppercase">
-        Price Guide
-      </h3>
+      <h2 className="text-sm font-semibold tracking-wider text-muted-foreground uppercase">
+        Used prices
+      </h2>
 
       {shownEstimate && (
         <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 overflow-hidden">
