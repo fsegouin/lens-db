@@ -10,10 +10,10 @@
  * Usage: node scripts/check-lens-duplicates.mjs
  */
 
-import { neon } from '@neondatabase/serverless';
+import { createSql } from './lib/db.mjs';
 import fs from 'fs';
 
-const sql = neon(process.env.DATABASE_URL);
+const sql = createSql();
 
 const scraped = JSON.parse(fs.readFileSync('../dpreview-scraped-lenses.json', 'utf8'));
 const newLenses = JSON.parse(fs.readFileSync('../dpreview-lenses-new.json', 'utf8'));

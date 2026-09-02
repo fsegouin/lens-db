@@ -12,13 +12,14 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.26.0",
-    "@neondatabase/serverless": "^1.0.2",
     "ai": "^6.0.164",
     "drizzle-orm": "0.45.2",
+    "pg": "^8.23.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/node": "^20",
+    "@types/pg": "^8.23.1",
     "typescript": "^5"
   }
 }

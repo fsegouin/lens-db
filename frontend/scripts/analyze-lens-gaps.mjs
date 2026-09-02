@@ -5,10 +5,10 @@
  * Usage: node scripts/analyze-lens-gaps.mjs
  */
 
-import { neon } from '@neondatabase/serverless';
+import { createSql } from './lib/db.mjs';
 import fs from 'fs';
 
-const sql = neon(process.env.DATABASE_URL);
+const sql = createSql();
 
 const scraped = JSON.parse(fs.readFileSync('../dpreview-scraped-lenses.json', 'utf8'));
 const normalizeName = s => s.toLowerCase().replace(/[^a-z0-9]/g, '');

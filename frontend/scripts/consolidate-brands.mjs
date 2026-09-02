@@ -10,7 +10,7 @@
  * Requires DATABASE_URL in environment or .env.local
  */
 
-import { neon } from '@neondatabase/serverless';
+import { createSql } from './lib/db.mjs';
 import { readFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
 
@@ -30,7 +30,7 @@ if (!process.env.DATABASE_URL) {
   }
 }
 
-const sql = neon(process.env.DATABASE_URL);
+const sql = createSql();
 const dryRun = process.argv.includes('--dry-run');
 
 // ─── Brand consolidation rules ───────────────────────────────────────────

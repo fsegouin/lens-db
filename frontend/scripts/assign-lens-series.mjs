@@ -5,9 +5,9 @@
  * Usage: node scripts/assign-lens-series.mjs [--dry-run]
  */
 
-import { neon } from '@neondatabase/serverless';
+import { createSql } from './lib/db.mjs';
 
-const sql = neon(process.env.DATABASE_URL);
+const sql = createSql();
 const dryRun = process.argv.includes('--dry-run');
 
 // Load existing series

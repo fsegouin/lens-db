@@ -3,14 +3,14 @@
 // Small batches + retries so it survives the server being killed/restarted.
 // Run (from frontend/): bash -c 'set -a; source .env.local; set +a; node scripts/approve-all-pending.mjs'
 import crypto from "node:crypto";
-import pg from "pg";
+import { createSql } from "./lib/db.mjs";
 
 const API = "http://localhost:3105";
 const BATCH = 8; // ~10-12s per batch — fits between server deaths
 
-const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 1 });
-const { rows } = await pool.query("SELECT id, display_name FROM users WHERE role = 'admin' ORDER BY id LIMIT 1");
-await pool.end();
+const sql = createSql();
+const rows = await sql`SELECT id, display_name FROM users WHERE role = 'admin' ORDER BY id LIMIT 1`;
+await sql.end();
 if (!rows.length) throw new Error("no admin user found");
 const admin = rows[0];
 console.log(`acting as admin: ${admin.display_name} (#${admin.id})`);

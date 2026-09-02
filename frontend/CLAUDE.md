@@ -18,9 +18,9 @@ pnpm lint             # ESLint (next/core-web-vitals + typescript)
 - **Framework**: Next.js 16 (App Router, React 19)
 - **Language**: TypeScript (strict mode)
 - **Styling**: Tailwind CSS v4 (via PostCSS plugin, dark mode with `dark:` utilities, zinc palette)
-- **Database**: Neon serverless PostgreSQL via Drizzle ORM
+- **Database**: Supabase PostgreSQL via Drizzle ORM (node-postgres driver, through the Supabase transaction pooler)
 - **Rate Limiting**: Upstash Redis (sliding window)
-- **AI**: Vercel AI SDK via AI Gateway — chat (`/chat`, tools from the `lens-db-mcp-server` workspace package) and eBay listing classification (`google/gemini-3.1-flash-lite`)
+- **AI**: Vercel AI SDK via AI Gateway — chat (`/chat`, tools from the `lens-db-mcp-server` workspace package), eBay listing classification, and DPReview import dedupe/audit checks (all `google/gemini-3.1-flash-lite`)
 - **Email**: Resend (account verification emails)
 - **Image Storage**: Cloudflare R2 (admin uploads, served from R2 public URL)
 - **Analytics**: Vercel Analytics + Speed Insights
@@ -31,6 +31,8 @@ pnpm lint             # ESLint (next/core-web-vitals + typescript)
 ```
 src/
 ├── proxy.ts                    # Next.js 16 proxy: /admin auth redirect + CSRF Origin check
+├── instrumentation-client.ts   # Client init: BotID protection for routes in src/lib/botid.ts
+├── hooks/use-entity-search.ts  # Client hook: debounced lens/camera typeahead search
 ├── app/
 │   ├── layout.tsx              # Root layout (nav, footer, theme, analytics)
 │   ├── page.tsx                # Home (popular lenses, top comparisons)
@@ -39,7 +41,7 @@ src/
 │   │   ├── cameras/route.ts    # GET: search/paginate cameras
 │   │   ├── chat/route.ts       # POST: AI chat (streamed, DB tools)
 │   │   ├── comparisons/route.ts # GET: top comparisons, POST: record comparison
-│   │   ├── cron/               # Cron routes: ebay-prices, ebay-lens-prices, dpreview-lenses, flush-view-counts
+│   │   ├── cron/               # Cron routes: ebay-prices, ebay-lens-prices, dpreview-lenses, dpreview-review, dpreview-audit, flush-view-counts, warm-prices
 │   │   ├── duplicates/route.ts # POST: flag duplicate entities
 │   │   ├── edits/route.ts      # User-submitted edits
 │   │   ├── lenses/route.ts     # GET: search/filter/paginate lenses
@@ -76,7 +78,9 @@ src/
 │   ├── admin/                  # Admin components (forms, tables, bulk actions, image upload)
 │   └── ui/                     # shadcn-style primitives
 ├── db/
-│   ├── index.ts                # DB singleton (Neon + Drizzle, lazy init)
+│   ├── index.ts                # DB singleton (pg Pool + Drizzle, lazy init)
+│   ├── pool.ts                 # createPool: tiny pg Pool (max 4) with pinned Supabase CA; also used by mcp-server
+│   ├── supabase-ca.ts          # Supabase Root 2021 CA (TLS chain verification)
 │   └── schema.ts               # All table definitions and relations
 └── lib/
     ├── admin-auth.ts           # Admin helpers on top of user sessions (role checks)
@@ -97,11 +101,12 @@ src/
 ## Database Schema
 
 Core tables: `systems`, `lenses`, `cameras`, `collections`, `lensSeries`, `tags`, `users`
-Junction tables: `lensCollections` (M:N), `lensSeriesMemberships` (M:N), `lensTags` (M:N), `lensCompatibility` (M:N with isNative flag)
+Junction tables: `lensCollections` (M:N), `lensSeriesMemberships` (M:N), `lensTags` (M:N), `lensCompatibility` (M:N with isNative flag), `lensSystems` (M:N mount availability; `lenses.systemId` stays the primary mount)
 Engagement: `lensRatings`, `cameraRatings`, `lensComparisons`, `cameraComparisons`
 Community edits: `revisions`, `pendingEdits`, `duplicateFlags`, `issueReports`, `blockedIps`
 Accounts: `users`, `emailVerificationTokens`
 Prices: `priceEstimates`, `priceHistory` (eBay sold-listing pipeline)
+DPReview watcher: `lensVersionGroups` (lens generations via `lenses.versionGroupId`), `dpreviewLensCandidates` (seen-registry, status pending/imported/rejected/matched/review)
 
 Key relationships:
 - `systems` 1→N `lenses`, `systems` 1→N `cameras`
@@ -109,7 +114,7 @@ Key relationships:
 - `lensComparisons`: canonical ordering enforced (`lensId1 < lensId2`)
 - `lensRatings`: one rating per IP per lens (unique on `lensId + ipHash`), rating 1-10
 
-Schema location: `src/db/schema.ts`. Drizzle config: `drizzle.config.ts` (output: `./drizzle`).
+Schema location: `src/db/schema.ts`. Drizzle config: `drizzle.config.ts` (output: `./drizzle`). It loads `.env`/`.env.local`, then splits `DATABASE_URL` into host/port/user/password/database and pins the Supabase root CA (`src/db/supabase-ca.ts`) because drizzle-kit cannot verify Supabase's chain from a bare URL.
 
 ## Database Migrations
 
@@ -201,7 +206,7 @@ Role-protected admin at `/admin/*` for CRUD management of all entities. Admins a
 | `/admin` | Dashboard (entity counts) |
 | `/admin/{lenses,cameras,systems,collections,series}` | List table → `[id]/edit` form, `new` form |
 | `/admin/compatibility` | Lens-camera compatibility (composite key, custom table) |
-| `/admin/users` | User management |
+| `/admin/users` | User management (`[id]` detail page) |
 | `/admin/pending-edits` | Review queue for user-submitted edits |
 | `/admin/duplicates` | Flagged duplicate entities |
 | `/admin/recent-changes` | Recent revision activity |
@@ -225,7 +230,7 @@ All under `/api/admin/`, session-protected (role `admin`):
 ## Environment Variables
 
 ```bash
-DATABASE_URL=          # Neon PostgreSQL connection string (required)
+DATABASE_URL=          # Supabase pooler connection string (required)
 SESSION_SECRET=        # HMAC key for signing session tokens (required)
 RATE_HASH_SALT=        # SHA-256 salt for IP hashing (required for ratings)
 KV_REST_API_URL=       # Upstash Redis URL (required for rate limiting)
@@ -233,7 +238,7 @@ KV_REST_API_TOKEN=     # Upstash Redis token (required for rate limiting)
 RESEND_API_KEY=        # Resend API key (verification emails)
 RESEND_FROM_EMAIL=     # From address for emails
 APP_URL=               # Base URL for email links
-AI_GATEWAY_API_KEY=    # Vercel AI Gateway key (/chat + price classification)
+AI_GATEWAY_API_KEY=    # Vercel AI Gateway key (/chat, price classification, DPReview dedupe/audit)
 CRON_SECRET=           # Bearer token protecting /api/cron/* endpoints
 EBAY_APP_ID=           # eBay API credentials (price pipeline)
 EBAY_CERT_ID=

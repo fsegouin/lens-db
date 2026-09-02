@@ -5,6 +5,7 @@ import { lenses, cameras } from "@/db/schema";
 import { getEntityPriceEstimate, getEntityPriceHistory } from "@/lib/prices";
 import { getLensBySlug } from "@/lib/lenses";
 import { getCameraBySlug } from "@/lib/cameras";
+import { isCronAuthorized } from "@/lib/api-utils";
 
 export const maxDuration = 300;
 
@@ -13,10 +14,7 @@ export const maxDuration = 300;
 // cold-starts the caches: GET ?entityType=lens|camera&offset=N&limit=M
 // until the response reports done: true.
 export async function GET(request: NextRequest) {
-  const authHeader = request.headers.get("authorization");
-  const cronSecret = process.env.CRON_SECRET;
-
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+  if (!isCronAuthorized(request.headers.get("authorization"))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -37,7 +35,9 @@ export async function GET(request: NextRequest) {
       .offset(offset)
       .limit(limit);
 
-    const CONCURRENCY = 20;
+    // Each entity fans out to 3 DB reads on a cold cache; keep in-flight queries
+// within the per-instance pg pool (4 clients) so waiters do not time out.
+const CONCURRENCY = 4;
     let warmed = 0;
     for (let i = 0; i < rows.length; i += CONCURRENCY) {
       await Promise.all(

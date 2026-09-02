@@ -11,10 +11,10 @@
  *   node scripts/enrich-canon-missing-images.mjs
  */
 
-import { neon } from '@neondatabase/serverless';
+import { createSql } from './lib/db.mjs';
 import { objectExists, processAndUpload, R2_PUBLIC } from './lib/r2-upload.mjs';
 
-const sql = neon(process.env.DATABASE_URL);
+const sql = createSql();
 const dryRun = process.argv.includes('--dry-run');
 
 const items = [

@@ -1,7 +1,7 @@
-import { neon } from '@neondatabase/serverless';
+import { createSql } from './lib/db.mjs';
 import fs from 'fs';
 
-const sql = neon(process.env.DATABASE_URL);
+const sql = createSql();
 
 const cameras = await sql`SELECT name, slug FROM cameras`;
 const lenses = await sql`SELECT name, slug FROM lenses`;
