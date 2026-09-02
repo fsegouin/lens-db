@@ -4,7 +4,6 @@ import { asc, eq } from "drizzle-orm";
 import { unstable_cache } from "next/cache";
 import Link from "next/link";
 import LensList from "@/components/LensList";
-import { PageTransition } from "@/components/page-transition";
 import { listLenses, type LensListItem } from "@/lib/lens-list";
 
 const getCachedDropdownData = unstable_cache(
@@ -37,7 +36,7 @@ const getCachedDropdownData = unstable_cache(
 );
 
 export const metadata = {
-  title: "Lenses | The Lens DB",
+  title: "Lenses",
   description: "Search and filter camera lenses by specs, system, and type.",
 };
 
@@ -112,32 +111,30 @@ export default async function LensesPage({
   }
 
   return (
-    <PageTransition>
-      <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100">
-          Lenses
-        </h1>
-        <p className="mt-2 text-zinc-600 dark:text-zinc-400">
-          {total > 0
-            ? `${total} lenses found`
-            : "Search and filter 7,400+ camera lenses"}
-          {" · "}
-          <Link href="/lenses/series" className="text-zinc-900 underline hover:text-zinc-700 dark:text-zinc-100 dark:hover:text-zinc-300">
-            Browse by series
-          </Link>
-        </p>
-      </div>
+    <div className="space-y-8">
+    <div>
+      <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100">
+        Lenses
+      </h1>
+      <p className="mt-2 text-zinc-600 dark:text-zinc-400">
+        {total > 0
+          ? `${total} lenses found`
+          : "Search and filter 7,400+ camera lenses"}
+        {" · "}
+        <Link href="/lenses/series" className="text-zinc-900 underline hover:text-zinc-700 dark:text-zinc-100 dark:hover:text-zinc-300">
+          Browse by series
+        </Link>
+      </p>
+    </div>
 
-      <LensList
-        initialItems={initialItems}
-        initialTotal={total}
-        initialNextCursor={nextCursor}
-        brands={brands}
-        systems={systemList}
-        seriesOptions={seriesList}
-      />
-      </div>
-    </PageTransition>
+    <LensList
+      initialItems={initialItems}
+      initialTotal={total}
+      initialNextCursor={nextCursor}
+      brands={brands}
+      systems={systemList}
+      seriesOptions={seriesList}
+    />
+    </div>
   );
 }

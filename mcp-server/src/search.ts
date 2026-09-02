@@ -12,12 +12,16 @@ export function escapeLikeMetachars(value: string): string {
   return value.replace(/[\\%_]/g, "\\$&");
 }
 
+/**
+ * "EF 50" should match "EF 50mm", so a one-or-two-letter token followed by a
+ * number is matched as one adjacent unit. The reverse (number then letters) is
+ * deliberately not merged: it broke "24-70 gm", where the tokens are words
+ * apart in the real name.
+ *
+ * Keep in sync with frontend/src/lib/search.ts.
+ */
 function shouldMergeModelFragments(a: string, b: string): boolean {
-  const aIsShortAlpha = /^[a-zA-Z]{1,2}$/.test(a);
-  const bIsNumeric = /^\d[\d.]*$/.test(b);
-  const bIsShortAlpha = /^[a-zA-Z]{1,2}$/.test(b);
-  const aIsNumeric = /^\d[\d.]*$/.test(a);
-  return (aIsShortAlpha && bIsNumeric) || (aIsNumeric && bIsShortAlpha);
+  return /^[a-zA-Z]{1,2}$/.test(a) && /^\d[\d.]*$/.test(b);
 }
 
 /**
@@ -25,29 +29,37 @@ function shouldMergeModelFragments(a: string, b: string): boolean {
  * when every word is stripped (non-Latin text, symbols) — callers MUST
  * treat an empty result for a non-empty query as "no matches" rather than
  * dropping the filter.
+ *
+ * Punctuation separates tokens rather than being deleted, so "24-70" matches
+ * "24-70mm" and "helios 44-2" matches "Helios-44-2". A token starting with a
+ * digit may be preceded by f/F, so a bare "1.4" matches "F/1.4".
  */
 export function buildSearchPatterns(query: string): string[] {
-  const words = query.trim().split(/\s+/).filter(Boolean).slice(0, 10);
-  const cleaned = words
-    .map((w) => w.replace(/[^a-zA-Z0-9.]/g, ""))
+  const cleaned = query
+    .trim()
+    .split(/[^a-zA-Z0-9.]+/)
+    .filter(Boolean)
+    .slice(0, 10)
+    .map((w) => w.replace(/\.+$/, ""))
     .filter(Boolean);
 
   const patterns: string[] = [];
   let i = 0;
 
   while (i < cleaned.length) {
+    const first = cleaned[i];
+    let body: string;
     if (
       i + 1 < cleaned.length &&
       shouldMergeModelFragments(cleaned[i], cleaned[i + 1])
     ) {
-      const merged = `${escapeRegex(cleaned[i])}\\s*${escapeRegex(cleaned[i + 1])}`;
-      patterns.push(/^\d/.test(cleaned[i]) ? `\\m${merged}` : merged);
+      body = `${escapeRegex(cleaned[i])}\\s*${escapeRegex(cleaned[i + 1])}`;
       i += 2;
     } else {
-      const escaped = escapeRegex(cleaned[i]);
-      patterns.push(/^\d/.test(cleaned[i]) ? `\\m${escaped}` : escaped);
+      body = escapeRegex(cleaned[i]);
       i++;
     }
+    patterns.push(/^\d/.test(first) ? `\\m[fF]?${body}` : body);
   }
 
   return patterns;

@@ -5,7 +5,6 @@ import { lenses, cameras, systems, collections, lensSeries } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { getRevisionHistory, type EntityType } from "@/lib/revisions";
 import BackButton from "@/components/BackButton";
-import { PageTransition } from "@/components/page-transition";
 import RevisionList from "@/components/RevisionList";
 
 export const revalidate = 86400; // Revision history changes rarely; daily is fresh enough
@@ -53,8 +52,8 @@ export async function generateMetadata({
   const entity = await getEntityName(entityType as EntityType, parseInt(entityId, 10));
   return {
     title: entity
-      ? `Revision History: ${entity.name} | The Lens DB`
-      : "Revision History | The Lens DB",
+      ? `Revision History: ${entity.name}`
+      : "Revision History",
   };
 }
 
@@ -79,36 +78,34 @@ export default async function HistoryPage({
   const { revisions, total } = history;
 
   return (
-    <PageTransition>
-      <div className="mx-auto max-w-3xl space-y-6">
-        <BackButton
-          fallbackHref={entityBackLink(type, entity.slug)}
-          label={`Back to ${entity.name}`}
-        />
+    <div className="mx-auto max-w-3xl space-y-6">
+      <BackButton
+        fallbackHref={entityBackLink(type, entity.slug)}
+        label={`Back to ${entity.name}`}
+      />
 
-        <div>
-          <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
-            Revision History
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            <Link
-              href={entityBackLink(type, entity.slug)}
-              className="hover:underline"
-            >
-              {entity.name}
-            </Link>
-            {" "}— {total} revision{total !== 1 ? "s" : ""}
-          </p>
-        </div>
-
-        {revisions.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            No revision history available yet.
-          </p>
-        ) : (
-          <RevisionList revisions={revisions} />
-        )}
+      <div>
+        <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
+          Revision History
+        </h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          <Link
+            href={entityBackLink(type, entity.slug)}
+            className="hover:underline"
+          >
+            {entity.name}
+          </Link>
+          {" "}— {total} revision{total !== 1 ? "s" : ""}
+        </p>
       </div>
-    </PageTransition>
+
+      {revisions.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          No revision history available yet.
+        </p>
+      ) : (
+        <RevisionList revisions={revisions} />
+      )}
+    </div>
   );
 }

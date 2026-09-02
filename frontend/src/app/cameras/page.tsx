@@ -3,7 +3,6 @@ import { cameras, systems } from "@/db/schema";
 import { asc, eq } from "drizzle-orm";
 import { unstable_cache } from "next/cache";
 import CameraList from "@/components/CameraList";
-import { PageTransition } from "@/components/page-transition";
 import { listCameras, type CameraListItem } from "@/lib/camera-list";
 
 const getCachedDropdownData = unstable_cache(
@@ -62,7 +61,7 @@ const getCachedDropdownData = unstable_cache(
 );
 
 export const metadata = {
-  title: "Cameras | The Lens DB",
+  title: "Cameras",
   description: "Browse camera bodies by system and specifications.",
 };
 
@@ -134,30 +133,28 @@ export default async function CamerasPage({
   }
 
   return (
-    <PageTransition>
-      <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100">
-          Cameras
-        </h1>
-        <p className="mt-2 text-zinc-600 dark:text-zinc-400">
-          {total > 0 ? `${total} cameras found` : "Browse camera bodies"}
-        </p>
-      </div>
+    <div className="space-y-8">
+    <div>
+      <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100">
+        Cameras
+      </h1>
+      <p className="mt-2 text-zinc-600 dark:text-zinc-400">
+        {total > 0 ? `${total} cameras found` : "Browse camera bodies"}
+      </p>
+    </div>
 
-      <CameraList
-        initialItems={initialItems}
-        initialTotal={total}
-        initialNextCursor={nextCursor}
-        systems={systemList}
-        sensorSizes={sensorSizes}
-        types={types}
-        models={models}
-        filmTypes={filmTypes}
-        sensorTypes={sensorTypes}
-        cropFactors={cropFactors}
-      />
-      </div>
-    </PageTransition>
+    <CameraList
+      initialItems={initialItems}
+      initialTotal={total}
+      initialNextCursor={nextCursor}
+      systems={systemList}
+      sensorSizes={sensorSizes}
+      types={types}
+      models={models}
+      filmTypes={filmTypes}
+      sensorTypes={sensorTypes}
+      cropFactors={cropFactors}
+    />
+    </div>
   );
 }

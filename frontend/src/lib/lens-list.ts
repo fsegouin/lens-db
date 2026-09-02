@@ -2,6 +2,7 @@ import { unstable_cache } from "next/cache";
 import { db } from "@/db";
 import { lenses, systems, lensSeries, lensSeriesMemberships, lensSystems, priceEstimates } from "@/db/schema";
 import { asc, desc, eq, and, gte, lte, sql, inArray, isNull, type AnyColumn } from "drizzle-orm";
+import { buildNameSearch } from "@/lib/search";
 
 const PAGE_SIZE = 50;
 
@@ -54,20 +55,10 @@ export const listLenses = unstable_cache(
     const conditions: ReturnType<typeof and>[] = [isNull(lenses.mergedIntoId)];
 
     if (p.q) {
-      // Split query into words, match each with word boundaries
-      // Strip punctuation so "f2" matches "F/2", use \m for word boundary so "35mm" doesn't match "135mm"
-      const words = p.q.trim().split(/\s+/).filter(Boolean).slice(0, 10);
-      for (const word of words) {
-        const clean = word.replace(/[^a-zA-Z0-9.]/g, "");
-        if (!clean) continue;
-        // Escape regex special chars in the clean word
-        const escaped = clean.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-        // Use \m (word start boundary) when the word starts with a digit to prevent "35" matching inside "135"
-        const startsWithDigit = /^\d/.test(clean);
-        const pattern = startsWithDigit ? `\\m${escaped}` : escaped;
-        conditions.push(
-          sql`regexp_replace(${lenses.name}, '[^a-zA-Z0-9. ]', '', 'g') ~* ${pattern}`
-        );
+      // Shared with the header typeahead and /search, so all three agree on
+      // what a query like "50mm 1.4" means.
+      for (const condition of buildNameSearch(lenses.name, p.q)) {
+        conditions.push(condition);
       }
     }
     if (p.slug) {

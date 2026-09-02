@@ -58,6 +58,17 @@ const nextConfig: NextConfig = {
         source: "/(.*)",
         headers: securityHeaders,
       },
+      // Account and tool pages are useful to visitors but must not compete
+      // with entity pages in search results. Set as a header because these
+      // are client components, which cannot export metadata.
+      {
+        source: "/:path(login|register|verify-email|submit|chat)",
+        headers: [{ key: "X-Robots-Tag", value: "noindex, follow" }],
+      },
+      {
+        source: "/history/:path*",
+        headers: [{ key: "X-Robots-Tag", value: "noindex, follow" }],
+      },
     ];
   },
   images: {

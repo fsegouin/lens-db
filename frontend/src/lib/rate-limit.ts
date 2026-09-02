@@ -31,4 +31,7 @@ export const rateLimiters = {
   comparisons: createRateLimit(10, "60 s"),
   search: createRateLimit(20, "60 s"),
   chat: createRateLimit(10, "60 s"),
+  // One call per entity page view; kept off the shared "search" bucket so
+  // browsing detail pages doesn't eat a visitor's list/typeahead allowance.
+  ebay: createRateLimit(30, "60 s"),
 };

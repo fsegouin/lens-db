@@ -18,27 +18,66 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "The Lens DB - Camera Lens Database",
+  title: {
+    default: "The Lens DB — Camera and Lens Reference",
+    template: "%s | The Lens DB",
+  },
   description:
-    "Comprehensive database of camera lenses and bodies with specs, compatibility, and expert recommendations.",
+    "An open reference for interchangeable camera lenses, camera bodies and lens mounts: specifications, what fits what, and used prices.",
   metadataBase: new URL("https://thelensdb.com"),
   verification: {
     google: "VqQ5eoCMbzHnK0tn55oyWCiTeUUgh8hfFaRNo6OfoDk",
   },
   openGraph: {
-    title: "The Lens DB - Camera Lens Database",
+    title: "The Lens DB — Camera and Lens Reference",
     description:
-      "Comprehensive database of camera lenses and bodies with specs, compatibility, and expert recommendations.",
+      "An open reference for interchangeable camera lenses, camera bodies and lens mounts: specifications, what fits what, and used prices.",
     siteName: "The Lens DB",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "The Lens DB - Camera Lens Database",
+    title: "The Lens DB — Camera and Lens Reference",
     description:
-      "Comprehensive database of camera lenses and bodies with specs, compatibility, and expert recommendations.",
+      "An open reference for interchangeable camera lenses, camera bodies and lens mounts: specifications, what fits what, and used prices.",
   },
 };
+
+const footerSections = [
+  {
+    title: "Browse",
+    links: [
+      { href: "/lenses", label: "Lenses" },
+      { href: "/cameras", label: "Cameras" },
+      { href: "/systems", label: "Mounts" },
+      { href: "/collections", label: "Collections" },
+      { href: "/lenses/series", label: "Series" },
+    ],
+  },
+  {
+    title: "Tools",
+    links: [
+      { href: "/compare", label: "Compare" },
+      { href: "/search", label: "Search" },
+      { href: "/chat", label: "Ask the database" },
+    ],
+  },
+  {
+    title: "Contribute",
+    links: [
+      { href: "/submit", label: "Submit a lens or camera" },
+      { href: "/register", label: "Create an account" },
+      { href: "/login", label: "Sign in" },
+    ],
+  },
+  {
+    title: "Reference",
+    links: [
+      { href: "/sitemap.xml", label: "Sitemap" },
+      { href: "/robots.txt", label: "Robots" },
+    ],
+  },
+];
 
 export default function RootLayout({
   children,
@@ -77,14 +116,38 @@ export default function RootLayout({
             </main>
             <Separator />
             <footer>
-              <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-2">
-                <p className="text-center text-sm text-zinc-500">
-                  The Lens DB &mdash; A community-driven camera lens database.
-                </p>
-                <p className="text-center text-xs text-zinc-400">
-                  As an eBay Partner Network affiliate, The Lens DB earns from
-                  qualifying purchases.
-                </p>
+              <div className="mx-auto max-w-7xl space-y-8 px-4 py-10 sm:px-6 lg:px-8">
+                <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+                  {footerSections.map((section) => (
+                    <div key={section.title}>
+                      <h2 className="text-xs font-semibold tracking-wider text-zinc-500 uppercase dark:text-zinc-400">
+                        {section.title}
+                      </h2>
+                      <ul className="mt-3 space-y-2">
+                        {section.links.map((link) => (
+                          <li key={link.href}>
+                            <Link
+                              href={link.href}
+                              className="text-sm text-zinc-600 underline-offset-2 hover:text-zinc-900 hover:underline dark:text-zinc-400 dark:hover:text-zinc-100"
+                            >
+                              {link.label}
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+                <div className="space-y-2 border-t border-border pt-6">
+                  <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                    The Lens DB &mdash; a community reference for camera lenses,
+                    bodies and mounts.
+                  </p>
+                  <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                    As an eBay Partner Network affiliate, The Lens DB earns from
+                    qualifying purchases.
+                  </p>
+                </div>
               </div>
             </footer>
           </TooltipProvider>
