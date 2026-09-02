@@ -3,7 +3,7 @@ import { eq, and, gte, lte, sql, asc, isNull } from "drizzle-orm";
 import { getDb, schema } from "../db";
 import { buildSearchPatterns, escapeLikeMetachars } from "../search";
 
-const { lenses, systems, priceEstimates } = schema;
+const { lenses, systems, lensSystems, priceEstimates } = schema;
 
 export const searchLensesSchema = z.object({
   query: z.string().optional().describe("Free text search on lens name"),
@@ -44,7 +44,12 @@ export async function searchLenses(params: SearchLensesParams) {
     }
   }
   if (params.system) {
-    conditions.push(sql`${systems.name} ILIKE ${escapeLikeMetachars(params.system)}`);
+    // Any mount the lens is sold in (lens_systems), not only its primary one.
+    conditions.push(sql`${lenses.id} IN (
+      SELECT ${lensSystems.lensId} FROM ${lensSystems}
+      JOIN ${systems} ON ${systems.id} = ${lensSystems.systemId}
+      WHERE ${systems.name} ILIKE ${escapeLikeMetachars(params.system)}
+    )`);
   }
   if (params.brand) {
     conditions.push(sql`${lenses.brand} ILIKE ${escapeLikeMetachars(params.brand)}`);

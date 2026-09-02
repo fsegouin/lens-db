@@ -13,6 +13,7 @@ interface LensData {
   url?: string | null;
   brand?: string | null;
   systemId?: number | null;
+  systemIds?: number[]; // every mount the lens is sold in (lens_systems)
   description?: string | null;
   lensType?: string | null;
   era?: string | null;
@@ -61,6 +62,9 @@ export default function LensForm({ lens, systems, tags }: LensFormProps) {
   const [brand, setBrand] = useState(lens?.brand ?? "");
   const [systemId, setSystemId] = useState<string>(
     lens?.systemId ? String(lens.systemId) : ""
+  );
+  const [extraSystemIds, setExtraSystemIds] = useState<number[]>(
+    (lens?.systemIds ?? []).filter((id) => id !== lens?.systemId)
   );
   const [url, setUrl] = useState(lens?.url ?? "");
   const [description, setDescription] = useState(lens?.description ?? "");
@@ -171,6 +175,7 @@ export default function LensForm({ lens, systems, tags }: LensFormProps) {
       url: url || null,
       brand: brand || null,
       systemId: systemId ? parseInt(systemId, 10) : null,
+      systemIds: extraSystemIds,
       description: description || null,
       lensType: lensType || null,
       era: era || null,
@@ -289,6 +294,32 @@ export default function LensForm({ lens, systems, tags }: LensFormProps) {
                 </option>
               ))}
             </select>
+          </div>
+          <div className="space-y-1 sm:col-span-2">
+            <label className={labelClass}>Also available in</label>
+            <div className="max-h-40 overflow-y-auto rounded border border-zinc-300 p-2 dark:border-zinc-700">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1 sm:grid-cols-3">
+                {systems
+                  .filter((s) => String(s.id) !== systemId)
+                  .map((s) => (
+                    <label key={s.id} className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={extraSystemIds.includes(s.id)}
+                        onChange={(e) =>
+                          setExtraSystemIds((prev) =>
+                            e.target.checked ? [...prev, s.id] : prev.filter((id) => id !== s.id)
+                          )
+                        }
+                      />
+                      <span className="truncate">{s.name}</span>
+                    </label>
+                  ))}
+              </div>
+            </div>
+            <p className="text-xs text-zinc-500">
+              Other mounts this lens is sold in. The primary system above is always included.
+            </p>
           </div>
           <div className="space-y-1 sm:col-span-2">
             <label className={labelClass}>URL</label>
