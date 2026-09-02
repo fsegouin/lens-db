@@ -247,7 +247,7 @@ export default async function LensDetailPage({
         </h1>
         <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
           {lens.brand && (
-            <Link href={`/lenses?brand=${encodeURIComponent(lens.brand)}`}>
+            <Link href={`/lenses?brand=${encodeURIComponent(lens.brand)}`} className="inline-flex">
               <Badge variant="brand">{lens.brand}</Badge>
             </Link>
           )}
@@ -256,30 +256,31 @@ export default async function LensDetailPage({
           )}
           {/* Mount badges link to the mount's own page, not a filtered list. */}
           {mounts.map((m) => (
-            <Link key={m.id} href={`/systems/${m.slug}`}>
+            <Link key={m.id} href={`/systems/${m.slug}`} className="inline-flex">
               <Badge variant="system">{m.name}</Badge>
             </Link>
           ))}
           {lens.coverage && (
-            <Link href={`/lenses?coverage=${encodeURIComponent(lens.coverage)}`}>
+            <Link href={`/lenses?coverage=${encodeURIComponent(lens.coverage)}`} className="inline-flex">
               <Badge variant="outline">
                 {COVERAGE_LABELS[lens.coverage] ?? lens.coverage}
               </Badge>
             </Link>
           )}
           {lens.lensType && (
-            <Link href={`/lenses?lensType=${encodeURIComponent(lens.lensType)}`}>
+            <Link href={`/lenses?lensType=${encodeURIComponent(lens.lensType)}`} className="inline-flex">
               <Badge variant="lensType">{lens.lensType}</Badge>
             </Link>
           )}
           {lens.era && (
-            <Link href={`/lenses?era=${encodeURIComponent(lens.era)}`}>
+            <Link href={`/lenses?era=${encodeURIComponent(lens.era)}`} className="inline-flex">
               <Badge variant="era">{lens.era}</Badge>
             </Link>
           )}
           {lens.productionStatus && (
             <Link
               href={`/lenses?productionStatus=${encodeURIComponent(lens.productionStatus)}`}
+              className="inline-flex"
             >
               <Badge variant="status">{lens.productionStatus}</Badge>
             </Link>
@@ -441,14 +442,14 @@ export default async function LensDetailPage({
           <ul className="flex flex-wrap gap-2">
             {relations.series.map((s) => (
               <li key={`series-${s.slug}`}>
-                <Link href={`/lenses/series/${s.slug}`}>
+                <Link href={`/lenses/series/${s.slug}`} className="inline-flex">
                   <Badge variant="series">{s.name}</Badge>
                 </Link>
               </li>
             ))}
             {relations.collections.map((c) => (
               <li key={`collection-${c.slug}`}>
-                <Link href={`/collections/${c.slug}`}>
+                <Link href={`/collections/${c.slug}`} className="inline-flex">
                   <Badge variant="outline">{c.name}</Badge>
                 </Link>
               </li>

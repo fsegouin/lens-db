@@ -175,7 +175,7 @@ export default async function CameraDetailPage({
         )}
         <div className="mt-2 flex flex-wrap items-center gap-2">
           {system && (
-            <Link href={`/systems/${system.slug}`}>
+            <Link href={`/systems/${system.slug}`} className="inline-flex">
               <Badge variant="system">{system.name}</Badge>
             </Link>
           )}
