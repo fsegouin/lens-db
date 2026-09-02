@@ -1,0 +1,195 @@
+APPLY — model google/gemini-3.1-flash-lite — 126 lenses with year >= 2026
+  34 trusted (specs.Announced matches), 92 to check
+
+
+── WILL CHANGE (58)
+  #17939  Carl Zeiss Biogon T* 2,8/21 ZM
+      2026 → 2005  [high]  The Zeiss ZM line was first introduced at Photokina 2004, with the Biogon 2,8/21 shipping in 2005.
+  #17941  Carl Zeiss Biogon T* 2,8/25 ZM
+      2026 → 2005  [high]  The Biogon 2,8/25 ZM was part of the initial launch sequence of the Zeiss Ikon M-mount system.
+  #17942  Carl Zeiss Biogon T* 2,8/28 ZM
+      2026 → 2005  [high]  The Biogon 2,8/28 ZM was introduced alongside the initial ZM lens lineup in 2005.
+  #17943  Carl Zeiss Biogon T* 2/35 ZM
+      2026 → 2005  [high]  The Biogon 2/35 ZM was one of the debut lenses for the Zeiss ZM rangefinder system.
+  #17945  Carl Zeiss C Sonnar T* 1,5/50 ZM
+      2026 → 2005  [high]  The C Sonnar 1,5/50 ZM was part of the original lens launch for the Zeiss Ikon system.
+  #17937  Carl Zeiss Distagon T* 2,8/15 ZM
+      2026 → 2012  [high]  The Distagon 2,8/15 ZM was announced in early 2012.
+  #17957  Carl Zeiss Distagon T* 2,8/25
+      2026 → 2007  [high]  The Zeiss Distagon T* 2,8/25 ZF (Nikon F) was announced in 2007.
+  #17958  Carl Zeiss Distagon T* 2/28
+      2026 → 2007  [high]  The Zeiss Distagon T* 2/28 ZE (Canon EF) was released as part of the EF mount expansion in 2007.
+  #17959  Carl Zeiss Distagon T* 2/35
+      2026 → 2009  [high]  The Zeiss ZE line for Canon EF was introduced in 2008 with the 50mm and 85mm, and the 35mm f/2 followed in 2009.
+  #17956  Carl Zeiss Distagon T* 3,5/18
+      2026 → 2009  [high]  The Distagon T* 3,5/18 was added to the Zeiss ZE (Canon EF) lineup in 2009.
+  #17938  Carl Zeiss Distagon T* 4/18 ZM
+      2026 → 2006  [high]  The Distagon T* 4/18 ZM was officially announced by Zeiss for the M-mount system in 2006.
+  #17963  Carl Zeiss Makro-Planar T* 2/100
+      2026 → 2009  [high]  The Makro-Planar T* 2/100 was released in the Zeiss ZE mount in 2009.
+  #17962  Carl Zeiss Makro-Planar T* 50mm F2
+      2026 → 2009  [high]  The Makro-Planar T* 2/50 was released in the Zeiss ZE mount in 2009.
+  #17960  Carl Zeiss Planar T* 1,4/50
+      2026 → 2008  [high]  The Planar T* 1,4/50 was part of the inaugural launch of the Zeiss ZE series for Canon EF in 2008.
+  #17961  Carl Zeiss Planar T* 1,4/85
+      2026 → 2008  [high]  The Planar T* 1,4/85 was part of the inaugural launch of the Zeiss ZE series for Canon EF in 2008.
+  #17946  Carl Zeiss Planar T* 2/50 ZM
+      2026 → 2005  [high]  The Planar T* 2/50 ZM was released at the launch of the ZM system in 2005.
+  #17947  Carl Zeiss Sonnar T* 2/85 ZM
+      2026 → 2005  [high]  The Sonnar T* 2/85 ZM was part of the original ZM lens lineup announced in 2005.
+  #17948  Carl Zeiss Tele-Tessar T* 4/85 ZM
+      2026 → 2005  [high]  The Tele-Tessar T* 4/85 ZM was introduced during the ZM system launch in 2005.
+  #17980  Kenko Teleplus MC4 AF 1.4 DGX
+      2026 → 2011  [high]  The Kenko DGX teleconverter series was introduced in 2011 as an update to the DG series.
+  #17981  Kenko Teleplus MC4 AF 2.0 DGX
+      2026 → 2011  [high]  The Kenko DGX teleconverter series was introduced in 2011 as an update to the DG series.
+  #17979  Kenko Teleplus MC7 AF 2.0 DGX
+      2026 → 2011  [high]  The Kenko DGX teleconverter series was introduced in 2011 as an update to the DG series.
+  #20283  Laowa 17mm F4 Zero-D Tilt-Shift
+      2026 → 2023  [high]  The Laowa 17mm f/4 Zero-D Tilt-Shift lens was officially announced by Venus Optics in 2023.
+  #17949  Leica APO-Telyt-M 135mm f/3.4 ASPH
+      2026 → 1998  [high]  The Leica APO-Telyt-M 135mm f/3.4 ASPH was introduced at Photokina 1998.
+  #17475  Leica M 35mm F1.2 Noctilux Asph.
+      2026 → 2008  [high]  The Leica Noctilux-M 35mm f/1.2 ASPH was announced at Photokina 2008.
+  #20365  Leica Summicron-M 50mm f/2 Type V
+      2026 → 2021  [high]  The current version (Type V) of the Leica Summicron-M 50mm f/2 was introduced in 2021.
+  #17992  Lensbaby Circular Fisheye 5.8mm f/3.5 Lens
+      2026 → 2014  [high]  The Lensbaby Circular Fisheye was announced in 2014.
+  #17991  Lensbaby Composer Pro with Double Glass Optic
+      2026 → 2011  [high]  The Lensbaby Composer Pro was released in 2011.
+  #17993  Lensbaby Spark
+      2026 → 2012  [high]  The Lensbaby Spark was introduced in 2012.
+  #17994  Lensbaby Velvet 85
+      2026 → 2016  [high]  The Lensbaby Velvet 85 was released in 2016.
+  #17966  Minolta 50mm F1.4 RS
+      2026 → 1990  [high]  The Minolta AF 50mm F1.4 'RS' (restyled) was introduced alongside the Dynax 8000i series in 1990.
+  #17983  Pentax smc D FA 645 25mm F4 AL (IF) SDM AW
+      2026 → 2010  [high]  The Pentax smc D FA 645 25mm F4 was officially announced in 2010 for the 645D system.
+  #17982  Pentax smc D FA 645 55mm F2.8 AL (IF) SDM AW
+      2026 → 2009  [high]  The Pentax smc D FA 645 55mm F2.8 was announced alongside the 645D development announcement in 2009.
+  #17951  Pentax smc FA 31mm F1.8 AL Limited
+      2026 → 2001  [high]  The Pentax FA 31mm F1.8 AL Limited was released to the market in 2001.
+  #17952  Pentax smc FA 43mm F1.9 Limited
+      2026 → 1997  [high]  The Pentax FA 43mm F1.9 Limited was first announced by Pentax in 1997.
+  #17950  Pentax smc FA 50mm F1.4
+      2026 → 1991  [high]  The standard Pentax FA 50mm F1.4 (replacing the F series) was released in 1991.
+  #17953  Pentax smc FA 77mm 1.8 Limited
+      2026 → 1999  [high]  The Pentax FA 77mm F1.8 Limited was announced and launched in 1999.
+  #20358  Samsung D-Xenon 10-17mm F3.5-4.5 Fisheye
+      2026 → 2006  [high]  The Samsung D-Xenon 10-17mm F3.5-4.5 was a rebranded Pentax lens announced in 2006 for the GX-10.
+  #17967  Samsung D-Xenon 100mm F2.8 macro
+      2026 → 2006  [high]  The Samsung D-Xenon 100mm macro was a rebadged Pentax lens announced in 2006.
+  #20359  Samsung D-Xenon 12-24mm F4 ED
+      2026 → 2006  [high]  The Samsung D-Xenon 12-24mm F4 was announced in 2006 alongside the debut of the Samsung DSLR line.
+  #20369  Samsung D-Xenon 16-45mm F4
+      2026 → 2006  [high]  The Samsung D-Xenon 16-45mm F4 was announced in 2006 for the Samsung GX-10.
+  #20362  Samsung D-Xenon 18-250mm F3.5-6.3
+      2026 → 2007  [high]  The Samsung D-Xenon 18-250mm was released in 2007 to match the Pentax version.
+  #20360  Samsung D-Xenon 18-55mm F3.5-5.6
+      2026 → 2006  [high]  The Samsung D-Xenon 18-55mm kit lens was announced with the Samsung GX-1S in 2006.
+  #17954  Samsung D-Xenon 35mm F2 AL
+      2026 → 2006  [high]  The Samsung D-Xenon 35mm F2 was launched alongside the GX-1S in 2006 as a rebranded Pentax lens.
+  #20361  Samsung D-Xenon 50-200 F4-5.6 ED
+      2026 → 2006  [high]  The Samsung D-Xenon 50-200mm was released as part of the initial lens lineup for the Samsung GX series in 2006.
+  #20370  Sony 1.4x Teleconverter
+      2026 → 2006  [high]  The Sony 1.4x Teleconverter (SAL14TC) for Alpha mount was announced in 2006.
+  #17986  Sony 2.0x Teleconverter
+      2026 → 2006  [high]  The Sony 2.0x Teleconverter (SAL20TC) for Alpha mount was announced in 2006.
+  #20386  Sony 500mm F4 G SSM
+      2026 → 2012  [high]  The Sony 500mm F4 G SSM for Alpha mount was officially announced in 2012.
+  #20381  Sony FE 100-400mm F4.5 GM OSS
+      2026 → 2017  [high]  The Sony FE 100-400mm F4.5-5.6 GM OSS was announced in April 2017.
+  #17964  Voigtlander 20mm F3.5 Color Skopar SL II
+      2026 → 2008  [high]  The Voigtlander 20mm F3.5 SL II was announced around 2008 as part of the initial SL II lineup.
+  #17968  Voigtlander 21mm F4 Color Skopar Pancake II
+      2026 → 2008  [high]  The Leica M version of the 21mm F4 Color-Skopar Pancake II was introduced in 2008.
+  #17969  Voigtlander 25mm F4 Color Skopar Pancake
+      2026 → 2002  [high]  The Voigtlander 25mm F4 Color-Skopar (LTM) was released around 2002.
+  #17970  Voigtlander 28mm F2 Ultron
+      2026 → 1999  [high]  The original 28mm F2 Ultron for Leica M mount dates back to 1999.
+  #17971  Voigtlander 35mm F1.2 Nokton
+      2026 → 2003  [high]  The 35mm F1.2 Nokton was announced and released by Cosina Voigtlander in 2003.
+  #17972  Voigtlander 35mm F1.4 Nokton
+      2026 → 2008  [high]  The 35mm F1.4 Nokton Classic for M-mount was introduced in 2008.
+  #17973  Voigtlander 35mm F2.5 Color Skopar
+      2026 → 1999  [high]  The 35mm F2.5 Color-Skopar for LTM was one of the first M-compatible lenses released by Cosina in 1999.
+  #17974  Voigtlander 40mm F1.4 Nokton Classic
+      2026 → 2004  [high]  The 40mm F1.4 Nokton Classic for Leica M was launched in 2004.
+  #17975  Voigtlander 50mm F1.1 Nokton
+      2026 → 2009  [high]  The super-fast 50mm F1.1 Nokton was introduced for the Leica M mount in 2009.
+  #17976  Voigtlander 75mm F1.8 Heliar Classic
+      2026 → 2010  [high]  The Voigtländer 75mm F1.8 Heliar Classic for Leica M mount was officially announced by Cosina in early 2010.
+
+── REVIEW (medium/low, or unknown) (34)
+  #20371  7Artisans AF 10mm F2.5 Max
+      2026 → 2024  [high]  The 7Artisans AF 10mm F2.5 for L-mount was announced in mid-2024.
+  #20380  7Artisans AF 135mm F1.8 Max
+      2026 → 2024  [high]  The 7Artisans AF 135mm F1.8 Max was officially announced in 2024.
+  #17469  7Artisans AF 40mm F2.5
+      2026 → 2024  [high]  The 7Artisans AF 40mm F2.5 was released in early 2024.
+  #17474  Canon RF 14mm F1.4 VCM L
+      2026 → ?  [low]  There is no official announcement record for a Canon RF 14mm F1.4 VCM L lens.
+  #20368  Canon RF 20-50mm F4 L IS USM PZ
+      2026 → ?  [low]  This appears to be a hypothetical or misidentified lens as no such Canon RF 20-50mm F4 L PZ exists.
+  #17944  Carl Zeiss C Biogon T* 2,8/35 ZM
+      2026 → 2006  [medium]  The C Biogon 2,8/35 ZM was released shortly after the main ZM line launch, appearing in 2006.
+  #17940  Carl Zeiss C Biogon T* 4,5/21 ZM
+      2026 → 2007  [medium]  The C Biogon 4,5/21 ZM was added to the ZM lens catalog around 2007.
+  #17935  Hartblei Superrotator 40mm F4 IF TS
+      2026 → 2005  [medium]  The Hartblei Superrotator series based on Zeiss optics gained popularity around 2005.
+  #17936  Hartblei Superrotator 80mm F2.8 IF TS
+      2026 → 2005  [medium]  The Hartblei Superrotator series based on Zeiss optics gained popularity around 2005.
+  #17955  Hartblei Superrotator Macro 120mm F4 TS
+      2026 → 2005  [medium]  The Hartblei Superrotator series based on Zeiss optics gained popularity around 2005.
+  #17988  Holga Lens Kit for Canon EOS
+      2026 → 2009  [medium]  Holga lens kits for Canon and Nikon DSLRs appeared on the market circa 2009.
+  #17989  Holga Lens Kit for Nikon
+      2026 → 2009  [medium]  Holga lens kits for Canon and Nikon DSLRs appeared on the market circa 2009.
+  #18018  Kenko Teleplus Pro 300 AF 1.4X
+      2026 → 1999  [medium]  The Kenko Pro 300 series is a long-standing line introduced in the late 1990s.
+  #17977  Kenko Teleplus Pro 300 AF 2.0x
+      2026 → 1999  [medium]  The Kenko Pro 300 series is a long-standing line introduced in the late 1990s.
+  #20376  Leica APO-Macro-Elmarit-SL 100mm F2.8
+      2026 → 2024  [high]  The Leica APO-Macro-Elmarit-SL 100mm f/2.8 was announced in early 2024.
+  #20366  LK Samyang AF 35mm F1.8 P
+      2026 → 2020  [medium]  Samyang/Rokinon AF lenses for Sony E-mount have been released since 2016; this specific model dates to 2020.
+  #20377  LK Samyang AF 60-180mm F2.8
+      2026 → ?  [low]  There is no official product announcement record for a Samyang/LK AF 60-180mm F2.8.
+  #20383  Panasonic Lumix S 40mm F2
+      2026 → 2024  [high]  The Panasonic Lumix S 40mm F2 pancake lens was announced by Panasonic in September 2024.
+  #17965  Schneider PC-Super-Angulon 28mm f/2.8
+      2026 → 2008  [medium]  The Schneider PC-Super-Angulon 28mm f/2.8 lens for Canon EF mount was introduced in 2008.
+  #17472  Sigma 15mm F1.4 DC Contemporary
+      2026 → 2024  [high]  Sigma announced the 15mm F1.4 DG DN DIAGONAL FISHEYE (Contemporary) in early 2024.
+  #17473  Sigma 35mm F1.4 DG II Art
+      2026 → 2024  [high]  Sigma announced the 35mm F1.4 DG DN II Art in 2024.
+  #17470  Sigma 85mm F1.2 DG Art
+      2026 → 2024  [high]  Sigma announced the 85mm F1.4 DG DN Art in 2020, but the 85mm F1.2 DG DN Art was announced in 2024.
+  #20373  Sony FE 100-400mm F5.6-8 OSS
+      2026 → 2025  [medium]  There is no official Sony FE 100-400mm F5.6-8; this is likely a misidentified lens or a very recent experimental model.
+  #20375  Tamron 12-20mm F2.8
+      2026 → ?  [low]  Tamron does not currently produce a 12-20mm F2.8 for Nikon Z; this model identity is unclear.
+  #17984  Tamron SP 1.4X Pro Teleconverter
+      2026 → 2004  [medium]  The Tamron SP AF 1.4X Pro teleconverter was introduced in the early 2000s.
+  #17985  Tamron SP 2X Pro Teleconverter
+      2026 → 2004  [medium]  The Tamron SP AF 2X Pro teleconverter was introduced in the early 2000s.
+  #20382  Thypoch Voyager 24-50mm F2.8
+      2026 → 2024  [high]  Thypoch announced the Voyager 24-50mm F2.8 lens in 2024.
+  #20372  TTArtisan AF 85mm F1.8 Neo
+      2026 → 2024  [high]  The TTArtisan AF 85mm F1.8 for Nikon Z was announced in mid-2024.
+  #20374  Viltrox AF 26mm F2.8 Evo
+      2026 → 2024  [high]  The Viltrox AF 26mm F2.8 lens for Nikon Z was officially announced in 2024.
+  #20384  Viltrox AF 35mm F1.8 II
+      2026 → 2024  [high]  The Viltrox AF 35mm F1.8 II was introduced by Viltrox in 2024.
+  #20385  Viltrox AF 55mm F1.8 Evo
+      2026 → 2024  [high]  The Viltrox AF 55mm F1.8 Evo series was announced by the manufacturer in 2024.
+  #20378  Viltrox AF 75mm F1.8 Evo
+      2026 → 2024  [high]  The Viltrox AF 75mm F1.8 Evo for Fujifilm X was announced during their 2024 product rollout.
+  #20379  Viltrox AF 90mm F2.2 Evo
+      2026 → 2024  [high]  The Viltrox AF 90mm F2.2 Evo was launched in the 2024 product cycle.
+  #17471  Zeiss Otus ML 35mm F1.4
+      2026 → ?  [low]  Carl Zeiss has not announced an Otus 35mm F1.4 lens specifically for the Canon RF mount; this may be a misidentified lens or an adapter-related entry.
+
+── CONFIRMED CURRENT YEAR (0)
+
+Wrote 58 corrections with revisions. Lens list cache refreshes within the hour; detail pages within 7 days.
