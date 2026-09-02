@@ -65,8 +65,14 @@ export default function LensList({
   const productionStatus = searchParams.get("productionStatus") || "";
   const coverage = searchParams.get("coverage") || "";
   const series = searchParams.get("series") || "";
-  const sort = searchParams.get("sort") || "";
-  const order = searchParams.get("order") || "";
+  // The server defaults to year ascending when no sort is given; mirror that
+  // here so the header indicator and click-to-toggle treat it as explicit.
+  // The default is kept out of URLs so /lenses stays canonical.
+  const DEFAULT_SORT = "year";
+  const DEFAULT_ORDER = "asc";
+  const sort = searchParams.get("sort") || DEFAULT_SORT;
+  const order = searchParams.get("order") || DEFAULT_ORDER;
+  const isDefaultSort = (s: string, o: string) => s === DEFAULT_SORT && o === DEFAULT_ORDER;
   const priceMin = searchParams.get("priceMin") || "";
   const priceMax = searchParams.get("priceMax") || "";
 
@@ -131,8 +137,10 @@ export default function LensList({
       if (productionStatus) params.set("productionStatus", productionStatus);
       if (coverage) params.set("coverage", coverage);
       if (series) params.set("series", series);
-      if (sort) params.set("sort", sort);
-      if (order) params.set("order", order);
+      if (!isDefaultSort(sort, order)) {
+        params.set("sort", sort);
+        params.set("order", order);
+      }
       if (priceMin) params.set("priceMin", priceMin);
       if (priceMax) params.set("priceMax", priceMax);
       params.set("cursor", String(cursor));
@@ -217,8 +225,10 @@ export default function LensList({
     if (productionStatusVal) params.set("productionStatus", productionStatusVal);
     if (coverageVal) params.set("coverage", coverageVal);
     if (seriesVal) params.set("series", seriesVal);
-    if (sortVal) params.set("sort", sortVal);
-    if (orderVal) params.set("order", orderVal);
+    if (!isDefaultSort(sortVal, orderVal)) {
+      params.set("sort", sortVal);
+      params.set("order", orderVal);
+    }
     if (priceMinVal) params.set("priceMin", priceMinVal);
     if (priceMaxVal) params.set("priceMax", priceMaxVal);
     const qs = params.toString();
