@@ -1,8 +1,8 @@
 import { z } from "zod";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { getDb, schema } from "../db";
 
-const { systems, cameras, lenses } = schema;
+const { systems, cameras, lenses, lensSystems } = schema;
 
 export const getSystemInfoSchema = z.object({
   slug: z.string().describe("System slug, e.g. 'nikon-f'"),
@@ -29,10 +29,12 @@ export async function getSystemInfo(params: GetSystemInfoParams) {
     .from(cameras)
     .where(eq(cameras.systemId, system.id));
 
+  // Every lens sold in this mount (lens_systems), not only primary-mount ones.
   const [lensCount] = await db
     .select({ count: sql<string>`count(*)` })
-    .from(lenses)
-    .where(eq(lenses.systemId, system.id));
+    .from(lensSystems)
+    .innerJoin(lenses, eq(lensSystems.lensId, lenses.id))
+    .where(and(eq(lensSystems.systemId, system.id), isNull(lenses.mergedIntoId)));
 
   return {
     name: system.name,

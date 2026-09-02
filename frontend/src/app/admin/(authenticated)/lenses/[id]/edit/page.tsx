@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { lenses, systems } from "@/db/schema";
+import { lenses, lensSystems, systems } from "@/db/schema";
 import { eq, asc } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import LensForm from "@/components/admin/LensForm";
@@ -25,17 +25,25 @@ export default async function EditLensPage({
 
   if (!lens) notFound();
 
-  const [allSystems, tags] = await Promise.all([
+  const [allSystems, tags, mountRows] = await Promise.all([
     db
       .select({ id: systems.id, name: systems.name })
       .from(systems)
       .orderBy(asc(systems.name)),
     getDistinctLensTags(),
+    db
+      .select({ systemId: lensSystems.systemId })
+      .from(lensSystems)
+      .where(eq(lensSystems.lensId, lens.id)),
   ]);
 
   return (
     <EditPageWithReport title="Edit Lens">
-      <LensForm lens={lens} systems={allSystems} tags={tags} />
+      <LensForm
+        lens={{ ...lens, systemIds: mountRows.map((r) => r.systemId) }}
+        systems={allSystems}
+        tags={tags}
+      />
     </EditPageWithReport>
   );
 }

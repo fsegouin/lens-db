@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { lenses, systems } from "@/db/schema";
 import { requireAdminAPI, getAdminUserFromToken } from "@/lib/admin-auth";
 import { createRevision } from "@/lib/revisions";
+import { syncLensSystems } from "@/lib/lens-systems";
 import { eq } from "drizzle-orm";
 
 export async function GET(
@@ -109,6 +110,10 @@ export async function PUT(
 
   if (!updated) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  if (Array.isArray(body.systemIds)) {
+    await syncLensSystems(updated.id, updated.systemId, body.systemIds);
   }
 
   await createRevision({

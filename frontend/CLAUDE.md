@@ -101,7 +101,7 @@ src/
 ## Database Schema
 
 Core tables: `systems`, `lenses`, `cameras`, `collections`, `lensSeries`, `tags`, `users`
-Junction tables: `lensCollections` (M:N), `lensSeriesMemberships` (M:N), `lensTags` (M:N), `lensCompatibility` (M:N with isNative flag), `lensSystems` (M:N mount availability; `lenses.systemId` stays the primary mount)
+Junction tables: `lensCollections` (M:N), `lensSeriesMemberships` (M:N), `lensTags` (M:N), `lensCompatibility` (M:N with isNative flag), `lensSystems` (M:N mount availability — the source of truth for "which mounts is this lens sold in"; `lenses.systemId` is the primary mount and is always mirrored into `lensSystems` by a DB trigger, so list/filter/system-page queries read the junction table alone; admin writes go through `lib/lens-systems.ts`)
 Systems: one row per physical mount, not per camera family or per-lens variant (a lens's original mount string survives in `lenses.specs.Mount`). `systemRedirects` maps slugs of merged-away systems to their survivor; `/systems/[slug]` follows it on a miss. Merges are done with `scripts/consolidate-systems.mjs` (dry run by default).
 Engagement: `lensRatings`, `cameraRatings`, `lensComparisons`, `cameraComparisons`
 Community edits: `revisions`, `pendingEdits`, `duplicateFlags`, `issueReports`, `blockedIps`

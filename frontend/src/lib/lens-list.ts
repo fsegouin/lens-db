@@ -1,6 +1,6 @@
 import { unstable_cache } from "next/cache";
 import { db } from "@/db";
-import { lenses, systems, lensSeries, lensSeriesMemberships, priceEstimates } from "@/db/schema";
+import { lenses, systems, lensSeries, lensSeriesMemberships, lensSystems, priceEstimates } from "@/db/schema";
 import { asc, desc, eq, and, gte, lte, sql, inArray, isNull, type AnyColumn } from "drizzle-orm";
 
 const PAGE_SIZE = 50;
@@ -33,6 +33,8 @@ export type LensListItem = {
   system: typeof systems.$inferSelect | null;
   avgPrice: number | null;
   series: { name: string; slug: string }[];
+  // Every mount the lens is sold in (lens_systems), primary first.
+  mounts: { name: string; slug: string }[];
 };
 
 export type LensListResult = {
@@ -75,7 +77,14 @@ export const listLenses = unstable_cache(
       conditions.push(eq(lenses.brand, p.brand));
     }
     if (p.system) {
-      conditions.push(eq(systems.slug, p.system));
+      // Match any mount the lens is sold in, not just the primary one.
+      conditions.push(
+        sql`${lenses.id} IN (
+          SELECT ${lensSystems.lensId} FROM ${lensSystems}
+          JOIN ${systems} ON ${systems.id} = ${lensSystems.systemId}
+          WHERE ${systems.slug} = ${p.system}
+        )`
+      );
     }
     if (p.coverage) {
       conditions.push(eq(lenses.coverage, p.coverage));
@@ -170,8 +179,6 @@ export const listLenses = unstable_cache(
       ? [sql`${lenses.yearIntroduced} IS NULL`, orderFn(sortCol), ...nameTieBreak]
       : [orderFn(sortCol), ...nameTieBreak];
 
-    const needsSystemJoin = !!p.system;
-
     const itemsPromise = db
       .select({ lens: lenses, system: systems, avgPrice: avgPrice })
       .from(lenses)
@@ -189,24 +196,14 @@ export const listLenses = unstable_cache(
     // Cursor pagination from the client already has total from SSR.
     const countPromise =
       cursor === 0
-        ? (needsSystemJoin
-            ? db
-                .select({ count: sql<number>`count(*)` })
-                .from(lenses)
-                .leftJoin(systems, eq(lenses.systemId, systems.id))
-                .leftJoin(priceEstimates, and(
-                  eq(priceEstimates.entityType, "lens"),
-                  eq(priceEstimates.entityId, lenses.id),
-                ))
-                .where(where)
-            : db
-                .select({ count: sql<number>`count(*)` })
-                .from(lenses)
-                .leftJoin(priceEstimates, and(
-                  eq(priceEstimates.entityType, "lens"),
-                  eq(priceEstimates.entityId, lenses.id),
-                ))
-                .where(where))
+        ? db
+            .select({ count: sql<number>`count(*)` })
+            .from(lenses)
+            .leftJoin(priceEstimates, and(
+              eq(priceEstimates.entityType, "lens"),
+              eq(priceEstimates.entityId, lenses.id),
+            ))
+            .where(where)
         : null;
 
     const [items, countRows] = await Promise.all([
@@ -218,31 +215,53 @@ export const listLenses = unstable_cache(
     const nextCursor =
       items.length === PAGE_SIZE ? cursor + PAGE_SIZE : null;
 
-    // Fetch series for the returned lenses
+    // Fetch series and mounts for the returned lenses
     const lensIds = items.map((r) => r.lens.id);
     const seriesMap: Record<number, { name: string; slug: string }[]> = {};
+    const mountsMap: Record<number, { name: string; slug: string }[]> = {};
     if (lensIds.length > 0) {
-      const seriesRows = await db
-        .select({
-          lensId: lensSeriesMemberships.lensId,
-          name: lensSeries.name,
-          slug: lensSeries.slug,
-        })
-        .from(lensSeriesMemberships)
-        .innerJoin(lensSeries, eq(lensSeriesMemberships.seriesId, lensSeries.id))
-        .where(inArray(lensSeriesMemberships.lensId, lensIds));
+      const [seriesRows, mountRows] = await Promise.all([
+        db
+          .select({
+            lensId: lensSeriesMemberships.lensId,
+            name: lensSeries.name,
+            slug: lensSeries.slug,
+          })
+          .from(lensSeriesMemberships)
+          .innerJoin(lensSeries, eq(lensSeriesMemberships.seriesId, lensSeries.id))
+          .where(inArray(lensSeriesMemberships.lensId, lensIds)),
+        db
+          .select({
+            lensId: lensSystems.lensId,
+            systemId: lensSystems.systemId,
+            name: systems.name,
+            slug: systems.slug,
+          })
+          .from(lensSystems)
+          .innerJoin(systems, eq(lensSystems.systemId, systems.id))
+          .where(inArray(lensSystems.lensId, lensIds))
+          .orderBy(asc(systems.name)),
+      ]);
       for (const row of seriesRows) {
         if (!seriesMap[row.lensId]) seriesMap[row.lensId] = [];
         seriesMap[row.lensId].push({ name: row.name, slug: row.slug });
       }
+      const primaryOf = new Map(items.map((r) => [r.lens.id, r.lens.systemId]));
+      for (const row of mountRows) {
+        if (!mountsMap[row.lensId]) mountsMap[row.lensId] = [];
+        const entry = { name: row.name, slug: row.slug };
+        if (row.systemId === primaryOf.get(row.lensId)) mountsMap[row.lensId].unshift(entry);
+        else mountsMap[row.lensId].push(entry);
+      }
     }
 
-    const itemsWithSeries = items.map((r) => ({
+    const itemsWithRelations = items.map((r) => ({
       ...r,
       series: seriesMap[r.lens.id] || [],
+      mounts: mountsMap[r.lens.id] || [],
     }));
 
-    return { items: itemsWithSeries, nextCursor, total };
+    return { items: itemsWithRelations, nextCursor, total };
   },
   ["lens-list-v2"],
   { revalidate: 3600, tags: ["lenses"] }
