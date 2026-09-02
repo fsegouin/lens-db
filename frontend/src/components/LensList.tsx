@@ -502,7 +502,7 @@ export default function LensList({
                 </TableCell>
                 <TableCell className="text-zinc-500">
                   {lens.brand ? (
-                    <button
+                    <button type="button"
                       onClick={() => applyFilters({ brand: lens.brand!, system: "", q: "", type: "", minFocal: "", maxFocal: "", minAperture: "", maxAperture: "", year: "", lensType: "", era: "", productionStatus: "", coverage: "" })}
                       className="text-left hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
                     >
@@ -512,7 +512,7 @@ export default function LensList({
                 </TableCell>
                 <TableCell className="text-zinc-500">
                   {system ? (
-                    <button
+                    <button type="button"
                       onClick={() => applyFilters({ system: system.slug, brand: "", q: "", type: "", minFocal: "", maxFocal: "", minAperture: "", maxAperture: "", year: "", lensType: "", era: "", productionStatus: "", coverage: "" })}
                       className="text-left hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
                     >
@@ -522,8 +522,8 @@ export default function LensList({
                 </TableCell>
                 <TableCell className="text-zinc-600 dark:text-zinc-400">
                   {lens.focalLengthMin ? (
-                    <button
-                      onClick={() => applyFilters({ minFocal: String(lens.focalLengthMin), maxFocal: String(lens.focalLengthMax), brand: "", system: "", q: "", type: "", minAperture: "", maxAperture: "", year: "", lensType: "", era: "", productionStatus: "", coverage: "" })}
+                    <button type="button"
+                      onClick={() => applyFilters({ minFocal: String(lens.focalLengthMin), maxFocal: String(lens.focalLengthMax ?? lens.focalLengthMin), brand: "", system: "", q: "", type: "", minAperture: "", maxAperture: "", year: "", lensType: "", era: "", productionStatus: "", coverage: "" })}
                       className="text-left hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
                     >
                       {lens.focalLengthMin === lens.focalLengthMax
@@ -534,7 +534,7 @@ export default function LensList({
                 </TableCell>
                 <TableCell className="text-zinc-600 dark:text-zinc-400">
                   {lens.apertureMin ? (
-                    <button
+                    <button type="button"
                       onClick={() => applyFilters({ minAperture: String(lens.apertureMin), maxAperture: String(lens.apertureMin), brand: "", system: "", q: "", type: "", minFocal: "", maxFocal: "", year: "", coverage: "" })}
                       className="text-left hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
                     >
@@ -600,7 +600,7 @@ export default function LensList({
                 </TableCell>
                 <TableCell className="text-zinc-600 dark:text-zinc-400">
                   {lens.yearIntroduced ? (
-                    <button
+                    <button type="button"
                       onClick={() => applyFilters({ year: String(lens.yearIntroduced), brand: "", system: "", q: "", type: "", minFocal: "", maxFocal: "", minAperture: "", maxAperture: "", coverage: "" })}
                       className="text-left hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
                     >

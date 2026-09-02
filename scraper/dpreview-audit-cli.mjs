@@ -41,7 +41,7 @@ async function api(method, bodyOrNull) {
       if (!res.ok) {
         throw new Error(`${method} audit failed: ${res.status} ${await res.text()}`);
       }
-      return res.json();
+      return await res.json();
     } catch (error) {
       if (attempt >= 3) throw error;
       console.warn(`  retrying after error (${attempt}/3): ${String(error).slice(0, 120)}`);

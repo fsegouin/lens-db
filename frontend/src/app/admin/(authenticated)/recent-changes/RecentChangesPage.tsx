@@ -51,11 +51,16 @@ export default function RecentChangesPage() {
     if (filterType) params.set("entityType", filterType);
     if (unpatrolledOnly) params.set("unpatrolled", "true");
 
-    const res = await fetch(`/api/admin/recent-changes?${params}`);
-    const data = await res.json();
-    setRevisions(data.revisions);
-    setTotal(data.total);
-    setLoading(false);
+    try {
+      const res = await fetch(`/api/admin/recent-changes?${params}`);
+      const data = await res.json();
+      setRevisions(data.revisions ?? []);
+      setTotal(data.total ?? 0);
+    } catch {
+      setRevisions([]);
+    } finally {
+      setLoading(false);
+    }
   }, [page, filterType, unpatrolledOnly]);
 
   useEffect(() => {

@@ -22,7 +22,7 @@ jobs:
           node-version: 24
 
       - name: Install script dependencies
-        run: cd scraper && npm install playwright-core
+        run: cd scraper && npm ci
 
       - name: Run eBay lens price scraper
         env:

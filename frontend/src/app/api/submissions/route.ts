@@ -225,7 +225,10 @@ export async function POST(request: NextRequest) {
   }
   } catch (error) {
     // Postgres unique violation (duplicate name/slug)
-    if ((error as { code?: string })?.code === "23505") {
+    const pgCode =
+      (error as { code?: string })?.code ??
+      (error as { cause?: { code?: string } })?.cause?.code;
+    if (pgCode === "23505") {
       return NextResponse.json(
         { error: "An entity with this name or slug already exists" },
         { status: 409 }

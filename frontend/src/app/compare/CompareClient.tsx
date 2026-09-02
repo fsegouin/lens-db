@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowUpDown, ChevronDown } from "lucide-react";
@@ -177,6 +177,7 @@ function ItemSearch({
   onSelect: (item: SelectedItem | null) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const labelId = useId();
 
   const types = useMemo<EntityType[]>(
     () => lockedType ? [lockedType] : ["lens", "camera"],
@@ -213,9 +214,9 @@ function ItemSearch({
 
   return (
     <div className="space-y-1">
-      <p className="text-xs text-zinc-500">{label}</p>
+      <p id={labelId} className="text-xs text-zinc-500">{label}</p>
       <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger render={<Button variant="outline" className="w-full justify-between" />}>
+        <PopoverTrigger render={<Button variant="outline" className="w-full justify-between" aria-describedby={labelId} />}>
           {query || placeholder}
           <ChevronDown className="h-4 w-4 text-muted-foreground" />
         </PopoverTrigger>

@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const q = searchParams.get("q");
-  const cursor = parseInt(searchParams.get("cursor") || "0", 10);
+  const cursor = Math.max(parseInt(searchParams.get("cursor") || "0", 10) || 0, 0);
 
   const lensConditions = q ? buildNameSearch(lenses.name, q) : [];
   const cameraConditions = q ? buildNameSearch(cameras.name, q) : [];
@@ -76,7 +76,10 @@ export async function POST(request: NextRequest) {
       notes: notes || null,
     });
   } catch (err: unknown) {
-    if (err instanceof Error && err.message.includes("duplicate key")) {
+    const pgCode =
+      (err as { code?: string })?.code ??
+      (err as { cause?: { code?: string } })?.cause?.code;
+    if (pgCode === "23505") {
       return NextResponse.json({ error: "This compatibility entry already exists" }, { status: 409 });
     }
     throw err;

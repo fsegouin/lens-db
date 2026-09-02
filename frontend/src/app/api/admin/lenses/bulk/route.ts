@@ -27,10 +27,11 @@ export async function POST(request: NextRequest) {
 
   switch (action) {
     case "addTags": {
-      const tagIds = value as number[];
-      if (!Array.isArray(tagIds) || tagIds.length === 0) {
+      const rawTagIds = value as number[];
+      if (!Array.isArray(rawTagIds) || rawTagIds.length === 0) {
         return NextResponse.json({ error: "No tags provided" }, { status: 400 });
       }
+      const tagIds = [...new Set(rawTagIds)];
       // Verify tags exist
       const existingTags = await db.select({ id: tags.id }).from(tags).where(inArray(tags.id, tagIds));
       if (existingTags.length !== tagIds.length) {

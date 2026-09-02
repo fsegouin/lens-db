@@ -39,7 +39,6 @@ export default function AdminCompatibilityPage() {
   }, [search, page]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
-  useEffect(() => { setPage(0); }, [search]);
 
   async function handleDelete(lensId: number, cameraId: number) {
     if (!window.confirm("Are you sure you want to delete this compatibility entry?")) return;
@@ -76,7 +75,7 @@ export default function AdminCompatibilityPage() {
         aria-label="Search by lens or camera name"
         placeholder="Search by lens or camera name..."
         value={search}
-        onChange={(e) => setSearch(e.target.value)}
+        onChange={(e) => { setSearch(e.target.value); setPage(0); }}
         className="w-full max-w-sm rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
       />
 

@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
   if (authError) return authError;
 
   const { searchParams } = new URL(request.url);
-  const page = parseInt(searchParams.get("page") || "1", 10);
+  const page = Math.max(parseInt(searchParams.get("page") || "1", 10) || 1, 1);
   const entityType = searchParams.get("entityType");
   const unpatrolledOnly = searchParams.get("unpatrolled") === "true";
   const limit = 50;

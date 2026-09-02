@@ -176,7 +176,7 @@ export default function PriceCard({ estimate, history }: PriceCardProps) {
             Sale history ({history.length} records)
           </summary>
           <div className="mt-2 max-h-72 overflow-auto rounded-lg border border-zinc-200 dark:border-zinc-800">
-            <Table>
+            <Table aria-label="Sale history">
               <TableHeader>
                 <TableRow>
                   <TableHead scope="col" className="text-xs">Date</TableHead>

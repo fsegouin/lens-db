@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Token is valid — redirect to confirmation page (user must click to verify)
-    return NextResponse.redirect(new URL(`/verify-email?token=${token}`, request.url));
+    return NextResponse.redirect(new URL(`/verify-email?token=${encodeURIComponent(token)}`, request.url));
   } catch (error) {
     console.error("GET /api/auth/verify-email error:", error);
     return NextResponse.redirect(new URL("/login?error=server-error", request.url));

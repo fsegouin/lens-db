@@ -169,45 +169,47 @@ async function main() {
 
   let totalStored = 0;
 
-  for (let i = 0; i < cameras.length; i++) {
-    const camera = cameras[i];
-    if (i > 0) await delay(DELAY_BETWEEN_CAMERAS_MS);
+  try {
+    for (let i = 0; i < cameras.length; i++) {
+      const camera = cameras[i];
+      if (i > 0) await delay(DELAY_BETWEEN_CAMERAS_MS);
 
-    // Scrape primary name
-    let listings = [];
-    try {
-      listings = await scrapeSoldListings(page, camera.name);
+      // Scrape primary name
+      let listings = [];
+      try {
+        listings = await scrapeSoldListings(page, camera.name);
 
-      // If alias exists and few results, also search alias
-      if (camera.alias && listings.length < 5) {
-        await delay(DELAY_BETWEEN_CAMERAS_MS);
-        const aliasListings = await scrapeSoldListings(page, camera.alias);
-        const seen = new Set(listings.map((l) => l.itemId));
-        for (const l of aliasListings) {
-          if (!seen.has(l.itemId)) listings.push(l);
+        // If alias exists and few results, also search alias
+        if (camera.alias && listings.length < 5) {
+          await delay(DELAY_BETWEEN_CAMERAS_MS);
+          const aliasListings = await scrapeSoldListings(page, camera.alias);
+          const seen = new Set(listings.map((l) => l.itemId));
+          for (const l of aliasListings) {
+            if (!seen.has(l.itemId)) listings.push(l);
+          }
+          listings = listings.slice(0, 20);
         }
-        listings = listings.slice(0, 20);
+      } catch (error) {
+        console.error(`  Error scraping: ${error.message}`);
       }
-    } catch (error) {
-      console.error(`  Error scraping: ${error.message}`);
-    }
 
-    console.log(`${i + 1}/${cameras.length} ${camera.name}: ${listings.length} listings`);
+      console.log(`${i + 1}/${cameras.length} ${camera.name}: ${listings.length} listings`);
 
-    // Always submit to API — even with 0 listings, so the camera is marked as scraped
-    // and gets rotated out of the "never-scraped" priority queue
-    try {
-      const result = await submitListings(camera.id, camera.name, listings);
-      if (listings.length > 0) {
-        console.log(`  Relevant: ${result.relevant}, Stored: ${result.stored}`);
+      // Always submit to API — even with 0 listings, so the camera is marked as scraped
+      // and gets rotated out of the "never-scraped" priority queue
+      try {
+        const result = await submitListings(camera.id, camera.name, listings);
+        if (listings.length > 0) {
+          console.log(`  Relevant: ${result.relevant}, Stored: ${result.stored}`);
+        }
+        totalStored += result.stored || 0;
+      } catch (error) {
+        console.error(`  Error submitting: ${error.message}`);
       }
-      totalStored += result.stored || 0;
-    } catch (error) {
-      console.error(`  Error submitting: ${error.message}`);
     }
+  } finally {
+    await browser.close();
   }
-
-  await browser.close();
   console.log(`\nDone: ${cameras.length} cameras, ${totalStored} stored`);
 
   try {

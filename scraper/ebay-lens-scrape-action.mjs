@@ -162,33 +162,35 @@ async function main() {
 
   let totalStored = 0;
 
-  for (let i = 0; i < lenses.length; i++) {
-    const lens = lenses[i];
-    if (i > 0) await delay(DELAY_BETWEEN_LENSES_MS);
+  try {
+    for (let i = 0; i < lenses.length; i++) {
+      const lens = lenses[i];
+      if (i > 0) await delay(DELAY_BETWEEN_LENSES_MS);
 
-    let listings = [];
-    try {
-      listings = await scrapeSoldListings(page, lens.name);
-    } catch (error) {
-      console.error(`  Error scraping: ${error.message}`);
-    }
-
-    console.log(`${i + 1}/${lenses.length} ${lens.name}: ${listings.length} listings`);
-
-    // Always submit to API — even with 0 listings, so the lens is marked as scraped
-    // and gets rotated out of the "never-scraped" priority queue
-    try {
-      const result = await submitListings(lens.id, lens.name, listings);
-      if (listings.length > 0) {
-        console.log(`  Relevant: ${result.relevant}, Stored: ${result.stored}`);
+      let listings = [];
+      try {
+        listings = await scrapeSoldListings(page, lens.name);
+      } catch (error) {
+        console.error(`  Error scraping: ${error.message}`);
       }
-      totalStored += result.stored || 0;
-    } catch (error) {
-      console.error(`  Error submitting: ${error.message}`);
-    }
-  }
 
-  await browser.close();
+      console.log(`${i + 1}/${lenses.length} ${lens.name}: ${listings.length} listings`);
+
+      // Always submit to API — even with 0 listings, so the lens is marked as scraped
+      // and gets rotated out of the "never-scraped" priority queue
+      try {
+        const result = await submitListings(lens.id, lens.name, listings);
+        if (listings.length > 0) {
+          console.log(`  Relevant: ${result.relevant}, Stored: ${result.stored}`);
+        }
+        totalStored += result.stored || 0;
+      } catch (error) {
+        console.error(`  Error submitting: ${error.message}`);
+      }
+    }
+  } finally {
+    await browser.close();
+  }
   console.log(`\nDone: ${lenses.length} lenses, ${totalStored} stored`);
 
   try {

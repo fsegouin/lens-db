@@ -38,11 +38,16 @@ export default function UsersPage() {
     setLoading(true);
     const params = new URLSearchParams({ page: String(page) });
     if (search) params.set("search", search);
-    const res = await fetch(`/api/admin/users?${params}`);
-    const data = await res.json();
-    setUsers(data.users);
-    setTotal(data.total);
-    setLoading(false);
+    try {
+      const res = await fetch(`/api/admin/users?${params}`);
+      const data = await res.json();
+      setUsers(data.users ?? []);
+      setTotal(data.total ?? 0);
+    } catch {
+      setUsers([]);
+    } finally {
+      setLoading(false);
+    }
   }, [page, search]);
 
   useEffect(() => {
