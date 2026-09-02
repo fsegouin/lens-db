@@ -96,14 +96,60 @@ function RarityDiamonds({ label }: { label: string }) {
   );
 }
 
-export default function PriceCard({ estimate, history }: PriceCardProps) {
-  if (!estimate && history.length === 0) return null;
+/**
+ * The three condition tiers are computed per condition grade from whatever
+ * sales exist, and with a handful of sales they routinely come out unordered:
+ * an Irix 11mm showed Fair $199-225, Good $225-280 and Excellent $157. Three
+ * tiers that contradict each other are worse than one honest range, so they
+ * are only shown when they actually ascend.
+ */
+type Tier = { label: string; low: number | null; high: number | null };
 
+function tiersAreOrdered(tiers: Tier[]): boolean {
+  const bounds = tiers.map((t) => t.low ?? t.high).filter((v): v is number => v != null);
+  if (bounds.length < tiers.length) return false;
+  const highs = tiers.map((t) => t.high ?? t.low).filter((v): v is number => v != null);
+  for (let i = 1; i < bounds.length; i++) {
+    if (bounds[i] < bounds[i - 1]) return false;
+    if (highs[i] < highs[i - 1]) return false;
+  }
+  return true;
+}
+
+/** Rarity is a claim about scarcity, so it needs enough sales to stand up. */
+const MIN_SALES_FOR_RARITY = 20;
+
+export default function PriceCard({ estimate, history }: PriceCardProps) {
   const shownEstimate =
     estimate != null &&
     (estimate.priceAverageLow != null || estimate.priceVeryGoodLow != null)
       ? estimate
       : null;
+
+  // An estimate row can carry a rarity label and no prices at all (1,707 lens
+  // rows do). Without prices and without sales there is nothing to show, and a
+  // bare "Used prices" heading over an empty box is worse than no section.
+  if (!shownEstimate && history.length === 0) return null;
+
+  const tiers: Tier[] = shownEstimate
+    ? [
+        { label: "Fair", low: shownEstimate.priceAverageLow, high: shownEstimate.priceAverageHigh },
+        { label: "Good", low: shownEstimate.priceVeryGoodLow, high: shownEstimate.priceVeryGoodHigh },
+        { label: "Excellent", low: shownEstimate.priceMintLow, high: shownEstimate.priceMintHigh },
+      ]
+    : [];
+  const showTiers = tiers.length > 0 && tiersAreOrdered(tiers);
+
+  // When the tiers disagree, fall back to the span they cover.
+  const allBounds = tiers
+    .flatMap((t) => [t.low, t.high])
+    .filter((v): v is number => v != null && v > 0);
+  const spanLow = allBounds.length ? Math.min(...allBounds) : null;
+  const spanHigh = allBounds.length ? Math.max(...allBounds) : null;
+
+  const saleCount = shownEstimate?.rarityVotes ?? history.length;
+  const showRarity =
+    shownEstimate?.rarity != null && saleCount >= MIN_SALES_FOR_RARITY;
 
   return (
     <div className="@container space-y-4">
@@ -111,7 +157,21 @@ export default function PriceCard({ estimate, history }: PriceCardProps) {
         Used prices
       </h2>
 
-      {shownEstimate && (
+      {shownEstimate && !showTiers && (
+        <div className="rounded-lg border border-border p-3">
+          <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+            Typical used price
+          </div>
+          <div className="mt-1 font-mono text-base font-semibold tabular-nums">
+            {formatPrice(spanLow, spanHigh)}
+          </div>
+          <p className="mt-1.5 text-xs text-muted-foreground">
+            Too few graded sales to separate conditions.
+          </p>
+        </div>
+      )}
+
+      {shownEstimate && showTiers && (
         <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 overflow-hidden">
           <div className="grid grid-cols-1 divide-y divide-border @sm:grid-cols-3 @sm:divide-x @sm:divide-y-0">
             <div className="flex items-baseline justify-between gap-3 p-3 @sm:block @sm:text-center">
@@ -140,9 +200,9 @@ export default function PriceCard({ estimate, history }: PriceCardProps) {
             </div>
           </div>
 
-          {(shownEstimate.rarity || shownEstimate.sourceUrl) && (
+          {(showRarity || shownEstimate.sourceUrl) && (
             <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-border px-3 py-2.5">
-              {shownEstimate.rarity && (
+              {showRarity && shownEstimate.rarity && (
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                   <span className="text-xs font-medium text-muted-foreground uppercase">
                     Rarity

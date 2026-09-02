@@ -363,12 +363,13 @@ export default async function LensDetailPage({
 
       <div className="mt-8 grid gap-10 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-12">
         <article className="min-w-0 space-y-8">
-          {/* The rail's content leads on mobile: the numbers people came for
-              sit above the prose, without pushing the specs down on desktop. */}
-          <div className="space-y-6 lg:hidden">{rail}</div>
-
-          {/* The one-sentence definition: what this thing is. */}
+          {/* The one-sentence definition comes first in reading order, so
+              screen readers and crawlers meet it before the rail's numbers. */}
           <p className="text-lg leading-relaxed">{leadSentence}</p>
+
+          {/* The rail then leads the rest of the page on mobile: the price and
+              rating people came for, without pushing specs down on desktop. */}
+          <div className="space-y-6 lg:hidden">{rail}</div>
 
           <LensMedia lens={lens} images={images} />
 
@@ -449,11 +450,13 @@ export default async function LensDetailPage({
             Fits these cameras
           </h2>
           <p className="mb-3 text-sm text-muted-foreground">
-            {relations.cameraCount.toLocaleString()} bodies in the database take
-            the {mountNames.join(" / ") || "same"} mount natively
-            {relations.cameraCount > relations.cameras.length
-              ? ". The most recent are listed here."
-              : "."}
+            {`${relations.cameraCount.toLocaleString()} bodies in the database take the ${
+              mountNames.join(" / ") || "same"
+            } mount natively.${
+              relations.cameraCount > relations.cameras.length
+                ? " The most recent are listed here."
+                : ""
+            }`}
           </p>
           <ul className="flex flex-wrap gap-2">
             {relations.cameras.map((c) => (
