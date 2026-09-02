@@ -377,7 +377,7 @@ export default async function LensDetailPage({
             {relations.cameraCount.toLocaleString()} bodies in the database take
             the {mountNames.join(" / ") || "same"} mount natively
             {relations.cameraCount > relations.cameras.length
-              ? " — the most recent are listed here."
+              ? ". The most recent are listed here."
               : "."}
           </p>
           <ul className="flex flex-wrap gap-2">

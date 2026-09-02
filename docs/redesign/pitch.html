@@ -516,7 +516,7 @@
     <h1>Every lens. Every mount. One reference.</h1>
     <p class="standfirst">
       The definitive lens database went dark in April. This is how The Lens DB
-      takes its place — and why that is a different job from the one the site
+      takes its place, and why that is a different job from the one the site
       is doing today.
     </p>
   </header>
@@ -535,8 +535,8 @@
       always for the same three jobs: <em>telling versions apart</em>
       ("Looking in Lens-DB there are two versions: L and non-L"),
       <em>listing every lens for a mount</em>, and <em>verifying a spec</em>.
-      Those readers — vintage shooters, adapters, system switchers, people
-      writing a sale listing — now have nowhere to go. That is the opening,
+      Those readers (vintage shooters, adapters, system switchers, people
+      writing a sale listing) now have nowhere to go. That is the opening,
       and it will not stay open indefinitely.
     </p>
     <p>
@@ -563,7 +563,7 @@
         <div class="figure">12,076<small>pages uncached</small></div>
         <div>
           <p>Every lens and camera page was served <span class="num">no-store</span> and re-queried Postgres on <em>every</em> request, including every crawler hit.</p>
-          <p>Two causes: a geo lookup in the render path, and a missing <span class="num">generateStaticParams</span>, which makes Next silently ignore the cache setting. Fixed — see below.</p>
+          <p>Two causes: a geo lookup in the render path, and a missing <span class="num">generateStaticParams</span>, which makes Next silently ignore the cache setting. Both fixed; see below.</p>
         </div>
       </div>
       <div class="finding">
@@ -577,7 +577,7 @@
         <div class="figure">4/8<small>searches failed</small></div>
         <div>
           <p><span class="num">50mm 1.4</span>, <span class="num">canon ef 50 1.8</span>, <span class="num">sony 24-70 gm</span> and <span class="num">helios 44-2</span> each returned nothing at all.</p>
-          <p>Punctuation was deleted rather than split, so "24-70" became "2470"; and a bare "1.4" could not match "F/1.4".</p>
+          <p>Punctuation was deleted rather than split, so "24-70" became "2470", and a bare "1.4" could not match "F/1.4".</p>
         </div>
       </div>
       <div class="finding">
@@ -590,14 +590,14 @@
       <div class="finding">
         <div class="figure">0<small>compatibility rows</small></div>
         <div>
-          <p>The lens-to-camera table exists in the schema, has admin screens and an AI-chat tool — and contains no rows. "Will this fit my camera?" is the single most common question in the evidence, and the site cannot answer it.</p>
+          <p>The lens-to-camera table exists in the schema, has admin screens and an AI-chat tool, yet contains no rows. "Will this fit my camera?" is the single most common question in the evidence, and the site cannot answer it.</p>
         </div>
       </div>
       <div class="finding">
         <div class="figure">2<small>human editors</small></div>
         <div>
           <p>37 registered users; 84% of all revisions were made by an import bot; 97% of the 254 human edits by two people. One lens has ever been submitted by the public.</p>
-          <p>There is a wiki skeleton, but no community — and the edit affordances sit below six eBay listings.</p>
+          <p>There is a wiki skeleton but no community, and the edit affordances sit below six eBay listings.</p>
         </div>
       </div>
     </div>
@@ -645,15 +645,15 @@
     </div>
     <p class="chart-note">
       Share of the 9,575 live lenses (2,187 cameras for the camera row) carrying
-      each field. The specs that arrived free with the import are excellent; the
-      prose, the pictures and the relationships — everything that makes a record
-      an <em>article</em> — are missing.
+      each field. The specs that arrived free with the import are excellent. The
+      prose, the pictures and the relationships, everything that makes a record
+      an <em>article</em>, are missing.
     </p>
     <p style="margin-top:22px">
       One more caution that reshaped our recommendations: <strong>view counts
       cannot be used to prioritise.</strong> The median lens has 4 views, the
       maximum is 127, and the "most popular lens" on the home page is
-      <span class="num">[Auto] Tamron-F 28mm F/2.8</span> — a record whose name
+      <span class="num">[Auto] Tamron-F 28mm F/2.8</span>, a record whose name
       sorts first alphabetically. That is crawler traffic, not reader demand.
       Real analytics must come before any work is ranked by popularity.
     </p>
@@ -665,7 +665,7 @@
 
     <div class="faults">
       <div class="fault">
-        <span class="fault-tag">Fault 01 — Citability</span>
+        <span class="fault-tag">Fault 01: Citability</span>
         <h3>Nothing to cite, nothing to quote</h3>
         <p>
           A page becomes canonical by being quotable, stable and machine-legible.
@@ -677,18 +677,18 @@
       </div>
 
       <div class="fault">
-        <span class="fault-tag">Fault 02 — The real questions</span>
+        <span class="fault-tag">Fault 02: The real questions</span>
         <h3>It answers the easy question, not the asked one</h3>
         <p>
           People ask "will it fit?", "which version is mine?", and "what is it
-          worth?". The site answers "what are its specs" — and even then only if
+          worth?". The site answers "what are its specs", and even then only if
           you type the name the way the database stores it.
         </p>
         <p class="evidence">compatibility rows: 0 · version groups: 1 · "sony 24-70 gm" → 0 results</p>
       </div>
 
       <div class="fault">
-        <span class="fault-tag">Fault 03 — Register</span>
+        <span class="fault-tag">Fault 03: Register</span>
         <h3>It reads as a product, not a document</h3>
         <p>
           Near-black canvas, floating rounded cards, a marketing hero with no
@@ -700,7 +700,7 @@
       </div>
 
       <div class="fault">
-        <span class="fault-tag">Fault 04 — Substance</span>
+        <span class="fault-tag">Fault 04: Substance</span>
         <h3>The records are spec sheets, not articles</h3>
         <p>
           No photographs on five pages in six. No prose on a third of lenses and
@@ -711,11 +711,11 @@
       </div>
 
       <div class="fault">
-        <span class="fault-tag">Fault 05 — Renewal</span>
+        <span class="fault-tag">Fault 05: Renewal</span>
         <h3>No engine to keep it alive</h3>
         <p>
-          Every comparable one-person database — lens-db, Artlimited's M42
-          archive, LensHero — eventually died. Without contributors and open
+          Every comparable one-person database (lens-db, Artlimited's M42
+          archive, LensHero) eventually died. Without contributors and open
           data, this one inherits that fate, and the community has already said
           so in public.
         </p>
@@ -723,12 +723,12 @@
       </div>
 
       <div class="fault">
-        <span class="fault-tag">Fault 06 — Reach</span>
+        <span class="fault-tag">Fault 06: Reach</span>
         <h3>The door is bolted to the visitors that matter</h3>
         <p>
           The firewall challenges everything except Googlebot and Bingbot. That
           blocks every AI assistant crawler, DuckDuckGo, Apple, the Internet
-          Archive, and every link unfurler — precisely the surfaces where
+          Archive, and every link unfurler: precisely the surfaces where
           "which lens should I buy" is now answered.
         </p>
         <p class="evidence">bypassed: Googlebot, bingbot · challenged: GPTBot, ClaudeBot, PerplexityBot, Applebot, Slackbot …</p>
@@ -741,12 +741,12 @@
     <h2>Stop competing on rows. Compete on relationships.</h2>
 
     <div class="thesis">
-      <p>The open, citable registry of every lens and mount ever made — and the only place that computes what fits what.</p>
+      <p>The open, citable registry of every lens and mount ever made, and the only place that computes what fits what.</p>
       <p class="qualifier">
         Retailers will always win "[lens] specs". DPReview owns reviews.
         Wikipedia owns prose. Nobody owns the graph: mount to body, lens to
         adapter, version to version, price over time. lens-db had more rows and
-        better photographs than this site, and it still died — rows were never
+        better photographs than this site, and it still died. Rows were never
         the moat.
       </p>
     </div>
@@ -765,10 +765,10 @@
       <div>
         <h3>Signature</h3>
         <ul class="stack">
-          <li><span class="mark">01</span><span><strong>Compatibility solver.</strong> Any lens × any body: fits, adapts (infinity? autofocus?), or impossible — derived from flange distances, with the reasoning shown.</span></li>
+          <li><span class="mark">01</span><span><strong>Compatibility solver.</strong> Any lens × any body: fits, adapts (infinity? autofocus?), or impossible, derived from flange distances, with the reasoning shown.</span></li>
           <li><span class="mark">02</span><span><strong>Version and family pages.</strong> Helios 44 → 44-2 → 44M-4; Summicron v1–v5; with serial-range dating.</span></li>
           <li><span class="mark">03</span><span><strong>Open data and identifiers.</strong> A CC0 fact dump, a documented API, and a crosswalk to Wikidata, ExifTool LensID and Lensfun.</span></li>
-          <li><span class="mark">04</span><span><strong>An ownership registry.</strong> "I own this": serial, price paid, condition, photograph — which yields images, licence-clean prices and production ranges.</span></li>
+          <li><span class="mark">04</span><span><strong>An ownership registry.</strong> "I own this": serial, price paid, condition, photograph, which together yield images, licence-clean prices and production ranges.</span></li>
           <li><span class="mark">05</span><span><strong>Announcement-day pages</strong> and a weekly digest, from the watcher that already runs.</span></li>
         </ul>
       </div>
@@ -790,15 +790,15 @@
     <div class="specimen">
       <div class="specimen-main">
         <div class="type-sample">
-          <span class="role">Display — Archivo</span>
+          <span class="role">Display: Archivo</span>
           <span class="sample-display">Summicron-M 35 mm ƒ/2 ASPH.</span>
         </div>
         <div class="type-sample">
-          <span class="role">Body — Source Serif 4</span>
+          <span class="role">Body: Source Serif 4</span>
           <span class="sample-serif">A six-element double-Gauss derivative introduced in 1979, the fourth generation of Leica's 35 mm standard.</span>
         </div>
         <div class="type-sample">
-          <span class="role">Data — IBM Plex Mono, tabular</span>
+          <span class="role">Data: IBM Plex Mono, tabular</span>
           <span class="sample-mono">ƒ/2 · 0.70 m · ⌀39 mm · 255 g · 1979</span>
         </div>
         <div class="swatches" style="margin-top:6px">
@@ -810,7 +810,7 @@
         </div>
       </div>
       <div class="specimen-side">
-        <span class="role" style="font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)">Specifications — the infobox pattern</span>
+        <span class="role" style="font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)">Specifications, the infobox pattern</span>
         <dl class="fact-list">
           <div class="fact"><dt>Focal length</dt><dd>35 <span class="unit">mm</span></dd></div>
           <div class="fact"><dt>Maximum aperture</dt><dd>ƒ/2</dd></div>
@@ -829,7 +829,7 @@
         <ul class="stack">
           <li><span class="mark">→</span><span>Specifications move above the price guide; commerce moves into a labelled rail.</span></li>
           <li><span class="mark">→</span><span>A two-column article: prose left, sticky infobox and market data right; on mobile the infobox comes <em>first</em>.</span></li>
-          <li><span class="mark">→</span><span>A one-sentence lead that says what the object is — the line an assistant can quote.</span></li>
+          <li><span class="mark">→</span><span>A one-sentence lead that says what the object is: the line an assistant can quote.</span></li>
           <li><span class="mark">→</span><span>A provenance line under every title: last edited, revisions, sale records, cite.</span></li>
           <li><span class="mark">→</span><span>Eleven arbitrary badge colours collapse to neutral tags plus four semantic states.</span></li>
         </ul>
@@ -841,7 +841,7 @@
           first-class design surface, not a fallback. We generate an
           <strong>optical schematic</strong> from data the record already has:
           element outlines clustered into groups, barrel length scaled to focal
-          length, and a front element sized to the real entrance pupil — so an
+          length, and a front element sized to the real entrance pupil, so an
           ƒ/1.2 fifty visibly differs from an ƒ/2.8 one. At thumbnail size it
           reduces to an iris monogram with the correct blade count.
         </p>
@@ -937,7 +937,7 @@
         <div class="phase-body">
           <p>
             Make the pages cacheable, findable and citable. Fix search. Put the
-            facts above the commerce. Detailed above — complete.
+            facts above the commerce. Detailed above, and complete.
           </p>
         </div>
         <div class="phase-meta">
@@ -973,7 +973,7 @@
           <span class="name">The graph</span>
         </div>
         <div class="phase-body">
-          <p>Build the relationships that make it a reference rather than a table — the defensible ground.</p>
+          <p>Build the relationships that make it a reference rather than a table: the defensible ground.</p>
           <ul>
             <li>Populate compatibility from mounts × bodies; add flange distances and adapter rules.</li>
             <li>New page types: <span class="num">/cameras/[x]/lenses</span>, <span class="num">/adapters/[a]-to-[b]</span>, <span class="num">/brands/[x]</span>, static <span class="num">/compare/[a]-vs-[b]</span>.</li>
@@ -1017,10 +1017,10 @@
     <div class="decision">
       <h3>The eBay price data is the best asset and the biggest liability</h3>
       <p>
-        Prices are the one thing no competitor has — 142,966 recorded sales
+        Prices are the one thing no competitor has: 142,966 recorded sales
         behind estimates on 98% of lenses. But eBay's developer licence
         prohibits deriving average selling prices, retaining content after it
-        stops being public, and — since June 2025 — feeding it to generative AI,
+        stops being public, and, since June 2025, feeding it to generative AI,
         which the chat feature does. The sold-listings API is also closed to new
         users, and the pipeline has written no new history since 23 July.
       </p>
@@ -1046,7 +1046,7 @@
         copyrightable, but in the EU a database can attract sui generis
         protection, and the descriptions are plainly someone's writing. This is
         also why re-sourcing each field to a manufacturer document is not
-        merely good practice — it converts the project's biggest legal exposure
+        merely good practice: it converts the project's biggest legal exposure
         into its strongest trust signal.
       </p>
       <p class="ask">Re-source and rewrite as part of Phase 2, and publish an explicit sources-and-licence page.</p>
@@ -1063,15 +1063,15 @@
       </div>
       <div class="metric">
         <span class="k">Answers the fit question</span>
-        <span class="v">Compatibility rows: 0 → every mount pair resolved with a reason.</span>
+        <span class="v">Compatibility rows: 0, then every mount pair resolved with a reason.</span>
       </div>
       <div class="metric">
         <span class="k">Records that look finished</span>
-        <span class="v">Photograph or schematic: 16.9% → 100%. Prose ≥200 chars: 51.5% → 90%.</span>
+        <span class="v">Photograph or schematic: 16.9% to 100%. Prose ≥200 chars: 51.5% to 90%.</span>
       </div>
       <div class="metric">
         <span class="k">Search that succeeds</span>
-        <span class="v">Zero-result rate on real queries, from live logs — not view counts.</span>
+        <span class="v">Zero-result rate on real queries, from live logs, not view counts.</span>
       </div>
       <div class="metric">
         <span class="k">Contributors</span>
@@ -1079,13 +1079,13 @@
       </div>
       <div class="metric">
         <span class="k">Machine reach</span>
-        <span class="v">Assistant crawlers: challenged today → allowed and verified.</span>
+        <span class="v">Assistant crawlers: challenged today, then allowed and verified.</span>
       </div>
     </div>
   </section>
 
   <footer>
-    <span>The Lens DB — redesign proposal</span>
+    <span>The Lens DB redesign proposal</span>
     <span>Audits: codebase · UX · data · market · SEO · design</span>
     <span>Full reports in docs/redesign/research/</span>
   </footer>

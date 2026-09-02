@@ -1,9 +1,9 @@
 {
   "artboards": [
-    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 1440, "h": 1820, "title": "Lens article — desktop" },
-    { "file": "Home.dc.html", "x": 1560, "y": 0, "w": 1440, "h": 1120, "title": "Home — desktop" },
-    { "file": "LensMobile.dc.html", "x": 0, "y": 1960, "w": 390, "h": 1700, "title": "Lens article — mobile" },
-    { "file": "ListMobile.dc.html", "x": 510, "y": 1960, "w": 390, "h": 820, "title": "Lens list — mobile" }
+    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 1440, "h": 1820, "title": "Lens article, desktop" },
+    { "file": "Home.dc.html", "x": 1560, "y": 0, "w": 1440, "h": 1120, "title": "Home, desktop" },
+    { "file": "LensMobile.dc.html", "x": 0, "y": 1960, "w": 390, "h": 1700, "title": "Lens article, mobile" },
+    { "file": "ListMobile.dc.html", "x": 510, "y": 1960, "w": 390, "h": 820, "title": "Lens list, mobile" }
   ],
   "annotations": [
     {
@@ -18,7 +18,7 @@
       "x": 1010,
       "y": 2230,
       "w": 320,
-      "text": "83% of lenses have no photograph, so the empty state is designed, not left blank: an optical schematic drawn from elements, groups, focal length and aperture — and a prompt to contribute a real photo."
+      "text": "83% of lenses have no photograph, so the empty state is designed, not left blank: an optical schematic drawn from elements, groups, focal length and aperture, plus a prompt to contribute a real photo."
     },
     {
       "id": "note-mounts",

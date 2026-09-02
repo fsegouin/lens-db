@@ -118,8 +118,8 @@ export default async function Home() {
           <p className="mx-auto max-w-2xl text-lg text-zinc-600 dark:text-zinc-400">
             Specifications for {counts.lenses.toLocaleString()} lenses and{" "}
             {counts.cameras.toLocaleString()} camera bodies across{" "}
-            {counts.systems} mounts — what fits what, when it was made, and what
-            it sells for used.
+            {counts.systems} mounts: what fits what, when it was made, and
+            what it sells for used.
           </p>
           {/* A plain GET form: works before JavaScript loads, and gives
               crawlers a real search endpoint to follow. */}
@@ -269,7 +269,7 @@ export default async function Home() {
           has an <strong className="text-zinc-700 dark:text-zinc-300">Edit</strong>{" "}
           button for corrections and a{" "}
           <strong className="text-zinc-700 dark:text-zinc-300">Flag duplicate</strong>{" "}
-          button for records that describe the same product twice — or{" "}
+          button for records that describe the same product twice, or{" "}
           <Link href="/submit" className="underline underline-offset-2">
             submit something missing
           </Link>

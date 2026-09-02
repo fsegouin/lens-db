@@ -149,7 +149,7 @@ export default function RevisionList({ revisions }: { revisions: Revision[] }) {
                   )}
                 </p>
                 <p className="mt-0.5 text-xs text-muted-foreground">
-                  {rev.displayName || "System"} — {formatDate(rev.createdAt)}
+                  {rev.displayName || "System"} · {formatDate(rev.createdAt)}
                   {changedFields.length > 0 && (
                     <span className="ml-1">
                       ({changedFields.map((f) => FIELD_LABELS[f] || f).join(", ")})
