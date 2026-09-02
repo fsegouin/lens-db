@@ -124,13 +124,20 @@ export const listCameras = unstable_cache(
       weight: cameras.weightG,
       price: avgPrice,
     };
-    const sortKey = p.sort || "";
+    // Default: newest first, unknown years last, then alphabetical. Year sorts
+    // descend unless the caller asks otherwise; every other column ascends.
+    const sortKey = p.sort || "year";
     const sortCol = sortColumns[sortKey] || cameras.name;
-    const orderFn = p.order === "desc" ? desc : asc;
-    // For price sorting, push NULLs to the end
-    const nullsLast = sortKey === "price"
-      ? [sql`${avgPrice} IS NULL`, orderFn(sortCol)]
-      : [orderFn(sortCol)];
+    const defaultOrder = sortKey === "year" ? "desc" : "asc";
+    const orderFn = (p.order || defaultOrder) === "desc" ? desc : asc;
+    // Other sorts break ties alphabetically so equal years / prices / weights
+    // come out in a stable, readable order.
+    const nameTieBreak = sortCol === cameras.name ? [] : [asc(cameras.name)];
+    // For price and year sorting, push NULLs to the end regardless of direction
+    const orderClauses =
+      sortKey === "price" || sortKey === "year"
+        ? [sql`${sortCol} IS NULL`, orderFn(sortCol), ...nameTieBreak]
+        : [orderFn(sortCol), ...nameTieBreak];
 
     const itemsPromise = db
       .select({ camera: cameras, system: systems, avgPrice: avgPrice })
@@ -141,7 +148,7 @@ export const listCameras = unstable_cache(
         eq(priceEstimates.entityId, cameras.id),
       ))
       .where(where)
-      .orderBy(...nullsLast)
+      .orderBy(...orderClauses)
       .limit(PAGE_SIZE)
       .offset(cursor);
 
@@ -167,6 +174,6 @@ export const listCameras = unstable_cache(
 
     return { items, nextCursor, total };
   },
-  ["camera-list"],
+  ["camera-list-v2"],
   { revalidate: 3600, tags: ["cameras"] }
 );

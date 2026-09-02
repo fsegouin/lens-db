@@ -65,11 +65,11 @@ export default function LensList({
   const productionStatus = searchParams.get("productionStatus") || "";
   const coverage = searchParams.get("coverage") || "";
   const series = searchParams.get("series") || "";
-  // The server defaults to year ascending when no sort is given; mirror that
-  // here so the header indicator and click-to-toggle treat it as explicit.
-  // The default is kept out of URLs so /lenses stays canonical.
+  // The server defaults to year descending (newest first) when no sort is
+  // given; mirror that here so the header indicator and click-to-toggle treat
+  // it as explicit. The default is kept out of URLs so /lenses stays canonical.
   const DEFAULT_SORT = "year";
-  const DEFAULT_ORDER = "asc";
+  const DEFAULT_ORDER = "desc";
   const sort = searchParams.get("sort") || DEFAULT_SORT;
   const order = searchParams.get("order") || DEFAULT_ORDER;
   const isDefaultSort = (s: string, o: string) => s === DEFAULT_SORT && o === DEFAULT_ORDER;
@@ -241,7 +241,8 @@ export default function LensList({
   }
 
   function handleSort(column: string) {
-    const nextOrder = sort === column ? (order === "asc" ? "desc" : "asc") : "asc";
+    // A fresh click on Year starts newest-first to match the default view.
+    const nextOrder = sort === column ? (order === "asc" ? "desc" : "asc") : column === "year" ? "desc" : "asc";
     trackEvent("lens_sort_change", { column, order: nextOrder });
     applyFilters({ sort: column, order: nextOrder });
   }

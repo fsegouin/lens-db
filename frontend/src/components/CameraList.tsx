@@ -83,8 +83,14 @@ export default function CameraList({
   const year = searchParams.get("year") || "";
   const priceMin = searchParams.get("priceMin") || "";
   const priceMax = searchParams.get("priceMax") || "";
-  const sort = searchParams.get("sort") || "";
-  const order = searchParams.get("order") || "";
+  // The server defaults to year descending (newest first) when no sort is
+  // given; mirror that here so the header indicator and click-to-toggle treat
+  // it as explicit. The default is kept out of URLs so /cameras stays canonical.
+  const DEFAULT_SORT = "year";
+  const DEFAULT_ORDER = "desc";
+  const sort = searchParams.get("sort") || DEFAULT_SORT;
+  const order = searchParams.get("order") || DEFAULT_ORDER;
+  const isDefaultSort = (s: string, o: string) => s === DEFAULT_SORT && o === DEFAULT_ORDER;
 
   // Form state
   const [formQ, setFormQ] = useState(q);
@@ -135,8 +141,10 @@ export default function CameraList({
       if (year) params.set("year", year);
       if (priceMin) params.set("priceMin", priceMin);
       if (priceMax) params.set("priceMax", priceMax);
-      if (sort) params.set("sort", sort);
-      if (order) params.set("order", order);
+      if (!isDefaultSort(sort, order)) {
+        params.set("sort", sort);
+        params.set("order", order);
+      }
       params.set("cursor", String(cursor));
       return `/api/cameras?${params.toString()}`;
     },
@@ -210,8 +218,10 @@ export default function CameraList({
     if (yearVal) params.set("year", yearVal);
     if (priceMinVal) params.set("priceMin", priceMinVal);
     if (priceMaxVal) params.set("priceMax", priceMaxVal);
-    if (sortVal) params.set("sort", sortVal);
-    if (orderVal) params.set("order", orderVal);
+    if (!isDefaultSort(sortVal, orderVal)) {
+      params.set("sort", sortVal);
+      params.set("order", orderVal);
+    }
     const qs = params.toString();
     router.push(qs ? `/cameras?${qs}` : "/cameras");
   }
@@ -222,7 +232,8 @@ export default function CameraList({
   }
 
   function handleSort(column: string) {
-    const nextOrder = sort === column ? (order === "asc" ? "desc" : "asc") : "asc";
+    // A fresh click on Year starts newest-first to match the default view.
+    const nextOrder = sort === column ? (order === "asc" ? "desc" : "asc") : column === "year" ? "desc" : "asc";
     trackEvent("camera_sort_change", { column, order: nextOrder });
     applyFilters({ sort: column, order: nextOrder });
   }

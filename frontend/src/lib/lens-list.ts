@@ -149,10 +149,12 @@ export const listLenses = unstable_cache(
       rating: lenses.averageRating,
       price: avgPrice,
     };
-    // Default: chronological (oldest first), unknown years last, then alphabetical.
+    // Default: newest first, unknown years last, then alphabetical. Year sorts
+    // descend unless the caller asks otherwise; every other column ascends.
     const sortKey = p.sort || "year";
     const sortCol = sortColumns[sortKey] || lenses.name;
-    const orderFn = p.order === "desc" ? desc : asc;
+    const defaultOrder = sortKey === "year" ? "desc" : "asc";
+    const orderFn = (p.order || defaultOrder) === "desc" ? desc : asc;
     const sortByName = sortCol === lenses.name;
     // When sorting by name, sort by the name prefix (before focal length), then focal length numerically
     const namePrefix = sql`regexp_replace(${lenses.name}, '\\d+(\\.\\d+)?mm.*$', '')`;
@@ -242,6 +244,6 @@ export const listLenses = unstable_cache(
 
     return { items: itemsWithSeries, nextCursor, total };
   },
-  ["lens-list"],
+  ["lens-list-v2"],
   { revalidate: 3600, tags: ["lenses"] }
 );
