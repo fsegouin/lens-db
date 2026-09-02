@@ -1,29 +1,29 @@
 {
   "artboards": [
-    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 1440, "h": 1560, "title": "Lens article — desktop" },
-    { "file": "Home.dc.html", "x": 1560, "y": 0, "w": 1440, "h": 1100, "title": "Home — desktop" },
-    { "file": "LensMobile.dc.html", "x": 0, "y": 1700, "w": 390, "h": 1500, "title": "Lens article — mobile" },
-    { "file": "ListMobile.dc.html", "x": 510, "y": 1700, "w": 390, "h": 880, "title": "Lens list — mobile" }
+    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 1440, "h": 1820, "title": "Lens article — desktop" },
+    { "file": "Home.dc.html", "x": 1560, "y": 0, "w": 1440, "h": 1120, "title": "Home — desktop" },
+    { "file": "LensMobile.dc.html", "x": 0, "y": 1960, "w": 390, "h": 1700, "title": "Lens article — mobile" },
+    { "file": "ListMobile.dc.html", "x": 510, "y": 1960, "w": 390, "h": 820, "title": "Lens list — mobile" }
   ],
   "annotations": [
     {
       "id": "note-order",
       "x": 1010,
-      "y": 1700,
+      "y": 1960,
       "w": 320,
       "text": "Mobile puts the infobox FIRST, before the photo and the prose, and pushes market data below the reference content.\n\nToday specs start 2,133 px down a 3,020 px page, under six eBay cards."
     },
     {
       "id": "note-schematic",
       "x": 1010,
-      "y": 1960,
+      "y": 2230,
       "w": 320,
       "text": "83% of lenses have no photograph, so the empty state is designed, not left blank: an optical schematic drawn from elements, groups, focal length and aperture — and a prompt to contribute a real photo."
     },
     {
       "id": "note-mounts",
       "x": 1560,
-      "y": 1240,
+      "y": 1260,
       "w": 320,
       "text": "The home page answers a question the site cannot answer today: what fits what. Mount navigation replaces the view-count ranking, which was crawler traffic."
     }
