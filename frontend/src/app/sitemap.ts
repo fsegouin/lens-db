@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { unstable_cache } from "next/cache";
 import { db } from "@/db";
 import { lenses, cameras, systems, collections, lensSeries } from "@/db/schema";
+import { getAdapterMatrix } from "@/lib/adapters";
 import { getBrands } from "@/lib/brands";
 import { isNull } from "drizzle-orm";
 
@@ -39,10 +40,26 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${baseUrl}/collections`, changeFrequency: "monthly", priority: 0.8 },
     { url: `${baseUrl}/lenses/series`, changeFrequency: "monthly", priority: 0.7 },
     { url: `${baseUrl}/brands`, changeFrequency: "monthly", priority: 0.8 },
+    { url: `${baseUrl}/adapters`, changeFrequency: "monthly", priority: 0.8 },
   ];
 
-  const [{ lensRows, cameraRows, systemRows, collectionRows, seriesRows }, brands] =
-    await Promise.all([getSitemapSlugs(), getBrands()]);
+  const [
+    { lensRows, cameraRows, systemRows, collectionRows, seriesRows },
+    brands,
+    { sources, targets },
+  ] = await Promise.all([getSitemapSlugs(), getBrands(), getAdapterMatrix()]);
+
+  // "Can I use X lenses on Y bodies" is the question these pages answer, and
+  // it is asked one mount pair at a time.
+  const adapterPages: MetadataRoute.Sitemap = sources.flatMap((from) =>
+    targets
+      .filter((to) => to.id !== from.id)
+      .map((to) => ({
+        url: `${baseUrl}/adapters/${from.slug}-to-${to.slug}`,
+        changeFrequency: "yearly" as const,
+        priority: 0.6,
+      })),
+  );
 
   const brandPages: MetadataRoute.Sitemap = brands.map((b) => ({
     url: `${baseUrl}/brands/${b.slug}`,
@@ -98,5 +115,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...collectionPages,
     ...seriesPages,
     ...brandPages,
+    ...adapterPages,
   ];
 }

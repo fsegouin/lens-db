@@ -58,6 +58,7 @@ const footerSections = [
   {
     title: "Tools",
     links: [
+      { href: "/adapters", label: "Adapting" },
       { href: "/compare", label: "Compare" },
       { href: "/search", label: "Search" },
       { href: "/chat", label: "Ask the database" },
