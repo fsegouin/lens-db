@@ -15,3 +15,6 @@ __pycache__/
 .worktrees/
 .env*
 !.env.example
+
+# Seeded design-canvas output (2.4 MB editor payload); rebuild from the .dc.html sources
+docs/redesign/mockups/lens-db-field-notes.html
