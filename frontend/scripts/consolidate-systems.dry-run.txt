@@ -1,0 +1,261 @@
+note: system_redirects table not present yet; --apply needs migration 0021.
+
+DRY RUN — tiers A,B,C,D — 42 merge groups, 97 source systems, 14 fixes
+systems before: 229
+
+[A] → #95 Leica screw mount (rename → "Leica Screw Mount (M39 / LTM)")
+      ← #111 M39  [104 lenses, 0 cameras, 0 links, 9 views]
+      ← #426 Leica  [96 lenses, 53 cameras, 0 links, 12 views]
+      ← #161 Leica SM  [0 lenses, 6 cameras, 0 links, 9 views]
+      ← #402 Voigtlander BESSA (LSM)  [0 lenses, 0 cameras, 0 links, 3 views]
+      ← #403 Voigtlander Bessa (LTM)  [0 lenses, 0 cameras, 0 links, 7 views]
+      why: M39, LSM, LTM, L39 and 'Leica' all name the 39mm × 26tpi Leica thread mount (1930). 'Leica SM' holds only screw-mount bodies; both Bessa rows are empty.
+
+[A] → #16 Leica M
+      ← #388 Leica M39  [38 lenses, 2 cameras, 0 links, 11 views]
+      ← #405 Voigtlander BESSA (VM)  [0 lenses, 0 cameras, 0 links, 6 views]
+      ← #409 Zeiss Ikon  [0 lenses, 0 cameras, 0 links, 9 views]
+      ← #399 Rollei 35 RF  [0 lenses, 0 cameras, 0 links, 6 views]
+      ← #385 Konica HEXAR RF  [0 lenses, 0 cameras, 0 links, 6 views]
+      why: 'Leica M39' is a DPReview mis-map: it contains Zeiss ZM, Voigtländer VM and Summilux-M lenses plus two M bodies. The others are empty M-mount camera rows.
+
+[A] → #94 Minolta/Sony A
+      ← #183 Sony A  [5 lenses, 2 cameras, 163 links, 15 views]
+      ← #392 Minolta A  [2 lenses, 4 cameras, 0 links, 25 views]
+      why: One A-mount (Minolta 1985, Sony 2006). 'Sony A' was created by the DPReview mount map; 'Minolta A' by the camera import.
+
+[A] → #53 Pentax 6x7 (rename → "Pentax 6×7")
+      ← #171 Pentax 6×7  [2 lenses, 1 cameras, 0 links, 24 views]
+      why: Unicode × vs ASCII x duplicate.
+
+[A] → #41 Praktisix (Pentacon Six) (rename → "Pentacon Six (Praktisix)")
+      ← #170 Praktisix/Pentacon six  [2 lenses, 7 cameras, 0 links, 7 views]
+      why: Same breech-lock 6×6 mount; one row came from the lens import, the other from the camera import.
+
+[A] → #1 Norita 66
+      ← #169 Rittreck / Norita 66  [2 lenses, 2 cameras, 0 links, 6 views]
+      why: Rittreck 6×6 was renamed Norita 66; same mount.
+
+[A] → #116 Rolleiflex SLX (rename → "Rolleiflex SLX / 6000")
+      ← #401 Rolleiflex SLX/6000  [3 lenses, 10 cameras, 0 links, 29 views]
+      why: SLX and the 6000-series share the same bayonet.
+
+[A] → #8 Rollei QBM
+      ← #400 Rolleiflex SL35  [12 lenses, 1 cameras, 0 links, 9 views]
+      why: The SL35 is the QBM camera line; the mount is QBM.
+
+[A] → #129 Prominent (rename → "Voigtländer Prominent")
+      ← #407 Voigtlander ProminenT  [0 lenses, 0 cameras, 0 links, 4 views]
+      why: Same Voigtländer Prominent bayonet.
+
+[A] → #156 Hasselblad 1600F/1000F (rename → "Hasselblad 1600F/1000F (M60×6)")
+      ← #76 M60x6  [22 lenses, 1 cameras, 0 links, 8 views]
+      ← #383 Hasselblad M60x6  [0 lenses, 0 cameras, 0 links, 5 views]
+      why: M60×6 is the thread of the 1600F/1000F mount; these three rows describe one mount.
+
+[A] → #4 Canon R
+      ← #420 Canonflex  [5 lenses, 3 cameras, 0 links, 9 views]
+      why: Canonflex bodies take Canon R lenses; the mount is R.
+
+[A] → #100 M37 (rename → "Asahiflex M37")
+      ← #141 Asahiflex M37  [1 lenses, 3 cameras, 0 links, 10 views]
+      why: The Asahiflex is the only M37 camera.
+
+[A] → #92 Mamiya RB67
+      ← #98 Mamiya RB67 Pro-SD  [4 lenses, 0 cameras, 0 links, 23 views]
+      why: Pro-SD is a body revision of the RB67 system; lenses interchange.
+
+[B] → #37 Leica R
+      ← #120 Leica R(1 cam, 2 cam, 3 cam, R only, ROM)  [1 lenses, 0 cameras, 0 links, 10 views]
+      ← #14 Leica R(1 cam, 2 cam, 3 cam)  [7 lenses, 0 cameras, 0 links, 12 views]
+      ← #130 Leica R(1 cam)  [1 lenses, 0 cameras, 0 links, 5 views]
+      ← #50 Leica R(2 cam, 3 cam, R only, ROM)  [1 lenses, 0 cameras, 0 links, 6 views]
+      ← #86 Leica R(2 cam, 3 cam, R only)  [4 lenses, 0 cameras, 0 links, 10 views]
+      ← #103 Leica R(2 cam, 3 cam)  [7 lenses, 0 cameras, 0 links, 7 views]
+      ← #11 Leica R(3 cam, R only, ROM)  [3 lenses, 0 cameras, 0 links, 11 views]
+      ← #20 Leica R(3 cam, R only)  [2 lenses, 0 cameras, 0 links, 9 views]
+      ← #52 Leica R(3 cam)  [5 lenses, 0 cameras, 0 links, 16 views]
+      ← #26 Leica R(Bellows)  [2 lenses, 0 cameras, 0 links, 8 views]
+      ← #113 Leica R(R only, ROM)  [23 lenses, 0 cameras, 0 links, 5 views]
+      ← #6 Leica R(R only)  [1 lenses, 0 cameras, 0 links, 6 views]
+      ← #31 Leica R(ROM)  [1 lenses, 0 cameras, 0 links, 9 views]
+      ← #72 Leica R(w/o cams)(Bellows)  [1 lenses, 0 cameras, 0 links, 5 views]
+      why: Cam/ROM generations are a per-lens attribute (kept in specs.Mount), not separate mounts.
+
+[B] → #39 Nikon F
+      ← #35 Nikon F(Bellows)  [19 lenses, 10 cameras, 0 links, 15 views]
+      why: Bellows lenses are F-mount lenses. Also polluted by the DPReview mapper with modern AF-S lenses and Kodak DCS bodies.
+
+[B] → #139 Pentax K
+      ← #102 Pentax K(Bellows)  [29 lenses, 2 cameras, 0 links, 9 views]
+      why: Bellows lenses are K-mount lenses. Also polluted by the DPReview mapper with modern DA/D-FA lenses and K-3 III bodies.
+
+[B] → #95 Leica screw mount
+      ← #93 Leica screw mount(Bellows)  [1 lenses, 0 cameras, 0 links, 4 views]
+      why: Bellows variant of the screw mount.
+
+[B] → #55 Canon FL
+      ← #77 Canon FL(Bellows)  [2 lenses, 0 cameras, 0 links, 6 views]
+      why: Bellows variant.
+
+[B] → #4 Canon R
+      ← #133 Canon R(Bellows)  [5 lenses, 0 cameras, 0 links, 8 views]
+      why: Bellows variant.
+
+[B] → #62 Contarex
+      ← #123 Contarex(Bellows)  [2 lenses, 0 cameras, 0 links, 3 views]
+      why: Bellows variant.
+
+[B] → #89 Contax/Yashica
+      ← #107 Contax/Yashica(Bellows)  [4 lenses, 0 cameras, 0 links, 11 views]
+      why: Bellows variant.
+
+[B] → #21 Hasselblad V
+      ← #71 Hasselblad V(Bellows)  [4 lenses, 0 cameras, 0 links, 11 views]
+      why: Bellows variant.
+
+[B] → #32 Konica AR
+      ← #78 Konica AR(Bellows)  [2 lenses, 0 cameras, 0 links, 3 views]
+      why: Bellows variant.
+
+[B] → #82 Minolta SR
+      ← #128 Minolta SR(Bellows)  [6 lenses, 0 cameras, 0 links, 8 views]
+      why: Bellows variant.
+
+[B] → #3 Olympus OM
+      ← #65 Olympus OM(Bellows)  [13 lenses, 0 cameras, 0 links, 11 views]
+      why: Bellows variant.
+
+[B] → #124 Topcon
+      ← #30 Topcon(Bellows)  [4 lenses, 0 cameras, 0 links, 4 views]
+      why: Bellows variant.
+
+[B] → #13 Nikon reflex housing
+      ← #64 Nikon reflex housing(Bellows)  [2 lenses, 0 cameras, 0 links, 4 views]
+      why: Bellows variant.
+
+[B] → #116 Rolleiflex SLX
+      ← #88 Rolleiflex SLX(Bellows)  [2 lenses, 0 cameras, 0 links, 13 views]
+      why: Bellows variant.
+
+[B] → #41 Praktisix (Pentacon Six)
+      ← #125 Praktisix (Pentacon Six)(Bellows)  [3 lenses, 0 cameras, 0 links, 3 views]
+      why: Bellows variant.
+
+[B] → #127 M42
+      ← #126 M42(Bellows)  [4 lenses, 0 cameras, 0 links, 10 views]
+      ← #38 M42(modified)  [90 lenses, 0 cameras, 0 links, 10 views]
+      ← #51 M42(modified)(Bellows)  [1 lenses, 0 cameras, 0 links, 4 views]
+      why: 'Modified' M42 (open-aperture pins on SMC Takumar, EBC Fujinon, Mamiya SX, Olympus FTL) is still the M42 thread; the variant lives in specs.Mount.
+
+[B] → #53 Pentax 6x7
+      ← #25 Pentax 6x7(Inner mount)  [17 lenses, 0 cameras, 0 links, 22 views]
+      ← #33 Pentax 6x7(Outer mount)  [3 lenses, 0 cameras, 0 links, 16 views]
+      why: Inner/outer bayonet is a per-lens attribute of the one 6×7 system.
+
+[B] → #121 Contax (rename → "Contax Rangefinder")
+      ← #54 Contax(Inner mount)  [4 lenses, 0 cameras, 0 links, 7 views]
+      ← #70 Contax(Outer mount)  [6 lenses, 0 cameras, 0 links, 7 views]
+      why: Inner/outer bayonet is a per-lens attribute of the Contax rangefinder mount.
+
+[B] → #112 Nikon S
+      ← #85 Nikon S(Inner mount)  [2 lenses, 0 cameras, 0 links, 8 views]
+      ← #61 Nikon S(Outer mount)  [9 lenses, 0 cameras, 0 links, 9 views]
+      why: Inner/outer bayonet is a per-lens attribute of the Nikon S mount.
+
+[C] → #127 M42
+      ← #140 Asahi Pentax M42  [7 lenses, 6 cameras, 0 links, 36 views]
+      ← #378 Chinon M42  [5 lenses, 1 cameras, 0 links, 11 views]
+      ← #380 Cosina M42  [13 lenses, 1 cameras, 0 links, 13 views]
+      ← #422 Edixa M42  [41 lenses, 32 cameras, 0 links, 13 views]
+      ← #155 Fujica M42  [1 lenses, 1 cameras, 0 links, 11 views]
+      ← #390 Mamiya CP M42  [1 lenses, 0 cameras, 0 links, 6 views]
+      ← #391 Mamiya SX M42  [8 lenses, 0 cameras, 0 links, 8 views]
+      ← #164 Mamiya TL/DTL M42  [11 lenses, 1 cameras, 0 links, 11 views]
+      ← #395 Olympus FTL M42  [0 lenses, 0 cameras, 0 links, 8 views]
+      ← #173 Petri Penta M42  [0 lenses, 1 cameras, 0 links, 5 views]
+      ← #177 Ricoh M42  [15 lenses, 1 cameras, 0 links, 7 views]
+      ← #185 Yashica M42  [29 lenses, 5 cameras, 0 links, 24 views]
+      ← #411 Zenit M42  [63 lenses, 13 cameras, 0 links, 9 views]
+      ← #175 Contax/Praktica  [16 lenses, 9 cameras, 0 links, 9 views]
+      ← #153 Exakta Twin TL  [0 lenses, 1 cameras, 0 links, 4 views]
+      why: All are M42 bodies and the lenses sold with them. 'Contax/Praktica' holds Praktica M42 bodies (nova B, LTL 3, VLC 2) and CZJ lenses; the Exakta Twin TL is an M42 camera.
+
+[C] → #139 Pentax K
+      ← #377 Chinon K  [5 lenses, 4 cameras, 0 links, 8 views]
+      ← #379 Cosina K  [1 lenses, 0 cameras, 0 links, 8 views]
+      ← #398 Ricoh K  [2 lenses, 0 cameras, 0 links, 6 views]
+      ← #178 Ricoh K (P)  [0 lenses, 13 cameras, 0 links, 4 views]
+      ← #410 Zenit K  [4 lenses, 0 cameras, 0 links, 5 views]
+      why: K-mount bodies by other makers. (Ricoh P lenses have an extra pin that can jam on Pentax AF bodies; that caveat belongs on the lens, not on a separate system.)
+
+[C] → #39 Nikon F
+      ← #157 Kiev-17/19/20  [6 lenses, 4 cameras, 0 links, 5 views]
+      ← #374 Almaz-103  [1 lenses, 0 cameras, 0 links, 12 views]
+      why: Soviet F-mount bodies and their N-suffix lenses.
+
+[C] → #121 Contax
+      ← #158 Kiev-II/III/4/5  [5 lenses, 7 cameras, 0 links, 5 views]
+      why: Kiev rangefinders are Contax II/III clones with the same bayonet.
+
+[C] → #112 Nikon S
+      ← #404 Voigtlander BESSA (SC)  [0 lenses, 0 cameras, 0 links, 4 views]
+      why: Empty row for the Nikon S-mount Bessa.
+
+[C] → #16 Leica M
+      ← #166 Minolta CLE  [0 lenses, 3 cameras, 0 links, 6 views]
+      ← #162 Leica CL  [1 lenses, 1 cameras, 0 links, 5 views]
+      why: M-mount bodies.
+
+[C] → #95 Leica screw mount
+      ← #146 Canon S (LSM)  [34 lenses, 8 cameras, 0 links, 18 views]
+      ← #389 Leotax  [15 lenses, 15 cameras, 0 links, 3 views]
+      ← #393 Nicca/Yashica  [21 lenses, 16 cameras, 0 links, 8 views]
+      ← #433 Tanack  [14 lenses, 6 cameras, 0 links, 5 views]
+      ← #154 FED  [7 lenses, 11 cameras, 0 links, 7 views]
+      ← #167 Zorki  [8 lenses, 5 cameras, 0 links, 5 views]
+      ← #165 Minolta-35  [9 lenses, 2 cameras, 0 links, 2 views]
+      ← #421 Corfield Periflex  [15 lenses, 7 cameras, 0 links, 4 views]
+      why: Leica-thread camera families and the LTM lenses sold with them. Canon 'S' is Canon's name for its LTM bodies. (Zenit M39 is NOT included: same thread, different register.)
+
+[C] → #99 Deckel
+      ← #406 Voigtlander Bessamatic/Ultramatic  [0 lenses, 0 cameras, 0 links, 8 views]
+      why: Bessamatic/Ultramatic use the Deckel (DKL) bayonet; row is empty.
+
+[C] → #41 Praktisix (Pentacon Six)
+      ← #159 Kiev 6S/60  [0 lenses, 2 cameras, 0 links, 12 views]
+      why: Kiev 6S/60 use the Pentacon Six breech-lock mount.
+
+[D] #60 manufacturer "Tamron" → "null"
+      why: Generic bucket, not Tamron.
+[D] #118 name "Interchangeable mount (T)" → "T-mount (T2)"; manufacturer "Tamron" → "null"
+      why: T-mount is an industry standard, not Tamron's.
+[D] #15 name "Interchangeable mount (YS)" → "Sigma YS"; manufacturer "Yashica" → "Sigma"
+      why: YS was Sigma's system; 'Yashica' was a guess.
+[D] #47 name "Interchangeable mount (Adaptall)" → "Tamron Adaptall"
+      why: Name the system after its owner.
+[D] #56 name "Interchangeable mount (Adaptall-2)" → "Tamron Adaptall-2"
+      why: Name the system after its owner.
+[D] #49 name "Interchangeable mount (Adapt-A-Matic)" → "Tamron Adapt-A-Matic"
+      why: Name the system after its owner.
+[D] #7 name "Interchangeable mount (T-4)" → "T-4 (Vivitar / Soligor)"; manufacturer "Vivitar" → "null"
+      why: T-4 was Sigma-made for Vivitar and Soligor.
+[D] #74 name "Interchangeable mount (U/S)" → "Soligor U/S"
+      why: Name the system after its owner.
+[D] #106 name "Interchangeable mount (Unidapter Auto)" → "Soligor Unidapter Auto"
+      why: Unidapter was Soligor's system.
+[D] #22 name "Interchangeable mount (Unidapter)" → "Soligor Unidapter"
+      why: Unidapter was Soligor's system.
+[D] #434 name "Zenit M39" → "Zenit M39 (SLR)"
+      why: Make clear this is the 45.2mm-register SLR thread, not Leica's.
+[D] #412 manufacturer "Olympus" → "Olympus / Panasonic"
+      why: Joint standard.
+[D] #413 manufacturer "Olympus" → "Olympus / Kodak"
+      why: Joint standard.
+[D] #109 manufacturer "Leica" → "L-Mount Alliance"
+      why: Shared by Leica, Sigma, Panasonic and others.
+
+moved: 949 lenses, 283 cameras, 163 lens_systems links
+systems after: 229 (unchanged — dry run); would be 132 after apply
+
+Re-run with --apply to write. ISR pages for /systems refresh on their own schedule.
