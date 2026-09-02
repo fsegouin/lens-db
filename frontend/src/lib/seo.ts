@@ -72,6 +72,7 @@ export function opticalConstruction(
 type LensLike = {
   name: string;
   brand: string | null;
+  lensType: string | null;
   focalLengthMin: number | null;
   focalLengthMax: number | null;
   apertureMin: number | null;
@@ -101,7 +102,13 @@ export function lensDescription(lens: LensLike, systemNames: string[]): string {
 export function lensLead(lens: LensLike, systemNames: string[]): string {
   const focal = formatFocalLength(lens.focalLengthMin, lens.focalLengthMax);
   const aperture = lens.apertureMin ? `f/${lens.apertureMin}` : null;
-  const kind = lens.isZoom ? "zoom lens" : lens.isPrime ? "prime lens" : "lens";
+  const kind = lens.isZoom
+    ? "zoom lens"
+    : lens.isPrime
+      ? "prime lens"
+      : lens.lensType
+        ? lens.lensType.toLowerCase()
+        : "lens";
   const mounts = systemNames.length > 0 ? `for ${systemNames.join(", ")}` : null;
   const summary = sentence([focal, aperture], " ");
 

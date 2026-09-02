@@ -260,9 +260,10 @@ export default async function CameraDetailPage({
 
       <div className="mt-8 grid gap-10 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-12">
         <article className="min-w-0 space-y-8">
-          <div className="space-y-6 lg:hidden">{rail}</div>
-
+          {/* Definition first in reading order, then the rail's numbers. */}
           <p className="text-lg leading-relaxed">{leadSentence}</p>
+
+          <div className="space-y-6 lg:hidden">{rail}</div>
 
           {images.length > 0 && (
             <ImageGallery
