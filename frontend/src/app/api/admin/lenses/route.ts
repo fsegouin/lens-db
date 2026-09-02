@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const q = searchParams.get("q");
   const missingImages = searchParams.get("missing_images") === "1";
-  const cursor = parseInt(searchParams.get("cursor") || "0", 10);
+  const cursor = Math.max(parseInt(searchParams.get("cursor") || "0", 10) || 0, 0);
   const sortParam = searchParams.get("sort");
   const orderParam = searchParams.get("order");
 

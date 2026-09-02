@@ -64,11 +64,16 @@ export default function PendingEditsPage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams({ page: String(page) });
-    const res = await fetch(`/api/admin/pending-edits?${params}`);
-    const data = await res.json();
-    setEdits(data.pendingEdits);
-    setTotal(data.total);
-    setLoading(false);
+    try {
+      const res = await fetch(`/api/admin/pending-edits?${params}`);
+      const data = await res.json();
+      setEdits(data.pendingEdits ?? []);
+      setTotal(data.total ?? 0);
+    } catch {
+      setEdits([]);
+    } finally {
+      setLoading(false);
+    }
   }, [page]);
 
   useEffect(() => {

@@ -20,7 +20,7 @@ jobs:
         with:
           node-version: 24
       - name: Install script dependencies
-        run: cd scraper && npm install playwright-core
+        run: cd scraper && npm ci
       - name: Run DPReview lens watcher
         env:
           API_URL: ${{ secrets.API_URL }}

@@ -118,7 +118,7 @@ export default function ImageGallery({ images }: { images: ImageData[] }) {
   // Multiple images - carousel
   return (
     <>
-      <div className="relative mx-auto w-full max-w-md">
+      <div role="group" aria-roledescription="carousel" aria-label="Images" className="relative mx-auto w-full max-w-md">
         <button
           type="button"
           aria-haspopup="dialog"

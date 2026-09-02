@@ -41,11 +41,16 @@ export default function DuplicatesPage() {
 
   const fetchData = useCallback(async () => {
     setLoading(true);
-    const res = await fetch(`/api/admin/duplicates?status=${statusFilter}`);
-    const data = await res.json();
-    setFlags(data.flags);
-    setTotal(data.total);
-    setLoading(false);
+    try {
+      const res = await fetch(`/api/admin/duplicates?status=${statusFilter}`);
+      const data = await res.json();
+      setFlags(data.flags ?? []);
+      setTotal(data.total ?? 0);
+    } catch {
+      setFlags([]);
+    } finally {
+      setLoading(false);
+    }
   }, [statusFilter]);
 
   useEffect(() => {

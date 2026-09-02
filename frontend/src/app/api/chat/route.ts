@@ -1,4 +1,4 @@
-import { streamText, convertToModelMessages, UIMessage, stepCountIs } from "ai";
+import { streamText, convertToModelMessages, stepCountIs, type UIMessage } from "ai";
 import { gateway } from "@ai-sdk/gateway";
 import { checkBotId } from "botid/server";
 import { NextRequest } from "next/server";
@@ -44,9 +44,9 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const allMessages: UIMessage[] = Array.isArray(body.messages)
+  const allMessages: UIMessage[] = Array.isArray(body?.messages)
     ? body.messages
-    : body.message
+    : body?.message
       ? [body.message]
       : [];
 

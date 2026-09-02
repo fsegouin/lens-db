@@ -64,11 +64,18 @@ export async function PUT(
   if (slug !== undefined) updates.slug = slug;
   if (description !== undefined) updates.description = description || null;
 
-  const [updated] = await db
-    .update(lensSeries)
-    .set(updates)
-    .where(eq(lensSeries.id, numericId))
-    .returning();
+  const [updated] =
+    Object.keys(updates).length > 0
+      ? await db
+          .update(lensSeries)
+          .set(updates)
+          .where(eq(lensSeries.id, numericId))
+          .returning()
+      : await db
+          .select()
+          .from(lensSeries)
+          .where(eq(lensSeries.id, numericId))
+          .limit(1);
 
   if (!updated) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });

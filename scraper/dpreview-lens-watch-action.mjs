@@ -176,57 +176,59 @@ async function main() {
   });
   const page = await context.newPage();
 
-  const unseen = [];
-  for (let p = 1; p <= PAGES; p++) {
-    if (p > 1) await delay(DELAY_BETWEEN_PAGES_MS);
-    let rows;
-    try {
-      rows = await scrapeIndexPage(page, p);
-    } catch (error) {
-      // Page 1 failing is fatal (markup-drift alarm); a later page timing out
-      // just means its lenses wait for the next run
-      if (p === 1) throw error;
-      console.warn(`Index page ${p}: skipped (${error.message.split("\n")[0]})`);
-      continue;
-    }
-    if (p === 1 && rows.length === 0) {
-      throw new Error("Index page 1 yielded 0 lens rows — DPReview markup may have changed");
-    }
-    const fresh = rows.filter((r) => !seen.has(r.slug));
-    console.log(`Index page ${p}: ${rows.length} lenses, ${fresh.length} unseen`);
-    unseen.push(...fresh);
-  }
-
-  const toProcess = unseen.slice(0, LIMIT);
-  console.log(`\nProcessing ${toProcess.length} unseen products\n`);
-
   const counts = { created: 0, matched: 0, review: 0, seen: 0, error: 0 };
 
-  for (let i = 0; i < toProcess.length; i++) {
-    const row = toProcess[i];
-    await delay(DELAY_BETWEEN_PAGES_MS);
-
-    try {
-      const product = await scrapeProductPage(page, row.url);
-      const candidate = {
-        dpreviewSlug: row.slug,
-        dpreviewUrl: row.url,
-        name: product.name || row.name,
-        specTable: product.specTable,
-        imageUrls: product.imageUrls,
-        year: row.year,
-        price: row.price,
-      };
-      const result = await submitCandidate(candidate);
-      counts[result.status] = (counts[result.status] ?? 0) + 1;
-      console.log(`${i + 1}/${toProcess.length} ${candidate.name}: ${result.status}`);
-    } catch (error) {
-      counts.error++;
-      console.error(`${i + 1}/${toProcess.length} ${row.name}: ${error.message}`);
+  try {
+    const unseen = [];
+    for (let p = 1; p <= PAGES; p++) {
+      if (p > 1) await delay(DELAY_BETWEEN_PAGES_MS);
+      let rows;
+      try {
+        rows = await scrapeIndexPage(page, p);
+      } catch (error) {
+        // Page 1 failing is fatal (markup-drift alarm); a later page timing out
+        // just means its lenses wait for the next run
+        if (p === 1) throw error;
+        console.warn(`Index page ${p}: skipped (${error.message.split("\n")[0]})`);
+        continue;
+      }
+      if (p === 1 && rows.length === 0) {
+        throw new Error("Index page 1 yielded 0 lens rows — DPReview markup may have changed");
+      }
+      const fresh = rows.filter((r) => !seen.has(r.slug));
+      console.log(`Index page ${p}: ${rows.length} lenses, ${fresh.length} unseen`);
+      unseen.push(...fresh);
     }
-  }
 
-  await browser.close();
+    const toProcess = unseen.slice(0, LIMIT);
+    console.log(`\nProcessing ${toProcess.length} unseen products\n`);
+
+    for (let i = 0; i < toProcess.length; i++) {
+      const row = toProcess[i];
+      await delay(DELAY_BETWEEN_PAGES_MS);
+
+      try {
+        const product = await scrapeProductPage(page, row.url);
+        const candidate = {
+          dpreviewSlug: row.slug,
+          dpreviewUrl: row.url,
+          name: product.name || row.name,
+          specTable: product.specTable,
+          imageUrls: product.imageUrls,
+          year: row.year,
+          price: row.price,
+        };
+        const result = await submitCandidate(candidate);
+        counts[result.status] = (counts[result.status] ?? 0) + 1;
+        console.log(`${i + 1}/${toProcess.length} ${candidate.name}: ${result.status}`);
+      } catch (error) {
+        counts.error++;
+        console.error(`${i + 1}/${toProcess.length} ${row.name}: ${error.message}`);
+      }
+    }
+  } finally {
+    await browser.close();
+  }
   console.log(
     `\nDone: ${counts.created} queued as new, ${counts.matched} matched existing (enriched), ` +
     `${counts.review} uncertain (run scraper/dpreview-review-cli.mjs), ` +

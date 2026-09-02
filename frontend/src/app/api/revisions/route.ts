@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const entityType = searchParams.get("entityType");
   const entityId = searchParams.get("entityId");
-  const page = parseInt(searchParams.get("page") || "1", 10);
+  const page = Math.max(parseInt(searchParams.get("page") || "1", 10) || 1, 1);
 
   if (!entityType || !validEntityTypes.has(entityType)) {
     return NextResponse.json({ error: "Invalid entityType" }, { status: 400 });

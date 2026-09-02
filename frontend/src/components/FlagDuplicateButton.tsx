@@ -163,11 +163,11 @@ export default function FlagDuplicateButton({
 
             <div className="space-y-3">
               <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">
+                <span id="duplicate-target-label" className="mb-1 block text-xs font-medium text-muted-foreground">
                   Search for the duplicate target
-                </label>
+                </span>
                 <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
-                  <PopoverTrigger render={<Button variant="outline" className="w-full justify-between" />}>
+                  <PopoverTrigger render={<Button variant="outline" className="w-full justify-between" aria-describedby="duplicate-target-label" />}>
                     {targetName || placeholder}
                     <ChevronDown className="h-4 w-4 text-muted-foreground" />
                   </PopoverTrigger>
