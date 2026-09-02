@@ -425,8 +425,9 @@ try {
     else if (!acceptedTargetNames.get(m.into[0]).has(target.name)) problems.push(`target ${m.into[0]} is "${target.name}", expected "${m.into[1]}"`);
     for (const [id, name] of m.from) {
       const src = before.get(id);
-      if (!src) problems.push(`source ${id} (${name}) not found`);
-      else if (src.name !== name) problems.push(`source ${id} is "${src.name}", expected "${name}"`);
+      // A missing source was merged by an earlier run (its slug is in
+      // system_redirects); a present-but-renamed one means the map is stale.
+      if (src && src.name !== name) problems.push(`source ${id} is "${src.name}", expected "${name}"`);
       if (seenSources.has(id)) problems.push(`source ${id} listed twice`);
       seenSources.add(id);
       if (id === m.into[0]) problems.push(`source ${id} equals its target`);
@@ -435,7 +436,7 @@ try {
   for (const f of fixes) {
     const row = before.get(f.id);
     if (!row) problems.push(`fix target ${f.id} (${f.name}) not found`);
-    else if (row.name !== f.name) problems.push(`fix target ${f.id} is "${row.name}", expected "${f.name}"`);
+    else if (row.name !== f.name && row.name !== f.rename) problems.push(`fix target ${f.id} is "${row.name}", expected "${f.name}"`);
   }
   // A target of one merge must not be a source of another in the same run.
   for (const m of selected) if (seenSources.has(m.into[0])) problems.push(`system ${m.into[0]} is both a target and a source`);
@@ -449,14 +450,19 @@ try {
   console.log(`${apply ? "APPLY" : "DRY RUN"} — tiers ${tiers.join(",")} — ${selected.length} merge groups, ${selected.reduce((n, m) => n + m.from.length, 0)} source systems, ${fixes.length} fixes`);
   console.log(`systems before: ${before.size}\n`);
 
-  let movedLenses = 0, movedCameras = 0, movedLinks = 0;
+  let movedLenses = 0, movedCameras = 0, movedLinks = 0, pending = 0;
 
   const run = async (tx) => {
     for (const m of selected) {
       const target = before.get(m.into[0]);
       console.log(`[${m.tier}] → #${target.id} ${target.name}${m.rename ? ` (rename → "${m.rename}")` : ""}`);
-      for (const [id] of m.from) {
+      for (const [id, name] of m.from) {
         const src = before.get(id);
+        if (!src) {
+          console.log(`      ← #${id} ${name}  [already merged]`);
+          continue;
+        }
+        pending += 1;
         const c = await counts(tx, id);
         movedLenses += c.lenses; movedCameras += c.cameras; movedLinks += c.lensSystems;
         console.log(`      ← #${id} ${src.name}  [${c.lenses} lenses, ${c.cameras} cameras, ${c.lensSystems} links, ${src.view_count ?? 0} views]`);
@@ -492,6 +498,12 @@ try {
 
     for (const f of fixes) {
       const row = before.get(f.id);
+      const done = (!f.rename || row.name === f.rename) && (f.manufacturer === undefined || row.manufacturer === f.manufacturer);
+      if (done) {
+        console.log(`[D] #${f.id} ${row.name}  [already applied]`);
+        continue;
+      }
+      pending += 1;
       const bits = [];
       if (f.rename) bits.push(`name "${row.name}" → "${f.rename}"`);
       if (f.manufacturer !== undefined) bits.push(`manufacturer "${row.manufacturer}" → "${f.manufacturer}"`);
@@ -525,8 +537,9 @@ try {
 
   const after = await loadSystems(sql);
   console.log(`\nmoved: ${movedLenses} lenses, ${movedCameras} cameras, ${movedLinks} lens_systems links`);
-  console.log(`systems after: ${after.size}${apply ? "" : " (unchanged — dry run)"}; would be ${before.size - selected.reduce((n, m) => n + m.from.length, 0)} after apply`);
-  if (!apply) console.log("\nRe-run with --apply to write. ISR pages for /systems refresh on their own schedule.");
+  console.log(`systems after: ${after.size}${apply ? "" : " (unchanged — dry run)"}`);
+  if (pending === 0) console.log("\nNothing left to do — every merge and fix in the selected tiers is already applied.");
+  else if (!apply) console.log(`\n${pending} pending operation(s). Re-run with --apply to write. ISR pages for /systems refresh on their own schedule.`);
 } finally {
   client.release();
   await pool.end();

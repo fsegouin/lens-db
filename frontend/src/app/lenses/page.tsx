@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { lenses, systems, lensSeries } from "@/db/schema";
+import { lenses, systems, lensSeries, lensSystems } from "@/db/schema";
 import { asc, eq } from "drizzle-orm";
 import { unstable_cache } from "next/cache";
 import Link from "next/link";
@@ -17,7 +17,7 @@ const getCachedDropdownData = unstable_cache(
       db
         .selectDistinct({ name: systems.name, slug: systems.slug })
         .from(systems)
-        .innerJoin(lenses, eq(lenses.systemId, systems.id))
+        .innerJoin(lensSystems, eq(lensSystems.systemId, systems.id))
         .orderBy(asc(systems.name)),
       db
         .select({ name: lensSeries.name, slug: lensSeries.slug })

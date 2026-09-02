@@ -18,6 +18,7 @@ type LensRow = {
   lens: typeof lenses.$inferSelect;
   system: typeof systems.$inferSelect | null;
   series: SeriesInfo[];
+  mounts?: SystemOption[];
   avgPrice: number | null;
 };
 
@@ -491,7 +492,7 @@ export default function LensList({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {items.map(({ lens, system, series: lensSeries, avgPrice }) => (
+            {items.map(({ lens, system, series: lensSeries, mounts = [], avgPrice }) => (
               <TableRow key={lens.id}>
                 <TableCell className="max-w-[22rem] whitespace-normal">
                   <Link
@@ -512,14 +513,18 @@ export default function LensList({
                   ) : "\u2014"}
                 </TableCell>
                 <TableCell className="text-zinc-500">
-                  {system ? (
-                    <button type="button"
-                      onClick={() => applyFilters({ system: system.slug, brand: "", q: "", type: "", minFocal: "", maxFocal: "", minAperture: "", maxAperture: "", year: "", lensType: "", era: "", productionStatus: "", coverage: "" })}
-                      className="text-left hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
-                    >
-                      {system.name}
-                    </button>
-                  ) : "\u2014"}
+                  {(mounts.length > 0 ? mounts : system ? [{ name: system.name, slug: system.slug }] : []).map((m, i) => (
+                    <span key={m.slug}>
+                      {i > 0 && <span className="text-zinc-400 dark:text-zinc-600">, </span>}
+                      <button type="button"
+                        onClick={() => applyFilters({ system: m.slug, brand: "", q: "", type: "", minFocal: "", maxFocal: "", minAperture: "", maxAperture: "", year: "", lensType: "", era: "", productionStatus: "", coverage: "" })}
+                        className="text-left hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
+                      >
+                        {m.name}
+                      </button>
+                    </span>
+                  ))}
+                  {mounts.length === 0 && !system && "\u2014"}
                 </TableCell>
                 <TableCell className="text-zinc-600 dark:text-zinc-400">
                   {lens.focalLengthMin ? (
