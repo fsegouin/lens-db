@@ -6,6 +6,9 @@ on:
     - cron: "0 12 * * *"
   workflow_dispatch: # Allow manual trigger
 
+permissions:
+  contents: read
+
 jobs:
   scrape-and-classify:
     runs-on: ubuntu-latest

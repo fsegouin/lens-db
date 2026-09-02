@@ -72,10 +72,15 @@ export const lenses = pgTable(
     submittedByIp: text("submitted_by_ip"),
     protectionLevel: text("protection_level").default("none"), // "none" | "autoconfirmed" | "trusted" | "admin"
     mergedIntoId: integer("merged_into_id"), // self-referencing: if set, this entity was merged into another
+    // Version lineage: lenses sharing a versionGroupId are generations of the
+    // same optical product (e.g. Summicron-M 50mm f/2 Type IV / Type V)
+    versionGroupId: integer("version_group_id").references(() => lensVersionGroups.id),
+    versionLabel: text("version_label"), // e.g. "Type IV", "II", "Mark 2"
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   },
   (table) => [
     index("idx_lenses_system").on(table.systemId),
+    index("idx_lenses_version_group").on(table.versionGroupId),
     index("idx_lenses_brand").on(table.brand),
     index("idx_lenses_focal").on(table.focalLengthMin, table.focalLengthMax),
     index("idx_lenses_aperture").on(table.apertureMin),
@@ -426,6 +431,60 @@ export const priceEstimates = pgTable(
     unique("uq_price_estimates_entity").on(table.entityType, table.entityId),
     index("idx_price_estimates_entity").on(table.entityType, table.entityId),
   ]
+);
+
+// A group of lenses that are successive versions of the same optical product
+export const lensVersionGroups = pgTable("lens_version_groups", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(), // base product name, e.g. "Leica Summicron-M 50mm f/2"
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+});
+
+// Mount availability (M:N): every system a lens is sold for. lenses.systemId
+// stays the primary/reference mount used by existing filters and pages.
+export const lensSystems = pgTable(
+  "lens_systems",
+  {
+    lensId: integer("lens_id")
+      .notNull()
+      .references(() => lenses.id, { onDelete: "cascade" }),
+    systemId: integer("system_id")
+      .notNull()
+      .references(() => systems.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    primaryKey({ columns: [table.lensId, table.systemId] }),
+    index("idx_lens_systems_system").on(table.systemId),
+  ]
+);
+
+// Seen-registry for the DPReview new-lens watcher: one row per DPReview
+// product ever processed, so candidates are never re-proposed (including
+// after rejection) and already-matched lenses are never reprocessed.
+export const dpreviewLensCandidates = pgTable(
+  "dpreview_lens_candidates",
+  {
+    id: serial("id").primaryKey(),
+    dpreviewSlug: text("dpreview_slug").notNull().unique(),
+    dpreviewUrl: text("dpreview_url").notNull(),
+    name: text("name").notNull(),
+    status: text("status").notNull().default("pending"), // "pending" | "imported" | "rejected" | "matched" | "review"
+    lensId: integer("lens_id").references(() => lenses.id),
+    pendingEditId: integer("pending_edit_id").references(() => pendingEdits.id),
+    // For status "review" (LLM not ≥90% sure the suspected duplicate is real):
+    // the raw scraped candidate, kept so the review CLI can resolve it without
+    // re-scraping, plus the LLM's verdict
+    candidateData: jsonb("candidate_data"),
+    llmVerdict: text("llm_verdict"), // "duplicate" | "new_version" | "new_lens"
+    // Deprecated: superseded by llmVerdict; kept because migration 0019 already
+    // ran. Nothing writes or reads it — drop in a future consolidation.
+    llmIsDuplicate: boolean("llm_is_duplicate"),
+    llmConfidence: real("llm_confidence"),
+    llmReasoning: text("llm_reasoning"),
+    firstSeenAt: timestamp("first_seen_at", { withTimezone: true }).defaultNow(),
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).defaultNow(),
+  },
+  (table) => [index("idx_dpreview_lens_candidates_status").on(table.status)]
 );
 
 export const priceHistory = pgTable(

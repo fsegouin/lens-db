@@ -1,26 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { revalidatePath, revalidateTag } from "next/cache";
 import { db } from "@/db";
-import {
-  pendingEdits,
-  lenses,
-  cameras,
-  systems,
-  collections,
-  lensSeries,
-} from "@/db/schema";
+import { pendingEdits } from "@/db/schema";
 import { requireAdminAPI } from "@/lib/admin-auth";
 import { getCurrentUser } from "@/lib/user-auth";
-import { createRevision, type EntityType } from "@/lib/revisions";
+import { applyPendingEditApproval } from "@/lib/pending-edits";
 import { eq } from "drizzle-orm";
-
-const entityTables = {
-  lens: lenses,
-  camera: cameras,
-  system: systems,
-  collection: collections,
-  series: lensSeries,
-} as const;
 
 export async function POST(
   request: NextRequest,
@@ -37,7 +21,7 @@ export async function POST(
 
   const { id } = await params;
   const editId = parseInt(id, 10);
-  if (isNaN(editId)) {
+  if (Number.isNaN(editId)) {
     return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
   }
 
@@ -81,143 +65,19 @@ export async function POST(
   }
 
   // Approve: apply the changes to the entity
-  const entityType = edit.entityType as EntityType;
-  const table = entityTables[entityType];
-  const rawChanges = edit.changes as Record<string, unknown>;
+  const result = await applyPendingEditApproval(edit, admin.id);
 
-  // Re-validate changes against the allowed field list (defense in depth)
-  const allowedFields: Record<string, string[]> = {
-    lens: [
-      "name", "url", "brand", "description", "lensType", "era", "productionStatus",
-      "systemId",
-      "focalLengthMin", "focalLengthMax", "apertureMin", "apertureMax",
-      "weightG", "filterSizeMm", "minFocusDistanceM", "maxMagnification",
-      "lensElements", "lensGroups", "diaphragmBlades",
-      "yearIntroduced", "yearDiscontinued",
-      "isZoom", "isMacro", "isPrime", "hasStabilization", "hasAutofocus",
-      "coverage",
-    ],
-    camera: [
-      "name", "url", "description", "alias",
-      "systemId",
-      "sensorType", "sensorSize", "megapixels", "resolution",
-      "yearIntroduced", "bodyType", "weightG",
-    ],
-    system: ["name", "manufacturer", "mountType", "description"],
-    collection: ["name", "description"],
-    series: ["name", "description"],
-  };
-  const allowed = new Set(allowedFields[entityType] ?? []);
-  const changes: Record<string, unknown> = {};
-  for (const [key, val] of Object.entries(rawChanges)) {
-    if (allowed.has(key)) changes[key] = val;
-  }
-
-  if (Object.keys(changes).length === 0) {
-    return NextResponse.json({ error: "No valid changes in this edit" }, { status: 400 });
-  }
-
-  const isNewEntity = edit.entityId === 0;
-
-  // Also allow "slug" for new entity creation only — never on updates
-  if (isNewEntity && rawChanges.slug) changes.slug = rawChanges.slug;
-
-  let targetEntityId: number;
-
-  if (isNewEntity) {
-    // Create a new entity
-    if (!changes.name) {
-      return NextResponse.json({ error: "New entity must have a name" }, { status: 400 });
-    }
-
-    const insertData: Record<string, unknown> = { ...changes };
-    // Ensure required defaults
-    if (entityType === "lens") {
-      insertData.specs = insertData.specs ?? {};
-      insertData.images = insertData.images ?? [];
-      insertData.isZoom = insertData.isZoom ?? false;
-      insertData.isMacro = insertData.isMacro ?? false;
-      insertData.isPrime = insertData.isPrime ?? false;
-      insertData.hasStabilization = insertData.hasStabilization ?? false;
-      insertData.hasAutofocus = insertData.hasAutofocus ?? false;
-    } else if (entityType === "camera") {
-      insertData.specs = insertData.specs ?? {};
-      insertData.images = insertData.images ?? [];
-    }
-
-    const [created] = await db
-      .insert(table)
-      .values(insertData as never)
-      .returning({ id: table.id });
-    targetEntityId = created.id;
-  } else {
-    // Verify entity still exists
-    const [entity] = await db
-      .select({ id: table.id })
-      .from(table)
-      .where(eq(table.id, edit.entityId))
-      .limit(1);
-
-    if (!entity) {
-      await db
-        .update(pendingEdits)
-        .set({
-          status: "rejected",
-          reviewedByUserId: admin.id,
-          reviewedAt: new Date(),
-          rejectReason: "Entity no longer exists",
-        })
-        .where(eq(pendingEdits.id, editId));
+  if (!result.ok) {
+    if (result.reason === "entity_missing") {
       return NextResponse.json(
         { error: "Entity no longer exists. Edit has been rejected." },
         { status: 404 }
       );
     }
-
-    // Apply the update
-    await db.update(table).set(changes).where(eq(table.id, edit.entityId));
-    targetEntityId = edit.entityId;
-  }
-
-  // Create revision attributed to the original submitter
-  await createRevision({
-    entityType,
-    entityId: targetEntityId,
-    summary: edit.summary,
-    userId: edit.userId,
-    ipHash: edit.ipHash,
-    autoPatrol: true, // Admin-approved edits are auto-patrolled
-  });
-
-  // Mark as approved
-  await db
-    .update(pendingEdits)
-    .set({
-      status: "approved",
-      reviewedByUserId: admin.id,
-      reviewedAt: new Date(),
-    })
-    .where(eq(pendingEdits.id, editId));
-
-  // Revalidate the public page for this entity
-  const [entity] = await db
-    .select({ slug: table.slug })
-    .from(table)
-    .where(eq(table.id, targetEntityId))
-    .limit(1);
-
-  if (entity) {
-    const pathPrefixes: Record<string, string> = {
-      lens: "/lenses",
-      camera: "/cameras",
-      system: "/systems",
-      collection: "/collections",
-      series: "/lenses/series",
-    };
-    revalidatePath(`${pathPrefixes[entityType]}/${entity.slug}`);
-    if (entityType === "lens") {
-      revalidateTag("lenses", "max");
+    if (result.reason === "missing_name") {
+      return NextResponse.json({ error: "New entity must have a name" }, { status: 400 });
     }
+    return NextResponse.json({ error: "No valid changes in this edit" }, { status: 400 });
   }
 
   return NextResponse.json({ success: true, action: "approved" });

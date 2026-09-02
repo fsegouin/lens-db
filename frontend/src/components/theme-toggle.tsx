@@ -13,7 +13,7 @@ export function ThemeToggle() {
     () => false
   );
 
-  if (!mounted) return <Button variant="ghost" size="icon" className="h-9 w-9" />;
+  if (!mounted) return <Button variant="ghost" size="icon" className="h-9 w-9" aria-label="Toggle theme" />;
 
   return (
     <Button

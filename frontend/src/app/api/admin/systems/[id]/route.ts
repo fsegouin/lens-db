@@ -18,7 +18,7 @@ export async function GET(
   const system = await db
     .select()
     .from(systems)
-    .where(eq(systems.id, parseInt(id)))
+    .where(eq(systems.id, parseInt(id, 10)))
     .then((r) => r[0]);
 
   if (!system) {
@@ -51,7 +51,7 @@ export async function PUT(
   const [updated] = await db
     .update(systems)
     .set(updates)
-    .where(eq(systems.id, parseInt(id)))
+    .where(eq(systems.id, parseInt(id, 10)))
     .returning();
 
   if (!updated) {
@@ -60,7 +60,7 @@ export async function PUT(
 
   await createRevision({
     entityType: "system",
-    entityId: parseInt(id),
+    entityId: parseInt(id, 10),
     userId: admin!.id,
     summary: "Admin edit",
     autoPatrol: true,
@@ -82,7 +82,7 @@ export async function DELETE(
   const { id } = await params;
   const [deleted] = await db
     .delete(systems)
-    .where(eq(systems.id, parseInt(id)))
+    .where(eq(systems.id, parseInt(id, 10)))
     .returning({ slug: systems.slug });
 
   if (deleted) {

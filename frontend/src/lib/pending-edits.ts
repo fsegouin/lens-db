@@ -1,0 +1,211 @@
+import { revalidatePath, revalidateTag } from "next/cache";
+import { db } from "@/db";
+import {
+  pendingEdits,
+  lenses,
+  cameras,
+  systems,
+  collections,
+  lensSeries,
+} from "@/db/schema";
+import { createRevision, type EntityType } from "@/lib/revisions";
+import { eq } from "drizzle-orm";
+
+const entityTables = {
+  lens: lenses,
+  camera: cameras,
+  system: systems,
+  collection: collections,
+  series: lensSeries,
+} as const;
+
+export type ApprovalResult =
+  | { ok: true; entityId: number }
+  | { ok: false; reason: "no_valid_changes" | "missing_name" | "entity_missing" };
+
+/**
+ * Apply one pending edit (the "approve" action): re-validates the changes
+ * against the field allowlist, creates or updates the entity, writes the
+ * revision, marks the edit approved, and revalidates the public page.
+ *
+ * On "entity_missing" the edit is auto-rejected before returning.
+ * Shared by the single-edit route and the bulk approve-all endpoint.
+ */
+export async function applyPendingEditApproval(
+  edit: typeof pendingEdits.$inferSelect,
+  adminId: number,
+): Promise<ApprovalResult> {
+  const entityType = edit.entityType as EntityType;
+  const table = entityTables[entityType];
+  const rawChanges = edit.changes as Record<string, unknown>;
+
+  // Re-validate changes against the allowed field list (defense in depth)
+  const allowedFields: Record<string, string[]> = {
+    lens: [
+      "name", "url", "brand", "description", "lensType", "era", "productionStatus",
+      "systemId",
+      "focalLengthMin", "focalLengthMax", "apertureMin", "apertureMax",
+      "weightG", "filterSizeMm", "minFocusDistanceM", "maxMagnification",
+      "lensElements", "lensGroups", "diaphragmBlades",
+      "yearIntroduced", "yearDiscontinued",
+      "isZoom", "isMacro", "isPrime", "hasStabilization", "hasAutofocus",
+      "coverage",
+    ],
+    camera: [
+      "name", "url", "description", "alias",
+      "systemId",
+      "sensorType", "sensorSize", "megapixels", "resolution",
+      "yearIntroduced", "bodyType", "weightG",
+    ],
+    system: ["name", "manufacturer", "mountType", "description"],
+    collection: ["name", "description"],
+    series: ["name", "description"],
+  };
+  const allowed = new Set(allowedFields[entityType] ?? []);
+  const changes: Record<string, unknown> = {};
+  for (const [key, val] of Object.entries(rawChanges)) {
+    if (allowed.has(key)) changes[key] = val;
+  }
+
+  if (Object.keys(changes).length === 0) {
+    return { ok: false, reason: "no_valid_changes" };
+  }
+
+  const isNewEntity = edit.entityId === 0;
+
+  // Also allow "slug" for new entity creation only — never on updates
+  if (isNewEntity && rawChanges.slug) changes.slug = rawChanges.slug;
+
+  // New lens creations may also carry scraped specs and R2-hosted images.
+  // Only the submissions API (whose field whitelist excludes these) and the
+  // CRON_SECRET-protected DPReview watcher write entityId=0 edits; the shape
+  // and R2-host checks below are defense in depth.
+  if (isNewEntity && entityType === "lens") {
+    const specs = rawChanges.specs;
+    if (
+      specs &&
+      typeof specs === "object" &&
+      !Array.isArray(specs) &&
+      Object.values(specs).every((v) => typeof v === "string")
+    ) {
+      changes.specs = specs;
+    }
+
+    const images = rawChanges.images;
+    const r2Public = process.env.R2_PUBLIC_URL;
+    if (
+      r2Public &&
+      Array.isArray(images) &&
+      images.length > 0 &&
+      images.every((img) => {
+        if (!img || typeof img !== "object") return false;
+        const { src, alt } = img as { src?: unknown; alt?: unknown };
+        return (
+          typeof src === "string" &&
+          src.startsWith(`${r2Public}/`) &&
+          typeof alt === "string"
+        );
+      })
+    ) {
+      changes.images = images;
+    }
+  }
+
+  let targetEntityId: number;
+
+  if (isNewEntity) {
+    // Create a new entity
+    if (!changes.name) {
+      return { ok: false, reason: "missing_name" };
+    }
+
+    const insertData: Record<string, unknown> = { ...changes };
+    // Ensure required defaults
+    if (entityType === "lens") {
+      insertData.specs = insertData.specs ?? {};
+      insertData.images = insertData.images ?? [];
+      insertData.isZoom = insertData.isZoom ?? false;
+      insertData.isMacro = insertData.isMacro ?? false;
+      insertData.isPrime = insertData.isPrime ?? false;
+      insertData.hasStabilization = insertData.hasStabilization ?? false;
+      insertData.hasAutofocus = insertData.hasAutofocus ?? false;
+    } else if (entityType === "camera") {
+      insertData.specs = insertData.specs ?? {};
+      insertData.images = insertData.images ?? [];
+    }
+
+    const [created] = await db
+      .insert(table)
+      .values(insertData as never)
+      .returning({ id: table.id });
+    targetEntityId = created.id;
+  } else {
+    // Verify entity still exists
+    const [entity] = await db
+      .select({ id: table.id })
+      .from(table)
+      .where(eq(table.id, edit.entityId))
+      .limit(1);
+
+    if (!entity) {
+      // Entity was deleted since the edit was submitted — auto-reject
+      await db
+        .update(pendingEdits)
+        .set({
+          status: "rejected",
+          reviewedByUserId: adminId,
+          reviewedAt: new Date(),
+          rejectReason: "Entity no longer exists",
+        })
+        .where(eq(pendingEdits.id, edit.id));
+      return { ok: false, reason: "entity_missing" };
+    }
+
+    // Apply the update
+    await db.update(table).set(changes).where(eq(table.id, edit.entityId));
+    targetEntityId = edit.entityId;
+  }
+
+  // Create revision attributed to the original submitter
+  await createRevision({
+    entityType,
+    entityId: targetEntityId,
+    summary: edit.summary,
+    userId: edit.userId,
+    ipHash: edit.ipHash,
+    autoPatrol: true, // Admin-approved edits are auto-patrolled
+  });
+
+  // Mark as approved
+  await db
+    .update(pendingEdits)
+    .set({
+      status: "approved",
+      reviewedByUserId: adminId,
+      reviewedAt: new Date(),
+    })
+    .where(eq(pendingEdits.id, edit.id));
+
+  // Revalidate the public page for this entity
+  const [entity] = await db
+    .select({ slug: table.slug })
+    .from(table)
+    .where(eq(table.id, targetEntityId))
+    .limit(1);
+
+  if (entity) {
+    const pathPrefixes: Record<string, string> = {
+      lens: "/lenses",
+      camera: "/cameras",
+      system: "/systems",
+      collection: "/collections",
+      series: "/lenses/series",
+    };
+    revalidatePath(`${pathPrefixes[entityType]}/${entity.slug}`);
+    if (entityType === "lens") {
+      revalidateTag("lenses", "max");
+    }
+  }
+
+  return { ok: true, entityId: targetEntityId };
+}

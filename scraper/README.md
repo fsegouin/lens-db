@@ -63,3 +63,12 @@ The `data.json` file contains:
 ```
 
 Each lens entry has: `name`, `specs` (key-value), `description`, `images`, `system`, `breadcrumbs`.
+
+## Node scripts (GitHub Actions / CLI)
+
+The `.mjs` scripts talk to the deployed app's `/api/cron/*` endpoints, authenticated with a `CRON_SECRET` Bearer token. Common env: `API_URL` (default `https://thelensdb.com`), `CRON_SECRET`.
+
+- `ebay-scrape-action.mjs` / `ebay-lens-scrape-action.mjs` — eBay sold-listing price scrapers for cameras/lenses (`.github/workflows/ebay-prices.yml`, `ebay-lens-prices.yml`); scrape with Playwright and POST listings to `/api/cron/ebay-prices` / `/api/cron/ebay-lens-prices` for LLM classification.
+- `dpreview-lens-watch-action.mjs` — DPReview new-lens watcher (`.github/workflows/dpreview-new-lenses.yml`, Mondays 09:00 UTC): scans the DPReview lens index for unseen products and POSTs candidates to `/api/cron/dpreview-lenses`. Env: `PAGES` (index pages to scan, default 1), `LIMIT`.
+- `dpreview-review-cli.mjs` — interactive CLI for uncertain DPReview duplicate candidates via `/api/cron/dpreview-review`: mark each as duplicate, new lens, version-group member, or skip.
+- `dpreview-audit-cli.mjs` — LLM audit of DPReview-extracted specs via `/api/cron/dpreview-audit`; writes `dpreview-audit-report.json` in the working directory. Env: `LIMIT`, `CREATE_EDITS=1` (file findings as pending edits), `RECENT_HOURS` (only recent candidates; the watcher workflow passes 192), `AFTER_ID` (resume). Also runs as the second step of the watcher workflow.

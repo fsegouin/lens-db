@@ -193,6 +193,7 @@ export default function AdminTable({
         <div className="flex flex-wrap gap-3">
           <input
             type="text"
+            aria-label="Search"
             placeholder="Search..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -250,6 +251,7 @@ export default function AdminTable({
             {bulkActions.map((action) => (
               <button
                 key={action.label}
+                type="button"
                 onClick={() => runBulkAction(action)}
                 disabled={bulkLoading}
                 className="rounded-md bg-blue-600 px-3 py-1 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
@@ -258,6 +260,7 @@ export default function AdminTable({
               </button>
             ))}
             <button
+              type="button"
               onClick={() => setSelectedIds(new Set())}
               className="ml-auto text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400"
             >
@@ -278,6 +281,7 @@ export default function AdminTable({
                   <th className="bg-white px-3 py-2 dark:bg-zinc-950">
                     <input
                       type="checkbox"
+                      aria-label="Select all rows on this page"
                       checked={allOnPageSelected}
                       onChange={toggleSelectAll}
                       className="h-4 w-4 rounded border-zinc-300 dark:border-zinc-600"
@@ -312,6 +316,7 @@ export default function AdminTable({
                     <td className="px-3 py-2">
                       <input
                         type="checkbox"
+                        aria-label="Select row"
                         checked={selectedIds.has(Number(item.id))}
                         onChange={() => toggleSelect(Number(item.id))}
                         className="h-4 w-4 rounded border-zinc-300 dark:border-zinc-600"
@@ -354,6 +359,7 @@ export default function AdminTable({
       {totalPages > 1 && (
         <div className="flex items-center gap-2 px-6 pb-6">
           <button
+            type="button"
             onClick={() => setPage((p) => Math.max(0, p - 1))}
             disabled={page === 0}
             className="rounded border border-zinc-300 px-3 py-1 text-sm disabled:opacity-50 dark:border-zinc-700"
@@ -364,6 +370,7 @@ export default function AdminTable({
             Page {page + 1} of {totalPages}
           </span>
           <button
+            type="button"
             onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
             disabled={page >= totalPages - 1}
             className="rounded border border-zinc-300 px-3 py-1 text-sm disabled:opacity-50 dark:border-zinc-700"

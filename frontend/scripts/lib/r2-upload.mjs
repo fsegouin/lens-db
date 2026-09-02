@@ -40,12 +40,3 @@ export async function processAndUpload(buffer, r2Key) {
   }));
   return publicUrlFor(r2Key);
 }
-
-export async function fetchAndUpload(sourceUrl, r2Key) {
-  const resp = await fetch(sourceUrl, {
-    headers: { "User-Agent": "lens-db-image-upload/1.0 (https://lens-db.com)" },
-  });
-  if (!resp.ok) throw new Error(`fetch ${sourceUrl} -> ${resp.status}`);
-  const buffer = Buffer.from(await resp.arrayBuffer());
-  return processAndUpload(buffer, r2Key);
-}

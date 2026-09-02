@@ -5,6 +5,7 @@ scraper/urls.json
 scraper/data.json
 scraper/sample_data.json
 scraper/.progress.json
+dpreview-audit-report.json
 __pycache__/
 *.pyc
 .next/

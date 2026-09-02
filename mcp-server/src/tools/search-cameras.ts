@@ -45,7 +45,7 @@ export async function searchCameras(params: SearchCamerasParams) {
   }
   if (params.brand) {
     conditions.push(
-      sql`${cameras.name} ILIKE ${escapeLikeMetachars(params.brand) + '%'}`
+      sql`${cameras.name} ILIKE ${escapeLikeMetachars(params.brand) + "%"}`
     );
   }
   if (params.yearFrom) {
@@ -73,7 +73,7 @@ export async function searchCameras(params: SearchCamerasParams) {
     conditions.push(lte(priceEstimates.medianPrice, params.priceMax));
   }
 
-  const where = conditions.length > 0 ? and(...conditions) : undefined;
+  const where = and(...conditions);
 
   // Fetch limit+1 to detect if there are more results without a separate COUNT query
   const results = await db
@@ -110,7 +110,7 @@ export async function searchCameras(params: SearchCamerasParams) {
     hasMore,
     cameras: trimmed,
     ...(hasMore && {
-      note: `More results available. Use the 'query' or 'brand' parameter to narrow your search.`,
+      note: "More results available. Use the 'query' or 'brand' parameter to narrow your search.",
     }),
   };
 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isCronAuthorized } from "@/lib/api-utils";
 import { db } from "@/db";
 import { cameras, priceEstimates } from "@/db/schema";
 import { sql, isNull, desc } from "drizzle-orm";
@@ -80,10 +81,7 @@ export const maxDuration = 300;
  * Called by GitHub Action to know which cameras to scrape.
  */
 export async function GET(request: NextRequest) {
-  const authHeader = request.headers.get("authorization");
-  const cronSecret = process.env.CRON_SECRET;
-
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+  if (!isCronAuthorized(request.headers.get("authorization"))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -112,14 +110,11 @@ export async function GET(request: NextRequest) {
  * Body: { cameraId: number, cameraName: string, listings: EbayListing[] }
  */
 export async function POST(request: NextRequest) {
-  const authHeader = request.headers.get("authorization");
-  const cronSecret = process.env.CRON_SECRET;
-
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+  if (!isCronAuthorized(request.headers.get("authorization"))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = await request.json();
+  const body = await request.json().catch(() => ({}));
   const { cameraId, cameraName, listings } = body as {
     cameraId: number;
     cameraName: string;

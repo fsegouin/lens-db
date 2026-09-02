@@ -22,57 +22,71 @@ const server = new McpServer({
   version: "0.1.0",
 });
 
-server.tool("search_cameras",
-  "Search for cameras by name, mount system, year, sensor size, or body type. Returns a summary list. Use get_camera_details for full specs.",
-  searchCamerasSchema.shape,
+server.registerTool("search_cameras",
+  {
+    description: "Search for cameras by name, mount system, year, sensor size, or body type. Returns a summary list. Use get_camera_details for full specs.",
+    inputSchema: searchCamerasSchema.shape,
+  },
   async (params) => ({
     content: [{ type: "text" as const, text: JSON.stringify(await searchCameras(params), null, 2) }],
   })
 );
 
-server.tool("search_lenses",
-  "Search for lenses by name, mount system, brand, focal length, aperture, or features. Returns a summary list. Use get_lens_details for full specs.",
-  searchLensesSchema.shape,
+server.registerTool("search_lenses",
+  {
+    description: "Search for lenses by name, mount system, brand, focal length, aperture, or features. Returns a summary list. Use get_lens_details for full specs.",
+    inputSchema: searchLensesSchema.shape,
+  },
   async (params) => ({
     content: [{ type: "text" as const, text: JSON.stringify(await searchLenses(params), null, 2) }],
   })
 );
 
-server.tool("get_camera_details",
-  "Get full details for a specific camera by slug, including the complete specs JSON. Use this to answer detailed technical questions.",
-  getCameraDetailsSchema.shape,
+server.registerTool("get_camera_details",
+  {
+    description: "Get full details for a specific camera by slug, including the complete specs JSON. Use this to answer detailed technical questions.",
+    inputSchema: getCameraDetailsSchema.shape,
+  },
   async (params) => ({
     content: [{ type: "text" as const, text: JSON.stringify(await getCameraDetails(params), null, 2) }],
   })
 );
 
-server.tool("get_lens_details",
-  "Get full details for a specific lens by slug, including the complete specs JSON. Use this to answer detailed technical questions.",
-  getLensDetailsSchema.shape,
+server.registerTool("get_lens_details",
+  {
+    description: "Get full details for a specific lens by slug, including the complete specs JSON. Use this to answer detailed technical questions.",
+    inputSchema: getLensDetailsSchema.shape,
+  },
   async (params) => ({
     content: [{ type: "text" as const, text: JSON.stringify(await getLensDetails(params), null, 2) }],
   })
 );
 
-server.tool("get_price",
-  "Get second-hand market price estimates and recent sale history for a camera or lens.",
-  getPriceSchema.shape,
+server.registerTool("get_price",
+  {
+    description: "Get second-hand market price estimates and recent sale history for a camera or lens.",
+    inputSchema: getPriceSchema.shape,
+  },
   async (params) => ({
     content: [{ type: "text" as const, text: JSON.stringify(await getPrice(params), null, 2) }],
   })
 );
 
-server.tool("get_system_info",
-  "Get details about a camera mount system, including camera and lens counts.",
-  getSystemInfoSchema.shape,
+server.registerTool("get_system_info",
+  {
+    description: "Get details about a camera mount system, including camera and lens counts.",
+    inputSchema: getSystemInfoSchema.shape,
+  },
   async (params) => ({
     content: [{ type: "text" as const, text: JSON.stringify(await getSystemInfo(params), null, 2) }],
   })
 );
 
-server.tool("get_compatible_lenses",
-  "Find lenses compatible with a specific camera body.",
-  getCompatibleLensesSchema.shape,
+server.registerTool("get_compatible_lenses",
+  {
+    description: "Find lenses compatible with a specific camera body.",
+    inputSchema: getCompatibleLensesSchema.shape,
+  },
   async (params) => ({
     content: [{ type: "text" as const, text: JSON.stringify(await getCompatibleLenses(params), null, 2) }],
   })

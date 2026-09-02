@@ -57,7 +57,7 @@ export async function getLensDetails(params: GetLensDetailsParams) {
   if (exact) return exact;
 
   // Fallback: fuzzy match on slug or name, prefer shortest slug (most likely the base model)
-  const fuzzyPattern = '%' + escapeLikeMetachars(params.slug) + '%';
+  const fuzzyPattern = `%${escapeLikeMetachars(params.slug)}%`;
   const [fuzzy] = await db
     .select(LENS_FIELDS)
     .from(lenses)

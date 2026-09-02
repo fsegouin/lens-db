@@ -24,8 +24,7 @@ function delay(ms) {
 
 function buildSearchQuery(lensName) {
   // Strip parenthesized content
-  const name = lensName.replace(/\s*\([^)]*\)/g, "").trim();
-  return name;
+  return lensName.replace(/\s*\([^)]*\)/g, "").trim();
 }
 
 async function getLensBatchState(staleBefore) {

@@ -20,7 +20,6 @@ export default function ComboboxInput({
   const [open, setOpen] = useState(false);
   const [highlightIndex, setHighlightIndex] = useState(-1);
   const wrapperRef = useRef<HTMLDivElement>(null);
-  const listRef = useRef<HTMLUListElement>(null);
 
   const filtered = value
     ? options.filter((o) => o.toLowerCase().includes(value.toLowerCase()))
@@ -86,10 +85,7 @@ export default function ComboboxInput({
         className={className}
       />
       {open && (filtered.length > 0 || showNew) && (
-        <ul
-          ref={listRef}
-          className="absolute z-50 mt-1 max-h-48 w-full overflow-auto rounded-lg border border-zinc-300 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
-        >
+        <ul className="absolute z-50 mt-1 max-h-48 w-full overflow-auto rounded-lg border border-zinc-300 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
           {filtered.map((option, i) => (
             <li
               key={option}

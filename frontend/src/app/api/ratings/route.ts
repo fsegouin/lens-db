@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = request.nextUrl;
     const type = parseType(searchParams.get("type"));
-    const entityId = parseInt(searchParams.get("entityId") || searchParams.get("lensId") || searchParams.get("cameraId") || "");
+    const entityId = parseInt(searchParams.get("entityId") || searchParams.get("lensId") || searchParams.get("cameraId") || "", 10);
     if (!entityId || !Number.isFinite(entityId))
       return NextResponse.json(
         { error: "entityId required" },

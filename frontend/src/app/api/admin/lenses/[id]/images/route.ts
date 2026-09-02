@@ -6,8 +6,6 @@ import { lenses } from "@/db/schema";
 import { requireAdminAPI } from "@/lib/admin-auth";
 import { processAndUpload, fetchAndUpload } from "@/lib/r2-upload";
 
-export const runtime = "nodejs";
-
 type ImageData = { src: string; alt: string };
 
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);

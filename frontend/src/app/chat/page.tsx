@@ -1,4 +1,4 @@
-import { Metadata } from "next";
+import type { Metadata } from "next";
 import ChatInterface from "@/components/ChatInterface";
 
 export const metadata: Metadata = {

@@ -1,5 +1,4 @@
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { users } from "@/db/schema";
@@ -193,18 +192,6 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
     .limit(1);
   if (!user || user.isBanned) return null;
   return user as SessionUser;
-}
-
-export async function requireUser(): Promise<SessionUser> {
-  const user = await getCurrentUser();
-  if (!user) redirect("/login");
-  return user;
-}
-
-export async function requireVerifiedUser(): Promise<SessionUser> {
-  const user = await requireUser();
-  if (!user.emailVerifiedAt) redirect("/verify-email");
-  return user;
 }
 
 export async function requireUserAPI(

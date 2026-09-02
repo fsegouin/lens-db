@@ -53,7 +53,7 @@ export async function GET(
     })
     .from(lenses)
     .leftJoin(systems, eq(lenses.systemId, systems.id))
-    .where(eq(lenses.id, parseInt(id)))
+    .where(eq(lenses.id, parseInt(id, 10)))
     .then((r) => r[0]);
 
   if (!result) {
@@ -104,7 +104,7 @@ export async function PUT(
   const [updated] = await db
     .update(lenses)
     .set(updates)
-    .where(eq(lenses.id, parseInt(id)))
+    .where(eq(lenses.id, parseInt(id, 10)))
     .returning();
 
   if (!updated) {
@@ -113,7 +113,7 @@ export async function PUT(
 
   await createRevision({
     entityType: "lens",
-    entityId: parseInt(id),
+    entityId: parseInt(id, 10),
     userId: admin!.id,
     summary: "Admin edit",
     autoPatrol: true,
@@ -136,7 +136,7 @@ export async function DELETE(
   const { id } = await params;
   const [deleted] = await db
     .delete(lenses)
-    .where(eq(lenses.id, parseInt(id)))
+    .where(eq(lenses.id, parseInt(id, 10)))
     .returning({ slug: lenses.slug });
 
   if (deleted) {

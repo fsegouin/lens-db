@@ -52,6 +52,7 @@ export function useEntitySearch({
       const searchId = ++searchIdRef.current;
       if (q.length < 2) {
         setResults([]);
+        setSearching(false);
         return;
       }
 

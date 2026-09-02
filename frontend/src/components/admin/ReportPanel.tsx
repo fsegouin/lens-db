@@ -97,6 +97,7 @@ export default function ReportPanel() {
       {report.status === "pending" && (
         <div className="mt-3 flex gap-2">
           <button
+            type="button"
             onClick={() => updateStatus("accepted")}
             disabled={updating}
             className={`cursor-pointer rounded-md px-3 py-1 text-xs font-medium text-white transition-colors disabled:opacity-50 ${
@@ -108,6 +109,7 @@ export default function ReportPanel() {
             {report.fieldName ? "Accept" : "Done"}
           </button>
           <button
+            type="button"
             onClick={() => updateStatus("dismissed")}
             disabled={updating}
             className="rounded-md bg-zinc-200 px-3 py-1 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-300 disabled:opacity-50 dark:bg-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-600"

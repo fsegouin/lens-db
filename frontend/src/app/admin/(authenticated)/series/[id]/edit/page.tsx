@@ -20,7 +20,7 @@ export default async function EditSeriesPage({
   const series = await db
     .select()
     .from(lensSeries)
-    .where(eq(lensSeries.id, parseInt(id)))
+    .where(eq(lensSeries.id, parseInt(id, 10)))
     .then((r) => r[0]);
 
   if (!series) notFound();
@@ -33,7 +33,7 @@ export default async function EditSeriesPage({
     })
     .from(lensSeriesMemberships)
     .innerJoin(lenses, eq(lensSeriesMemberships.lensId, lenses.id))
-    .where(eq(lensSeriesMemberships.seriesId, parseInt(id)));
+    .where(eq(lensSeriesMemberships.seriesId, parseInt(id, 10)));
 
   return (
     <EditPageWithReport title="Edit Series">

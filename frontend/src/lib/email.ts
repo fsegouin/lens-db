@@ -18,11 +18,9 @@ export async function sendVerificationEmail(
   token: string
 ): Promise<void> {
   const appUrl =
-    process.env.VERCEL_ENV === "production"
-      ? (process.env.APP_URL || "https://thelensdb.com")
-      : process.env.VERCEL_BRANCH_URL
-        ? `https://${process.env.VERCEL_BRANCH_URL}`
-        : (process.env.APP_URL || "https://thelensdb.com");
+    process.env.VERCEL_ENV !== "production" && process.env.VERCEL_BRANCH_URL
+      ? `https://${process.env.VERCEL_BRANCH_URL}`
+      : process.env.APP_URL || "https://thelensdb.com";
   const fromEmail = process.env.RESEND_FROM_EMAIL || "The Lens DB <noreply@thelensdb.com>";
   const verifyUrl = `${appUrl}/api/auth/verify-email?token=${token}`;
 

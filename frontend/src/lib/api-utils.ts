@@ -58,3 +58,19 @@ export function parseMultiValueParam(raw: string | null | undefined): string[] {
   }
   return Array.from(seen);
 }
+
+/**
+ * Constant-time check of the Authorization header against
+ * "Bearer <CRON_SECRET>". Fail-closed when CRON_SECRET is unset.
+ */
+export function isCronAuthorized(authHeader: string | null): boolean {
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret || !authHeader) return false;
+  const expected = `Bearer ${cronSecret}`;
+  if (authHeader.length !== expected.length) return false;
+  let diff = 0;
+  for (let i = 0; i < authHeader.length; i++) {
+    diff |= authHeader.charCodeAt(i) ^ expected.charCodeAt(i);
+  }
+  return diff === 0;
+}

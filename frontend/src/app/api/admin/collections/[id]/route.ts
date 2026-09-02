@@ -18,7 +18,7 @@ export async function GET(
   const collection = await db
     .select()
     .from(collections)
-    .where(eq(collections.id, parseInt(id)))
+    .where(eq(collections.id, parseInt(id, 10)))
     .then((r) => r[0]);
 
   if (!collection) {
@@ -33,7 +33,7 @@ export async function GET(
     })
     .from(lensCollections)
     .innerJoin(lenses, eq(lensCollections.lensId, lenses.id))
-    .where(eq(lensCollections.collectionId, parseInt(id)));
+    .where(eq(lensCollections.collectionId, parseInt(id, 10)));
 
   return NextResponse.json({ ...collection, lenses: collectionLenses });
 }
@@ -47,14 +47,14 @@ export async function PUT(
   if (authError) return authError;
 
   const { id } = await params;
-  const numericId = parseInt(id);
+  const numericId = parseInt(id, 10);
   const admin = await getAdminUserFromToken(token);
   const body = await request.json();
   const { name, slug, description, lensIds } = body;
 
   // Validate everything before the first write (avoid partial updates)
   if (lensIds !== undefined) {
-    if (!Array.isArray(lensIds) || !lensIds.every((id: unknown) => typeof id === "number" && Number.isInteger(id))) {
+    if (!Array.isArray(lensIds) || !lensIds.every((v: unknown) => typeof v === "number" && Number.isInteger(v))) {
       return NextResponse.json({ error: "lensIds must be an array of integers" }, { status: 400 });
     }
   }
@@ -114,7 +114,7 @@ export async function DELETE(
   const { id } = await params;
   const [deleted] = await db
     .delete(collections)
-    .where(eq(collections.id, parseInt(id)))
+    .where(eq(collections.id, parseInt(id, 10)))
     .returning({ slug: collections.slug });
 
   if (deleted) {

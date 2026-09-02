@@ -8,6 +8,15 @@ import { PageTransition } from "@/components/page-transition";
 
 export const revalidate = 604800;
 
+type ComparisonRow = {
+  view_count: number;
+  item1_name: string;
+  item1_slug: string;
+  item2_name: string;
+  item2_slug: string;
+  type: string;
+};
+
 const sections = [
   {
     title: "Systems",
@@ -79,7 +88,7 @@ export default async function Home() {
     )
     ORDER BY view_count DESC
     LIMIT 10
-  `).then(r => r.rows).catch(() => []);
+  `).then((r) => r.rows as ComparisonRow[]).catch(() => []);
 
   const [popularLenses, topComparisons] = await Promise.all([
     popularLensesPromise,
@@ -176,7 +185,7 @@ export default async function Home() {
               Most Compared
             </h2>
             <div className="grid gap-3 sm:grid-cols-2">
-              {(topComparisons as Array<{view_count: number; item1_name: string; item1_slug: string; item2_name: string; item2_slug: string; type: string}>).map((c, i) => (
+              {topComparisons.map((c, i) => (
                 <Link
                   key={i}
                   href={`/compare?type=${c.type}&item1=${c.item1_slug}&item2=${c.item2_slug}`}

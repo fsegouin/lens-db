@@ -3,14 +3,14 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 
-interface CompatibilityEntry {
+type CompatibilityEntry = {
   lensId: number;
   cameraId: number;
   lensName: string;
   cameraName: string;
   isNative: boolean | null;
   notes: string | null;
-}
+};
 
 const PAGE_SIZE = 50;
 
@@ -73,6 +73,7 @@ export default function AdminCompatibilityPage() {
 
       <input
         type="text"
+        aria-label="Search by lens or camera name"
         placeholder="Search by lens or camera name..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
@@ -88,11 +89,11 @@ export default function AdminCompatibilityPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-zinc-200 dark:border-zinc-800">
-                <th className="px-3 py-2 text-left font-medium text-zinc-500">Lens</th>
-                <th className="px-3 py-2 text-left font-medium text-zinc-500">Camera</th>
-                <th className="px-3 py-2 text-left font-medium text-zinc-500">Native</th>
-                <th className="px-3 py-2 text-left font-medium text-zinc-500">Notes</th>
-                <th className="px-3 py-2 text-left font-medium text-zinc-500">Actions</th>
+                <th scope="col" className="px-3 py-2 text-left font-medium text-zinc-500">Lens</th>
+                <th scope="col" className="px-3 py-2 text-left font-medium text-zinc-500">Camera</th>
+                <th scope="col" className="px-3 py-2 text-left font-medium text-zinc-500">Native</th>
+                <th scope="col" className="px-3 py-2 text-left font-medium text-zinc-500">Notes</th>
+                <th scope="col" className="px-3 py-2 text-left font-medium text-zinc-500">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
@@ -112,6 +113,7 @@ export default function AdminCompatibilityPage() {
                   </td>
                   <td className="px-3 py-2">
                     <button
+                      type="button"
                       onClick={() => handleDelete(item.lensId, item.cameraId)}
                       className="rounded bg-red-600 px-2 py-1 text-xs font-medium text-white hover:bg-red-700"
                     >
@@ -135,6 +137,7 @@ export default function AdminCompatibilityPage() {
       {totalPages > 1 && (
         <div className="flex items-center gap-2">
           <button
+            type="button"
             onClick={() => setPage((p) => Math.max(0, p - 1))}
             disabled={page === 0}
             className="rounded border border-zinc-300 px-3 py-1 text-sm disabled:opacity-50 dark:border-zinc-700"
@@ -145,6 +148,7 @@ export default function AdminCompatibilityPage() {
             Page {page + 1} of {totalPages}
           </span>
           <button
+            type="button"
             onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
             disabled={page >= totalPages - 1}
             className="rounded border border-zinc-300 px-3 py-1 text-sm disabled:opacity-50 dark:border-zinc-700"

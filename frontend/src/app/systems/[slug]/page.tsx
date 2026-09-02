@@ -87,7 +87,7 @@ export default async function SystemDetailPage({
               {systemLenses.length} lenses, {systemCameras.length} cameras
             </Badge>
             {(system.viewCount ?? 0) > 0 && (
-              <span className="text-zinc-400">{system.viewCount!.toLocaleString()} views</span>
+              <span className="text-zinc-400">{(system.viewCount ?? 0).toLocaleString()} views</span>
             )}
           </div>
         </div>

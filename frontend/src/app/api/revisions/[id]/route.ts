@@ -10,7 +10,7 @@ export async function GET(
 ) {
   const { id } = await params;
   const revisionId = parseInt(id, 10);
-  if (isNaN(revisionId)) {
+  if (Number.isNaN(revisionId)) {
     return NextResponse.json({ error: "Invalid revision ID" }, { status: 400 });
   }
 

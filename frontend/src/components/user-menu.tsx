@@ -47,6 +47,7 @@ export function UserMenu() {
         </Link>
       )}
       <button
+        type="button"
         onClick={handleLogout}
         className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
         aria-label="Sign out"

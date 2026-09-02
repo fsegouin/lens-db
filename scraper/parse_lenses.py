@@ -279,7 +279,13 @@ def parse_camera_page(html: str, filename: str) -> dict | None:
 
     h1 = soup.find("h1")
     if h1:
-        data["name"] = h1.get_text(strip=True)
+        name = h1.get_text(strip=True)
+        if name.upper() == "LENS-DB.COM":
+            name = ""
+            title = soup.find("title")
+            if title:
+                name = title.get_text(strip=True).replace(" | LENS-DB.COM", "").strip()
+        data["name"] = name
     if not data.get("name"):
         return None
 

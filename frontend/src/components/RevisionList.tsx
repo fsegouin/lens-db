@@ -40,7 +40,7 @@ function formatDate(date: string | Date | null): string {
 }
 
 // Human-readable field labels
-const fieldLabels: Record<string, string> = {
+const FIELD_LABELS: Record<string, string> = {
   name: "Name",
   slug: "Slug",
   description: "Description",
@@ -131,6 +131,8 @@ export default function RevisionList({ revisions }: { revisions: Revision[] }) {
             className="rounded-lg border border-zinc-200 dark:border-zinc-800"
           >
             <button
+              type="button"
+              aria-expanded={expandedId === rev.id}
               onClick={() => toggleDiff(rev.id)}
               className="flex w-full items-start gap-3 p-3 text-left hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors"
             >
@@ -150,7 +152,7 @@ export default function RevisionList({ revisions }: { revisions: Revision[] }) {
                   {rev.displayName || "System"} — {formatDate(rev.createdAt)}
                   {changedFields.length > 0 && (
                     <span className="ml-1">
-                      ({changedFields.map((f) => fieldLabels[f] || f).join(", ")})
+                      ({changedFields.map((f) => FIELD_LABELS[f] || f).join(", ")})
                     </span>
                   )}
                 </p>
@@ -168,6 +170,7 @@ export default function RevisionList({ revisions }: { revisions: Revision[] }) {
                   <p className="text-xs text-muted-foreground">
                     Failed to load diff.{" "}
                     <button
+                      type="button"
                       onClick={() => fetchDiff(rev.id)}
                       className="underline hover:text-zinc-900 dark:hover:text-zinc-100"
                     >
@@ -185,15 +188,17 @@ export default function RevisionList({ revisions }: { revisions: Revision[] }) {
                     {(diffData[rev.id] || []).map((diff) => (
                       <div key={diff.field} className="text-sm">
                         <p className="text-xs font-medium text-muted-foreground mb-1">
-                          {fieldLabels[diff.field] || diff.field}
+                          {FIELD_LABELS[diff.field] || diff.field}
                         </p>
                         <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
                           <div className="rounded bg-red-50 px-2 py-1 text-xs dark:bg-red-950/30">
+                            <span className="sr-only">Before: </span>
                             <span className="text-red-600 dark:text-red-400">
                               {formatValue(diff.oldValue)}
                             </span>
                           </div>
                           <div className="rounded bg-green-50 px-2 py-1 text-xs dark:bg-green-950/30">
+                            <span className="sr-only">After: </span>
                             <span className="text-green-600 dark:text-green-400">
                               {formatValue(diff.newValue)}
                             </span>

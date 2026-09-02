@@ -20,7 +20,6 @@ interface CameraData {
   yearIntroduced?: number | null;
   bodyType?: string | null;
   weightG?: number | null;
-  verified?: boolean | null;
   specs?: unknown;
   images?: unknown;
 }

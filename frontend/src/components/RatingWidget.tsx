@@ -102,6 +102,8 @@ export default function RatingWidget(props: RatingWidgetProps) {
           return (
             <motion.button
               key={n}
+              type="button"
+              aria-pressed={userRating === n}
               whileHover={{ scale: 1.15 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => submit(n)}
@@ -138,6 +140,8 @@ export default function RatingWidget(props: RatingWidgetProps) {
               Your rating: {userRating}/10
             </span>
             <button
+              type="button"
+              aria-label="Remove your rating"
               onClick={removeRating}
               disabled={submitting}
               className="ml-2 text-xs text-zinc-400 underline hover:text-zinc-600 disabled:cursor-not-allowed dark:hover:text-zinc-300"

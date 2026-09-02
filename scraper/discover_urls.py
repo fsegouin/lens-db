@@ -130,8 +130,6 @@ def categorize_url(url: str) -> str | None:
             return "article"
         return "lens"
 
-    return "other"
-
 
 def main():
     parser = argparse.ArgumentParser(description="Discover archived lens-db.com URLs")

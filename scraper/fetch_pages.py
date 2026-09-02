@@ -77,6 +77,9 @@ async def fetch_page(
                 stats["errors"] += 1
                 return None
 
+        stats["errors"] += 1
+        return None
+
 
 async def run(args):
     with open(args.input) as f:

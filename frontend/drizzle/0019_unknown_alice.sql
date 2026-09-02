@@ -1,0 +1,1 @@
+ALTER TABLE "dpreview_lens_candidates" ADD COLUMN "llm_is_duplicate" boolean;
