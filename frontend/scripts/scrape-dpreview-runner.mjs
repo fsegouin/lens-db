@@ -7,10 +7,10 @@
  * Usage: node scripts/scrape-dpreview-runner.mjs <scraped-data.json>
  */
 
-import { neon } from '@neondatabase/serverless';
+import { createSql } from './lib/db.mjs';
 import fs from 'fs';
 
-const sql = neon(process.env.DATABASE_URL);
+const sql = createSql();
 
 // Load scraped data
 const dataFile = process.argv[2] || '../dpreview-scraped-cameras.json';

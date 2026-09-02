@@ -1,5 +1,5 @@
 """
-Step 4: Import parsed data into the Neon PostgreSQL database.
+Step 4: Import parsed data into the Supabase PostgreSQL database.
 
 Reads structured JSON from parse_lenses.py and inserts into the DB.
 Systems/mounts are extracted from lens specs (Mount field) rather than
@@ -1019,7 +1019,7 @@ def import_collections(conn, collections_data: list[dict]):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Import lens data into Neon PostgreSQL")
+    parser = argparse.ArgumentParser(description="Import lens data into Supabase PostgreSQL")
     parser.add_argument("--input", default="data.json", help="Parsed data file")
     parser.add_argument("--reset", action="store_true", help="Drop and recreate tables")
     args = parser.parse_args()

@@ -4,9 +4,9 @@
  * Usage: node scripts/add-series-descriptions.mjs [--dry-run]
  */
 
-import { neon } from '@neondatabase/serverless';
+import { createSql } from './lib/db.mjs';
 
-const sql = neon(process.env.DATABASE_URL);
+const sql = createSql();
 const dryRun = process.argv.includes('--dry-run');
 
 const descriptions = {

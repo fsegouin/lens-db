@@ -24,7 +24,7 @@ The frontend lives in [`frontend/`](frontend/) and uses:
 - React 19
 - TypeScript
 - Drizzle ORM
-- Neon PostgreSQL
+- Supabase PostgreSQL
 - Tailwind CSS v4
 - Upstash Redis for rate limiting
 - Vercel AI SDK (AI Gateway) for chat, price classification, and DPReview import dedupe/audit checks

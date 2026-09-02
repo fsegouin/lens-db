@@ -4,11 +4,11 @@
  * Usage: node scripts/enrich-existing-lenses.mjs [--dry-run]
  */
 
-import { neon } from '@neondatabase/serverless';
+import { createSql } from './lib/db.mjs';
 import { objectExists, processAndUpload, R2_PUBLIC } from './lib/r2-upload.mjs';
 import fs from 'fs';
 
-const sql = neon(process.env.DATABASE_URL);
+const sql = createSql();
 const dryRun = process.argv.includes('--dry-run');
 
 const toReplace = JSON.parse(fs.readFileSync('../dpreview-lenses-to-replace-images.json', 'utf8'));

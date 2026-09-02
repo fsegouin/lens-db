@@ -8,9 +8,9 @@
  * Usage: DATABASE_URL=... node scripts/prune-audit-noise.mjs [--dry-run]
  */
 
-import { neon } from '@neondatabase/serverless';
+import { createSql } from './lib/db.mjs';
 
-const sql = neon(process.env.DATABASE_URL);
+const sql = createSql();
 const dryRun = process.argv.includes('--dry-run');
 
 const NUMERIC_FIELDS = new Set([

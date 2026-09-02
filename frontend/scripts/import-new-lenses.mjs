@@ -5,12 +5,12 @@
  * Usage: node scripts/import-new-lenses.mjs [--dry-run]
  */
 
-import { neon } from '@neondatabase/serverless';
+import { createSql } from './lib/db.mjs';
 import { S3Client, PutObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
 import sharp from 'sharp';
 import fs from 'fs';
 
-const sql = neon(process.env.DATABASE_URL);
+const sql = createSql();
 const dryRun = process.argv.includes('--dry-run');
 
 const {

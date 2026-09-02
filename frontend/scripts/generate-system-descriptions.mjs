@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { neon } from "@neondatabase/serverless";
+import { createSql } from "./lib/db.mjs";
 
 function parseArgs(argv) {
   const args = {
@@ -130,7 +130,7 @@ async function main() {
     throw new Error("OPENAI_API_KEY is required");
   }
 
-  const sql = neon(databaseUrl);
+  const sql = createSql(databaseUrl);
 
   const rows = await sql`
     SELECT

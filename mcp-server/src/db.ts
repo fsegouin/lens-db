@@ -1,19 +1,12 @@
-import { neon } from "@neondatabase/serverless";
-import { drizzle, type NeonHttpDatabase } from "drizzle-orm/neon-http";
+import type { Pool } from "pg";
+import { getDb } from "../../frontend/src/db";
 import * as schema from "../../frontend/src/db/schema";
 
-export { schema };
+// One pool per process: the chat route loads these tools inside the Next.js
+// server, so re-exporting the frontend singleton avoids a second pool there.
+export { getDb, schema };
 
-let _db: NeonHttpDatabase<typeof schema> | null = null;
-
-export function getDb() {
-  if (!_db) {
-    const databaseUrl = process.env.DATABASE_URL;
-    if (!databaseUrl) {
-      throw new Error("DATABASE_URL environment variable is not set");
-    }
-    const sql = neon(databaseUrl);
-    _db = drizzle(sql, { schema });
-  }
-  return _db;
+/** Drain the pool so the stdio process can exit promptly on EOF/SIGTERM. */
+export async function closeDb() {
+  await (getDb().$client as Pool).end();
 }

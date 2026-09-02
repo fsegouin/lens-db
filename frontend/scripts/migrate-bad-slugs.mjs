@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { neon } from "@neondatabase/serverless";
+import { createSql } from "./lib/db.mjs";
 
 const SERIES_MATCH_RULES = [
   { slug: "canon-l", sql: `name ~ '[0-9]L' AND name ILIKE '%canon%'` },
@@ -67,7 +67,7 @@ async function main() {
     throw new Error("DATABASE_URL is required");
   }
 
-  const sql = neon(databaseUrl);
+  const sql = createSql(databaseUrl);
   const prefix = dryRun ? "[DRY RUN] " : "";
 
   console.log(`${prefix}Starting bad-slug migration...\n`);

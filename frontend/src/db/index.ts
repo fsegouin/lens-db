@@ -1,23 +1,27 @@
-import { neon } from "@neondatabase/serverless";
-import { drizzle, type NeonHttpDatabase } from "drizzle-orm/neon-http";
+import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
+import type { Pool } from "pg";
+import { createPool } from "./pool";
 import * as schema from "./schema";
 
-let _db: NeonHttpDatabase<typeof schema> | null = null;
+// drizzle() returns the database intersected with `$client`; keep it on the
+// alias so callers (e.g. the MCP server's shutdown) can reach the pool.
+export type Database = NodePgDatabase<typeof schema> & { $client: Pool };
+
+// Cached on globalThis so Next dev HMR reuses one pool instead of leaking one per reload.
+const globalForDb = globalThis as unknown as { __lensDb?: Database };
 
 export function getDb() {
-  if (!_db) {
+  if (!globalForDb.__lensDb) {
     const databaseUrl = process.env.DATABASE_URL;
     if (!databaseUrl) {
       throw new Error("DATABASE_URL environment variable is not set");
     }
-    const sql = neon(databaseUrl);
-    _db = drizzle(sql, { schema });
+    globalForDb.__lensDb = drizzle(createPool(databaseUrl), { schema });
   }
-  return _db;
+  return globalForDb.__lensDb;
 }
 
-// For convenience - will throw if DATABASE_URL is not set
-export const db = new Proxy({} as NeonHttpDatabase<typeof schema>, {
+export const db = new Proxy({} as Database, {
   get(_target, prop) {
     return (getDb() as unknown as Record<string | symbol, unknown>)[prop];
   },
