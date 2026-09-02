@@ -101,7 +101,7 @@ export default async function CollectionDetailPage({
           {collection.name}
         </h1>
         {collection.description && (
-          <p className="mt-2 text-zinc-600 dark:text-zinc-400">{collection.description}</p>
+          <p className="mt-2 text-zinc-600">{collection.description}</p>
         )}
         <div className="mt-2">
           <Badge variant="secondary">
@@ -135,16 +135,16 @@ export default async function CollectionDetailPage({
                       {lens.name}
                     </Link>
                   </TableCell>
-                  <TableCell className="text-zinc-500">{lens.brand || "\u2014"}</TableCell>
-                  <TableCell className="text-zinc-500">{system?.name || "\u2014"}</TableCell>
-                  <TableCell className="text-zinc-600 dark:text-zinc-400">
+                  <TableCell className="text-muted-foreground">{lens.brand || "\u2014"}</TableCell>
+                  <TableCell className="text-muted-foreground">{system?.name || "\u2014"}</TableCell>
+                  <TableCell className="text-zinc-600">
                     {lens.focalLengthMin
                       ? lens.focalLengthMin === lens.focalLengthMax
                         ? `${lens.focalLengthMin}mm`
                         : `${lens.focalLengthMin}-${lens.focalLengthMax}mm`
                       : "\u2014"}
                   </TableCell>
-                  <TableCell className="text-zinc-600 dark:text-zinc-400">
+                  <TableCell className="text-zinc-600">
                     {lens.apertureMin ? `f/${lens.apertureMin}` : "\u2014"}
                   </TableCell>
                   <TableCell>
@@ -154,7 +154,7 @@ export default async function CollectionDetailPage({
                       {lens.isMacro && <Badge variant="macro">Macro</Badge>}
                     </div>
                   </TableCell>
-                  <TableCell className="text-zinc-600 dark:text-zinc-400">
+                  <TableCell className="text-zinc-600">
                     {lens.yearIntroduced || "\u2014"}
                   </TableCell>
                 </TableRow>
@@ -164,7 +164,7 @@ export default async function CollectionDetailPage({
         </div>
       ) : (
         <div className="rounded-xl border border-dashed border-zinc-300 p-12 text-center dark:border-zinc-700">
-          <p className="text-zinc-500">No lenses in this collection yet.</p>
+          <p className="text-muted-foreground">No lenses in this collection yet.</p>
         </div>
       )}
 

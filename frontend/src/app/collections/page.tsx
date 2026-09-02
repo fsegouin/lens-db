@@ -45,7 +45,7 @@ export default async function CollectionsPage() {
         <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100">
           Collections
         </h1>
-        <p className="mt-2 text-zinc-600 dark:text-zinc-400">
+        <p className="mt-2 text-zinc-600">
           Curated thematic lists of lenses based on features, use cases, and
           historical significance.
         </p>
@@ -63,7 +63,7 @@ export default async function CollectionsPage() {
                 {collection.name}
               </h2>
               {collection.description && (
-                <p className="mt-2 line-clamp-2 text-sm text-zinc-600 dark:text-zinc-400">
+                <p className="mt-2 line-clamp-2 text-sm text-zinc-600">
                   {collection.description}
                 </p>
               )}
@@ -77,7 +77,7 @@ export default async function CollectionsPage() {
         </div>
       ) : (
         <div className="rounded-xl border border-dashed border-zinc-300 p-12 text-center dark:border-zinc-700">
-          <p className="text-zinc-500">No collections yet.</p>
+          <p className="text-muted-foreground">No collections yet.</p>
         </div>
       )}
     </div>

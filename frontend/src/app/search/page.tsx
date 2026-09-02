@@ -97,7 +97,7 @@ export default async function SearchPage({
     <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100">Search</h1>
-        <p className="mt-2 text-zinc-600 dark:text-zinc-400">
+        <p className="mt-2 text-zinc-600">
           Search across all lenses, cameras, and systems.
         </p>
       </div>
@@ -105,7 +105,7 @@ export default async function SearchPage({
       <SearchInput defaultValue={query} />
 
       {query && !hasResults && (
-        <p className="text-center text-zinc-500">No results found for &ldquo;{query}&rdquo;</p>
+        <p className="text-center text-muted-foreground">No results found for &ldquo;{query}&rdquo;</p>
       )}
 
       {systemResults.length > 0 && (
@@ -140,7 +140,7 @@ export default async function SearchPage({
                 className="block rounded-lg border border-zinc-200 p-3 transition-all hover:shadow-sm dark:border-zinc-800"
               >
                 <span className="font-medium text-zinc-900 dark:text-zinc-100">{lens.name}</span>
-                <span className="ml-3 text-sm text-zinc-500">
+                <span className="ml-3 text-sm text-muted-foreground">
                   {lens.focalLengthMin &&
                     (lens.focalLengthMin === lens.focalLengthMax
                       ? `${lens.focalLengthMin}mm`
@@ -173,7 +173,7 @@ export default async function SearchPage({
       )}
 
       {!query && (
-        <div className="space-y-4 text-center text-zinc-500">
+        <div className="space-y-4 text-center text-muted-foreground">
           <p>Try searching for:</p>
           <div className="flex flex-wrap justify-center gap-2">
             {[

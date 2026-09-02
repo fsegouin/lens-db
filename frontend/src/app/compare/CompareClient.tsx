@@ -191,9 +191,9 @@ function ItemSearch({
       <div className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-700">
         <div className="flex items-center justify-between gap-2">
           <div>
-            <p className="text-xs text-zinc-500">{label}</p>
+            <p className="text-xs text-muted-foreground">{label}</p>
             <p className="font-medium text-zinc-900 dark:text-zinc-100">{selected.data.name}</p>
-            <span className="text-xs text-zinc-400">{selected.type === "lens" ? "Lens" : "Camera"}</span>
+            <span className="text-xs text-muted-foreground">{selected.type === "lens" ? "Lens" : "Camera"}</span>
           </div>
           <Button
             variant="outline"
@@ -214,7 +214,7 @@ function ItemSearch({
 
   return (
     <div className="space-y-1">
-      <p id={labelId} className="text-xs text-zinc-500">{label}</p>
+      <p id={labelId} className="text-xs text-muted-foreground">{label}</p>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger render={<Button variant="outline" className="w-full justify-between" aria-describedby={labelId} />}>
           {query || placeholder}
@@ -412,7 +412,7 @@ export default function CompareClient() {
                 const isDiff = v1 !== v2 && v1 !== "\u2014" && v2 !== "\u2014";
                 return (
                   <TableRow key={label} className={isDiff ? "bg-amber-50/50 dark:bg-amber-950/20" : ""}>
-                    <TableCell className="font-medium text-zinc-500 dark:text-zinc-400">{label}</TableCell>
+                    <TableCell className="font-medium text-muted-foreground">{label}</TableCell>
                     <TableCell className={isDiff ? "border-l-2 border-amber-400 font-semibold" : ""}>{formatCellValue(v1)}</TableCell>
                     <TableCell className={isDiff ? "border-l-2 border-amber-400 font-semibold" : ""}>{formatCellValue(v2)}</TableCell>
                   </TableRow>

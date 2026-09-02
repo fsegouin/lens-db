@@ -17,6 +17,7 @@ import PriceCard from "@/components/PriceCard";
 import EntitySummaryLine from "@/components/EntitySummaryLine";
 import EbayListings from "@/components/EbayListings";
 import { getImages } from "@/lib/images";
+import { specValue } from "@/lib/spec-value";
 import { formatDescription } from "@/lib/format-description";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -169,7 +170,7 @@ export default async function CameraDetailPage({
           {camera.name}
         </h1>
         {camera.alias && (
-          <p className="mt-1 text-lg text-zinc-500 dark:text-zinc-400">
+          <p className="mt-1 text-lg text-muted-foreground">
             Also known as: {camera.alias}
           </p>
         )}
@@ -239,7 +240,8 @@ export default async function CameraDetailPage({
           </h2>
           <SpecsTable
             rows={imagingRows
-              .filter(([, value]) => value != null && value !== "")
+              .map(([label, value]) => [label, specValue(value)] as const)
+              .filter(([, value]) => value != null)
               .map(([label, value]) => [label, String(value)])}
           />
         </div>
@@ -252,7 +254,8 @@ export default async function CameraDetailPage({
           </h2>
           <SpecsTable
             rows={bodyRows
-              .filter(([, value]) => value != null && value !== "")
+              .map(([label, value]) => [label, specValue(value)] as const)
+              .filter(([, value]) => value != null)
               .map(([label, value]) => [label, String(value)])}
           />
         </div>
@@ -263,7 +266,7 @@ export default async function CameraDetailPage({
           <h2 className="mb-2 text-sm font-semibold tracking-wider text-muted-foreground uppercase">
             Lenses that fit
           </h2>
-          <p className="mb-3 text-sm text-zinc-500 dark:text-zinc-400">
+          <p className="mb-3 text-sm text-muted-foreground">
             {relations.lensCount.toLocaleString()} lenses in the database mount
             natively on the {system.name}.
           </p>
@@ -301,7 +304,7 @@ export default async function CameraDetailPage({
 
       {process.env.NODE_ENV === "development" && Object.keys(specs).length > 0 && (
         <details className="group">
-          <summary className="cursor-pointer text-sm font-medium text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-400">
+          <summary className="cursor-pointer text-sm font-medium text-muted-foreground hover:text-zinc-700">
             Raw specs JSON ({Object.keys(specs).length} fields)
           </summary>
           <pre className="mt-3 max-h-96 overflow-auto rounded-lg bg-zinc-50 p-4 text-xs text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
@@ -314,7 +317,7 @@ export default async function CameraDetailPage({
 
       <div className="space-y-3">
         {camera.url && /^https?:\/\//i.test(camera.url) && (
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">
+          <p className="text-xs text-muted-foreground">
             Source:{" "}
             <a
               href={camera.url}

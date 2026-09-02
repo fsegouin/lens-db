@@ -115,7 +115,7 @@ export default async function Home() {
           <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
             Every lens. Every mount. One reference.
           </h1>
-          <p className="mx-auto max-w-2xl text-lg text-zinc-600 dark:text-zinc-400">
+          <p className="mx-auto max-w-2xl text-lg text-zinc-600">
             Specifications for {counts.lenses.toLocaleString()} lenses and{" "}
             {counts.cameras.toLocaleString()} camera bodies across{" "}
             {counts.systems} mounts: what fits what, when it was made, and
@@ -184,7 +184,7 @@ export default async function Home() {
             <h2 className="mb-1 text-lg font-semibold text-zinc-800 group-hover:text-zinc-900 dark:text-zinc-200 dark:group-hover:text-white">
               {section.title}
             </h2>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">
+            <p className="text-sm text-muted-foreground">
               {section.description}
             </p>
           </Link>
@@ -198,7 +198,7 @@ export default async function Home() {
             <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
               Start with your mount
             </h2>
-            <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+            <p className="mt-1 text-sm text-muted-foreground">
               The mounts with the deepest lens catalogues.
             </p>
           </div>
@@ -212,7 +212,7 @@ export default async function Home() {
                 <span className="text-sm font-medium text-zinc-900 group-hover:underline dark:text-zinc-100">
                   {system.name}
                 </span>
-                <span className="text-xs text-zinc-500 tabular-nums dark:text-zinc-400">
+                <span className="text-xs text-muted-foreground tabular-nums">
                   {system.lensCount.toLocaleString()}
                 </span>
               </Link>
@@ -227,7 +227,7 @@ export default async function Home() {
             <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
               Recently added
             </h2>
-            <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+            <p className="mt-1 text-sm text-muted-foreground">
               New entries as they are announced and catalogued.
             </p>
           </div>
@@ -241,7 +241,7 @@ export default async function Home() {
                 <p className="text-sm font-medium text-zinc-900 group-hover:underline dark:text-zinc-100">
                   {lens.name}
                 </p>
-                <div className="mt-1 flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
+                <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
                   <span>{lens.brand}</span>
                   {lens.yearIntroduced && (
                     <span className="tabular-nums">{lens.yearIntroduced}</span>
@@ -258,13 +258,13 @@ export default async function Home() {
         <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
           About this project
         </h2>
-        <p className="mt-4 text-zinc-600 dark:text-zinc-400">
+        <p className="mt-4 text-zinc-600">
           The Lens DB is a community reference for camera lenses, bodies and
           mounts. It continues the work of lens-db.com, a catalogue built from
           manufacturer booklets, datasheets and brochures between 2012 and 2025,
           and extends it with used-price data drawn from completed sales.
         </p>
-        <p className="mt-3 text-zinc-600 dark:text-zinc-400">
+        <p className="mt-3 text-zinc-600">
           Records are incomplete and some are wrong. Every lens and camera page
           has an <strong className="text-zinc-700 dark:text-zinc-300">Edit</strong>{" "}
           button for corrections and a{" "}

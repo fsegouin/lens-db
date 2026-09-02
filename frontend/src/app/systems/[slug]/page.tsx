@@ -128,12 +128,12 @@ export default async function SystemDetailPage({
             {systemLenses.length} lenses, {systemCameras.length} cameras
           </Badge>
           {(system.viewCount ?? 0) > 0 && (
-            <span className="text-zinc-400">{(system.viewCount ?? 0).toLocaleString()} views</span>
+            <span className="text-muted-foreground">{(system.viewCount ?? 0).toLocaleString()} views</span>
           )}
         </div>
       </div>
 
-      {system.description && <p className="leading-relaxed text-zinc-600 dark:text-zinc-400">{system.description}</p>}
+      {system.description && <p className="leading-relaxed text-zinc-600">{system.description}</p>}
 
       {systemLenses.length > 0 && (
         <div>
@@ -163,15 +163,15 @@ export default async function SystemDetailPage({
                         {lens.name}
                       </Link>
                     </TableCell>
-                    <TableCell className="text-zinc-500">{lens.brand || "\u2014"}</TableCell>
-                    <TableCell className="text-zinc-600 dark:text-zinc-400">
+                    <TableCell className="text-muted-foreground">{lens.brand || "\u2014"}</TableCell>
+                    <TableCell className="text-zinc-600">
                       {lens.focalLengthMin
                         ? lens.focalLengthMin === lens.focalLengthMax
                           ? `${lens.focalLengthMin}mm`
                           : `${lens.focalLengthMin}-${lens.focalLengthMax}mm`
                         : "\u2014"}
                     </TableCell>
-                    <TableCell className="text-zinc-600 dark:text-zinc-400">
+                    <TableCell className="text-zinc-600">
                       {lens.apertureMin ? `f/${lens.apertureMin}` : "\u2014"}
                     </TableCell>
                     <TableCell>
@@ -181,7 +181,7 @@ export default async function SystemDetailPage({
                         {lens.isMacro && <Badge variant="macro">Macro</Badge>}
                       </div>
                     </TableCell>
-                    <TableCell className="text-zinc-600 dark:text-zinc-400">
+                    <TableCell className="text-zinc-600">
                       {lens.yearIntroduced || "\u2014"}
                     </TableCell>
                   </TableRow>
@@ -219,16 +219,16 @@ export default async function SystemDetailPage({
                         {camera.name}
                       </Link>
                     </TableCell>
-                    <TableCell className="text-zinc-500">
+                    <TableCell className="text-muted-foreground">
                       {camera.sensorType || "\u2014"}
                     </TableCell>
-                    <TableCell className="text-zinc-500">
+                    <TableCell className="text-muted-foreground">
                       {camera.sensorSize || "\u2014"}
                     </TableCell>
-                    <TableCell className="text-zinc-600 dark:text-zinc-400">
+                    <TableCell className="text-zinc-600">
                       {camera.megapixels ? `${camera.megapixels} MP` : "\u2014"}
                     </TableCell>
-                    <TableCell className="text-zinc-600 dark:text-zinc-400">
+                    <TableCell className="text-zinc-600">
                       {camera.yearIntroduced || "\u2014"}
                     </TableCell>
                   </TableRow>

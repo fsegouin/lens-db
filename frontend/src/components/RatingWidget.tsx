@@ -123,7 +123,7 @@ export default function RatingWidget(props: RatingWidgetProps) {
           );
         })}
       </div>
-      <p className="text-sm text-zinc-500">
+      <p className="text-sm text-muted-foreground">
         {avg != null ? (
           <>
             <span className="font-medium text-zinc-700 dark:text-zinc-300">
@@ -144,7 +144,7 @@ export default function RatingWidget(props: RatingWidgetProps) {
               aria-label="Remove your rating"
               onClick={removeRating}
               disabled={submitting}
-              className="ml-2 text-xs text-zinc-400 underline hover:text-zinc-600 disabled:cursor-not-allowed dark:hover:text-zinc-300"
+              className="ml-2 text-xs text-muted-foreground underline hover:text-zinc-600 disabled:cursor-not-allowed"
             >
               Remove
             </button>

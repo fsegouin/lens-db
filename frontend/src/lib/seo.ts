@@ -59,16 +59,23 @@ type LensLike = {
  * A factual one-liner built from the columns we trust. Written so the first
  * clause reads as a definition — the shape an answer engine can quote.
  */
-export function lensDescription(
-  lens: LensLike,
-  systemNames: string[],
-): string {
+export function lensDescription(lens: LensLike, systemNames: string[]): string {
+  return clamp(
+    `${lensLead(lens, systemNames)} Full specifications, used price history and compatible cameras.`,
+  );
+}
+
+/**
+ * The on-page version: the same facts, but never truncated and without the
+ * "full specifications" tail, which is search-result copy rather than prose.
+ */
+export function lensLead(lens: LensLike, systemNames: string[]): string {
   const focal = formatFocalLength(lens.focalLengthMin, lens.focalLengthMax);
   const aperture = lens.apertureMin ? `f/${lens.apertureMin}` : null;
   const kind = lens.isZoom ? "zoom lens" : lens.isPrime ? "prime lens" : "lens";
   const mounts = systemNames.length > 0 ? `for ${systemNames.join(", ")}` : null;
-
   const summary = sentence([focal, aperture], " ");
+
   const lead = sentence(
     [
       `${lens.name} is ${summary ? indefiniteArticle(summary) : "a"}`,
@@ -86,9 +93,7 @@ export function lensDescription(
     opticalConstruction(lens.lensElements, lens.lensGroups),
   ]);
 
-  return clamp(
-    `${lead}.${facts ? ` ${facts}.` : ""} Full specifications, used price history and compatible cameras.`,
-  );
+  return `${lead}.${facts ? ` ${facts}.` : ""}`;
 }
 
 type CameraLike = {

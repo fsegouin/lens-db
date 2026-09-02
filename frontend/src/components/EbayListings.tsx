@@ -57,7 +57,7 @@ export default function EbayListings({
   if (listings.length === 0) return null;
 
   return (
-    <div className="space-y-4">
+    <div className="@container space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold tracking-wider text-muted-foreground uppercase">
           eBay Listings
@@ -67,14 +67,14 @@ export default function EbayListings({
             href={searchUrl}
             event="ebay_view_all_click"
             eventProps={{ entity_type: entityType, entity_slug: entitySlug }}
-            className="text-xs text-zinc-500 underline hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300"
+            className="text-xs text-muted-foreground underline hover:text-zinc-700"
           >
             View all on eBay
           </EbayTrackedLink>
         )}
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-3 @lg:grid-cols-2">
         {listings.map((listing) => (
           <EbayTrackedLink
             key={listing.itemId}
@@ -88,7 +88,7 @@ export default function EbayListings({
               condition: listing.condition,
               listing_type: listing.listingType,
             }}
-            className="flex gap-3 rounded-lg border border-zinc-200 p-3 transition-colors hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900/50"
+            className="flex min-w-0 gap-3 rounded-lg border border-border p-3 transition-colors hover:bg-muted/50"
           >
             {listing.imageUrl && (
               // eslint-disable-next-line @next/next/no-img-element
@@ -111,14 +111,14 @@ export default function EbayListings({
                   <Badge variant="outline" className="text-[10px]">Free shipping</Badge>
                 )}
                 {listing.shippingCost && listing.shippingCost !== "0.00" && (
-                  <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                  <span className="text-xs text-muted-foreground">
                     + {formatCurrency(listing.shippingCost, listing.price.currency)} shipping
                   </span>
                 )}
               </div>
-              <div className="mt-1 flex items-center gap-2">
+              <div className="mt-1 flex min-w-0 items-center gap-2">
                 <Badge variant="outline" className="text-[10px]">{listing.listingType}</Badge>
-                <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                <span className="truncate text-xs text-muted-foreground">
                   {listing.seller.username} ({listing.seller.feedbackPercentage}%)
                 </span>
               </div>
@@ -127,7 +127,7 @@ export default function EbayListings({
         ))}
       </div>
 
-      <p className="text-right text-[10px] text-zinc-500 dark:text-zinc-400">
+      <p className="text-right text-[10px] text-muted-foreground">
         As an eBay Partner Network affiliate, The Lens DB earns from qualifying
         purchases.
       </p>

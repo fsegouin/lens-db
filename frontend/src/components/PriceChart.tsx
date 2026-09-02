@@ -54,11 +54,11 @@ function CustomTooltip({
       <p className="font-medium text-zinc-900 dark:text-zinc-100">
         ${data.price.toLocaleString()}
       </p>
-      <p className="text-zinc-500 dark:text-zinc-400">
+      <p className="text-muted-foreground">
         {formatDate(data.date)}
       </p>
       {data.condition && (
-        <p className="text-zinc-400 dark:text-zinc-500 text-xs">
+        <p className="text-muted-foreground text-xs">
           {CONDITION_LABELS[data.condition] ?? data.condition}
         </p>
       )}
@@ -136,14 +136,14 @@ export default function PriceChart({ history }: PriceChartProps) {
               return d.getFullYear().toString();
             }}
             tick={{ fontSize: 11 }}
-            className="text-zinc-500 dark:text-zinc-400"
+            className="text-muted-foreground"
           />
           <YAxis
             domain={[Math.max(0, minPrice - padding), maxPrice + padding]}
             tickFormatter={(v) => `$${v}`}
             tick={{ fontSize: 11 }}
             width={55}
-            className="text-zinc-500 dark:text-zinc-400"
+            className="text-muted-foreground"
           />
           <Tooltip content={<CustomTooltip />} />
           <Line
