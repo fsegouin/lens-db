@@ -14,6 +14,7 @@ import EditButton from "@/components/EditButton";
 import FlagDuplicateButton from "@/components/FlagDuplicateButton";
 import SpecsTable from "@/components/SpecsTable";
 import PriceCard from "@/components/PriceCard";
+import EntitySummaryLine from "@/components/EntitySummaryLine";
 import EbayListings from "@/components/EbayListings";
 import { getImages } from "@/lib/images";
 import { formatDescription } from "@/lib/format-description";
@@ -182,6 +183,22 @@ export default async function CameraDetailPage({
         </div>
       </div>
 
+      <EntitySummaryLine
+        priceRange={
+          priceEstimate?.priceAverageLow && priceEstimate?.priceAverageHigh
+            ? {
+                low: Number(priceEstimate.priceAverageLow),
+                high: Number(priceEstimate.priceAverageHigh),
+                currency: priceEstimate.currency ?? "USD",
+              }
+            : null
+        }
+        medianPrice={priceEstimate?.medianPrice ?? null}
+        averageRating={camera.averageRating}
+        ratingCount={camera.ratingCount}
+        saleCount={priceHistoryRows.length}
+      />
+
       <p className="text-lg leading-relaxed text-zinc-700 dark:text-zinc-300">
         {leadSentence}
       </p>
@@ -199,6 +216,21 @@ export default async function CameraDetailPage({
           ))}
         </div>
       )}
+
+      <PriceCard estimate={priceEstimate ?? null} history={priceHistoryRows} />
+
+      <EbayListings query={camera.name} entitySlug={camera.slug} />
+
+      <div>
+        <h2 className="mb-2 text-sm font-semibold tracking-wider text-muted-foreground uppercase">
+          Rate this camera
+        </h2>
+        <RatingWidget
+          cameraId={camera.id}
+          initialAverage={camera.averageRating}
+          initialCount={camera.ratingCount ?? 0}
+        />
+      </div>
 
       <div className="space-y-5">
         <div>
@@ -257,25 +289,6 @@ export default async function CameraDetailPage({
           </p>
         </div>
       )}
-
-      <div className="space-y-4">
-        <h2 className="text-sm font-semibold tracking-wider text-muted-foreground uppercase">
-          Used prices
-        </h2>
-        <PriceCard estimate={priceEstimate ?? null} history={priceHistoryRows} />
-        <EbayListings query={camera.name} entitySlug={camera.slug} />
-      </div>
-
-      <div>
-        <h2 className="mb-2 text-sm font-semibold tracking-wider text-muted-foreground uppercase">
-          Rate this camera
-        </h2>
-        <RatingWidget
-          cameraId={camera.id}
-          initialAverage={camera.averageRating}
-          initialCount={camera.ratingCount ?? 0}
-        />
-      </div>
 
       <div className="flex flex-wrap gap-3 text-sm">
         <Link
