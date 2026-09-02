@@ -48,14 +48,14 @@ function MountsCell({ mounts, onSelect }: { mounts: SystemOption[]; onSelect: (s
           <button type="button" onClick={() => onSelect(m.slug)} className={linkClass}>
             {shortMountName(m.name)}
           </button>
-          {i < shown.length - 1 && <span className="text-zinc-400 dark:text-zinc-600">,</span>}
+          {i < shown.length - 1 && <span className="text-zinc-400 dark:text-muted-foreground">,</span>}
         </span>
       ))}
       {hidden > 0 && (
         <button
           type="button"
           onClick={() => setExpanded(true)}
-          className="shrink-0 rounded bg-zinc-100 px-1 text-xs text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+          className="shrink-0 rounded bg-zinc-100 px-1 text-xs text-muted-foreground hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
         >
           +{hidden}
         </button>
@@ -653,7 +653,7 @@ export default function LensList({
                     onSelect={(slug) => applyFilters({ system: slug, brand: "", q: "", type: "", minFocal: "", maxFocal: "", minAperture: "", maxAperture: "", year: "", lensType: "", era: "", productionStatus: "", coverage: "" })}
                   />
                 </TableCell>
-                <TableCell className="text-zinc-600">
+                <TableCell className="text-muted-foreground">
                   {lens.focalLengthMin ? (
                     <button type="button"
                       onClick={() => applyFilters({ minFocal: String(lens.focalLengthMin), maxFocal: String(lens.focalLengthMax ?? lens.focalLengthMin), brand: "", system: "", q: "", type: "", minAperture: "", maxAperture: "", year: "", lensType: "", era: "", productionStatus: "", coverage: "" })}
@@ -665,7 +665,7 @@ export default function LensList({
                     </button>
                   ) : "\u2014"}
                 </TableCell>
-                <TableCell className="text-zinc-600">
+                <TableCell className="text-muted-foreground">
                   {lens.apertureMin ? (
                     <button type="button"
                       onClick={() => applyFilters({ minAperture: String(lens.apertureMin), maxAperture: String(lens.apertureMin), brand: "", system: "", q: "", type: "", minFocal: "", maxFocal: "", year: "", coverage: "" })}
@@ -731,7 +731,7 @@ export default function LensList({
                     </div>
                   )}
                 </TableCell>
-                <TableCell className="text-zinc-600">
+                <TableCell className="text-muted-foreground">
                   {lens.yearIntroduced ? (
                     <button type="button"
                       onClick={() => applyFilters({ year: String(lens.yearIntroduced), brand: "", system: "", q: "", type: "", minFocal: "", maxFocal: "", minAperture: "", maxAperture: "", coverage: "" })}
@@ -741,15 +741,15 @@ export default function LensList({
                     </button>
                   ) : "\u2014"}
                 </TableCell>
-                <TableCell className="text-zinc-600">
+                <TableCell className="text-muted-foreground">
                   {avgPrice != null
                     ? `$${avgPrice.toLocaleString()}`
                     : "\u2014"}
                 </TableCell>
-                <TableCell className="text-zinc-600">
+                <TableCell className="text-muted-foreground">
                   {lens.weightG ? `${lens.weightG}g` : "\u2014"}
                 </TableCell>
-                <TableCell className="text-zinc-600">
+                <TableCell className="text-muted-foreground">
                   {lens.averageRating != null ? (
                     <span className="text-amber-600 dark:text-amber-400">
                       {lens.averageRating.toFixed(1)}

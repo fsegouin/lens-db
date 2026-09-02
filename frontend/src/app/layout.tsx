@@ -70,13 +70,6 @@ const footerSections = [
       { href: "/login", label: "Sign in" },
     ],
   },
-  {
-    title: "Reference",
-    links: [
-      { href: "/sitemap.xml", label: "Sitemap" },
-      { href: "/robots.txt", label: "Robots" },
-    ],
-  },
 ];
 
 export default function RootLayout({
@@ -120,7 +113,7 @@ export default function RootLayout({
             <Separator />
             <footer>
               <div className="mx-auto max-w-7xl space-y-8 px-4 py-10 sm:px-6 lg:px-8">
-                <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="grid gap-8 sm:grid-cols-3">
                   {footerSections.map((section) => (
                     <div key={section.title}>
                       <h2 className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
@@ -131,7 +124,7 @@ export default function RootLayout({
                           <li key={link.href}>
                             <Link
                               href={link.href}
-                              className="text-sm text-zinc-600 underline-offset-2 hover:text-zinc-900 hover:underline dark:text-zinc-400 dark:hover:text-zinc-100"
+                              className="text-sm text-muted-foreground underline-offset-2 hover:text-zinc-900 hover:underline dark:text-zinc-400 dark:hover:text-zinc-100"
                             >
                               {link.label}
                             </Link>
@@ -142,11 +135,11 @@ export default function RootLayout({
                   ))}
                 </div>
                 <div className="space-y-2 border-t border-border pt-6">
-                  <p className="text-sm text-zinc-600">
+                  <p className="text-sm text-muted-foreground">
                     The Lens DB, a community reference for camera lenses,
                     bodies and mounts.
                   </p>
-                  <p className="text-xs text-zinc-600">
+                  <p className="text-xs text-muted-foreground">
                     As an eBay Partner Network affiliate, The Lens DB earns from
                     qualifying purchases.
                   </p>

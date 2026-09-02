@@ -133,7 +133,7 @@ export default async function SystemDetailPage({
         </div>
       </div>
 
-      {system.description && <p className="leading-relaxed text-zinc-600">{system.description}</p>}
+      {system.description && <p className="leading-relaxed text-muted-foreground">{system.description}</p>}
 
       {systemLenses.length > 0 && (
         <div>
@@ -164,14 +164,14 @@ export default async function SystemDetailPage({
                       </Link>
                     </TableCell>
                     <TableCell className="text-muted-foreground">{lens.brand || "\u2014"}</TableCell>
-                    <TableCell className="text-zinc-600">
+                    <TableCell className="text-muted-foreground">
                       {lens.focalLengthMin
                         ? lens.focalLengthMin === lens.focalLengthMax
                           ? `${lens.focalLengthMin}mm`
                           : `${lens.focalLengthMin}-${lens.focalLengthMax}mm`
                         : "\u2014"}
                     </TableCell>
-                    <TableCell className="text-zinc-600">
+                    <TableCell className="text-muted-foreground">
                       {lens.apertureMin ? `f/${lens.apertureMin}` : "\u2014"}
                     </TableCell>
                     <TableCell>
@@ -181,7 +181,7 @@ export default async function SystemDetailPage({
                         {lens.isMacro && <Badge variant="macro">Macro</Badge>}
                       </div>
                     </TableCell>
-                    <TableCell className="text-zinc-600">
+                    <TableCell className="text-muted-foreground">
                       {lens.yearIntroduced || "\u2014"}
                     </TableCell>
                   </TableRow>
@@ -225,10 +225,10 @@ export default async function SystemDetailPage({
                     <TableCell className="text-muted-foreground">
                       {camera.sensorSize || "\u2014"}
                     </TableCell>
-                    <TableCell className="text-zinc-600">
+                    <TableCell className="text-muted-foreground">
                       {camera.megapixels ? `${camera.megapixels} MP` : "\u2014"}
                     </TableCell>
-                    <TableCell className="text-zinc-600">
+                    <TableCell className="text-muted-foreground">
                       {camera.yearIntroduced || "\u2014"}
                     </TableCell>
                   </TableRow>

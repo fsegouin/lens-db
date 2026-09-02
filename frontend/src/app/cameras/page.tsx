@@ -138,7 +138,7 @@ export default async function CamerasPage({
       <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100">
         Cameras
       </h1>
-      <p className="mt-2 text-zinc-600">
+      <p className="mt-2 text-muted-foreground">
         {total > 0 ? `${total} cameras found` : "Browse camera bodies"}
       </p>
     </div>

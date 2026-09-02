@@ -115,7 +115,7 @@ export default async function Home() {
           <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
             Every lens. Every mount. One reference.
           </h1>
-          <p className="mx-auto max-w-2xl text-lg text-zinc-600">
+          <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
             Specifications for {counts.lenses.toLocaleString()} lenses and{" "}
             {counts.cameras.toLocaleString()} camera bodies across{" "}
             {counts.systems} mounts: what fits what, when it was made, and
@@ -258,13 +258,13 @@ export default async function Home() {
         <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
           About this project
         </h2>
-        <p className="mt-4 text-zinc-600">
+        <p className="mt-4 text-muted-foreground">
           The Lens DB is a community reference for camera lenses, bodies and
           mounts. It continues the work of lens-db.com, a catalogue built from
           manufacturer booklets, datasheets and brochures between 2012 and 2025,
           and extends it with used-price data drawn from completed sales.
         </p>
-        <p className="mt-3 text-zinc-600">
+        <p className="mt-3 text-muted-foreground">
           Records are incomplete and some are wrong. Every lens and camera page
           has an <strong className="text-zinc-700 dark:text-zinc-300">Edit</strong>{" "}
           button for corrections and a{" "}

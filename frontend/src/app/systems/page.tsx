@@ -26,7 +26,7 @@ export default async function SystemsPage() {
         <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100">
           Camera Systems
         </h1>
-        <p className="mt-2 text-zinc-600">
+        <p className="mt-2 text-muted-foreground">
           Browse {allSystems.length || "130+"} camera systems organized by
           manufacturer and mount type.
         </p>
@@ -49,7 +49,7 @@ export default async function SystemsPage() {
                 </div>
               )}
               {system.description && (
-                <p className="mt-2 line-clamp-2 text-sm text-zinc-600">
+                <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">
                   {system.description}
                 </p>
               )}

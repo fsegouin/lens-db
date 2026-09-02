@@ -20,7 +20,7 @@ export default function NotFound() {
         <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100">
           Page not found
         </h1>
-        <p className="mt-2 text-zinc-600">
+        <p className="mt-2 text-muted-foreground">
           This record may have been merged into another, renamed, or never
           existed. Searching by name is usually the fastest way back.
         </p>

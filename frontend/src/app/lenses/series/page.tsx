@@ -45,7 +45,7 @@ export default async function LensSeriesPage() {
         <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100">
           Lens Series
         </h1>
-        <p className="mt-2 text-zinc-600">
+        <p className="mt-2 text-muted-foreground">
           Product lines and series from major lens manufacturers.
         </p>
       </div>
@@ -62,7 +62,7 @@ export default async function LensSeriesPage() {
                 {series.name}
               </h2>
               {series.description && (
-                <p className="mt-2 line-clamp-2 text-sm text-zinc-600">
+                <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">
                   {series.description}
                 </p>
               )}
