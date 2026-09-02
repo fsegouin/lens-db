@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import BackButton from "@/components/BackButton";
 import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { cameras, lenses, systems } from "@/db/schema";
+import { cameras, lenses, systemRedirects, systems } from "@/db/schema";
 import ViewTracker from "@/components/ViewTracker";
 import { PageTransition } from "@/components/page-transition";
 import { Badge } from "@/components/ui/badge";
@@ -54,7 +54,18 @@ export default async function SystemDetailPage({
     .where(eq(systems.slug, slug))
     .limit(1);
 
-  if (!result) notFound();
+  if (!result) {
+    // Merged-away system (see scripts/consolidate-systems.mjs): follow the
+    // slug redirect so old links and search results still land somewhere.
+    const [target] = await db
+      .select({ slug: systems.slug })
+      .from(systemRedirects)
+      .innerJoin(systems, eq(systemRedirects.systemId, systems.id))
+      .where(eq(systemRedirects.oldSlug, slug))
+      .limit(1);
+    if (target) redirect(`/systems/${target.slug}`);
+    notFound();
+  }
 
   const { system } = result;
 

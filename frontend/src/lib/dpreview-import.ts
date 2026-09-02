@@ -79,7 +79,7 @@ export const MOUNT_MAP: Record<string, string> = {
   "canon ef": "canon ef",
   "sony fe": "sony e",
   "sony e": "sony e",
-  "sony/minolta alpha": "sony a",
+  "sony/minolta alpha": "minolta/sony a",
   "fujifilm x": "fujifilm x",
   "fujifilm g": "fujifilm g",
   "micro four thirds": "micro four thirds",
