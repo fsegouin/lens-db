@@ -141,7 +141,7 @@ function SearchDropdown({
       )}
 
       {results && !hasResults && (
-        <div className="px-4 py-3 text-sm text-zinc-400">
+        <div className="px-4 py-3 text-sm text-muted-foreground">
           No results for &ldquo;{query.trim()}&rdquo;
         </div>
       )}
@@ -152,7 +152,7 @@ function SearchDropdown({
           if (items.length === 0) return null;
           return (
             <div key={key}>
-              <div className="border-b border-zinc-100 bg-zinc-50 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-400">
+              <div className="border-b border-zinc-100 bg-zinc-50 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:border-zinc-800 dark:bg-zinc-950">
                 {label}
               </div>
               {items.map((item) => (
@@ -183,7 +183,7 @@ function SearchDropdown({
             trackEvent("search_submit", { query: query.trim(), source: "header" });
             handleClose();
           }}
-          className="block border-t border-zinc-100 px-4 py-2 text-center text-sm font-medium text-zinc-500 transition-colors hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-800"
+          className="block border-t border-zinc-100 px-4 py-2 text-center text-sm font-medium text-muted-foreground transition-colors hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-800"
         >
           View all results
         </Link>

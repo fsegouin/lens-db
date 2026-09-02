@@ -27,7 +27,7 @@ export default function SpecsTable({ rows }: SpecsTableProps) {
       <TableBody>
         {rows.map(([label, value]) => (
           <TableRow key={label}>
-            <TableCell className="w-1/3 font-medium text-zinc-500 dark:text-zinc-400">
+            <TableCell className="w-1/3 font-medium text-muted-foreground">
               {label}
             </TableCell>
             <TableCell>

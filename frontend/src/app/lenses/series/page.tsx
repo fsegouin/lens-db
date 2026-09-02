@@ -45,7 +45,7 @@ export default async function LensSeriesPage() {
         <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100">
           Lens Series
         </h1>
-        <p className="mt-2 text-zinc-600 dark:text-zinc-400">
+        <p className="mt-2 text-zinc-600">
           Product lines and series from major lens manufacturers.
         </p>
       </div>
@@ -62,7 +62,7 @@ export default async function LensSeriesPage() {
                 {series.name}
               </h2>
               {series.description && (
-                <p className="mt-2 line-clamp-2 text-sm text-zinc-600 dark:text-zinc-400">
+                <p className="mt-2 line-clamp-2 text-sm text-zinc-600">
                   {series.description}
                 </p>
               )}
@@ -76,7 +76,7 @@ export default async function LensSeriesPage() {
         </div>
       ) : (
         <div className="rounded-xl border border-dashed border-zinc-300 p-12 text-center dark:border-zinc-700">
-          <p className="text-zinc-500">No lens series yet.</p>
+          <p className="text-muted-foreground">No lens series yet.</p>
         </div>
       )}
     </div>

@@ -252,7 +252,7 @@ export default function SubmitForm({ systems }: { systems: SystemOption[] }) {
                   onChange={(e) => updateField(field.name, e.target.checked)}
                   className="size-4 rounded border-zinc-300 dark:border-zinc-600"
                 />
-                <span className="text-sm text-zinc-600 dark:text-zinc-400">
+                <span className="text-sm text-zinc-600">
                   Yes
                 </span>
               </label>

@@ -89,7 +89,10 @@ export default function RootLayout({
       <body
         className={`${GeistSans.variable} ${GeistMono.variable} font-sans antialiased flex flex-col min-h-dvh`}
       >
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+        {/* Light by default: dense tables and long prose are what this site is
+            for, and both read worse in inverted polarity. Dark stays available
+            from the toggle and follows the OS once chosen. */}
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
           <UserProvider>
           <TooltipProvider>
             <SearchProvider>
@@ -120,7 +123,7 @@ export default function RootLayout({
                 <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
                   {footerSections.map((section) => (
                     <div key={section.title}>
-                      <h2 className="text-xs font-semibold tracking-wider text-zinc-500 uppercase dark:text-zinc-400">
+                      <h2 className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
                         {section.title}
                       </h2>
                       <ul className="mt-3 space-y-2">
@@ -139,11 +142,11 @@ export default function RootLayout({
                   ))}
                 </div>
                 <div className="space-y-2 border-t border-border pt-6">
-                  <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                  <p className="text-sm text-zinc-600">
                     The Lens DB, a community reference for camera lenses,
                     bodies and mounts.
                   </p>
-                  <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                  <p className="text-xs text-zinc-600">
                     As an eBay Partner Network affiliate, The Lens DB earns from
                     qualifying purchases.
                   </p>

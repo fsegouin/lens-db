@@ -6,13 +6,19 @@ import { getEntityPriceEstimate, getEntityPriceHistory } from "@/lib/prices";
 import { formatDescription } from "@/lib/format-description";
 import { formatMagnification } from "@/lib/format-magnification";
 import { getImages } from "@/lib/images";
+import { specValue } from "@/lib/spec-value";
 import { getLensBySlug, getLensSlugById } from "@/lib/lenses";
 import { getLensRelations } from "@/lib/lens-relations";
-import { entityMetadata, lensDescription, SITE_URL } from "@/lib/seo";
+import {
+  entityMetadata,
+  lensDescription,
+  lensLead,
+  opticalConstruction,
+  SITE_URL,
+} from "@/lib/seo";
 import { lensJsonLd } from "@/lib/jsonld";
 import ViewTracker from "@/components/ViewTracker";
 import RatingWidget from "@/components/RatingWidget";
-import ImageGallery from "@/components/ImageGallery";
 import EditButton from "@/components/EditButton";
 import FlagDuplicateButton from "@/components/FlagDuplicateButton";
 import SpecsTable from "@/components/SpecsTable";
@@ -21,6 +27,10 @@ import { Separator } from "@/components/ui/separator";
 import PriceCard from "@/components/PriceCard";
 import EntitySummaryLine from "@/components/EntitySummaryLine";
 import EbayListings from "@/components/EbayListings";
+import Infobox, { type Fact } from "@/components/Infobox";
+import ProvenanceLine from "@/components/ProvenanceLine";
+import LensMedia from "@/components/LensMedia";
+import { getProvenance } from "@/lib/provenance";
 
 export const revalidate = 604800;
 
@@ -101,10 +111,11 @@ export default async function LensDetailPage({
     if (targetSlug) permanentRedirect(`/lenses/${targetSlug}`);
   }
 
-  const [priceEstimate, priceHistoryRows, relations] = await Promise.all([
+  const [priceEstimate, priceHistoryRows, relations, provenance] = await Promise.all([
     getEntityPriceEstimate("lens", lens.id),
     getEntityPriceHistory("lens", lens.id),
     getLensRelations(lens.id, lens.systemId, lens.versionGroupId),
+    getProvenance("lens", lens.id),
   ]);
 
   const specs = (lens.specs ?? {}) as Record<string, string>;
@@ -133,7 +144,7 @@ export default async function LensDetailPage({
     slug,
     (lens.images as Array<{ src: string; alt: string }>) || [],
   );
-  const leadSentence = lensDescription(lens, mountNames);
+  const leadSentence = lensLead(lens, mountNames);
 
   const crumbs = [
     { name: "Lenses", path: "/lenses" },
@@ -196,6 +207,30 @@ export default async function LensDetailPage({
     ["Year Discontinued", lens.yearDiscontinued],
   ];
 
+  const infoboxFacts: Fact[] = [
+    {
+      label: "Focal length",
+      value: lens.focalLengthMin
+        ? lens.focalLengthMin === lens.focalLengthMax
+          ? lens.focalLengthMin
+          : `${lens.focalLengthMin}-${lens.focalLengthMax}`
+        : null,
+      unit: "mm",
+    },
+    { label: "Max aperture", value: lens.apertureMin ? `f/${lens.apertureMin}` : null },
+    {
+      label: "Construction",
+      value: opticalConstruction(lens.lensElements, lens.lensGroups)
+        ? `${lens.lensElements} / ${lens.lensGroups}`
+        : null,
+    },
+    { label: "Min focus", value: lens.minFocusDistanceM, unit: "m" },
+    { label: "Filter", value: lens.filterSizeMm, unit: "mm" },
+    { label: "Weight", value: lens.weightG, unit: "g" },
+    { label: "Introduced", value: lens.yearIntroduced },
+    { label: "Mounts", value: specValue(mountNames.join(" · ")) },
+  ];
+
   const priceRange =
     priceEstimate?.priceAverageLow && priceEstimate?.priceAverageHigh
       ? {
@@ -205,8 +240,26 @@ export default async function LensDetailPage({
         }
       : null;
 
+  const rail = (
+    <div className="space-y-6">
+      <Infobox title="Specifications" facts={infoboxFacts} />
+      <PriceCard estimate={priceEstimate ?? null} history={priceHistoryRows} />
+      <EbayListings query={lens.name} entityType="lens" entitySlug={lens.slug} />
+      <div>
+        <h2 className="mb-2 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+          Rate this lens
+        </h2>
+        <RatingWidget
+          lensId={lens.id}
+          initialAverage={lens.averageRating}
+          initialCount={lens.ratingCount ?? 0}
+        />
+      </div>
+    </div>
+  );
+
   return (
-    <div className="mx-auto max-w-3xl space-y-8">
+    <div className="mx-auto w-full max-w-6xl">
       <JsonLd
         data={lensJsonLd(
           {
@@ -241,10 +294,20 @@ export default async function LensDetailPage({
 
       <Breadcrumb crumbs={crumbs} />
 
-      <div>
-        <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100">
+      <div className="mt-4">
+        <h1 className="text-3xl font-bold tracking-tight text-balance">
           {lens.name}
         </h1>
+        <div className="mt-2">
+          <ProvenanceLine
+            entityType="lens"
+            entityId={lens.id}
+            revisionCount={provenance.revisionCount}
+            lastEditedAt={provenance.lastEditedAt}
+            saleCount={priceHistoryRows.length}
+            sourceUrl={lens.url}
+          />
+        </div>
         <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
           {lens.brand && (
             <Link href={`/lenses?brand=${encodeURIComponent(lens.brand)}`} className="inline-flex">
@@ -288,25 +351,26 @@ export default async function LensDetailPage({
         </div>
       </div>
 
-      <EntitySummaryLine
-        priceRange={priceRange}
-        medianPrice={priceEstimate?.medianPrice ?? null}
-        averageRating={lens.averageRating}
-        ratingCount={lens.ratingCount}
-        saleCount={priceHistoryRows.length}
-      />
+      <div className="mt-5">
+        <EntitySummaryLine
+          priceRange={priceRange}
+          medianPrice={priceEstimate?.medianPrice ?? null}
+          averageRating={lens.averageRating}
+          ratingCount={lens.ratingCount}
+          saleCount={priceHistoryRows.length}
+        />
+      </div>
 
-      {/* The one-sentence definition: what this thing is. */}
-      <p className="text-lg leading-relaxed text-zinc-700 dark:text-zinc-300">
-        {leadSentence}
-      </p>
+      <div className="mt-8 grid gap-10 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-12">
+        <article className="min-w-0 space-y-8">
+          {/* The rail's content leads on mobile: the numbers people came for
+              sit above the prose, without pushing the specs down on desktop. */}
+          <div className="space-y-6 lg:hidden">{rail}</div>
 
-      <ImageGallery
-        images={images.map((img) => ({
-          ...img,
-          alt: img.alt || lens.name,
-        }))}
-      />
+          {/* The one-sentence definition: what this thing is. */}
+          <p className="text-lg leading-relaxed">{leadSentence}</p>
+
+          <LensMedia lens={lens} images={images} />
 
       {lens.description && (
         <div className="space-y-3">
@@ -318,21 +382,6 @@ export default async function LensDetailPage({
         </div>
       )}
 
-      <PriceCard estimate={priceEstimate ?? null} history={priceHistoryRows} />
-
-      <EbayListings query={lens.name} entityType="lens" entitySlug={lens.slug} />
-
-      <div>
-        <h2 className="mb-2 text-sm font-semibold tracking-wider text-muted-foreground uppercase">
-          Rate this lens
-        </h2>
-        <RatingWidget
-          lensId={lens.id}
-          initialAverage={lens.averageRating}
-          initialCount={lens.ratingCount ?? 0}
-        />
-      </div>
-
       <div className="space-y-5">
         <div>
           <h2 className="mb-2 text-sm font-semibold tracking-wider text-muted-foreground uppercase">
@@ -340,7 +389,8 @@ export default async function LensDetailPage({
           </h2>
           <SpecsTable
             rows={opticalRows
-              .filter(([, value]) => value != null && value !== "")
+              .map(([label, value]) => [label, specValue(value)] as const)
+              .filter(([, value]) => value != null)
               .map(([label, value]) => [label, String(value)])}
           />
         </div>
@@ -353,7 +403,8 @@ export default async function LensDetailPage({
           </h2>
           <SpecsTable
             rows={physicalRows
-              .filter(([, value]) => value != null && value !== "")
+              .map(([label, value]) => [label, specValue(value)] as const)
+              .filter(([, value]) => value != null)
               .map(([label, value]) => [label, String(value)])}
           />
         </div>
@@ -373,7 +424,7 @@ export default async function LensDetailPage({
                 >
                   {v.name}
                 </Link>
-                <span className="ml-2 text-xs text-zinc-500 dark:text-zinc-400">
+                <span className="ml-2 text-xs text-muted-foreground">
                   {[
                     v.versionLabel &&
                     v.versionLabel !== lens.versionLabel &&
@@ -397,7 +448,7 @@ export default async function LensDetailPage({
           <h2 className="mb-2 text-sm font-semibold tracking-wider text-muted-foreground uppercase">
             Fits these cameras
           </h2>
-          <p className="mb-3 text-sm text-zinc-500 dark:text-zinc-400">
+          <p className="mb-3 text-sm text-muted-foreground">
             {relations.cameraCount.toLocaleString()} bodies in the database take
             the {mountNames.join(" / ") || "same"} mount natively
             {relations.cameraCount > relations.cameras.length
@@ -413,7 +464,7 @@ export default async function LensDetailPage({
                 >
                   {c.name}
                   {c.yearIntroduced && (
-                    <span className="ml-1.5 text-xs text-zinc-500 dark:text-zinc-400">
+                    <span className="ml-1.5 text-xs text-muted-foreground">
                       {c.yearIntroduced}
                     </span>
                   )}
@@ -469,7 +520,7 @@ export default async function LensDetailPage({
 
       {process.env.NODE_ENV === "development" && Object.keys(specs).length > 0 && (
         <details className="group">
-          <summary className="cursor-pointer text-sm font-medium text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-400">
+          <summary className="cursor-pointer text-sm font-medium text-muted-foreground hover:text-zinc-700">
             Raw specs JSON ({Object.keys(specs).length} fields)
           </summary>
           <pre className="mt-3 max-h-96 overflow-auto rounded-lg bg-zinc-50 p-4 text-xs text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
@@ -482,7 +533,7 @@ export default async function LensDetailPage({
 
       <div className="space-y-3">
         {lens.url && /^https?:\/\//i.test(lens.url) && (
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">
+          <p className="text-xs text-muted-foreground">
             Source:{" "}
             <a
               href={lens.url}
@@ -567,6 +618,12 @@ export default async function LensDetailPage({
       </div>
 
       <ViewTracker type="lens" id={lens.id} />
+        </article>
+
+        <aside className="hidden lg:block">
+          <div className="sticky top-20 space-y-6">{rail}</div>
+        </aside>
+      </div>
     </div>
   );
 }

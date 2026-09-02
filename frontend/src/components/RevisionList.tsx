@@ -136,7 +136,7 @@ export default function RevisionList({ revisions }: { revisions: Revision[] }) {
               onClick={() => toggleDiff(rev.id)}
               className="flex w-full items-start gap-3 p-3 text-left hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors"
             >
-              <span className="shrink-0 rounded bg-zinc-100 px-1.5 py-0.5 text-xs font-mono text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+              <span className="shrink-0 rounded bg-zinc-100 px-1.5 py-0.5 text-xs font-mono text-zinc-500 dark:bg-zinc-800">
                 r{rev.revisionNumber}
               </span>
               <div className="min-w-0 flex-1">

@@ -64,7 +64,7 @@ export default function ChatInterface() {
       {/* Messages */}
       <div className={`flex-1 overflow-y-auto pb-20 ${messages.length === 0 ? "flex items-center justify-center" : "space-y-4"}`}>
         {messages.length === 0 && (
-          <div className="text-center text-zinc-500 dark:text-zinc-400">
+          <div className="text-center text-muted-foreground">
             <p className="text-lg font-medium mb-2">Ask me anything about cameras and lenses</p>
             <div className="space-y-1 text-sm">
               <p>&ldquo;Which Nikon F camera was the first with autofocus?&rdquo;</p>
@@ -97,7 +97,7 @@ export default function ChatInterface() {
         ))}
         {isLoading && messages[messages.length - 1]?.role === "user" && (
           <div className="flex justify-start">
-            <div className="bg-zinc-100 dark:bg-zinc-800 rounded-lg px-4 py-2 text-sm text-zinc-500">
+            <div className="bg-zinc-100 dark:bg-zinc-800 rounded-lg px-4 py-2 text-sm text-muted-foreground">
               Thinking...
             </div>
           </div>

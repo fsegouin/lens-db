@@ -480,7 +480,7 @@ export default function CameraList({
                       {camera.name}
                     </Link>
                   </TableCell>
-                  <TableCell className="text-zinc-500">
+                  <TableCell className="text-muted-foreground">
                     {sys ? (
                       <button
                         type="button"
@@ -491,10 +491,10 @@ export default function CameraList({
                       </button>
                     ) : "\u2014"}
                   </TableCell>
-                  <TableCell className="text-zinc-600 dark:text-zinc-400">
+                  <TableCell className="text-zinc-600">
                     {camera.sensorSize || "\u2014"}
                   </TableCell>
-                  <TableCell className="text-zinc-600 dark:text-zinc-400">
+                  <TableCell className="text-zinc-600">
                     {specs["Model"] ? (
                       <button
                         type="button"
@@ -512,7 +512,7 @@ export default function CameraList({
                       </button>
                     ) : "\u2014"}
                   </TableCell>
-                  <TableCell className="text-zinc-600 dark:text-zinc-400">
+                  <TableCell className="text-zinc-600">
                     {specs["Film type"] ? (
                       <button
                         type="button"
@@ -523,7 +523,7 @@ export default function CameraList({
                       </button>
                     ) : "\u2014"}
                   </TableCell>
-                  <TableCell className="text-zinc-600 dark:text-zinc-400">
+                  <TableCell className="text-zinc-600">
                     {camera.yearIntroduced ? (
                       <button
                         type="button"
@@ -534,12 +534,12 @@ export default function CameraList({
                       </button>
                     ) : "\u2014"}
                   </TableCell>
-                  <TableCell className="text-zinc-600 dark:text-zinc-400">
+                  <TableCell className="text-zinc-600">
                     {avgPrice != null
                       ? `$${avgPrice.toLocaleString()}`
                       : "\u2014"}
                   </TableCell>
-                  <TableCell className="text-zinc-600 dark:text-zinc-400">
+                  <TableCell className="text-zinc-600">
                     {camera.weightG ? `${camera.weightG}g` : "\u2014"}
                   </TableCell>
                 </TableRow>
@@ -557,7 +557,7 @@ export default function CameraList({
         </Table>
       ) : (
         <div className="rounded-xl border border-dashed border-zinc-300 p-12 text-center dark:border-zinc-700">
-          <p className="text-zinc-500">
+          <p className="text-muted-foreground">
             No cameras found.
           </p>
         </div>

@@ -89,7 +89,7 @@ function RarityDiamonds({ label }: { label: string }) {
           <path d="M8 1l2.5 4.5L16 7l-4 4 1 5-5-2.5L3 16l1-5-4-4 5.5-1.5z" />
         </svg>
       ))}
-      <span className="ml-1 text-sm text-zinc-500 dark:text-zinc-400">
+      <span className="ml-1 text-sm text-muted-foreground">
         {label}
       </span>
     </span>
@@ -106,56 +106,56 @@ export default function PriceCard({ estimate, history }: PriceCardProps) {
       : null;
 
   return (
-    <div className="space-y-4">
+    <div className="@container space-y-4">
       <h2 className="text-sm font-semibold tracking-wider text-muted-foreground uppercase">
         Used prices
       </h2>
 
       {shownEstimate && (
         <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 overflow-hidden">
-          <div className="grid grid-cols-3 divide-x divide-zinc-200 dark:divide-zinc-800">
-            <div className="p-4 text-center">
-              <div className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">
+          <div className="grid grid-cols-1 divide-y divide-border @sm:grid-cols-3 @sm:divide-x @sm:divide-y-0">
+            <div className="flex items-baseline justify-between gap-3 p-3 @sm:block @sm:text-center">
+              <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                 Fair
               </div>
-              <div className="mt-1 text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+              <div className="font-mono text-base font-semibold tabular-nums @sm:mt-1">
                 {formatPrice(shownEstimate.priceAverageLow, shownEstimate.priceAverageHigh)}
               </div>
             </div>
-            <div className="p-4 text-center">
-              <div className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">
+            <div className="flex items-baseline justify-between gap-3 p-3 @sm:block @sm:text-center">
+              <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                 Good
               </div>
-              <div className="mt-1 text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+              <div className="font-mono text-base font-semibold tabular-nums @sm:mt-1">
                 {formatPrice(shownEstimate.priceVeryGoodLow, shownEstimate.priceVeryGoodHigh)}
               </div>
             </div>
-            <div className="p-4 text-center bg-zinc-50 dark:bg-zinc-900/50">
-              <div className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">
+            <div className="flex items-baseline justify-between gap-3 bg-muted/40 p-3 @sm:block @sm:text-center">
+              <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                 Excellent
               </div>
-              <div className="mt-1 text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+              <div className="font-mono text-base font-semibold tabular-nums @sm:mt-1">
                 {formatPrice(shownEstimate.priceMintLow, shownEstimate.priceMintHigh)}
               </div>
             </div>
           </div>
 
           {(shownEstimate.rarity || shownEstimate.sourceUrl) && (
-            <div className="border-t border-zinc-200 dark:border-zinc-800 px-4 py-3 flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-border px-3 py-2.5">
               {shownEstimate.rarity && (
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <span className="text-xs font-medium text-muted-foreground uppercase">
                     Rarity
                   </span>
                   <RarityDiamonds label={shownEstimate.rarity} />
                   {shownEstimate.rarityVotes != null && shownEstimate.rarityVotes > 0 && (
-                    <span className="text-xs text-zinc-400">
+                    <span className="text-xs text-muted-foreground">
                       ({shownEstimate.rarityVotes} sold in last 90 days)
                     </span>
                   )}
                 </div>
               )}
-              <span className="text-xs text-zinc-400">
+              <span className="text-xs text-muted-foreground">
                 Based on recent {shownEstimate.sourceName || "eBay"} sales
                 {" · "}
                 {new Date(shownEstimate.extractedAt).toLocaleDateString("en-US", {
@@ -172,7 +172,7 @@ export default function PriceCard({ estimate, history }: PriceCardProps) {
 
       {history.length > 0 && (
         <details className="group">
-          <summary className="cursor-pointer text-sm font-medium text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-400">
+          <summary className="cursor-pointer text-sm font-medium text-muted-foreground hover:text-zinc-700">
             Sale history ({history.length} records)
           </summary>
           <div className="mt-2 max-h-72 overflow-auto rounded-lg border border-zinc-200 dark:border-zinc-800">
@@ -197,7 +197,7 @@ export default function PriceCard({ estimate, history }: PriceCardProps) {
                         ? `$${entry.priceUsd.toLocaleString()}`
                         : "—"}
                     </TableCell>
-                    <TableCell className="text-sm text-zinc-500">
+                    <TableCell className="text-sm text-muted-foreground">
                       {entry.sourceUrl ? (
                         <a
                           href={entry.sourceUrl}

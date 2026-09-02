@@ -20,25 +20,22 @@ const badgeVariants = cva(
           "hover:bg-muted hover:text-muted-foreground dark:hover:bg-muted/50",
         link: "text-primary underline-offset-4 hover:underline",
         brand:
-          "bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 border-transparent",
+          "bg-muted text-foreground hover:bg-accent border-transparent",
+        // Categories are neutral: hue here meant nothing, and eleven of them
+        // across 9,575 table rows drowned out the data.
         system:
-          "bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/50 border-transparent",
-        lensType:
-          "bg-green-50 text-green-700 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-300 dark:hover:bg-green-900/50 border-transparent",
-        era:
-          "bg-amber-50 text-amber-700 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-300 dark:hover:bg-amber-900/50 border-transparent",
-        status:
-          "bg-purple-50 text-purple-700 hover:bg-purple-100 dark:bg-purple-900/30 dark:text-purple-300 dark:hover:bg-purple-900/50 border-transparent",
-        zoom:
-          "bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/50 border-transparent",
-        prime:
-          "bg-green-50 text-green-700 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-300 dark:hover:bg-green-900/50 border-transparent",
-        macro:
-          "bg-purple-50 text-purple-700 hover:bg-purple-100 dark:bg-purple-900/30 dark:text-purple-300 dark:hover:bg-purple-900/50 border-transparent",
+          "border-border bg-transparent text-foreground hover:bg-muted font-mono",
+        lensType: "bg-muted text-muted-foreground hover:bg-accent border-transparent",
+        era: "bg-muted text-muted-foreground hover:bg-accent border-transparent",
+        zoom: "bg-muted text-muted-foreground hover:bg-accent border-transparent",
+        prime: "bg-muted text-muted-foreground hover:bg-accent border-transparent",
+        macro: "bg-muted text-muted-foreground hover:bg-accent border-transparent",
         teleconverter:
-          "bg-orange-50 text-orange-700 hover:bg-orange-100 dark:bg-orange-900/30 dark:text-orange-300 dark:hover:bg-orange-900/50 border-transparent",
-        series:
-          "bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-300 dark:hover:bg-indigo-900/50 border-transparent",
+          "bg-muted text-muted-foreground hover:bg-accent border-transparent",
+        series: "bg-muted text-muted-foreground hover:bg-accent border-transparent",
+        // State, and only state, gets colour.
+        status:
+          "border-[color:var(--brand)] bg-brand-tint text-[color:var(--brand)] hover:bg-brand-tint",
       },
     },
     defaultVariants: {

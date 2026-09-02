@@ -542,7 +542,7 @@ export default function LensList({
                     {lens.name}
                   </Link>
                 </TableCell>
-                <TableCell className="text-zinc-500">
+                <TableCell className="text-muted-foreground">
                   {lens.brand ? (
                     <button type="button"
                       onClick={() => applyFilters({ brand: lens.brand!, system: "", q: "", type: "", minFocal: "", maxFocal: "", minAperture: "", maxAperture: "", year: "", lensType: "", era: "", productionStatus: "", coverage: "" })}
@@ -552,13 +552,13 @@ export default function LensList({
                     </button>
                   ) : "\u2014"}
                 </TableCell>
-                <TableCell className="text-zinc-500">
+                <TableCell className="text-muted-foreground">
                   <MountsCell
                     mounts={mounts.length > 0 ? mounts : system ? [{ name: system.name, slug: system.slug }] : []}
                     onSelect={(slug) => applyFilters({ system: slug, brand: "", q: "", type: "", minFocal: "", maxFocal: "", minAperture: "", maxAperture: "", year: "", lensType: "", era: "", productionStatus: "", coverage: "" })}
                   />
                 </TableCell>
-                <TableCell className="text-zinc-600 dark:text-zinc-400">
+                <TableCell className="text-zinc-600">
                   {lens.focalLengthMin ? (
                     <button type="button"
                       onClick={() => applyFilters({ minFocal: String(lens.focalLengthMin), maxFocal: String(lens.focalLengthMax ?? lens.focalLengthMin), brand: "", system: "", q: "", type: "", minAperture: "", maxAperture: "", year: "", lensType: "", era: "", productionStatus: "", coverage: "" })}
@@ -570,7 +570,7 @@ export default function LensList({
                     </button>
                   ) : "\u2014"}
                 </TableCell>
-                <TableCell className="text-zinc-600 dark:text-zinc-400">
+                <TableCell className="text-zinc-600">
                   {lens.apertureMin ? (
                     <button type="button"
                       onClick={() => applyFilters({ minAperture: String(lens.apertureMin), maxAperture: String(lens.apertureMin), brand: "", system: "", q: "", type: "", minFocal: "", maxFocal: "", year: "", coverage: "" })}
@@ -636,7 +636,7 @@ export default function LensList({
                     </div>
                   )}
                 </TableCell>
-                <TableCell className="text-zinc-600 dark:text-zinc-400">
+                <TableCell className="text-zinc-600">
                   {lens.yearIntroduced ? (
                     <button type="button"
                       onClick={() => applyFilters({ year: String(lens.yearIntroduced), brand: "", system: "", q: "", type: "", minFocal: "", maxFocal: "", minAperture: "", maxAperture: "", coverage: "" })}
@@ -646,15 +646,15 @@ export default function LensList({
                     </button>
                   ) : "\u2014"}
                 </TableCell>
-                <TableCell className="text-zinc-600 dark:text-zinc-400">
+                <TableCell className="text-zinc-600">
                   {avgPrice != null
                     ? `$${avgPrice.toLocaleString()}`
                     : "\u2014"}
                 </TableCell>
-                <TableCell className="text-zinc-600 dark:text-zinc-400">
+                <TableCell className="text-zinc-600">
                   {lens.weightG ? `${lens.weightG}g` : "\u2014"}
                 </TableCell>
-                <TableCell className="text-zinc-600 dark:text-zinc-400">
+                <TableCell className="text-zinc-600">
                   {lens.averageRating != null ? (
                     <span className="text-amber-600 dark:text-amber-400">
                       {lens.averageRating.toFixed(1)}
@@ -675,7 +675,7 @@ export default function LensList({
         </Table>
       ) : (
         <div className="rounded-xl border border-dashed border-zinc-300 p-12 text-center dark:border-zinc-700">
-          <p className="text-zinc-500">
+          <p className="text-muted-foreground">
             No lenses found.
           </p>
         </div>
