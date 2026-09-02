@@ -18,6 +18,7 @@ import {
 } from "@/lib/seo";
 import { lensJsonLd } from "@/lib/jsonld";
 import ViewTracker from "@/components/ViewTracker";
+import ImageGallery from "@/components/ImageGallery";
 import RatingWidget from "@/components/RatingWidget";
 import EditButton from "@/components/EditButton";
 import FlagDuplicateButton from "@/components/FlagDuplicateButton";
@@ -29,7 +30,6 @@ import EntitySummaryLine from "@/components/EntitySummaryLine";
 import EbayListings from "@/components/EbayListings";
 import Infobox, { type Fact } from "@/components/Infobox";
 import ProvenanceLine from "@/components/ProvenanceLine";
-import LensMedia from "@/components/LensMedia";
 import { getProvenance } from "@/lib/provenance";
 
 export const revalidate = 604800;
@@ -371,7 +371,11 @@ export default async function LensDetailPage({
               rating people came for, without pushing specs down on desktop. */}
           <div className="space-y-6 lg:hidden">{rail}</div>
 
-          <LensMedia lens={lens} images={images} />
+          {images.length > 0 && (
+            <ImageGallery
+              images={images.map((img) => ({ ...img, alt: img.alt || lens.name }))}
+            />
+          )}
 
       {lens.description && (
         <div className="space-y-3">
