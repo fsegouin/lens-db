@@ -22,6 +22,10 @@ export const systems = pgTable("systems", {
   slug: text("slug").notNull().unique(),
   description: text("description"),
   mountType: text("mount_type"),
+  // Flange focal distance in mm: the film/sensor-to-mount register. This is
+  // what decides whether one mount's lenses can reach infinity focus on
+  // another's body, so it is the basis of every adapting answer.
+  flangeDistanceMm: real("flange_distance_mm"),
   manufacturer: text("manufacturer"),
   viewCount: integer("view_count").default(0),
   protectionLevel: text("protection_level").default("none"), // "none" | "autoconfirmed" | "trusted" | "admin"

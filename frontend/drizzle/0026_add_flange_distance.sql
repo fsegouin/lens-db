@@ -1,0 +1,1 @@
+ALTER TABLE "systems" ADD COLUMN "flange_distance_mm" real;
