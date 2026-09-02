@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import BackButton from "@/components/BackButton";
 import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { cameras, lenses, systemRedirects, systems } from "@/db/schema";
+import { cameras, lenses, lensSystems, systemRedirects, systems } from "@/db/schema";
 import ViewTracker from "@/components/ViewTracker";
 import { PageTransition } from "@/components/page-transition";
 import { Badge } from "@/components/ui/badge";
@@ -70,12 +70,16 @@ export default async function SystemDetailPage({
   const { system } = result;
 
   const [systemLenses, systemCameras] = await Promise.all([
+    // Every lens sold in this mount (lens_systems), not only those whose
+    // primary mount it is.
     db
-      .select()
-      .from(lenses)
-      .where(and(eq(lenses.systemId, system.id), isNull(lenses.mergedIntoId)))
+      .select({ lens: lenses })
+      .from(lensSystems)
+      .innerJoin(lenses, eq(lensSystems.lensId, lenses.id))
+      .where(and(eq(lensSystems.systemId, system.id), isNull(lenses.mergedIntoId)))
       .orderBy(asc(sql`regexp_replace(${lenses.name}, '\\d+(\\.\\d+)?mm.*$', '')`), asc(lenses.focalLengthMin), asc(lenses.apertureMin))
-      .limit(500),
+      .limit(500)
+      .then((rows) => rows.map((r) => r.lens)),
     db
       .select()
       .from(cameras)

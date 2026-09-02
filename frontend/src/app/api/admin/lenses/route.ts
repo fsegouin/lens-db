@@ -5,6 +5,7 @@ import { requireAdminAPI } from "@/lib/admin-auth";
 import { and, sql, eq, inArray, isNull } from "drizzle-orm";
 import { buildNameSearch } from "@/lib/search";
 import { buildOrderBy } from "@/lib/admin-sort";
+import { syncLensSystems } from "@/lib/lens-systems";
 
 const PAGE_SIZE = 50;
 
@@ -157,6 +158,10 @@ export async function POST(request: NextRequest) {
       images: body.images ?? [],
     })
     .returning();
+
+  if (Array.isArray(body.systemIds)) {
+    await syncLensSystems(created.id, created.systemId, body.systemIds);
+  }
 
   return NextResponse.json(created, { status: 201 });
 }
