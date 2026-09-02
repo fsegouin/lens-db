@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import ChatInterface from "@/components/ChatInterface";
 
 export const metadata: Metadata = {
-  title: "Chat | The Lens DB",
+  title: "Chat",
   description: "Ask questions about cameras, lenses, and mount systems",
 };
 

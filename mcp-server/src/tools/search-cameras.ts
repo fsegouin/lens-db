@@ -34,7 +34,7 @@ export async function searchCameras(params: SearchCamerasParams) {
     }
     for (const pattern of patterns) {
       conditions.push(
-        sql`regexp_replace(${cameras.name}, '[^a-zA-Z0-9. ]', '', 'g') ~* ${pattern}`
+        sql`regexp_replace(${cameras.name}, '[^a-zA-Z0-9. ]', ' ', 'g') ~* ${pattern}`
       );
     }
   }

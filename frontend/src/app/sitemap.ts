@@ -37,8 +37,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${baseUrl}/systems`, changeFrequency: "monthly", priority: 0.8 },
     { url: `${baseUrl}/collections`, changeFrequency: "monthly", priority: 0.8 },
     { url: `${baseUrl}/lenses/series`, changeFrequency: "monthly", priority: 0.7 },
-    { url: `${baseUrl}/compare`, changeFrequency: "monthly", priority: 0.6 },
-    { url: `${baseUrl}/search`, changeFrequency: "monthly", priority: 0.6 },
   ];
 
   const { lensRows, cameraRows, systemRows, collectionRows, seriesRows } =

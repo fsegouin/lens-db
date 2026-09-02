@@ -39,7 +39,7 @@ export async function searchLenses(params: SearchLensesParams) {
     }
     for (const pattern of patterns) {
       conditions.push(
-        sql`regexp_replace(${lenses.name}, '[^a-zA-Z0-9. ]', '', 'g') ~* ${pattern}`
+        sql`regexp_replace(${lenses.name}, '[^a-zA-Z0-9. ]', ' ', 'g') ~* ${pattern}`
       );
     }
   }

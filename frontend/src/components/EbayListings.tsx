@@ -1,130 +1,15 @@
-import { headers } from "next/headers";
+"use client";
+
+import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import EbayTrackedLink from "@/components/EbayTrackedLink";
-import { buildEbaySearchQuery, buildEbayLensSearchQuery } from "@/lib/ebay-search-query";
-import { getEbayAccessToken } from "@/lib/ebay-auth";
+import EbayListingsSkeleton from "@/components/EbayListingsSkeleton";
+import type { EbayListing } from "@/lib/ebay-listings";
 
 interface EbayListingsProps {
   query: string;
   entityType?: "camera" | "lens";
   entitySlug: string;
-}
-
-interface EbayListing {
-  itemId: string;
-  title: string;
-  price: { value: string; currency: string };
-  condition: string;
-  imageUrl: string;
-  itemWebUrl: string;
-  seller: { username: string; feedbackPercentage: string };
-  listingType: string;
-  shippingCost: string | null;
-}
-
-interface EbaySearchResponse {
-  itemSummaries?: Array<{
-    itemId: string;
-    title: string;
-    price: { value: string; currency: string };
-    condition: string;
-    image?: { imageUrl: string };
-    itemAffiliateWebUrl?: string;
-    itemWebUrl: string;
-    seller: { username: string; feedbackPercentage: string };
-    buyingOptions: string[];
-    shippingOptions?: Array<{ shippingCost?: { value: string; currency: string } }>;
-  }>;
-  total: number;
-}
-
-const EBAY_CAMPAIGN_ID = process.env.EBAY_CAMPAIGN_ID ?? "";
-
-// ISO 3166-1 alpha-2 country code -> eBay Browse API marketplace ID.
-// The marketplace determines both inventory and currency. Countries
-// not listed here fall back to EBAY_US (USD).
-const MARKETPLACE_BY_COUNTRY: Record<string, string> = {
-  US: "EBAY_US",
-  GB: "EBAY_GB",
-  DE: "EBAY_DE",
-  FR: "EBAY_FR",
-  IT: "EBAY_IT",
-  ES: "EBAY_ES",
-  AT: "EBAY_AT",
-  CH: "EBAY_CH",
-  BE: "EBAY_BE",
-  NL: "EBAY_NL",
-  IE: "EBAY_IE",
-  PL: "EBAY_PL",
-  AU: "EBAY_AU",
-  CA: "EBAY_CA",
-};
-
-function affiliateUrl(searchQuery: string): string {
-  if (!EBAY_CAMPAIGN_ID) {
-    return `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(searchQuery)}`;
-  }
-  return `https://rover.ebay.com/rover/1/711-53200-19255-0/1?campid=${EBAY_CAMPAIGN_ID}&toolid=10001&mpre=${encodeURIComponent(`https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(searchQuery)}`)}`;
-}
-
-async function fetchListings(
-  query: string,
-  countryCode: string,
-  marketplaceId: string,
-  entityType: "camera" | "lens" = "camera",
-): Promise<EbayListing[]> {
-  if (!process.env.EBAY_APP_ID || !process.env.EBAY_CERT_ID) return [];
-
-  try {
-    const token = await getEbayAccessToken();
-    const searchQuery = entityType === "lens"
-      ? buildEbayLensSearchQuery(query)
-      : buildEbaySearchQuery(query);
-
-    const params = new URLSearchParams({
-      q: searchQuery,
-      limit: "6",
-      category_ids: "625",
-      filter: `deliveryCountry:${countryCode},conditions:{USED}`,
-      sort: "newlyListed",
-    });
-
-    const requestHeaders: Record<string, string> = {
-      Authorization: `Bearer ${token}`,
-      "X-EBAY-C-MARKETPLACE-ID": marketplaceId,
-    };
-
-    if (EBAY_CAMPAIGN_ID) {
-      requestHeaders["X-EBAY-C-ENDUSERCTX"] = `affiliateCampaignId=${EBAY_CAMPAIGN_ID}`;
-    }
-
-    const res = await fetch(
-      `https://api.ebay.com/buy/browse/v1/item_summary/search?${params}`,
-      { headers: requestHeaders },
-    );
-
-    if (!res.ok) {
-      console.error(`eBay search failed: ${res.status}`);
-      return [];
-    }
-
-    const data: EbaySearchResponse = await res.json();
-
-    return (data.itemSummaries ?? []).map((item) => ({
-      itemId: item.itemId,
-      title: item.title,
-      price: item.price,
-      condition: item.condition,
-      imageUrl: item.image?.imageUrl ?? "",
-      itemWebUrl: item.itemAffiliateWebUrl ?? item.itemWebUrl,
-      seller: item.seller,
-      listingType: item.buyingOptions.includes("AUCTION") ? "Auction" : "Buy It Now",
-      shippingCost: item.shippingOptions?.[0]?.shippingCost?.value ?? null,
-    }));
-  } catch (error) {
-    console.error("eBay listings error:", error);
-    return [];
-  }
 }
 
 function formatCurrency(value: string, currency: string): string {
@@ -140,32 +25,53 @@ function formatCurrency(value: string, currency: string): string {
   }
 }
 
-export default async function EbayListings({ query, entityType = "camera", entitySlug }: EbayListingsProps) {
-  const hdrs = await headers();
-  const countryCode = (hdrs.get("x-vercel-ip-country") ?? "US").toUpperCase();
-  const marketplaceId = MARKETPLACE_BY_COUNTRY[countryCode] ?? "EBAY_US";
-  const listings = await fetchListings(query, countryCode, marketplaceId, entityType);
+/**
+ * Fetched on the client so the surrounding page stays statically cacheable:
+ * the listings depend on the visitor's country, which the /api/ebay route
+ * resolves from request headers.
+ */
+export default function EbayListings({
+  query,
+  entityType = "camera",
+  entitySlug,
+}: EbayListingsProps) {
+  const [listings, setListings] = useState<EbayListing[] | null>(null);
+  const [searchUrl, setSearchUrl] = useState<string | null>(null);
 
+  useEffect(() => {
+    const controller = new AbortController();
+    const params = new URLSearchParams({ q: query, type: entityType });
+
+    fetch(`/api/ebay?${params}`, { signal: controller.signal })
+      .then((res) => (res.ok ? res.json() : { listings: [], searchUrl: null }))
+      .then((data: { listings: EbayListing[]; searchUrl: string | null }) => {
+        setListings(data.listings ?? []);
+        setSearchUrl(data.searchUrl);
+      })
+      .catch(() => setListings([]));
+
+    return () => controller.abort();
+  }, [query, entityType]);
+
+  if (listings === null) return <EbayListingsSkeleton />;
   if (listings.length === 0) return null;
-
-  const searchQuery = entityType === "lens"
-    ? buildEbayLensSearchQuery(query)
-    : buildEbaySearchQuery(query);
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold tracking-wider text-muted-foreground uppercase">
+        <h2 className="text-sm font-semibold tracking-wider text-muted-foreground uppercase">
           eBay Listings
-        </h3>
-        <EbayTrackedLink
-          href={affiliateUrl(searchQuery)}
-          event="ebay_view_all_click"
-          eventProps={{ entity_type: entityType, entity_slug: entitySlug }}
-          className="text-xs text-zinc-400 underline hover:text-zinc-600 dark:hover:text-zinc-300"
-        >
-          View all on eBay
-        </EbayTrackedLink>
+        </h2>
+        {searchUrl && (
+          <EbayTrackedLink
+            href={searchUrl}
+            event="ebay_view_all_click"
+            eventProps={{ entity_type: entityType, entity_slug: entitySlug }}
+            className="text-xs text-zinc-500 underline hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300"
+          >
+            View all on eBay
+          </EbayTrackedLink>
+        )}
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
@@ -205,14 +111,14 @@ export default async function EbayListings({ query, entityType = "camera", entit
                   <Badge variant="outline" className="text-[10px]">Free shipping</Badge>
                 )}
                 {listing.shippingCost && listing.shippingCost !== "0.00" && (
-                  <span className="text-xs text-zinc-400">
+                  <span className="text-xs text-zinc-500 dark:text-zinc-400">
                     + {formatCurrency(listing.shippingCost, listing.price.currency)} shipping
                   </span>
                 )}
               </div>
               <div className="mt-1 flex items-center gap-2">
                 <Badge variant="outline" className="text-[10px]">{listing.listingType}</Badge>
-                <span className="text-xs text-zinc-400">
+                <span className="text-xs text-zinc-500 dark:text-zinc-400">
                   {listing.seller.username} ({listing.seller.feedbackPercentage}%)
                 </span>
               </div>
@@ -221,7 +127,7 @@ export default async function EbayListings({ query, entityType = "camera", entit
         ))}
       </div>
 
-      <p className="text-right text-[10px] text-zinc-400">
+      <p className="text-right text-[10px] text-zinc-500 dark:text-zinc-400">
         As an eBay Partner Network affiliate, The Lens DB earns from qualifying
         purchases.
       </p>

@@ -1,4 +1,4 @@
-import { redirect } from "next/navigation";
+import { permanentRedirect } from "next/navigation";
 
 export default async function LegacyComparePage({
   searchParams,
@@ -13,5 +13,5 @@ export default async function LegacyComparePage({
     if (lens2) params.set("lens2", lens2);
   }
   const qs = params.toString();
-  redirect(qs ? `/compare?${qs}` : "/compare");
+  permanentRedirect(qs ? `/compare?${qs}` : "/compare");
 }

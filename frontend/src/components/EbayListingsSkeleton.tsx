@@ -17,9 +17,9 @@ export default function EbayListingsSkeleton() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold tracking-wider text-muted-foreground uppercase">
+        <h2 className="text-sm font-semibold tracking-wider text-muted-foreground uppercase">
           eBay Listings
-        </h3>
+        </h2>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         {Array.from({ length: 6 }).map((_, i) => (

@@ -106,6 +106,7 @@ export default function ImageGallery({ images }: { images: ImageData[] }) {
             src={safeImages[0].src}
             alt={safeImages[0].alt || "Image"}
             fill
+            priority
             className="object-contain p-4"
             sizes="(max-width: 640px) 100vw, 448px"
           />
@@ -125,7 +126,7 @@ export default function ImageGallery({ images }: { images: ImageData[] }) {
           onClick={() => setLightboxIdx(currentIdx)}
           className="group relative aspect-[4/3] w-full overflow-hidden rounded-lg border border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900"
         >
-          <AnimatePresence mode="wait">
+          <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={currentIdx}
               initial={{ opacity: 0 }}
@@ -138,6 +139,7 @@ export default function ImageGallery({ images }: { images: ImageData[] }) {
                 src={safeImages[currentIdx].src}
                 alt={safeImages[currentIdx].alt || "Image"}
                 fill
+                priority={currentIdx === 0}
                 className="object-contain p-4"
                 sizes="(max-width: 640px) 100vw, 448px"
               />

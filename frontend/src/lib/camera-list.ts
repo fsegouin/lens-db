@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { cameras, systems, priceEstimates } from "@/db/schema";
 import { asc, desc, eq, and, or, sql, isNull, type AnyColumn } from "drizzle-orm";
 import { escapeLikeMetachars, parseMultiValueParam } from "@/lib/api-utils";
+import { buildNameSearch } from "@/lib/search";
 
 const PAGE_SIZE = 50;
 
@@ -47,20 +48,12 @@ export const listCameras = unstable_cache(
     const conditions: ReturnType<typeof and>[] = [isNull(cameras.mergedIntoId)];
 
     if (p.q) {
-      const words = p.q.trim().split(/\s+/).filter(Boolean).slice(0, 10);
-      for (const word of words) {
-        const clean = word.replace(/[^a-zA-Z0-9.]/g, "");
-        if (!clean) continue;
-        const escaped = clean.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-        const startsWithDigit = /^\d/.test(clean);
-        const pattern = startsWithDigit ? `\\m${escaped}` : escaped;
-        conditions.push(
-          or(
-            sql`regexp_replace(${cameras.name}, '[^a-zA-Z0-9. ]', '', 'g') ~* ${pattern}`,
-            sql`regexp_replace(${cameras.alias}, '[^a-zA-Z0-9. ]', '', 'g') ~* ${pattern}`
-          )
-        );
-      }
+      // Each token must appear in the name or the alias.
+      const nameConditions = buildNameSearch(cameras.name, p.q);
+      const aliasConditions = buildNameSearch(cameras.alias, p.q);
+      nameConditions.forEach((nameCondition, i) => {
+        conditions.push(or(nameCondition, aliasConditions[i]));
+      });
     }
     if (p.slug) {
       conditions.push(eq(cameras.slug, p.slug));
