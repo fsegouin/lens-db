@@ -22,9 +22,38 @@ function clamp(text: string, max = 158): string {
   return `${text.slice(0, max - 1).trimEnd()}…`;
 }
 
-/** "an 85mm", "a 50mm" — spoken form, so the leading digit decides. */
+/**
+ * "an 85mm", "a 50mm", "an APS-C", "a 35mm". The article follows how the
+ * phrase is spoken, not how it is spelled, so an acronym is judged by the
+ * sound of its first letter: "an SLR" (ess), but "a CMOS" (see).
+ */
+const VOWEL_SOUND_LETTERS = new Set(["A", "E", "F", "H", "I", "L", "M", "N", "O", "R", "S", "X"]);
+
 function indefiniteArticle(value: string): string {
-  return /^(8|11|18)/.test(value) ? "an" : "a";
+  const first = value.trim().split(/\s+/)[0] ?? "";
+  if (!first) return "a";
+
+  // Numbers are spoken: eight, eleven, eighteen all begin with a vowel.
+  if (/^\d/.test(first)) return /^(8|11|18)/.test(first) ? "an" : "a";
+
+  // An acronym is read letter by letter.
+  if (/^[A-Z]{2,}/.test(first)) {
+    return VOWEL_SOUND_LETTERS.has(first[0]) ? "an" : "a";
+  }
+
+  return /^[aeiou]/i.test(first) ? "an" : "a";
+}
+
+/**
+ * Body types are stored capitalised ("SLR-style mirrorless", "Compact SLR").
+ * Lowercasing the whole string mid-sentence flattened the acronyms into
+ * "slr-style"; only the first word is lowered, and only when it is not itself
+ * an acronym.
+ */
+function lowerFirstWord(value: string): string {
+  const [first] = value.split(/\s+/);
+  if (!first || /^[A-Z]{2,}/.test(first)) return value;
+  return value[0].toLowerCase() + value.slice(1);
 }
 
 /**
@@ -116,12 +145,19 @@ export function cameraDescription(
 
 /** The on-page version: no truncation, no search-result tail. */
 export function cameraLead(camera: CameraLike, systemName: string | null): string {
-  const lead = sentence(
+  const descriptor = sentence(
     [
-      `${camera.name} is a`,
       camera.sensorSize,
       camera.megapixels ? `${camera.megapixels} MP` : null,
-      camera.bodyType?.toLowerCase() ?? "camera",
+      camera.bodyType ? lowerFirstWord(camera.bodyType) : "camera",
+    ],
+    " ",
+  );
+
+  const lead = sentence(
+    [
+      `${camera.name} is ${indefiniteArticle(descriptor)}`,
+      descriptor,
       systemName ? `with a ${systemName} mount` : null,
       camera.yearIntroduced ? `introduced in ${camera.yearIntroduced}` : null,
     ],
