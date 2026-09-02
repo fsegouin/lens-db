@@ -7,7 +7,7 @@ import type { lenses, systems } from "@/db/schema";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
+import { ChevronUp, ChevronDown, ChevronsUpDown, SlidersHorizontal } from "lucide-react";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { trackEvent } from "@/lib/analytics";
@@ -87,6 +87,7 @@ export default function LensList({
   const [items, setItems] = useState<LensRow[]>(initialItems);
   const [nextCursor, setNextCursor] = useState<number | null>(initialNextCursor);
   const [loading, setLoading] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
   // Bumped whenever the list resets so late loadMore responses are discarded
   const listGenRef = useRef(0);
@@ -293,11 +294,50 @@ export default function LensList({
     debouncedApply({ q: value });
   }
 
+  // Thirteen always-visible controls pushed the first result below the fold on
+  // a phone. Search stays out; the rest open on demand.
+  const activeFilterCount = [
+    brand, system, type, series, coverage, minFocal, maxFocal,
+    minAperture, maxAperture, year, priceMin, priceMax,
+  ].filter(Boolean).length;
+
   return (
     <>
       {/* Filters */}
-      <div className="flex flex-wrap gap-3">
-        <div>
+      <div className="flex items-center gap-2 sm:hidden">
+        <div className="flex-1">
+          <label className="sr-only" htmlFor="lens-search-mobile">Search lenses</label>
+          <Input
+            id="lens-search-mobile"
+            type="text"
+            placeholder="Search lenses..."
+            value={formQ}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            className="h-11 w-full"
+          />
+        </div>
+        <button
+          type="button"
+          onClick={() => setFiltersOpen((open) => !open)}
+          aria-expanded={filtersOpen}
+          aria-controls="lens-filters"
+          className="inline-flex h-11 shrink-0 items-center gap-2 rounded-lg border border-border px-4 text-sm font-medium"
+        >
+          <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
+          Filters
+          {activeFilterCount > 0 && (
+            <span className="rounded bg-brand-tint px-1.5 py-0.5 font-mono text-xs tabular-nums text-[color:var(--brand)]">
+              {activeFilterCount}
+            </span>
+          )}
+        </button>
+      </div>
+
+      <div
+        id="lens-filters"
+        className={`${filtersOpen ? "flex" : "hidden"} flex-wrap gap-3 sm:flex`}
+      >
+        <div className="hidden sm:block">
           <label className="sr-only" htmlFor="lens-search">Search lenses</label>
           <Input
             id="lens-search"
@@ -477,8 +517,63 @@ export default function LensList({
         </div>
       </div>
 
-      {/* Results */}
+      {/* Results: cards on a phone, the full table from lg up. A 1,008px table
+          in a 358px viewport scrolled sideways and detached names from values. */}
+      {items.length > 0 && (
+        <ul className="divide-y divide-border border-y border-border lg:hidden">
+          {items.map(({ lens, system, mounts = [], avgPrice }) => {
+            const focal = lens.focalLengthMin
+              ? lens.focalLengthMin === lens.focalLengthMax
+                ? `${lens.focalLengthMin}mm`
+                : `${lens.focalLengthMin}-${lens.focalLengthMax}mm`
+              : null;
+            const specLine = [
+              focal,
+              lens.apertureMin ? `f/${lens.apertureMin}` : null,
+              lens.weightG ? `${lens.weightG}g` : null,
+              lens.yearIntroduced,
+            ]
+              .filter(Boolean)
+              .join(" · ");
+            const mountName = mounts[0]?.name ?? system?.name ?? null;
+            return (
+              <li key={lens.id}>
+                <Link
+                  href={`/lenses/${lens.slug}`}
+                  className="flex flex-col gap-1.5 py-3 transition-colors hover:bg-muted/50"
+                >
+                  <span className="font-medium leading-snug">{lens.name}</span>
+                  {specLine && (
+                    <span className="font-mono text-xs tabular-nums text-muted-foreground">
+                      {specLine}
+                    </span>
+                  )}
+                  <span className="flex items-center justify-between gap-3">
+                    {mountName ? (
+                      <span className="rounded border border-border px-1.5 py-0.5 font-mono text-xs">
+                        {mountName}
+                        {mounts.length > 1 && (
+                          <span className="text-muted-foreground"> +{mounts.length - 1}</span>
+                        )}
+                      </span>
+                    ) : (
+                      <span />
+                    )}
+                    {avgPrice != null && (
+                      <span className="font-mono text-sm tabular-nums">
+                        ${avgPrice.toLocaleString()}
+                      </span>
+                    )}
+                  </span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
       {items.length > 0 ? (
+        <div className="hidden lg:block">
         <Table>
           <TableHeader>
             <TableRow>
@@ -673,6 +768,7 @@ export default function LensList({
             )}
           </TableBody>
         </Table>
+        </div>
       ) : (
         <div className="rounded-xl border border-dashed border-zinc-300 p-12 text-center dark:border-zinc-700">
           <p className="text-muted-foreground">
