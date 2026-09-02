@@ -114,7 +114,7 @@ export default function RatingWidget(props: RatingWidgetProps) {
               className={`flex h-10 w-10 items-center justify-center rounded text-sm font-medium transition-colors ${
                 filled
                   ? "bg-amber-500 text-white"
-                  : "bg-zinc-100 text-zinc-600 hover:bg-amber-100 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-amber-900/30"
+                  : "bg-zinc-100 text-muted-foreground hover:bg-amber-100 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-amber-900/30"
               } ${submitting ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}
               title={`Rate ${n}/10`}
             >
@@ -144,7 +144,7 @@ export default function RatingWidget(props: RatingWidgetProps) {
               aria-label="Remove your rating"
               onClick={removeRating}
               disabled={submitting}
-              className="ml-2 text-xs text-muted-foreground underline hover:text-zinc-600 disabled:cursor-not-allowed"
+              className="ml-2 text-xs text-muted-foreground underline hover:text-muted-foreground disabled:cursor-not-allowed"
             >
               Remove
             </button>

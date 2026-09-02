@@ -45,7 +45,7 @@ export default async function CollectionsPage() {
         <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100">
           Collections
         </h1>
-        <p className="mt-2 text-zinc-600">
+        <p className="mt-2 text-muted-foreground">
           Curated thematic lists of lenses based on features, use cases, and
           historical significance.
         </p>
@@ -63,7 +63,7 @@ export default async function CollectionsPage() {
                 {collection.name}
               </h2>
               {collection.description && (
-                <p className="mt-2 line-clamp-2 text-sm text-zinc-600">
+                <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">
                   {collection.description}
                 </p>
               )}

@@ -343,7 +343,7 @@ export default function CameraList({
                     className={`rounded-full border px-2.5 py-1 text-[11px] transition-colors ${
                       active
                         ? "border-foreground bg-foreground text-background"
-                        : "border-border bg-background text-zinc-600 hover:border-zinc-500 hover:text-foreground dark:text-zinc-400 dark:hover:border-zinc-400"
+                        : "border-border bg-background text-muted-foreground hover:border-zinc-500 hover:text-foreground dark:text-zinc-400 dark:hover:border-zinc-400"
                     }`}
                   >
                     {f}
@@ -491,10 +491,10 @@ export default function CameraList({
                       </button>
                     ) : "\u2014"}
                   </TableCell>
-                  <TableCell className="text-zinc-600">
+                  <TableCell className="text-muted-foreground">
                     {camera.sensorSize || "\u2014"}
                   </TableCell>
-                  <TableCell className="text-zinc-600">
+                  <TableCell className="text-muted-foreground">
                     {specs["Model"] ? (
                       <button
                         type="button"
@@ -512,7 +512,7 @@ export default function CameraList({
                       </button>
                     ) : "\u2014"}
                   </TableCell>
-                  <TableCell className="text-zinc-600">
+                  <TableCell className="text-muted-foreground">
                     {specs["Film type"] ? (
                       <button
                         type="button"
@@ -523,7 +523,7 @@ export default function CameraList({
                       </button>
                     ) : "\u2014"}
                   </TableCell>
-                  <TableCell className="text-zinc-600">
+                  <TableCell className="text-muted-foreground">
                     {camera.yearIntroduced ? (
                       <button
                         type="button"
@@ -534,12 +534,12 @@ export default function CameraList({
                       </button>
                     ) : "\u2014"}
                   </TableCell>
-                  <TableCell className="text-zinc-600">
+                  <TableCell className="text-muted-foreground">
                     {avgPrice != null
                       ? `$${avgPrice.toLocaleString()}`
                       : "\u2014"}
                   </TableCell>
-                  <TableCell className="text-zinc-600">
+                  <TableCell className="text-muted-foreground">
                     {camera.weightG ? `${camera.weightG}g` : "\u2014"}
                   </TableCell>
                 </TableRow>

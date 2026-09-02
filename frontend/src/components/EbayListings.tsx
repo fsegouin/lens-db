@@ -67,7 +67,7 @@ export default function EbayListings({
             href={searchUrl}
             event="ebay_view_all_click"
             eventProps={{ entity_type: entityType, entity_slug: entitySlug }}
-            className="text-xs text-muted-foreground underline hover:text-zinc-700"
+            className="text-xs text-muted-foreground underline hover:text-foreground"
           >
             View all on eBay
           </EbayTrackedLink>

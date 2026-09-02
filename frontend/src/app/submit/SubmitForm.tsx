@@ -171,7 +171,7 @@ export default function SubmitForm({ systems }: { systems: SystemOption[] }) {
           className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
             entityType === "lens"
               ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-700 dark:text-zinc-100"
-              : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+              : "text-muted-foreground hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
           }`}
         >
           Lens
@@ -183,7 +183,7 @@ export default function SubmitForm({ systems }: { systems: SystemOption[] }) {
           className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
             entityType === "camera"
               ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-700 dark:text-zinc-100"
-              : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+              : "text-muted-foreground hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
           }`}
         >
           Camera
@@ -252,7 +252,7 @@ export default function SubmitForm({ systems }: { systems: SystemOption[] }) {
                   onChange={(e) => updateField(field.name, e.target.checked)}
                   className="size-4 rounded border-zinc-300 dark:border-zinc-600"
                 />
-                <span className="text-sm text-zinc-600">
+                <span className="text-sm text-muted-foreground">
                   Yes
                 </span>
               </label>

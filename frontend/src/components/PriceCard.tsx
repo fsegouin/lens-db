@@ -82,7 +82,7 @@ function RarityDiamonds({ label }: { label: string }) {
           className={`h-3.5 w-3.5 ${
             i < count
               ? "text-amber-500 dark:text-amber-400"
-              : "text-zinc-200 dark:text-zinc-700"
+              : "text-zinc-200 dark:text-foreground"
           }`}
           fill="currentColor"
         >
@@ -172,7 +172,7 @@ export default function PriceCard({ estimate, history }: PriceCardProps) {
 
       {history.length > 0 && (
         <details className="group">
-          <summary className="cursor-pointer text-sm font-medium text-muted-foreground hover:text-zinc-700">
+          <summary className="cursor-pointer text-sm font-medium text-muted-foreground hover:text-foreground">
             Sale history ({history.length} records)
           </summary>
           <div className="mt-2 max-h-72 overflow-auto rounded-lg border border-zinc-200 dark:border-zinc-800">

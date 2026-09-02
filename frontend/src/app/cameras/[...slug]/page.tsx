@@ -322,7 +322,7 @@ export default async function CameraDetailPage({
               <li key={l.slug}>
                 <Link
                   href={`/lenses/${l.slug}`}
-                  className="inline-flex items-center rounded-lg border border-zinc-200 px-2.5 py-1 text-sm text-zinc-700 transition-colors hover:border-zinc-400 dark:border-zinc-800 dark:text-zinc-300 dark:hover:border-zinc-600"
+                  className="inline-flex items-baseline gap-1.5 rounded-lg border border-border px-2.5 py-1 text-sm transition-colors hover:border-zinc-400 dark:hover:border-zinc-600"
                 >
                   {l.name}
                 </Link>
@@ -351,7 +351,7 @@ export default async function CameraDetailPage({
 
       {process.env.NODE_ENV === "development" && Object.keys(specs).length > 0 && (
         <details className="group">
-          <summary className="cursor-pointer text-sm font-medium text-muted-foreground hover:text-zinc-700">
+          <summary className="cursor-pointer text-sm font-medium text-muted-foreground hover:text-foreground">
             Raw specs JSON ({Object.keys(specs).length} fields)
           </summary>
           <pre className="mt-3 max-h-96 overflow-auto rounded-lg bg-zinc-50 p-4 text-xs text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
