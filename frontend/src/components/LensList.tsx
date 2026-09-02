@@ -24,6 +24,38 @@ type LensRow = {
 
 type SystemOption = { name: string; slug: string };
 
+// Primary mount plus a "+N" toggle for the rest, so multi-mount lenses don't
+// widen the System column. Every mount is still a clickable filter.
+function MountsCell({ mounts, onSelect }: { mounts: SystemOption[]; onSelect: (slug: string) => void }) {
+  const [expanded, setExpanded] = useState(false);
+  if (mounts.length === 0) return <>{"—"}</>;
+  const shown = expanded ? mounts : mounts.slice(0, 1);
+  const hidden = mounts.length - shown.length;
+  const linkClass = "text-left hover:text-zinc-900 hover:underline dark:hover:text-zinc-100";
+  return (
+    <span className="inline-flex flex-wrap items-baseline gap-x-1">
+      {shown.map((m, i) => (
+        <span key={m.slug}>
+          <button type="button" onClick={() => onSelect(m.slug)} className={linkClass}>
+            {m.name}
+          </button>
+          {i < shown.length - 1 && <span className="text-zinc-400 dark:text-zinc-600">,</span>}
+        </span>
+      ))}
+      {hidden > 0 && (
+        <button
+          type="button"
+          onClick={() => setExpanded(true)}
+          title={mounts.slice(1).map((m) => m.name).join(", ")}
+          className="rounded bg-zinc-100 px-1 text-xs text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+        >
+          +{hidden}
+        </button>
+      )}
+    </span>
+  );
+}
+
 type Props = {
   initialItems: LensRow[];
   initialTotal: number;
@@ -512,18 +544,10 @@ export default function LensList({
                   ) : "\u2014"}
                 </TableCell>
                 <TableCell className="text-zinc-500">
-                  {(mounts.length > 0 ? mounts : system ? [{ name: system.name, slug: system.slug }] : []).map((m, i) => (
-                    <span key={m.slug}>
-                      {i > 0 && <span className="text-zinc-400 dark:text-zinc-600">, </span>}
-                      <button type="button"
-                        onClick={() => applyFilters({ system: m.slug, brand: "", q: "", type: "", minFocal: "", maxFocal: "", minAperture: "", maxAperture: "", year: "", lensType: "", era: "", productionStatus: "", coverage: "" })}
-                        className="text-left hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
-                      >
-                        {m.name}
-                      </button>
-                    </span>
-                  ))}
-                  {mounts.length === 0 && !system && "\u2014"}
+                  <MountsCell
+                    mounts={mounts.length > 0 ? mounts : system ? [{ name: system.name, slug: system.slug }] : []}
+                    onSelect={(slug) => applyFilters({ system: slug, brand: "", q: "", type: "", minFocal: "", maxFocal: "", minAperture: "", maxAperture: "", year: "", lensType: "", era: "", productionStatus: "", coverage: "" })}
+                  />
                 </TableCell>
                 <TableCell className="text-zinc-600 dark:text-zinc-400">
                   {lens.focalLengthMin ? (
