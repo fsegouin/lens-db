@@ -95,7 +95,7 @@ export default async function HistoryPage({
           >
             {entity.name}
           </Link>
-          {" "}— {total} revision{total !== 1 ? "s" : ""}
+          {" "}· {total} revision{total !== 1 ? "s" : ""}
         </p>
       </div>
 

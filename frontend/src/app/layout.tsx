@@ -19,7 +19,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "The Lens DB — Camera and Lens Reference",
+    default: "The Lens DB: Camera and Lens Reference",
     template: "%s | The Lens DB",
   },
   description:
@@ -29,7 +29,7 @@ export const metadata: Metadata = {
     google: "VqQ5eoCMbzHnK0tn55oyWCiTeUUgh8hfFaRNo6OfoDk",
   },
   openGraph: {
-    title: "The Lens DB — Camera and Lens Reference",
+    title: "The Lens DB: Camera and Lens Reference",
     description:
       "An open reference for interchangeable camera lenses, camera bodies and lens mounts: specifications, what fits what, and used prices.",
     siteName: "The Lens DB",
@@ -37,7 +37,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "The Lens DB — Camera and Lens Reference",
+    title: "The Lens DB: Camera and Lens Reference",
     description:
       "An open reference for interchangeable camera lenses, camera bodies and lens mounts: specifications, what fits what, and used prices.",
   },
@@ -140,7 +140,7 @@ export default function RootLayout({
                 </div>
                 <div className="space-y-2 border-t border-border pt-6">
                   <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                    The Lens DB &mdash; a community reference for camera lenses,
+                    The Lens DB, a community reference for camera lenses,
                     bodies and mounts.
                   </p>
                   <p className="text-xs text-zinc-600 dark:text-zinc-400">
