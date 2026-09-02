@@ -1,0 +1,1093 @@
+<title>The Lens DB Redesign</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+  :root {
+    --paper: #FAF9F6;
+    --surface: #FFFFFF;
+    --sunken: #F1EFE9;
+    --ink: #1C1B18;
+    --muted: #6E6A62;
+    --faint: #8B867C;
+    --rule: #E3DFD6;
+    --rule-strong: #CFC9BC;
+    --accent: #A8620C;
+    --accent-tint: rgba(168, 98, 12, 0.10);
+    --link: #2C5AA8;
+    --alert: #A33A2A;
+    --alert-tint: rgba(163, 58, 42, 0.09);
+    --ok: #3F6B42;
+
+    --display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+    --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+    --measure: 63ch;
+    --shell: 1080px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #171614;
+      --surface: #1E1D1A;
+      --sunken: #232220;
+      --ink: #EDEAE3;
+      --muted: #A8A296;
+      --faint: #8A8478;
+      --rule: #302E29;
+      --rule-strong: #454239;
+      --accent: #E9A94A;
+      --accent-tint: rgba(233, 169, 74, 0.13);
+      --link: #93B4EC;
+      --alert: #E08373;
+      --alert-tint: rgba(224, 131, 115, 0.12);
+      --ok: #8FBF92;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --paper: #171614;
+    --surface: #1E1D1A;
+    --sunken: #232220;
+    --ink: #EDEAE3;
+    --muted: #A8A296;
+    --faint: #8A8478;
+    --rule: #302E29;
+    --rule-strong: #454239;
+    --accent: #E9A94A;
+    --accent-tint: rgba(233, 169, 74, 0.13);
+    --link: #93B4EC;
+    --alert: #E08373;
+    --alert-tint: rgba(224, 131, 115, 0.12);
+    --ok: #8FBF92;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--serif);
+    font-size: 17px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .shell {
+    max-width: var(--shell);
+    margin: 0 auto;
+    padding: 0 24px 96px;
+  }
+
+  @media (max-width: 640px) {
+    .shell { padding: 0 18px 64px; }
+    body { font-size: 16px; }
+  }
+
+  /* ---------- masthead ---------- */
+
+  .masthead {
+    border-bottom: 1px solid var(--rule-strong);
+    padding: 56px 0 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+  }
+
+  .stamp {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+  }
+  .stamp b { color: var(--accent); font-weight: 600; }
+
+  h1 {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: clamp(34px, 5.4vw, 58px);
+    line-height: 1.02;
+    letter-spacing: -0.024em;
+    margin: 0;
+    text-wrap: balance;
+  }
+
+  .standfirst {
+    font-size: clamp(18px, 2.2vw, 21px);
+    line-height: 1.5;
+    color: var(--muted);
+    max-width: 40ch;
+    margin: 0;
+  }
+
+  /* ---------- structure ---------- */
+
+  section { padding-top: 64px; }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 14px;
+  }
+  .eyebrow::before {
+    content: "";
+    width: 18px;
+    height: 2px;
+    background: var(--accent);
+    flex: none;
+  }
+
+  h2 {
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: clamp(25px, 3.4vw, 34px);
+    line-height: 1.14;
+    letter-spacing: -0.017em;
+    margin: 0 0 18px;
+    text-wrap: balance;
+  }
+
+  h3 {
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: 19px;
+    line-height: 1.3;
+    letter-spacing: -0.008em;
+    margin: 0 0 8px;
+  }
+
+  p { margin: 0 0 18px; max-width: var(--measure); }
+  .lede { font-size: 19px; color: var(--ink); }
+  section > p:last-child { margin-bottom: 0; }
+
+  a { color: var(--link); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+
+  strong { font-weight: 600; }
+
+  .num, .figure {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---------- finding rows ---------- */
+
+  .findings {
+    display: flex;
+    flex-direction: column;
+    border-top: 1px solid var(--rule);
+    margin-top: 26px;
+  }
+
+  .finding {
+    display: grid;
+    grid-template-columns: 96px 1fr;
+    gap: 0 22px;
+    padding: 18px 0;
+    border-bottom: 1px solid var(--rule);
+    align-items: start;
+  }
+
+  .finding .figure {
+    font-size: 21px;
+    font-weight: 600;
+    color: var(--accent);
+    line-height: 1.25;
+    letter-spacing: -0.02em;
+  }
+  .finding .figure small {
+    display: block;
+    font-size: 10.5px;
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--faint);
+    margin-top: 2px;
+  }
+  .finding p { margin: 0; font-size: 16px; max-width: 58ch; }
+  .finding p + p { margin-top: 6px; color: var(--muted); font-size: 15px; }
+
+  @media (max-width: 560px) {
+    .finding { grid-template-columns: 1fr; gap: 8px; }
+  }
+
+  /* ---------- diagnosis cards ---------- */
+
+  .faults {
+    display: grid;
+    gap: 1px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+    margin-top: 28px;
+  }
+  @media (min-width: 760px) { .faults { grid-template-columns: 1fr 1fr; } }
+
+  .fault {
+    background: var(--surface);
+    padding: 24px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .fault-tag {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .fault h3 { margin: 0; }
+  .fault p { margin: 0; font-size: 15.5px; color: var(--muted); max-width: none; }
+  .fault .evidence {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    color: var(--ink);
+    background: var(--sunken);
+    padding: 8px 10px;
+    border-left: 2px solid var(--accent);
+    margin-top: auto;
+    overflow-x: auto;
+  }
+
+  /* ---------- coverage chart ---------- */
+
+  .coverage {
+    margin-top: 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    max-width: 720px;
+  }
+  .bar-row {
+    display: grid;
+    grid-template-columns: 190px 1fr 58px;
+    align-items: center;
+    gap: 14px;
+  }
+  .bar-row .label { font-size: 15px; }
+  .bar-track {
+    height: 12px;
+    background: var(--sunken);
+    border: 1px solid var(--rule);
+    position: relative;
+  }
+  .bar-fill {
+    position: absolute;
+    inset: 0 auto 0 0;
+    background: var(--accent);
+  }
+  .bar-fill.low { background: var(--alert); }
+  .bar-fill.high { background: var(--ok); }
+  .bar-row .pct {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 13.5px;
+    text-align: right;
+    color: var(--muted);
+  }
+  @media (max-width: 620px) {
+    .bar-row { grid-template-columns: 1fr 48px; }
+    .bar-row .bar-track { grid-column: 1 / -1; order: 3; }
+  }
+  .chart-note { font-size: 14px; color: var(--muted); margin-top: 4px; max-width: var(--measure); }
+
+  /* ---------- positioning ---------- */
+
+  .thesis {
+    border-top: 2px solid var(--accent);
+    border-bottom: 1px solid var(--rule);
+    padding: 28px 0 26px;
+    margin-top: 26px;
+  }
+  .thesis p {
+    font-size: clamp(21px, 2.9vw, 27px);
+    line-height: 1.32;
+    font-weight: 600;
+    letter-spacing: -0.012em;
+    max-width: 26ch;
+    margin: 0;
+    font-family: var(--display);
+    text-wrap: balance;
+  }
+  .thesis .qualifier {
+    font-family: var(--serif);
+    font-size: 16.5px;
+    font-weight: 400;
+    color: var(--muted);
+    max-width: var(--measure);
+    letter-spacing: 0;
+    margin-top: 14px;
+    line-height: 1.55;
+  }
+
+  .split { display: grid; gap: 34px; margin-top: 30px; }
+  @media (min-width: 760px) { .split { grid-template-columns: 1fr 1fr; gap: 44px; } }
+  .split h3 { margin-bottom: 12px; }
+  .stack { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+  .stack li {
+    display: grid;
+    grid-template-columns: 26px 1fr;
+    gap: 10px;
+    font-size: 15.5px;
+    line-height: 1.5;
+  }
+  .stack .mark {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--accent);
+    padding-top: 3px;
+  }
+
+  /* ---------- specimen ---------- */
+
+  .specimen {
+    border: 1px solid var(--rule);
+    background: var(--surface);
+    margin-top: 28px;
+    display: grid;
+  }
+  @media (min-width: 760px) { .specimen { grid-template-columns: 1.15fr 1fr; } }
+
+  .specimen-main { padding: 26px 24px; display: flex; flex-direction: column; gap: 14px; }
+  .specimen-side {
+    padding: 26px 24px;
+    background: var(--sunken);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    border-left: 1px solid var(--rule);
+  }
+  @media (max-width: 759px) { .specimen-side { border-left: none; border-top: 1px solid var(--rule); } }
+
+  .swatches { display: flex; flex-wrap: wrap; gap: 8px; }
+  .swatch { display: flex; flex-direction: column; gap: 5px; width: 78px; }
+  .chip { height: 34px; border: 1px solid var(--rule-strong); }
+  .swatch span {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+  }
+
+  .fact-list { display: flex; flex-direction: column; }
+  .fact {
+    display: grid;
+    grid-template-columns: 132px 1fr;
+    gap: 14px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--rule);
+    font-size: 14px;
+  }
+  .fact:last-child { border-bottom: none; }
+  .fact dt { font-family: var(--display); font-weight: 500; color: var(--muted); font-size: 13px; letter-spacing: 0.01em; }
+  .fact dd { margin: 0; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .fact dd .unit { color: var(--muted); font-size: 0.88em; }
+
+  .type-sample { display: flex; flex-direction: column; gap: 4px; }
+  .type-sample .role {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--faint);
+  }
+  .sample-display { font-family: var(--display); font-weight: 600; font-size: 27px; letter-spacing: -0.018em; line-height: 1.1; }
+  .sample-serif { font-family: var(--serif); font-size: 16.5px; line-height: 1.55; color: var(--muted); }
+  .sample-mono { font-family: var(--mono); font-size: 14.5px; font-variant-numeric: tabular-nums; }
+
+  /* ---------- roadmap as a focus scale ---------- */
+
+  .scale-wrap { margin-top: 30px; overflow-x: auto; }
+  .scale { min-width: 640px; }
+
+  .phases { display: flex; flex-direction: column; gap: 1px; background: var(--rule); border: 1px solid var(--rule); margin-top: 26px; }
+  .phase {
+    background: var(--surface);
+    padding: 22px;
+    display: grid;
+    grid-template-columns: 132px 1fr 128px;
+    gap: 22px;
+    align-items: start;
+  }
+  @media (max-width: 720px) { .phase { grid-template-columns: 1fr; gap: 12px; } }
+
+  .phase-id { display: flex; flex-direction: column; gap: 4px; }
+  .phase-id .n {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .phase-id .name { font-family: var(--display); font-weight: 600; font-size: 17px; letter-spacing: -0.01em; }
+  .phase-body p { margin: 0 0 10px; font-size: 15.5px; max-width: 60ch; }
+  .phase-body p:last-child { margin-bottom: 0; }
+  .phase-body ul { margin: 0; padding-left: 18px; font-size: 15.5px; display: flex; flex-direction: column; gap: 5px; }
+  .phase-meta { display: flex; flex-direction: column; gap: 6px; }
+  .badge {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 3px 7px;
+    border: 1px solid var(--rule-strong);
+    color: var(--muted);
+    align-self: flex-start;
+  }
+  .badge.done { color: var(--ok); border-color: currentColor; }
+  .badge.now { color: var(--accent); border-color: currentColor; background: var(--accent-tint); }
+  .effort { font-family: var(--mono); font-size: 12.5px; color: var(--muted); }
+
+  /* ---------- shipped table ---------- */
+
+  .table-wrap { overflow-x: auto; margin-top: 26px; border: 1px solid var(--rule); }
+  table { border-collapse: collapse; width: 100%; min-width: 620px; background: var(--surface); }
+  caption { text-align: left; font-size: 14px; color: var(--muted); padding: 0 0 10px; }
+  th, td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--rule); font-size: 14.5px; vertical-align: top; }
+  thead th {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 500;
+    background: var(--sunken);
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  td.was { font-family: var(--mono); font-size: 13px; color: var(--alert); font-variant-numeric: tabular-nums; }
+  td.now { font-family: var(--mono); font-size: 13px; color: var(--ok); font-variant-numeric: tabular-nums; }
+
+  /* ---------- decisions ---------- */
+
+  .decision {
+    border-left: 2px solid var(--alert);
+    background: var(--alert-tint);
+    padding: 18px 20px;
+    margin-top: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .decision h3 { margin: 0; font-size: 17px; }
+  .decision p { margin: 0; font-size: 15.5px; max-width: 62ch; }
+  .decision .ask { font-family: var(--mono); font-size: 13px; color: var(--ink); }
+
+  .metrics { display: grid; gap: 1px; background: var(--rule); border: 1px solid var(--rule); margin-top: 26px; }
+  @media (min-width: 700px) { .metrics { grid-template-columns: repeat(2, 1fr); } }
+  .metric { background: var(--surface); padding: 18px 20px; display: flex; flex-direction: column; gap: 5px; }
+  .metric .k { font-family: var(--display); font-weight: 600; font-size: 15.5px; }
+  .metric .v { font-family: var(--mono); font-size: 13px; color: var(--muted); }
+
+  footer {
+    margin-top: 72px;
+    padding-top: 24px;
+    border-top: 1px solid var(--rule-strong);
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--faint);
+    letter-spacing: 0.03em;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 20px;
+  }
+
+  ::selection { background: var(--accent-tint); }
+  a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+
+<div class="shell">
+
+  <header class="masthead">
+    <div class="stamp">
+      <span>Redesign proposal</span>
+      <span>thelensdb.com</span>
+      <span><b>2 September 2026</b></span>
+    </div>
+    <h1>Every lens. Every mount. One reference.</h1>
+    <p class="standfirst">
+      The definitive lens database went dark in April. This is how The Lens DB
+      takes its place — and why that is a different job from the one the site
+      is doing today.
+    </p>
+  </header>
+
+  <section>
+    <p class="eyebrow">The opening</p>
+    <h2>A reference the web relied on has disappeared</h2>
+    <p class="lede">
+      lens-db.com catalogued 8,621 lenses from manufacturer booklets and
+      datasheets between 2012 and 2025. In April 2026 it geo-blocked Western
+      visitors, and its owner had the Wayback Machine snapshots removed. The
+      photographs and catalogue scans are simply gone.
+    </p>
+    <p>
+      In its final year it was cited on Reddit roughly weekly, and almost
+      always for the same three jobs: <em>telling versions apart</em>
+      ("Looking in Lens-DB there are two versions: L and non-L"),
+      <em>listing every lens for a mount</em>, and <em>verifying a spec</em>.
+      Those readers — vintage shooters, adapters, system switchers, people
+      writing a sale listing — now have nowhere to go. That is the opening,
+      and it will not stay open indefinitely.
+    </p>
+    <p>
+      The Lens DB already holds more rows than the site it replaces. What it
+      does not yet have is the thing that made lens-db worth linking to: the
+      feeling, on arrival, that you have reached <em>the record</em> of an
+      object. The gap between "a database with a web front end" and "the
+      reference the web cites" is what this document is about.
+    </p>
+  </section>
+
+  <section>
+    <p class="eyebrow">What we measured</p>
+    <h2>Six audits, one week, no assumptions</h2>
+    <p>
+      We read the codebase, drove the live site on desktop and mobile, queried
+      the production database read-only, mapped the competitive landscape, and
+      audited the site for search and answer engines. Every number below is
+      measured, not estimated.
+    </p>
+
+    <div class="findings">
+      <div class="finding">
+        <div class="figure">12,076<small>pages uncached</small></div>
+        <div>
+          <p>Every lens and camera page was served <span class="num">no-store</span> and re-queried Postgres on <em>every</em> request, including every crawler hit.</p>
+          <p>Two causes: a geo lookup in the render path, and a missing <span class="num">generateStaticParams</span>, which makes Next silently ignore the cache setting. Fixed — see below.</p>
+        </div>
+      </div>
+      <div class="finding">
+        <div class="figure">0<small>structured data</small></div>
+        <div>
+          <p>No JSON-LD, no canonical URLs, and one identical meta description across all 12,076 pages.</p>
+          <p>The site was invisible as an <em>entity</em> to both search engines and the AI assistants that increasingly answer "which lens" questions.</p>
+        </div>
+      </div>
+      <div class="finding">
+        <div class="figure">4/8<small>searches failed</small></div>
+        <div>
+          <p><span class="num">50mm 1.4</span>, <span class="num">canon ef 50 1.8</span>, <span class="num">sony 24-70 gm</span> and <span class="num">helios 44-2</span> each returned nothing at all.</p>
+          <p>Punctuation was deleted rather than split, so "24-70" became "2470"; and a bare "1.4" could not match "F/1.4".</p>
+        </div>
+      </div>
+      <div class="finding">
+        <div class="figure">89%<small>top pages, no photo</small></div>
+        <div>
+          <p>Of the 200 most-visited lenses, 178 have no image. Overall image coverage is 16.9% of lenses and 33.5% of cameras.</p>
+          <p>Coverage is <em>worse</em> at the top than in the tail: the images came from recent imports, not from the vintage catalogue people actually browse.</p>
+        </div>
+      </div>
+      <div class="finding">
+        <div class="figure">0<small>compatibility rows</small></div>
+        <div>
+          <p>The lens-to-camera table exists in the schema, has admin screens and an AI-chat tool — and contains no rows. "Will this fit my camera?" is the single most common question in the evidence, and the site cannot answer it.</p>
+        </div>
+      </div>
+      <div class="finding">
+        <div class="figure">2<small>human editors</small></div>
+        <div>
+          <p>37 registered users; 84% of all revisions were made by an import bot; 97% of the 254 human edits by two people. One lens has ever been submitted by the public.</p>
+          <p>There is a wiki skeleton, but no community — and the edit affordances sit below six eBay listings.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <p class="eyebrow">Data completeness</p>
+    <h2>Dense where it is cheap, thin where it counts</h2>
+    <div class="coverage">
+      <div class="bar-row">
+        <span class="label">Core numeric specs</span>
+        <span class="bar-track"><span class="bar-fill high" style="width:95.4%"></span></span>
+        <span class="pct">95.4%</span>
+      </div>
+      <div class="bar-row">
+        <span class="label">Used-price estimate</span>
+        <span class="bar-track"><span class="bar-fill high" style="width:98.4%"></span></span>
+        <span class="pct">98.4%</span>
+      </div>
+      <div class="bar-row">
+        <span class="label">Release year</span>
+        <span class="bar-track"><span class="bar-fill" style="width:82.6%"></span></span>
+        <span class="pct">82.6%</span>
+      </div>
+      <div class="bar-row">
+        <span class="label">Description ≥ 200 chars</span>
+        <span class="bar-track"><span class="bar-fill" style="width:51.5%"></span></span>
+        <span class="pct">51.5%</span>
+      </div>
+      <div class="bar-row">
+        <span class="label">Any photograph</span>
+        <span class="bar-track"><span class="bar-fill low" style="width:16.9%"></span></span>
+        <span class="pct">16.9%</span>
+      </div>
+      <div class="bar-row">
+        <span class="label">Camera descriptions</span>
+        <span class="bar-track"><span class="bar-fill low" style="width:0.6%"></span></span>
+        <span class="pct">0.6%</span>
+      </div>
+      <div class="bar-row">
+        <span class="label">Lens ↔ camera links</span>
+        <span class="bar-track"><span class="bar-fill low" style="width:0.4%"></span></span>
+        <span class="pct">0%</span>
+      </div>
+    </div>
+    <p class="chart-note">
+      Share of the 9,575 live lenses (2,187 cameras for the camera row) carrying
+      each field. The specs that arrived free with the import are excellent; the
+      prose, the pictures and the relationships — everything that makes a record
+      an <em>article</em> — are missing.
+    </p>
+    <p style="margin-top:22px">
+      One more caution that reshaped our recommendations: <strong>view counts
+      cannot be used to prioritise.</strong> The median lens has 4 views, the
+      maximum is 127, and the "most popular lens" on the home page is
+      <span class="num">[Auto] Tamron-F 28mm F/2.8</span> — a record whose name
+      sorts first alphabetically. That is crawler traffic, not reader demand.
+      Real analytics must come before any work is ranked by popularity.
+    </p>
+  </section>
+
+  <section>
+    <p class="eyebrow">Diagnosis</p>
+    <h2>Five reasons the web does not link here yet</h2>
+
+    <div class="faults">
+      <div class="fault">
+        <span class="fault-tag">Fault 01 — Citability</span>
+        <h3>Nothing to cite, nothing to quote</h3>
+        <p>
+          A page becomes canonical by being quotable, stable and machine-legible.
+          This one had no structured data, no canonical URL, no per-page
+          description, no "last updated", no sources, and no visible identity for
+          the object it describes.
+        </p>
+        <p class="evidence">ld+json: 0 · canonical: absent · description: 1 shared by 12,076 pages</p>
+      </div>
+
+      <div class="fault">
+        <span class="fault-tag">Fault 02 — The real questions</span>
+        <h3>It answers the easy question, not the asked one</h3>
+        <p>
+          People ask "will it fit?", "which version is mine?", and "what is it
+          worth?". The site answers "what are its specs" — and even then only if
+          you type the name the way the database stores it.
+        </p>
+        <p class="evidence">compatibility rows: 0 · version groups: 1 · "sony 24-70 gm" → 0 results</p>
+      </div>
+
+      <div class="fault">
+        <span class="fault-tag">Fault 03 — Register</span>
+        <h3>It reads as a product, not a document</h3>
+        <p>
+          Near-black canvas, floating rounded cards, a marketing hero with no
+          search field, and specifications placed <em>below</em> a rating strip,
+          a price guide and six eBay cards. The page's own layout says the
+          listings matter more than the facts.
+        </p>
+        <p class="evidence">specs begin 1,600 px down desktop · 2,133 of 3,020 px mobile</p>
+      </div>
+
+      <div class="fault">
+        <span class="fault-tag">Fault 04 — Substance</span>
+        <h3>The records are spec sheets, not articles</h3>
+        <p>
+          No photographs on five pages in six. No prose on a third of lenses and
+          on 2,174 of 2,187 cameras. 1,387 lenses share one of 519 identical
+          boilerplate texts. Sources are a single scraped URL.
+        </p>
+        <p class="evidence">images 16.9% · cameras with prose 13 / 2,187</p>
+      </div>
+
+      <div class="fault">
+        <span class="fault-tag">Fault 05 — Renewal</span>
+        <h3>No engine to keep it alive</h3>
+        <p>
+          Every comparable one-person database — lens-db, Artlimited's M42
+          archive, LensHero — eventually died. Without contributors and open
+          data, this one inherits that fate, and the community has already said
+          so in public.
+        </p>
+        <p class="evidence">37 users · 2 real editors · 1 public submission ever</p>
+      </div>
+
+      <div class="fault">
+        <span class="fault-tag">Fault 06 — Reach</span>
+        <h3>The door is bolted to the visitors that matter</h3>
+        <p>
+          The firewall challenges everything except Googlebot and Bingbot. That
+          blocks every AI assistant crawler, DuckDuckGo, Apple, the Internet
+          Archive, and every link unfurler — precisely the surfaces where
+          "which lens should I buy" is now answered.
+        </p>
+        <p class="evidence">bypassed: Googlebot, bingbot · challenged: GPTBot, ClaudeBot, PerplexityBot, Applebot, Slackbot …</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <p class="eyebrow">Positioning</p>
+    <h2>Stop competing on rows. Compete on relationships.</h2>
+
+    <div class="thesis">
+      <p>The open, citable registry of every lens and mount ever made — and the only place that computes what fits what.</p>
+      <p class="qualifier">
+        Retailers will always win "[lens] specs". DPReview owns reviews.
+        Wikipedia owns prose. Nobody owns the graph: mount to body, lens to
+        adapter, version to version, price over time. lens-db had more rows and
+        better photographs than this site, and it still died — rows were never
+        the moat.
+      </p>
+    </div>
+
+    <div class="split">
+      <div>
+        <h3>Table stakes</h3>
+        <ul class="stack">
+          <li><span class="mark">01</span><span>A sourced spec sheet with a "last verified" date on every record.</span></li>
+          <li><span class="mark">02</span><span>Stable IDs and redirect-safe URLs; structured data on every entity.</span></li>
+          <li><span class="mark">03</span><span>Search that understands how photographers type.</span></li>
+          <li><span class="mark">04</span><span>"Lenses for [camera]" and "bodies for [lens]" as real pages.</span></li>
+          <li><span class="mark">05</span><span>A photograph, or a deliberate substitute, on every record.</span></li>
+        </ul>
+      </div>
+      <div>
+        <h3>Signature</h3>
+        <ul class="stack">
+          <li><span class="mark">01</span><span><strong>Compatibility solver.</strong> Any lens × any body: fits, adapts (infinity? autofocus?), or impossible — derived from flange distances, with the reasoning shown.</span></li>
+          <li><span class="mark">02</span><span><strong>Version and family pages.</strong> Helios 44 → 44-2 → 44M-4; Summicron v1–v5; with serial-range dating.</span></li>
+          <li><span class="mark">03</span><span><strong>Open data and identifiers.</strong> A CC0 fact dump, a documented API, and a crosswalk to Wikidata, ExifTool LensID and Lensfun.</span></li>
+          <li><span class="mark">04</span><span><strong>An ownership registry.</strong> "I own this": serial, price paid, condition, photograph — which yields images, licence-clean prices and production ranges.</span></li>
+          <li><span class="mark">05</span><span><strong>Announcement-day pages</strong> and a weekly digest, from the watcher that already runs.</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <p class="eyebrow">Design direction</p>
+    <h2>Field Notes</h2>
+    <p>
+      A reference work typeset like a well-made technical manual. Paper-white by
+      default, because dense tables and long prose are what this site is for and
+      both are worse in inverted polarity. One warm accent borrowed from lens
+      coatings, spent only on identity and state. Names set in a grotesque,
+      every quantity in tabular mono, so figures form a vertical rule you can
+      scan. Nothing floats, nothing fades in.
+    </p>
+
+    <div class="specimen">
+      <div class="specimen-main">
+        <div class="type-sample">
+          <span class="role">Display — Archivo</span>
+          <span class="sample-display">Summicron-M 35 mm ƒ/2 ASPH.</span>
+        </div>
+        <div class="type-sample">
+          <span class="role">Body — Source Serif 4</span>
+          <span class="sample-serif">A six-element double-Gauss derivative introduced in 1979, the fourth generation of Leica's 35 mm standard.</span>
+        </div>
+        <div class="type-sample">
+          <span class="role">Data — IBM Plex Mono, tabular</span>
+          <span class="sample-mono">ƒ/2 · 0.70 m · ⌀39 mm · 255 g · 1979</span>
+        </div>
+        <div class="swatches" style="margin-top:6px">
+          <div class="swatch"><span class="chip" style="background:#FAF9F6"></span><span>paper</span></div>
+          <div class="swatch"><span class="chip" style="background:#1C1B18"></span><span>ink</span></div>
+          <div class="swatch"><span class="chip" style="background:#A8620C"></span><span>coating</span></div>
+          <div class="swatch"><span class="chip" style="background:#2C5AA8"></span><span>link</span></div>
+          <div class="swatch"><span class="chip" style="background:#E3DFD6"></span><span>rule</span></div>
+        </div>
+      </div>
+      <div class="specimen-side">
+        <span class="role" style="font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)">Specifications — the infobox pattern</span>
+        <dl class="fact-list">
+          <div class="fact"><dt>Focal length</dt><dd>35 <span class="unit">mm</span></dd></div>
+          <div class="fact"><dt>Maximum aperture</dt><dd>ƒ/2</dd></div>
+          <div class="fact"><dt>Construction</dt><dd>7 / 5</dd></div>
+          <div class="fact"><dt>Minimum focus</dt><dd>0.70 <span class="unit">m</span></dd></div>
+          <div class="fact"><dt>Filter thread</dt><dd>39 <span class="unit">mm</span></dd></div>
+          <div class="fact"><dt>Weight</dt><dd>255 <span class="unit">g</span></dd></div>
+          <div class="fact"><dt>Produced</dt><dd>1979–1997</dd></div>
+        </dl>
+      </div>
+    </div>
+
+    <div class="split" style="margin-top:34px">
+      <div>
+        <h3>What changes on the page</h3>
+        <ul class="stack">
+          <li><span class="mark">→</span><span>Specifications move above the price guide; commerce moves into a labelled rail.</span></li>
+          <li><span class="mark">→</span><span>A two-column article: prose left, sticky infobox and market data right; on mobile the infobox comes <em>first</em>.</span></li>
+          <li><span class="mark">→</span><span>A one-sentence lead that says what the object is — the line an assistant can quote.</span></li>
+          <li><span class="mark">→</span><span>A provenance line under every title: last edited, revisions, sale records, cite.</span></li>
+          <li><span class="mark">→</span><span>Eleven arbitrary badge colours collapse to neutral tags plus four semantic states.</span></li>
+        </ul>
+      </div>
+      <div>
+        <h3>The missing-photo system</h3>
+        <p style="font-size:15.5px">
+          Five records in six have no photograph, so the empty state is a
+          first-class design surface, not a fallback. We generate an
+          <strong>optical schematic</strong> from data the record already has:
+          element outlines clustered into groups, barrel length scaled to focal
+          length, and a front element sized to the real entrance pupil — so an
+          ƒ/1.2 fifty visibly differs from an ƒ/2.8 one. At thumbnail size it
+          reduces to an iris monogram with the correct blade count.
+        </p>
+        <p style="font-size:15.5px">
+          It turns the largest data weakness into the site's visual signature,
+          and every one of those tiles is a prompt to contribute a photograph.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <p class="eyebrow">Already shipped</p>
+    <h2>Phase 0 is done and verified</h2>
+    <p>
+      Rather than propose foundations, we built them. These are measured
+      before-and-after values on branch
+      <span class="num">worktree-redesign-phase-0</span>, not projections.
+    </p>
+
+    <div class="table-wrap">
+      <table>
+        <caption>Verified locally against the production database and a production build.</caption>
+        <thead>
+          <tr><th scope="col">What</th><th scope="col">Was</th><th scope="col">Now</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Lens &amp; camera page caching</td>
+            <td class="was">no-store, every hit renders</td>
+            <td class="now">s-maxage 604800, cache HIT</td>
+          </tr>
+          <tr>
+            <td><span class="num">50mm 1.4</span></td>
+            <td class="was">0 results</td>
+            <td class="now">218 results</td>
+          </tr>
+          <tr>
+            <td><span class="num">canon ef 50 1.8</span> · <span class="num">sony 24-70 gm</span> · <span class="num">helios 44-2</span></td>
+            <td class="was">0 · 0 · 0</td>
+            <td class="now">3 · 2 · 10</td>
+          </tr>
+          <tr>
+            <td>Structured data per entity</td>
+            <td class="was">none</td>
+            <td class="now">Product · WebPage · BreadcrumbList</td>
+          </tr>
+          <tr>
+            <td>Meta description</td>
+            <td class="was">1 shared by every page</td>
+            <td class="now">generated per entity</td>
+          </tr>
+          <tr>
+            <td>Specifications position</td>
+            <td class="was">below ratings, price, 6 ads</td>
+            <td class="now">directly below the summary</td>
+          </tr>
+          <tr>
+            <td>Cross-links from a lens</td>
+            <td class="was">filtered lists only</td>
+            <td class="now">mounts, series, collections, bodies</td>
+          </tr>
+          <tr>
+            <td>First paint</td>
+            <td class="was">every page SSR'd at opacity 0</td>
+            <td class="now">visible without JavaScript</td>
+          </tr>
+          <tr>
+            <td>Home page counts</td>
+            <td class="was">"7,400+" against a real 9,575</td>
+            <td class="now">read from the database</td>
+          </tr>
+          <tr>
+            <td>404</td>
+            <td class="was">bare Next.js default</td>
+            <td class="now">search and navigation</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <p class="eyebrow">The plan</p>
+    <h2>Four phases, each shippable on its own</h2>
+
+    <div class="phases">
+      <div class="phase">
+        <div class="phase-id">
+          <span class="n">Phase 0</span>
+          <span class="name">Foundations</span>
+        </div>
+        <div class="phase-body">
+          <p>
+            Make the pages cacheable, findable and citable. Fix search. Put the
+            facts above the commerce. Detailed above — complete.
+          </p>
+        </div>
+        <div class="phase-meta">
+          <span class="badge done">Shipped</span>
+          <span class="effort">1 session</span>
+        </div>
+      </div>
+
+      <div class="phase">
+        <div class="phase-id">
+          <span class="n">Phase 1</span>
+          <span class="name">The article</span>
+        </div>
+        <div class="phase-body">
+          <p>Rebuild the entity page as a reference article, in the Field Notes direction.</p>
+          <ul>
+            <li>Two-column layout with a sticky infobox; infobox first on mobile.</li>
+            <li>Light default, one accent, mono numerals, contrast fixes (the whole zinc-500 backlog).</li>
+            <li>Optical-schematic placeholders for the 83% with no photograph.</li>
+            <li>Provenance line, sources block, "cite this page".</li>
+            <li>Mobile list becomes cards with a filter drawer; the 13 stacked selects go.</li>
+          </ul>
+        </div>
+        <div class="phase-meta">
+          <span class="badge now">Next</span>
+          <span class="effort">2–3 weeks</span>
+        </div>
+      </div>
+
+      <div class="phase">
+        <div class="phase-id">
+          <span class="n">Phase 2</span>
+          <span class="name">The graph</span>
+        </div>
+        <div class="phase-body">
+          <p>Build the relationships that make it a reference rather than a table — the defensible ground.</p>
+          <ul>
+            <li>Populate compatibility from mounts × bodies; add flange distances and adapter rules.</li>
+            <li>New page types: <span class="num">/cameras/[x]/lenses</span>, <span class="num">/adapters/[a]-to-[b]</span>, <span class="num">/brands/[x]</span>, static <span class="num">/compare/[a]-vs-[b]</span>.</li>
+            <li>Version and family pages; merge the 103 duplicate groups; normalise the 17 spellings of "coverage".</li>
+            <li>Drop the stray <span class="num">/camera/</span> URL segment with permanent redirects.</li>
+          </ul>
+        </div>
+        <div class="phase-meta">
+          <span class="badge">Planned</span>
+          <span class="effort">4–6 weeks</span>
+        </div>
+      </div>
+
+      <div class="phase">
+        <div class="phase-id">
+          <span class="n">Phase 3</span>
+          <span class="name">The engine</span>
+        </div>
+        <div class="phase-body">
+          <p>Make it survive its maintainer, and make others want to link to it.</p>
+          <ul>
+            <li>Open the data: CC0 fact dump, documented read API, published MCP endpoint, Wikidata / ExifTool / Lensfun crosswalk.</li>
+            <li>Photograph and ownership drive: "I own this" with serial, price paid and image, under a clear licence.</li>
+            <li>Per-field citations and a visible patrol queue; surface the 574 pending edits.</li>
+            <li>Announcement-day pages and a weekly digest from the existing watcher.</li>
+            <li>Replace the blanket challenge rule with managed bot protection so assistants and unfurlers can read the site.</li>
+          </ul>
+        </div>
+        <div class="phase-meta">
+          <span class="badge">Planned</span>
+          <span class="effort">ongoing</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <p class="eyebrow">Decisions we need from you</p>
+    <h2>Three things we cannot decide for you</h2>
+
+    <div class="decision">
+      <h3>The eBay price data is the best asset and the biggest liability</h3>
+      <p>
+        Prices are the one thing no competitor has — 142,966 recorded sales
+        behind estimates on 98% of lenses. But eBay's developer licence
+        prohibits deriving average selling prices, retaining content after it
+        stops being public, and — since June 2025 — feeding it to generative AI,
+        which the chat feature does. The sold-listings API is also closed to new
+        users, and the pipeline has written no new history since 23 July.
+      </p>
+      <p class="ask">Options: diversify to MPB/KEH plus owner-reported purchases, and treat eBay as an affiliate link rather than a data source.</p>
+    </div>
+
+    <div class="decision">
+      <h3>The name invites a fight it does not need</h3>
+      <p>
+        "The Lens DB" is a near-clone of the brand of a site whose owner
+        publicly resents the recreation and pulled his archive rather than
+        share it. It also says "lenses" when a third of the ambition is cameras
+        and mounts. Keeping it means being permanently defined as the
+        replacement rather than the successor.
+      </p>
+      <p class="ask">Either commit to it deliberately, or move now while the backlink profile is near zero.</p>
+    </div>
+
+    <div class="decision">
+      <h3>Provenance of the seed corpus</h3>
+      <p>
+        98% of records cite lens-db.com as their source. Bare facts are not
+        copyrightable, but in the EU a database can attract sui generis
+        protection, and the descriptions are plainly someone's writing. This is
+        also why re-sourcing each field to a manufacturer document is not
+        merely good practice — it converts the project's biggest legal exposure
+        into its strongest trust signal.
+      </p>
+      <p class="ask">Re-source and rewrite as part of Phase 2, and publish an explicit sources-and-licence page.</p>
+    </div>
+  </section>
+
+  <section>
+    <p class="eyebrow">How we will know it worked</p>
+    <h2>Measures, not impressions</h2>
+    <div class="metrics">
+      <div class="metric">
+        <span class="k">Cited by others</span>
+        <span class="v">Wikipedia citations: 0 today. camera-wiki has 57, GSMArena 1,990.</span>
+      </div>
+      <div class="metric">
+        <span class="k">Answers the fit question</span>
+        <span class="v">Compatibility rows: 0 → every mount pair resolved with a reason.</span>
+      </div>
+      <div class="metric">
+        <span class="k">Records that look finished</span>
+        <span class="v">Photograph or schematic: 16.9% → 100%. Prose ≥200 chars: 51.5% → 90%.</span>
+      </div>
+      <div class="metric">
+        <span class="k">Search that succeeds</span>
+        <span class="v">Zero-result rate on real queries, from live logs — not view counts.</span>
+      </div>
+      <div class="metric">
+        <span class="k">Contributors</span>
+        <span class="v">2 real editors today. Ten monthly contributors is the survival threshold.</span>
+      </div>
+      <div class="metric">
+        <span class="k">Machine reach</span>
+        <span class="v">Assistant crawlers: challenged today → allowed and verified.</span>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span>The Lens DB — redesign proposal</span>
+    <span>Audits: codebase · UX · data · market · SEO · design</span>
+    <span>Full reports in docs/redesign/research/</span>
+  </footer>
+
+</div>
