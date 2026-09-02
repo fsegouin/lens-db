@@ -127,6 +127,11 @@ export default async function SystemDetailPage({
           <Badge variant="secondary">
             {systemLenses.length} lenses, {systemCameras.length} cameras
           </Badge>
+          {system.flangeDistanceMm != null && (
+            <Badge variant="outline">
+              {system.flangeDistanceMm} mm register
+            </Badge>
+          )}
           {(system.viewCount ?? 0) > 0 && (
             <span className="text-muted-foreground">{(system.viewCount ?? 0).toLocaleString()} views</span>
           )}
@@ -134,6 +139,14 @@ export default async function SystemDetailPage({
       </div>
 
       {system.description && <p className="leading-relaxed text-muted-foreground">{system.description}</p>}
+
+      {system.flangeDistanceMm != null && (
+        <p className="text-sm">
+          <Link href="/adapters" className="underline underline-offset-2">
+            What adapts onto {system.name}, and what {system.name} lenses adapt onto →
+          </Link>
+        </p>
+      )}
 
       {systemLenses.length > 0 && (
         <div>
