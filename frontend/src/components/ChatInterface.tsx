@@ -114,6 +114,7 @@ export default function ChatInterface() {
           )}
           <form onSubmit={handleSubmit} className="relative">
             <input
+              aria-label="Ask about cameras, lenses, prices"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Ask about cameras, lenses, prices..."
@@ -122,6 +123,7 @@ export default function ChatInterface() {
             />
             <button
               type="submit"
+              aria-label="Send message"
               disabled={isLoading || !input.trim()}
               className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-zinc-900 dark:bg-zinc-100 p-2 text-white dark:text-zinc-900 hover:bg-zinc-700 dark:hover:bg-zinc-300 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             >

@@ -97,6 +97,8 @@ export default function ImageGallery({ images }: { images: ImageData[] }) {
     return (
       <>
         <button
+          type="button"
+          aria-haspopup="dialog"
           onClick={() => setLightboxIdx(0)}
           className="group relative mx-auto block aspect-[4/3] w-full max-w-md overflow-hidden rounded-lg border border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900"
         >
@@ -118,6 +120,8 @@ export default function ImageGallery({ images }: { images: ImageData[] }) {
     <>
       <div className="relative mx-auto w-full max-w-md">
         <button
+          type="button"
+          aria-haspopup="dialog"
           onClick={() => setLightboxIdx(currentIdx)}
           className="group relative aspect-[4/3] w-full overflow-hidden rounded-lg border border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900"
         >
@@ -164,6 +168,8 @@ export default function ImageGallery({ images }: { images: ImageData[] }) {
           {safeImages.map((_, i) => (
             <button
               key={i}
+              type="button"
+              aria-current={i === currentIdx}
               onClick={() => setCurrentIdx(i)}
               className={`h-1.5 rounded-full transition-all ${
                 i === currentIdx

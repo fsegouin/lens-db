@@ -37,7 +37,7 @@ interface PriceCardProps {
 
 function formatPrice(low: number | null, high: number | null) {
   // Treat 0 as missing
-  if ((!low && !high) || (low == null && high == null)) return "—";
+  if (!low && !high) return "—";
   if (low === high || high == null) return `$${low?.toLocaleString()}`;
   if (low == null) return `$${high.toLocaleString()}`;
   return `$${low.toLocaleString()}–${high.toLocaleString()}`;
@@ -77,6 +77,7 @@ function RarityDiamonds({ label }: { label: string }) {
       {Array.from({ length: 5 }).map((_, i) => (
         <svg
           key={i}
+          aria-hidden="true"
           viewBox="0 0 16 16"
           className={`h-3.5 w-3.5 ${
             i < count
@@ -178,10 +179,10 @@ export default function PriceCard({ estimate, history }: PriceCardProps) {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-xs">Date</TableHead>
-                  <TableHead className="text-xs">Condition</TableHead>
-                  <TableHead className="text-xs text-right">Price</TableHead>
-                  <TableHead className="text-xs">Source</TableHead>
+                  <TableHead scope="col" className="text-xs">Date</TableHead>
+                  <TableHead scope="col" className="text-xs">Condition</TableHead>
+                  <TableHead scope="col" className="text-xs text-right">Price</TableHead>
+                  <TableHead scope="col" className="text-xs">Source</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

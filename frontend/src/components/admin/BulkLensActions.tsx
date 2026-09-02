@@ -12,7 +12,7 @@ interface Series {
   name: string;
 }
 
-type BulkModalType = "addTags" | "removeTags" | "addToSeries" | "setField";
+type BulkModalType = "addTags" | "addToSeries" | "setField";
 
 /**
  * Hook that provides bulk action definitions for the lens admin table.
@@ -105,7 +105,7 @@ function BulkModal({
   async function handleSubmit() {
     setSubmitting(true);
     let ok = false;
-    if (modal.type === "addTags" || modal.type === "removeTags") {
+    if (modal.type === "addTags") {
       ok = await onSubmit(modal.type, modal.ids, Array.from(selectedTagIds));
     } else if (modal.type === "addToSeries") {
       if (selectedSeriesId) ok = await onSubmit("addToSeries", modal.ids, selectedSeriesId);
@@ -133,7 +133,6 @@ function BulkModal({
 
   const titles: Record<string, string> = {
     addTags: "Add Tags",
-    removeTags: "Remove Tags",
     addToSeries: "Add to Series",
     setField: "Set Field Value",
   };
@@ -141,6 +140,8 @@ function BulkModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => onClose(false)}>
       <div
+        role="dialog"
+        aria-label={titles[modal.type]}
         className="w-full max-w-md rounded-xl border border-zinc-200 bg-white p-6 shadow-xl dark:border-zinc-700 dark:bg-zinc-900"
         onClick={(e) => e.stopPropagation()}
       >
@@ -149,7 +150,7 @@ function BulkModal({
         </h2>
 
         <div className="mt-4 space-y-3">
-          {(modal.type === "addTags" || modal.type === "removeTags") && (
+          {modal.type === "addTags" && (
             <>
               <div className="max-h-48 space-y-1 overflow-auto">
                 {localTags.map((tag) => (
@@ -177,6 +178,7 @@ function BulkModal({
               <div className="flex gap-2">
                 <input
                   type="text"
+                  aria-label="New tag name"
                   placeholder="New tag name..."
                   value={newTagName}
                   onChange={(e) => setNewTagName(e.target.value)}
@@ -184,6 +186,7 @@ function BulkModal({
                   className="flex-1 rounded-md border border-zinc-300 px-3 py-1.5 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
                 />
                 <button
+                  type="button"
                   onClick={createTag}
                   className="rounded-md bg-zinc-200 px-3 py-1.5 text-sm font-medium hover:bg-zinc-300 dark:bg-zinc-700 dark:hover:bg-zinc-600"
                 >
@@ -195,6 +198,7 @@ function BulkModal({
 
           {modal.type === "addToSeries" && (
             <select
+              aria-label="Series"
               value={selectedSeriesId ?? ""}
               onChange={(e) => setSelectedSeriesId(e.target.value ? Number(e.target.value) : null)}
               className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
@@ -209,6 +213,7 @@ function BulkModal({
           {modal.type === "setField" && (
             <>
               <select
+                aria-label="Field to set"
                 value={field}
                 onChange={(e) => setField(e.target.value)}
                 className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
@@ -220,6 +225,7 @@ function BulkModal({
               </select>
               <input
                 type="text"
+                aria-label="Field value"
                 placeholder="Value..."
                 value={fieldValue}
                 onChange={(e) => setFieldValue(e.target.value)}
@@ -231,12 +237,14 @@ function BulkModal({
 
         <div className="mt-6 flex justify-end gap-2">
           <button
+            type="button"
             onClick={() => onClose(false)}
             className="rounded-md px-4 py-2 text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
           >
             Cancel
           </button>
           <button
+            type="button"
             onClick={handleSubmit}
             disabled={submitting}
             className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"

@@ -23,7 +23,7 @@ export async function getSystemInfo(params: GetSystemInfoParams) {
     return { error: `System not found with slug: ${params.slug}` };
   }
 
-  // count(*) comes back as a string over the Neon HTTP driver (bigint), hence Number() below
+  // count(*) is bigint, which the pg driver returns as a string — hence Number() below
   const [cameraCount] = await db
     .select({ count: sql<string>`count(*)` })
     .from(cameras)

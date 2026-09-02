@@ -89,7 +89,7 @@ export async function searchLenses(params: SearchLensesParams) {
     conditions.push(lte(priceEstimates.medianPrice, params.priceMax));
   }
 
-  const where = conditions.length > 0 ? and(...conditions) : undefined;
+  const where = and(...conditions);
 
   // Fetch limit+1 to detect if there are more results without a separate COUNT query
   const results = await db
@@ -132,7 +132,7 @@ export async function searchLenses(params: SearchLensesParams) {
     hasMore,
     lenses: trimmed,
     ...(hasMore && {
-      note: `More results available. Narrow your search with more specific filters.`,
+      note: "More results available. Narrow your search with more specific filters.",
     }),
   };
 }

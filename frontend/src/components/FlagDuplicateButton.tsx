@@ -210,10 +210,11 @@ export default function FlagDuplicateButton({
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">
+                <label htmlFor="duplicate-reason" className="mb-1 block text-xs font-medium text-muted-foreground">
                   Reason (optional)
                 </label>
                 <Textarea
+                  id="duplicate-reason"
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
                   placeholder="Explain why these are duplicates..."

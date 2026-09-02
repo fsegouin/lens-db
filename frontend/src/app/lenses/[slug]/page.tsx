@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { and, eq, isNull, ne } from "drizzle-orm";
 import BackButton from "@/components/BackButton";
+import { db } from "@/db";
+import { lenses, lensSystems, systems as systemsTable } from "@/db/schema";
 import { getEntityPriceEstimate, getEntityPriceHistory } from "@/lib/prices";
 import { formatDescription } from "@/lib/format-description";
 import { formatMagnification } from "@/lib/format-magnification";
@@ -54,9 +57,38 @@ export default async function LensDetailPage({
     if (targetSlug) redirect(`/lenses/${targetSlug}`);
   }
 
-  const [priceEstimate, priceHistoryRows] = await Promise.all([
+  const [priceEstimate, priceHistoryRows, otherVersions, extraSystems] = await Promise.all([
     getEntityPriceEstimate("lens", lens.id),
     getEntityPriceHistory("lens", lens.id),
+    lens.versionGroupId
+      ? db
+          .select({
+            id: lenses.id,
+            name: lenses.name,
+            slug: lenses.slug,
+            versionLabel: lenses.versionLabel,
+            yearIntroduced: lenses.yearIntroduced,
+            weightG: lenses.weightG,
+          })
+          .from(lenses)
+          .where(
+            and(
+              eq(lenses.versionGroupId, lens.versionGroupId),
+              ne(lenses.id, lens.id),
+              isNull(lenses.mergedIntoId)
+            )
+          )
+          .orderBy(lenses.yearIntroduced)
+      : Promise.resolve([]),
+    db
+      .select({ id: systemsTable.id, name: systemsTable.name, slug: systemsTable.slug })
+      .from(lensSystems)
+      .innerJoin(systemsTable, eq(lensSystems.systemId, systemsTable.id))
+      .where(
+        lens.systemId
+          ? and(eq(lensSystems.lensId, lens.id), ne(lensSystems.systemId, lens.systemId))
+          : eq(lensSystems.lensId, lens.id)
+      ),
   ]);
 
   const specs = (lens.specs ?? {}) as Record<string, string>;
@@ -137,11 +169,19 @@ export default async function LensDetailPage({
                 <Badge variant="brand">{lens.brand}</Badge>
               </Link>
             )}
+            {lens.versionLabel && (
+              <Badge variant="outline">{lens.versionLabel}</Badge>
+            )}
             {system && (
               <Link href={`/lenses?system=${encodeURIComponent(system.slug)}`}>
                 <Badge variant="system">{system.name}</Badge>
               </Link>
             )}
+            {extraSystems.map((s) => (
+              <Link key={s.id} href={`/lenses?system=${encodeURIComponent(s.slug)}`}>
+                <Badge variant="system">{s.name}</Badge>
+              </Link>
+            ))}
             {lens.coverage && (
               <Link href={`/lenses?coverage=${encodeURIComponent(lens.coverage)}`}>
                 <Badge variant="outline">
@@ -172,7 +212,7 @@ export default async function LensDetailPage({
             )}
             {(lens.viewCount ?? 0) > 0 && (
               <span className="text-sm text-zinc-400">
-                {lens.viewCount!.toLocaleString()} views
+                {(lens.viewCount ?? 0).toLocaleString()} views
               </span>
             )}
           </div>
@@ -238,6 +278,35 @@ export default async function LensDetailPage({
             />
           </div>
         </div>
+
+        {otherVersions.length > 0 && (
+          <div>
+            <h3 className="mb-2 text-sm font-semibold tracking-wider text-muted-foreground uppercase">
+              Other Versions
+            </h3>
+            <ul className="space-y-1">
+              {otherVersions.map((v) => (
+                <li key={v.id}>
+                  <Link
+                    href={`/lenses/${v.slug}`}
+                    className="text-sm text-zinc-700 underline-offset-2 hover:underline dark:text-zinc-300"
+                  >
+                    {v.name}
+                  </Link>
+                  <span className="ml-2 text-xs text-zinc-400">
+                    {[
+                      v.versionLabel && v.versionLabel !== lens.versionLabel && !v.name.includes(v.versionLabel) ? v.versionLabel : null,
+                      v.yearIntroduced,
+                      v.weightG ? `${v.weightG}g` : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {process.env.NODE_ENV === "development" && Object.keys(specs).length > 0 && (
           <details className="group">

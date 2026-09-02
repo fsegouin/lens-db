@@ -19,7 +19,7 @@ export default async function EditSystemPage({
   const system = await db
     .select()
     .from(systems)
-    .where(eq(systems.id, parseInt(id)))
+    .where(eq(systems.id, parseInt(id, 10)))
     .then((r) => r[0]);
 
   if (!system) notFound();

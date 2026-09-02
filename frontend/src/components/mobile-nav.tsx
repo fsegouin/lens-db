@@ -43,6 +43,7 @@ export function MobileNav() {
                   key={link.href}
                   href={link.href}
                   onClick={() => setOpen(false)}
+                  aria-current={isActive ? "page" : undefined}
                   className={`rounded-md px-3 py-2.5 text-sm font-medium transition-colors ${
                     isActive
                       ? "bg-accent text-accent-foreground"
@@ -70,6 +71,7 @@ export function MobileNav() {
                     </Link>
                   )}
                   <button
+                    type="button"
                     onClick={async () => {
                       await fetch("/api/auth/logout", { method: "POST" });
                       setOpen(false);

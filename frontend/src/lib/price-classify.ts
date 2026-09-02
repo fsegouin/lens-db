@@ -94,6 +94,7 @@ ${listingLines}`;
         model: "google/gemini-3.1-flash-lite",
         output: Output.object({ schema: ClassifiedListingSchema }),
         prompt,
+        timeout: 60_000,
       });
 
       // Pad/truncate to exactly batch.length so downstream positional joins

@@ -1,5 +1,6 @@
 import { generateText, Output } from "ai";
 import { z } from "zod";
+import type { RawListing } from "@/lib/price-classify";
 
 const ClassifiedLensListingSchema = z.object({
   listings: z.array(
@@ -42,7 +43,7 @@ function placeholderListing(): ClassifiedLensListing {
 
 export async function classifyLensListings(
   lensName: string,
-  listings: { title: string; price: number; date: string; condition?: string; description?: string; url?: string }[],
+  listings: RawListing[],
 ): Promise<ClassifiedLensListing[]> {
   const allClassified: ClassifiedLensListing[] = [];
   let anyBatchSucceeded = false;
@@ -87,6 +88,7 @@ ${listingLines}`;
         model: "google/gemini-3.1-flash-lite",
         output: Output.object({ schema: ClassifiedLensListingSchema }),
         prompt,
+        timeout: 60_000,
       });
 
       // Pad/truncate to exactly batch.length so downstream positional joins

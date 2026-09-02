@@ -200,7 +200,6 @@ export default function HeaderSearch() {
     handleChange, handleClose, handleKeyDown,
   } = useSearchLogic();
   const inputRef = useRef<HTMLInputElement>(null);
-  const wrapperRef = useRef<HTMLDivElement>(null);
 
   const handleOpen = useCallback(() => {
     setOpen(true);
@@ -239,7 +238,7 @@ export default function HeaderSearch() {
   }, [open, handleOpen]);
 
   return (
-    <div ref={wrapperRef} data-search-area className="relative h-9 w-9">
+    <div data-search-area className="relative h-9 w-9">
       <AnimatePresence mode="wait" initial={false}>
         {open ? (
           /* Mobile-only full-width overlay — desktop uses HeaderSearchExpanded in nav area */
@@ -256,6 +255,7 @@ export default function HeaderSearch() {
               <Input
                 ref={inputRef}
                 type="text"
+                aria-label="Search"
                 value={query}
                 onChange={(e) => handleChange(e.target.value)}
                 onKeyDown={handleKeyDown}
@@ -322,6 +322,7 @@ export function HeaderSearchExpanded() {
         <Input
           ref={inputRef}
           type="text"
+          aria-label="Search"
           value={query}
           onChange={(e) => handleChange(e.target.value)}
           onKeyDown={handleKeyDown}

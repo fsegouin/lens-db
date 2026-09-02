@@ -8,6 +8,9 @@ import { Textarea } from "@/components/ui/textarea";
 
 type SystemOption = { id: number; name: string };
 
+const selectClassName =
+  "h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30";
+
 const lensFields = [
   { name: "name", label: "Name", type: "text", required: true },
   { name: "brand", label: "Brand", type: "text" },
@@ -163,6 +166,7 @@ export default function SubmitForm({ systems }: { systems: SystemOption[] }) {
       <div className="flex gap-1 rounded-lg bg-zinc-100 p-1 dark:bg-zinc-800">
         <button
           type="button"
+          aria-pressed={entityType === "lens"}
           onClick={() => handleTypeChange("lens")}
           className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
             entityType === "lens"
@@ -174,6 +178,7 @@ export default function SubmitForm({ systems }: { systems: SystemOption[] }) {
         </button>
         <button
           type="button"
+          aria-pressed={entityType === "camera"}
           onClick={() => handleTypeChange("camera")}
           className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
             entityType === "camera"
@@ -217,7 +222,7 @@ export default function SubmitForm({ systems }: { systems: SystemOption[] }) {
                     e.target.value ? Number(e.target.value) : null
                   )
                 }
-                className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
+                className={selectClassName}
               >
                 <option value="">Select...</option>
                 {systems.map((s) => (
@@ -231,7 +236,7 @@ export default function SubmitForm({ systems }: { systems: SystemOption[] }) {
                 id={field.name}
                 value={(formData[field.name] as string) ?? ""}
                 onChange={(e) => updateField(field.name, e.target.value || null)}
-                className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
+                className={selectClassName}
               >
                 <option value="">Select...</option>
                 <option value="full-frame">Full Frame</option>

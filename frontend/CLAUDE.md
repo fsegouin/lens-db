@@ -39,7 +39,7 @@ src/
 │   │   ├── cameras/route.ts    # GET: search/paginate cameras
 │   │   ├── chat/route.ts       # POST: AI chat (streamed, DB tools)
 │   │   ├── comparisons/route.ts # GET: top comparisons, POST: record comparison
-│   │   ├── cron/               # Vercel Cron: ebay-prices, ebay-lens-prices, flush-view-counts
+│   │   ├── cron/               # Cron routes: ebay-prices, ebay-lens-prices, dpreview-lenses, flush-view-counts
 │   │   ├── duplicates/route.ts # POST: flag duplicate entities
 │   │   ├── edits/route.ts      # User-submitted edits
 │   │   ├── lenses/route.ts     # GET: search/filter/paginate lenses

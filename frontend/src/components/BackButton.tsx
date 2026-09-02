@@ -14,6 +14,7 @@ export default function BackButton({
 
   return (
     <button
+      type="button"
       onClick={() => {
         if (window.history.length > 1) {
           router.back();

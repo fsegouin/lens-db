@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
   if (!entityType || !validEntityTypes.has(entityType)) {
     return NextResponse.json({ error: "Invalid entityType" }, { status: 400 });
   }
-  if (!entityId || isNaN(parseInt(entityId, 10))) {
+  if (!entityId || Number.isNaN(parseInt(entityId, 10))) {
     return NextResponse.json({ error: "Invalid entityId" }, { status: 400 });
   }
 

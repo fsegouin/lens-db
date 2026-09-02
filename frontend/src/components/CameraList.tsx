@@ -472,6 +472,7 @@ export default function CameraList({
                   <TableCell className="text-zinc-500">
                     {sys ? (
                       <button
+                        type="button"
                         onClick={() => applyFilters({ ...clearAll, system: sys.slug })}
                         className="text-left hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
                       >
@@ -485,6 +486,7 @@ export default function CameraList({
                   <TableCell className="text-zinc-600 dark:text-zinc-400">
                     {specs["Model"] ? (
                       <button
+                        type="button"
                         onClick={() => {
                           const prefix = specs["Model"].startsWith("Electronically controlled")
                             ? "Electronically controlled"
@@ -502,6 +504,7 @@ export default function CameraList({
                   <TableCell className="text-zinc-600 dark:text-zinc-400">
                     {specs["Film type"] ? (
                       <button
+                        type="button"
                         onClick={() => applyFilters({ ...clearAll, filmType: specs["Film type"] })}
                         className="text-left hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
                       >
@@ -512,6 +515,7 @@ export default function CameraList({
                   <TableCell className="text-zinc-600 dark:text-zinc-400">
                     {camera.yearIntroduced ? (
                       <button
+                        type="button"
                         onClick={() => applyFilters({ ...clearAll, year: String(camera.yearIntroduced) })}
                         className="text-left hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
                       >

@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
+const PAGE_SIZE = 50;
+
 type User = {
   id: number;
   email: string;
@@ -125,15 +127,15 @@ export default function UsersPage() {
         </div>
       )}
 
-      {total > 50 && (
+      {total > PAGE_SIZE && (
         <div className="flex items-center justify-center gap-2">
           <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
             Previous
           </Button>
           <span className="text-sm text-muted-foreground">
-            Page {page} of {Math.ceil(total / 50)}
+            Page {page} of {Math.ceil(total / PAGE_SIZE)}
           </span>
-          <Button variant="outline" size="sm" disabled={page >= Math.ceil(total / 50)} onClick={() => setPage((p) => p + 1)}>
+          <Button variant="outline" size="sm" disabled={page >= Math.ceil(total / PAGE_SIZE)} onClick={() => setPage((p) => p + 1)}>
             Next
           </Button>
         </div>

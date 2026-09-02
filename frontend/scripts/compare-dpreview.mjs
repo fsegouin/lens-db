@@ -43,9 +43,9 @@ const missingLenses = dpLenses.filter(dp => {
   const dpNorm = normalize(dp.slug);
   if (lensNorms.has(dpNorm)) return false;
   // Try matching key portion
-  // Only treat 'p' as a decimal marker between digits (1p4 → 1.4) — a global
-  // replace would mangle slugs containing 'p' ("pro", "pancake").
-  const dpKey = dp.slug.replace(dp.brand + '_', '').replace(/_/g, '').replace(/(\d)p(\d)/g, '$1.$2');
+  // Only treat 'p' as a decimal marker between digits (1p4 → 14, matching the
+  // punctuation-stripped norms) — a global replace would mangle slugs containing 'p'.
+  const dpKey = dp.slug.replace(dp.brand + '_', '').replace(/_/g, '').replace(/(\d)p(\d)/g, '$1$2');
   for (const ln of lensNorms) {
     if (ln.includes(dpKey) && dpKey.length > 5) return false;
   }

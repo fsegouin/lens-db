@@ -113,7 +113,7 @@ export default function PriceChart({ history }: PriceChartProps) {
   const padding = Math.max(10, Math.round((maxPrice - minPrice) * 0.1));
 
   return (
-    <div className="h-48 w-full">
+    <div className="h-48 w-full" role="img" aria-label="Price history chart">
       <ResponsiveContainer width="100%" height="100%">
         <ComposedChart data={trendPoints} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
           <CartesianGrid

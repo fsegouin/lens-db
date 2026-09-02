@@ -78,11 +78,10 @@ export async function GET(request: NextRequest) {
     if (!success) return rateLimitedResponse();
 
     const { searchParams } = request.nextUrl;
-    const rawLimit = parseInt(searchParams.get("top") || "10");
+    const rawLimit = parseInt(searchParams.get("top") || "10", 10);
     const limit = Math.min(Math.max(Number.isFinite(rawLimit) ? rawLimit : 10, 1), MAX_TOP);
-    const type: ComparisonType = isValidType(searchParams.get("type"))
-      ? (searchParams.get("type") as ComparisonType)
-      : "lens";
+    const typeParam = searchParams.get("type");
+    const type: ComparisonType = isValidType(typeParam) ? typeParam : "lens";
 
     if (type === "camera") {
       const results = await db.execute(sql`

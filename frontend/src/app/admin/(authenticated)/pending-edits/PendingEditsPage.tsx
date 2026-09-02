@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 
+const PAGE_SIZE = 50;
+
 type PendingEdit = {
   id: number;
   entityType: string;
@@ -35,6 +37,17 @@ function formatFieldName(field: string): string {
 function formatValue(value: unknown): string {
   if (value === null || value === undefined || value === "") return "(empty)";
   if (typeof value === "boolean") return value ? "Yes" : "No";
+  if (Array.isArray(value)) {
+    if (value.length === 0) return "(empty)";
+    const items = value.map((v) =>
+      v && typeof v === "object" && "src" in v ? String((v as { src: unknown }).src) : String(v)
+    );
+    return `${value.length} item${value.length === 1 ? "" : "s"}: ${items.join(", ")}`;
+  }
+  if (typeof value === "object") {
+    const entries = Object.entries(value).map(([k, v]) => `${k}: ${v}`).join("; ");
+    return entries.length > 300 ? `${entries.slice(0, 300)}…` : entries;
+  }
   return String(value);
 }
 
@@ -46,6 +59,7 @@ export default function PendingEditsPage() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<number | null>(null);
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [bulkProgress, setBulkProgress] = useState<number | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -60,6 +74,38 @@ export default function PendingEditsPage() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  async function handleApproveAll() {
+    if (!confirm(`Approve ALL ${total} pending edits? This applies every queued change.`)) return;
+    setBulkProgress(0);
+    let approved = 0;
+    const failed: { id: number; reason: string }[] = [];
+    let afterId = 0;
+    try {
+      for (;;) {
+        const res = await fetch("/api/admin/pending-edits", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "approve_all", afterId }),
+        });
+        if (!res.ok) break;
+        const data = await res.json();
+        approved += data.approved;
+        failed.push(...data.failed);
+        setBulkProgress(approved);
+        if (data.lastId === null) break;
+        afterId = data.lastId;
+      }
+    } finally {
+      setBulkProgress(null);
+      fetchData();
+      router.refresh();
+    }
+    if (failed.length > 0) {
+      alert(`Approved ${approved}. ${failed.length} could not be applied and remain pending:\n` +
+        failed.map((f) => `#${f.id}: ${f.reason}`).join("\n"));
+    }
+  }
 
   async function handleAction(editId: number, action: "approve" | "reject") {
     setActionLoading(editId);
@@ -84,7 +130,19 @@ export default function PendingEditsPage() {
         <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
           Pending Edits
         </h1>
-        <span className="text-sm text-muted-foreground">{total} pending</span>
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-muted-foreground">{total} pending</span>
+          {total > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleApproveAll}
+              disabled={bulkProgress !== null}
+            >
+              {bulkProgress !== null ? `Approving… ${bulkProgress}` : "Approve all"}
+            </Button>
+          )}
+        </div>
       </div>
 
       {loading ? (
@@ -110,7 +168,7 @@ export default function PendingEditsPage() {
                       </span>
                     )}
                     <span className="font-medium text-zinc-900 dark:text-zinc-100">
-                      {edit.entityId === 0 ? (edit.changes as Record<string, unknown>)?.name as string || "Untitled" : edit.entityName}
+                      {edit.entityId === 0 ? (edit.changes.name as string) || "Untitled" : edit.entityName}
                     </span>
                   </div>
                   <p className="mt-0.5 text-sm text-zinc-600 dark:text-zinc-400">
@@ -120,6 +178,8 @@ export default function PendingEditsPage() {
                     {edit.displayName || "Unknown user"} — {formatDate(edit.createdAt)}
                     {" — "}
                     <button
+                      type="button"
+                      aria-expanded={expandedId === edit.id}
                       onClick={() => setExpandedId(expandedId === edit.id ? null : edit.id)}
                       className="text-blue-600 hover:underline dark:text-blue-400"
                     >
@@ -154,15 +214,25 @@ export default function PendingEditsPage() {
 
               {expandedId === edit.id && (
                 <div className="border-t border-amber-200 px-3 py-2 dark:border-amber-800/50">
-                  <table className="w-full text-sm">
+                  {Array.isArray(edit.changes._audit) && edit.changes._audit.length > 0 && (
+                    <div className="mb-2 rounded border border-red-300 bg-red-50 px-2 py-1.5 text-xs text-red-800 dark:border-red-800/50 dark:bg-red-950/30 dark:text-red-300">
+                      <p className="font-semibold">LLM spec audit flagged:</p>
+                      {(edit.changes._audit as Array<{ field: string; problem: string; rawValue: string; extractedValue: string }>).map((issue, i) => (
+                        <p key={i}>
+                          {issue.problem.toUpperCase()} <span className="font-mono">{issue.field}</span>: raw says “{issue.rawValue}”, extracted “{issue.extractedValue}”
+                        </p>
+                      ))}
+                    </div>
+                  )}
+                  <table className="w-full text-sm" aria-label="Proposed changes">
                     <thead>
                       <tr className="text-left text-xs text-muted-foreground">
-                        <th className="pb-1 pr-3 font-medium">Field</th>
-                        <th className="pb-1 font-medium">New Value</th>
+                        <th scope="col" className="pb-1 pr-3 font-medium">Field</th>
+                        <th scope="col" className="pb-1 font-medium">New Value</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {Object.entries(edit.changes).map(([field, value]) => (
+                      {Object.entries(edit.changes).filter(([field]) => field !== "_audit").map(([field, value]) => (
                         <tr key={field} className="border-t border-zinc-200 dark:border-zinc-700">
                           <td className="py-1 pr-3 font-medium text-zinc-600 dark:text-zinc-400">
                             {formatFieldName(field)}
@@ -181,7 +251,7 @@ export default function PendingEditsPage() {
         </div>
       )}
 
-      {total > 50 && (
+      {total > PAGE_SIZE && (
         <div className="flex items-center justify-center gap-2">
           <Button
             variant="outline"
@@ -192,12 +262,12 @@ export default function PendingEditsPage() {
             Previous
           </Button>
           <span className="text-sm text-muted-foreground">
-            Page {page} of {Math.ceil(total / 50)}
+            Page {page} of {Math.ceil(total / PAGE_SIZE)}
           </span>
           <Button
             variant="outline"
             size="sm"
-            disabled={page >= Math.ceil(total / 50)}
+            disabled={page >= Math.ceil(total / PAGE_SIZE)}
             onClick={() => setPage((p) => p + 1)}
           >
             Next

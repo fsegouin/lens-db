@@ -20,7 +20,7 @@ export default async function EditCollectionPage({
   const collection = await db
     .select()
     .from(collections)
-    .where(eq(collections.id, parseInt(id)))
+    .where(eq(collections.id, parseInt(id, 10)))
     .then((r) => r[0]);
 
   if (!collection) notFound();
@@ -33,7 +33,7 @@ export default async function EditCollectionPage({
     })
     .from(lensCollections)
     .innerJoin(lenses, eq(lensCollections.lensId, lenses.id))
-    .where(eq(lensCollections.collectionId, parseInt(id)));
+    .where(eq(lensCollections.collectionId, parseInt(id, 10)));
 
   return (
     <EditPageWithReport title="Edit Collection">

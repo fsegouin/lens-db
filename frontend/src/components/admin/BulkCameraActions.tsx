@@ -64,6 +64,8 @@ function SetFieldModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => onClose(false)}>
       <div
+        role="dialog"
+        aria-label="Set field value"
         className="w-full max-w-md rounded-xl border border-zinc-200 bg-white p-6 shadow-xl dark:border-zinc-700 dark:bg-zinc-900"
         onClick={(e) => e.stopPropagation()}
       >
@@ -73,6 +75,7 @@ function SetFieldModal({
 
         <div className="mt-4 space-y-3">
           <select
+            aria-label="Field to set"
             value={field}
             onChange={(e) => setField(e.target.value)}
             className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
@@ -83,6 +86,7 @@ function SetFieldModal({
           </select>
           <input
             type="text"
+            aria-label="Field value"
             placeholder="Value..."
             value={fieldValue}
             onChange={(e) => setFieldValue(e.target.value)}
@@ -92,12 +96,14 @@ function SetFieldModal({
 
         <div className="mt-6 flex justify-end gap-2">
           <button
+            type="button"
             onClick={() => onClose(false)}
             className="rounded-md px-4 py-2 text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
           >
             Cancel
           </button>
           <button
+            type="button"
             onClick={handleSubmit}
             disabled={submitting}
             className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"

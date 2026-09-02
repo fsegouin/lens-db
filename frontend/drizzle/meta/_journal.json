@@ -120,6 +120,34 @@
       "when": 1784485748656,
       "tag": "0016_reset-broken-classifier-estimates",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1788171061596,
+      "tag": "0017_common_the_liberteens",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1788184748751,
+      "tag": "0018_overrated_retro_girl",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1788336775924,
+      "tag": "0019_unknown_alice",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1788337551856,
+      "tag": "0020_aberrant_squadron_supreme",
+      "breakpoints": true
     }
   ]
 }

@@ -219,11 +219,12 @@ export default function EditButton({
               <div className="space-y-3">
                 {fields.map((field) => (
                   <div key={field.name}>
-                    <label className="mb-1 block text-xs font-medium text-muted-foreground">
+                    <label htmlFor={`edit-field-${field.name}`} className="mb-1 block text-xs font-medium text-muted-foreground">
                       {field.label}
                     </label>
                     {field.type === "select" ? (
                       <select
+                        id={`edit-field-${field.name}`}
                         value={String(values[field.name] ?? "")}
                         onChange={(e) =>
                           setValues((v) => ({
@@ -242,6 +243,7 @@ export default function EditButton({
                       </select>
                     ) : field.type === "textarea" ? (
                       <Textarea
+                        id={`edit-field-${field.name}`}
                         value={String(values[field.name] ?? "")}
                         onChange={(e) =>
                           setValues((v) => ({ ...v, [field.name]: e.target.value }))
@@ -251,6 +253,7 @@ export default function EditButton({
                     ) : field.type === "boolean" ? (
                       <label className="flex items-center gap-2 text-sm">
                         <input
+                          id={`edit-field-${field.name}`}
                           type="checkbox"
                           checked={Boolean(values[field.name])}
                           onChange={(e) =>
@@ -262,6 +265,7 @@ export default function EditButton({
                       </label>
                     ) : (
                       <Input
+                        id={`edit-field-${field.name}`}
                         type={field.type}
                         value={String(values[field.name] ?? "")}
                         onChange={(e) =>
@@ -279,10 +283,11 @@ export default function EditButton({
                 ))}
 
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-muted-foreground">
+                  <label htmlFor="edit-summary" className="mb-1 block text-xs font-medium text-muted-foreground">
                     Edit summary *
                   </label>
                   <Input
+                    id="edit-summary"
                     value={summary}
                     onChange={(e) => setSummary(e.target.value)}
                     placeholder="Briefly describe your changes"

@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
+const PAGE_SIZE = 50;
+
 type Revision = {
   id: number;
   entityType: string;
@@ -189,7 +191,7 @@ export default function RecentChangesPage() {
         </div>
       )}
 
-      {total > 50 && (
+      {total > PAGE_SIZE && (
         <div className="flex items-center justify-center gap-2">
           <Button
             variant="outline"
@@ -200,12 +202,12 @@ export default function RecentChangesPage() {
             Previous
           </Button>
           <span className="text-sm text-muted-foreground">
-            Page {page} of {Math.ceil(total / 50)}
+            Page {page} of {Math.ceil(total / PAGE_SIZE)}
           </span>
           <Button
             variant="outline"
             size="sm"
-            disabled={page >= Math.ceil(total / 50)}
+            disabled={page >= Math.ceil(total / PAGE_SIZE)}
             onClick={() => setPage((p) => p + 1)}
           >
             Next

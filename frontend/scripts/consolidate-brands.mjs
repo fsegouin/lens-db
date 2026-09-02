@@ -121,7 +121,7 @@ const BRAND_UPDATES = [
 
 console.log(`\n=== Brand Consolidation Migration ${dryRun ? '(DRY RUN)' : ''} ===\n`);
 
-// Step 1: Show current state
+// Step 1: Apply brand consolidation updates
 let totalUpdated = 0;
 
 for (const [desc, whereClause, targetBrand] of BRAND_UPDATES) {
@@ -130,7 +130,6 @@ for (const [desc, whereClause, targetBrand] of BRAND_UPDATES) {
   const count = countResult[0].cnt;
 
   if (count === 0) {
-    // Skip silently
     continue;
   }
 

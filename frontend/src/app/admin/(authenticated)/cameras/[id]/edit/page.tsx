@@ -21,7 +21,7 @@ export default async function EditCameraPage({
     db
       .select()
       .from(cameras)
-      .where(eq(cameras.id, parseInt(id)))
+      .where(eq(cameras.id, parseInt(id, 10)))
       .then((r) => r[0]),
     db
       .select({ id: systems.id, name: systems.name })

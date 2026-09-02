@@ -52,6 +52,7 @@ export default function RegisterPage() {
           <input
             id="displayName"
             type="text"
+            autoComplete="nickname"
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
             placeholder="Your public name"
@@ -68,6 +69,7 @@ export default function RegisterPage() {
           <input
             id="email"
             type="email"
+            autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@example.com"
@@ -82,6 +84,7 @@ export default function RegisterPage() {
           <input
             id="password"
             type="password"
+            autoComplete="new-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="8-128 characters"

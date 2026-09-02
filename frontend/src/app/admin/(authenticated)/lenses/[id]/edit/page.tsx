@@ -20,7 +20,7 @@ export default async function EditLensPage({
   const lens = await db
     .select()
     .from(lenses)
-    .where(eq(lenses.id, parseInt(id)))
+    .where(eq(lenses.id, parseInt(id, 10)))
     .then((r) => r[0]);
 
   if (!lens) notFound();

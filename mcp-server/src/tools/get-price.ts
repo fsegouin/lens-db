@@ -24,7 +24,7 @@ export async function getPrice(params: GetPriceParams) {
     .limit(1);
 
   if (!entity) {
-    const fuzzyPattern = '%' + escapeLikeMetachars(params.slug) + '%';
+    const fuzzyPattern = `%${escapeLikeMetachars(params.slug)}%`;
     [entity] = await db
       .select({ id: table.id, name: table.name })
       .from(table)

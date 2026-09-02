@@ -45,7 +45,7 @@ export default function AdminSidebar({ pendingEditCount, unpatrolledCount = 0, p
         className="fixed top-3 left-3 z-[60] rounded-md border border-zinc-200 bg-white p-2 shadow-sm md:hidden dark:border-zinc-700 dark:bg-zinc-900"
         aria-label="Open menu"
       >
-        <svg className="h-5 w-5 text-zinc-700 dark:text-zinc-300" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+        <svg aria-hidden="true" className="h-5 w-5 text-zinc-700 dark:text-zinc-300" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
         </svg>
       </button>
@@ -80,7 +80,7 @@ export default function AdminSidebar({ pendingEditCount, unpatrolledCount = 0, p
             className="rounded-md p-1 text-zinc-400 hover:text-zinc-600 md:hidden dark:hover:text-zinc-300"
             aria-label="Close menu"
           >
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <svg aria-hidden="true" className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
             </svg>
           </button>

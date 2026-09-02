@@ -11,7 +11,7 @@ The Lens DB is a camera and lens database project built from archived `lens-db.c
   TypeScript MCP server exposing lens/camera search, detail, price, and compatibility tools. Its tool implementations are also consumed by the frontend chat via the `lens-db-mcp-server` workspace dependency.
 
 - `scraper/`
-  Python tools for discovering archived pages, downloading them from the Wayback Machine, parsing structured data, and importing it into PostgreSQL, plus eBay price-scraping scripts.
+  Python tools for discovering archived pages, downloading them from the Wayback Machine, parsing structured data, and importing it into PostgreSQL, plus Node scripts (eBay price scrapers and the DPReview new-lens watcher) run via GitHub Actions in `.github/workflows/` or manually against the `/api/cron/*` endpoints.
 
 - `docs/`
   Project notes and implementation plans.
@@ -27,7 +27,7 @@ The frontend lives in [`frontend/`](frontend/) and uses:
 - Neon PostgreSQL
 - Tailwind CSS v4
 - Upstash Redis for rate limiting
-- Vercel AI SDK (AI Gateway) for chat and price classification
+- Vercel AI SDK (AI Gateway) for chat, price classification, and DPReview import dedupe/audit checks
 - Resend for verification emails
 - Cloudflare R2 for image storage
 
