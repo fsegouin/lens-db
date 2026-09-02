@@ -109,6 +109,13 @@ export function cameraDescription(
   camera: CameraLike,
   systemName: string | null,
 ): string {
+  return clamp(
+    `${cameraLead(camera, systemName)} Full specifications, used price history and the lenses that fit it.`,
+  );
+}
+
+/** The on-page version: no truncation, no search-result tail. */
+export function cameraLead(camera: CameraLike, systemName: string | null): string {
   const lead = sentence(
     [
       `${camera.name} is a`,
@@ -121,9 +128,7 @@ export function cameraDescription(
     " ",
   );
 
-  return clamp(
-    `${lead}. Full specifications, used price history and the lenses that fit it.`,
-  );
+  return `${lead}.`;
 }
 
 type EntityMetadataInput = {

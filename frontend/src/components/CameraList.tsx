@@ -305,14 +305,14 @@ export default function CameraList({
           </select>
         </div>
         <div>
-          <label className="sr-only" htmlFor="camera-model">Model</label>
+          <label className="sr-only" htmlFor="camera-model">Shutter</label>
           <select
             id="camera-model"
             value={formModel}
             onChange={(e) => { setFormModel(e.target.value); applyFilters({ model: e.target.value }); }}
             className="filter-select h-10 rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
           >
-            <option value="">All models</option>
+            <option value="">All shutters</option>
             {models.map((m) => (
               <option key={m} value={m}>{m}</option>
             ))}
@@ -425,7 +425,7 @@ export default function CameraList({
                 { key: "name", label: "Name" },
                 { key: "system", label: "System" },
                 { key: "sensorSize", label: "Sensor Size", sortable: false },
-                { key: "model", label: "Model", sortable: false },
+                { key: "model", label: "Shutter", sortable: false },
                 { key: "filmType", label: "Film Type", sortable: false },
                 { key: "year", label: "Year" },
                 { key: "price", label: "Avg Price" },
