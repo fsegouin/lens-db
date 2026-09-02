@@ -9,6 +9,7 @@ import { getImages } from "@/lib/images";
 import { specValue } from "@/lib/spec-value";
 import { getLensBySlug, getLensSlugById } from "@/lib/lenses";
 import { getLensRelations } from "@/lib/lens-relations";
+import { brandSlug } from "@/lib/brands";
 import {
   entityMetadata,
   lensDescription,
@@ -153,7 +154,7 @@ export default async function LensDetailPage({
       ? [
           {
             name: lens.brand,
-            path: `/lenses?brand=${encodeURIComponent(lens.brand)}`,
+            path: `/brands/${brandSlug(lens.brand)}`,
           },
         ]
       : []),
@@ -310,7 +311,7 @@ export default async function LensDetailPage({
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
           {lens.brand && (
-            <Link href={`/lenses?brand=${encodeURIComponent(lens.brand)}`} className="inline-flex">
+            <Link href={`/brands/${brandSlug(lens.brand)}`} className="inline-flex">
               <Badge variant="brand">{lens.brand}</Badge>
             </Link>
           )}

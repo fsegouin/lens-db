@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { unstable_cache } from "next/cache";
 import { db } from "@/db";
 import { lenses, cameras, systems, collections, lensSeries } from "@/db/schema";
+import { getBrands } from "@/lib/brands";
 import { isNull } from "drizzle-orm";
 
 const getSitemapSlugs = unstable_cache(
@@ -37,10 +38,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${baseUrl}/systems`, changeFrequency: "monthly", priority: 0.8 },
     { url: `${baseUrl}/collections`, changeFrequency: "monthly", priority: 0.8 },
     { url: `${baseUrl}/lenses/series`, changeFrequency: "monthly", priority: 0.7 },
+    { url: `${baseUrl}/brands`, changeFrequency: "monthly", priority: 0.8 },
   ];
 
-  const { lensRows, cameraRows, systemRows, collectionRows, seriesRows } =
-    await getSitemapSlugs();
+  const [{ lensRows, cameraRows, systemRows, collectionRows, seriesRows }, brands] =
+    await Promise.all([getSitemapSlugs(), getBrands()]);
+
+  const brandPages: MetadataRoute.Sitemap = brands.map((b) => ({
+    url: `${baseUrl}/brands/${b.slug}`,
+    changeFrequency: "monthly",
+    priority: 0.6,
+  }));
 
   const lensPages: MetadataRoute.Sitemap = lensRows.map((r) => ({
     url: `${baseUrl}/lenses/${r.slug}`,
@@ -89,5 +97,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...systemPages,
     ...collectionPages,
     ...seriesPages,
+    ...brandPages,
   ];
 }

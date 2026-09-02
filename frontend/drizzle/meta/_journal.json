@@ -169,6 +169,13 @@
       "when": 1788385403455,
       "tag": "0023_strip_camera_slug_prefix",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1788385916603,
+      "tag": "0024_normalize_lens_brands",
+      "breakpoints": true
     }
   ]
 }
