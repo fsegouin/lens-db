@@ -186,8 +186,9 @@ export default async function AdapterPage({
 
       <p className="mt-8 border-t border-border pt-4 text-xs text-muted-foreground">
         Worked out from the two mounts&rsquo; flange focal distances. It does not
-        account for whether an adapter exists commercially, for electronic
-        contacts, or for mirror clearance on SLR bodies.
+        account for whether the lens covers the body&rsquo;s sensor, whether an
+        adapter exists commercially, for electronic contacts, or for mirror
+        clearance on SLR bodies.
       </p>
     </div>
   );
