@@ -148,6 +148,13 @@
       "when": 1788337551856,
       "tag": "0020_aberrant_squadron_supreme",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1788352487416,
+      "tag": "0021_system_redirects",
+      "breakpoints": true
     }
   ]
 }
