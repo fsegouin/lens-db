@@ -149,18 +149,24 @@ export const listLenses = unstable_cache(
       rating: lenses.averageRating,
       price: avgPrice,
     };
-    const sortKey = p.sort || "";
+    // Default: chronological (oldest first), unknown years last, then alphabetical.
+    const sortKey = p.sort || "year";
     const sortCol = sortColumns[sortKey] || lenses.name;
     const orderFn = p.order === "desc" ? desc : asc;
     const sortByName = sortCol === lenses.name;
     // When sorting by name, sort by the name prefix (before focal length), then focal length numerically
     const namePrefix = sql`regexp_replace(${lenses.name}, '\\d+(\\.\\d+)?mm.*$', '')`;
-    // For price sorting, push NULLs to the end
+    // Other sorts break ties the same way name sorting orders rows, so equal
+    // years / prices / weights come out alphabetically.
+    const nameTieBreak = [asc(namePrefix), asc(lenses.focalLengthMin), asc(lenses.apertureMin)];
+    // For price and year sorting, push NULLs to the end regardless of direction
     const orderClauses = sortByName
       ? [orderFn(namePrefix), asc(lenses.focalLengthMin), asc(lenses.apertureMin)]
       : sortKey === "price"
-      ? [sql`${avgPrice} IS NULL`, orderFn(sortCol)]
-      : [orderFn(sortCol)];
+      ? [sql`${avgPrice} IS NULL`, orderFn(sortCol), ...nameTieBreak]
+      : sortKey === "year"
+      ? [sql`${lenses.yearIntroduced} IS NULL`, orderFn(sortCol), ...nameTieBreak]
+      : [orderFn(sortCol), ...nameTieBreak];
 
     const needsSystemJoin = !!p.system;
 
