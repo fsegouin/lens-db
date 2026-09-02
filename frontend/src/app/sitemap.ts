@@ -13,7 +13,7 @@ const getSitemapSlugs = unstable_cache(
           .from(lenses)
           .where(isNull(lenses.mergedIntoId)),
         db
-          .select({ slug: cameras.slug })
+          .select({ slug: cameras.slug, systemId: cameras.systemId })
           .from(cameras)
           .where(isNull(cameras.mergedIntoId)),
         db.select({ slug: systems.slug }).from(systems),
@@ -54,6 +54,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }));
 
+  // "Lenses for <camera>" exists only where a mount is recorded.
+  const cameraLensPages: MetadataRoute.Sitemap = cameraRows
+    .filter((r) => r.systemId != null)
+    .map((r) => ({
+      url: `${baseUrl}/cameras/${r.slug}/lenses`,
+      changeFrequency: "monthly" as const,
+      priority: 0.6,
+    }));
+
   const systemPages: MetadataRoute.Sitemap = systemRows.map((r) => ({
     url: `${baseUrl}/systems/${r.slug}`,
     changeFrequency: "monthly",
@@ -76,6 +85,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...staticPages,
     ...lensPages,
     ...cameraPages,
+    ...cameraLensPages,
     ...systemPages,
     ...collectionPages,
     ...seriesPages,
