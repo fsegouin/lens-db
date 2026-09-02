@@ -5,7 +5,7 @@ import JsonLd from "@/components/JsonLd";
 import { getEntityPriceEstimate, getEntityPriceHistory } from "@/lib/prices";
 import { getCameraBySlug, getCameraSlugById } from "@/lib/cameras";
 import { getCameraRelations } from "@/lib/camera-relations";
-import { cameraDescription, entityMetadata, SITE_URL } from "@/lib/seo";
+import { cameraDescription, cameraLead, entityMetadata, SITE_URL } from "@/lib/seo";
 import { cameraJsonLd } from "@/lib/jsonld";
 import ViewTracker from "@/components/ViewTracker";
 import ImageGallery from "@/components/ImageGallery";
@@ -16,6 +16,9 @@ import SpecsTable from "@/components/SpecsTable";
 import PriceCard from "@/components/PriceCard";
 import EntitySummaryLine from "@/components/EntitySummaryLine";
 import EbayListings from "@/components/EbayListings";
+import Infobox, { type Fact } from "@/components/Infobox";
+import ProvenanceLine from "@/components/ProvenanceLine";
+import { getProvenance } from "@/lib/provenance";
 import { getImages } from "@/lib/images";
 import { specValue } from "@/lib/spec-value";
 import { formatDescription } from "@/lib/format-description";
@@ -34,6 +37,16 @@ function absoluteImages(images: { src: string }[]): string[] {
   return images.map((img) =>
     img.src.startsWith("http") ? img.src : `${SITE_URL}${img.src}`,
   );
+}
+
+/**
+ * `body_type` was imported from the same field as the shutter type for 456
+ * records, so values like "Focal-plane" appear where a body style belongs.
+ * Those are dropped rather than shown as if they described the body.
+ */
+function bodyStyle(value: string | null): string | null {
+  if (!value) return null;
+  return /focal-plane|leaf shutter/i.test(value) ? null : value;
 }
 
 /** Cameras have no brand column; the name's first token is the best proxy. */
@@ -90,10 +103,11 @@ export default async function CameraDetailPage({
 
   const specs = (camera.specs ?? {}) as Record<string, string>;
 
-  const [priceEstimate, priceHistoryRows, relations] = await Promise.all([
+  const [priceEstimate, priceHistoryRows, relations, provenance] = await Promise.all([
     getEntityPriceEstimate("camera", camera.id),
     getEntityPriceHistory("camera", camera.id),
     getCameraRelations(camera.systemId),
+    getProvenance("camera", camera.id),
   ]);
 
   const images = getImages(
@@ -101,7 +115,7 @@ export default async function CameraDetailPage({
     fullSlug,
     (camera.images as Array<{ src: string; alt: string }>) || [],
   );
-  const leadSentence = cameraDescription(camera, system?.name ?? null);
+  const leadSentence = cameraLead(camera, system?.name ?? null);
 
   const crumbs = [
     { name: "Cameras", path: "/cameras" },
@@ -109,9 +123,23 @@ export default async function CameraDetailPage({
     { name: camera.name },
   ];
 
+  const infoboxFacts: Fact[] = [
+    { label: "Mount", value: specValue(system?.name) },
+    { label: "Sensor", value: specValue(camera.sensorSize ?? specs["Maximum format"]) },
+    {
+      label: "Resolution",
+      value: camera.megapixels ?? specValue(specs["Effective pixels"]),
+      unit: camera.megapixels ? "MP" : undefined,
+    },
+    { label: "Sensor type", value: specValue(camera.sensorType) },
+    { label: "Body", value: bodyStyle(camera.bodyType) },
+    { label: "Weight", value: camera.weightG, unit: "g" },
+    { label: "Introduced", value: camera.yearIntroduced },
+  ];
+
   const imagingRows: [string, string | number | null | undefined][] = [
-    ["Type", specs["Type"]],
-    ["Shutter", specs["Model"]],
+    ["Shutter type", specs["Type"]],
+    ["Shutter control", specs["Model"]],
     ["Film Type", specs["Film type"]],
     ["Imaging Sensor", camera.sensorType || specs["Imaging sensor"] || specs["Imaging plane"]],
     ["Sensor Size", camera.sensorSize || specs["Maximum format"]],
@@ -138,8 +166,26 @@ export default async function CameraDetailPage({
     ["GPS", specs["GPS"] && specs["GPS"] !== "None" ? specs["GPS"] : null],
   ];
 
+  const rail = (
+    <div className="space-y-6">
+      <Infobox title="Specifications" facts={infoboxFacts} />
+      <PriceCard estimate={priceEstimate ?? null} history={priceHistoryRows} />
+      <EbayListings query={camera.name} entitySlug={camera.slug} />
+      <div>
+        <h2 className="mb-2 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+          Rate this camera
+        </h2>
+        <RatingWidget
+          cameraId={camera.id}
+          initialAverage={camera.averageRating}
+          initialCount={camera.ratingCount ?? 0}
+        />
+      </div>
+    </div>
+  );
+
   return (
-    <div className="mx-auto max-w-3xl space-y-8">
+    <div className="mx-auto w-full max-w-6xl">
       <JsonLd
         data={cameraJsonLd(
           {
@@ -165,8 +211,8 @@ export default async function CameraDetailPage({
 
       <Breadcrumb crumbs={crumbs} />
 
-      <div>
-        <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100">
+      <div className="mt-4">
+        <h1 className="text-3xl font-bold tracking-tight text-balance">
           {camera.name}
         </h1>
         {camera.alias && (
@@ -174,6 +220,16 @@ export default async function CameraDetailPage({
             Also known as: {camera.alias}
           </p>
         )}
+        <div className="mt-2">
+          <ProvenanceLine
+            entityType="camera"
+            entityId={camera.id}
+            revisionCount={provenance.revisionCount}
+            lastEditedAt={provenance.lastEditedAt}
+            saleCount={priceHistoryRows.length}
+            sourceUrl={camera.url}
+          />
+        </div>
         <div className="mt-2 flex flex-wrap items-center gap-2">
           {system && (
             <Link href={`/systems/${system.slug}`} className="inline-flex">
@@ -184,8 +240,9 @@ export default async function CameraDetailPage({
         </div>
       </div>
 
-      <EntitySummaryLine
-        priceRange={
+      <div className="mt-5">
+        <EntitySummaryLine
+          priceRange={
           priceEstimate?.priceAverageLow && priceEstimate?.priceAverageHigh
             ? {
                 low: Number(priceEstimate.priceAverageLow),
@@ -194,19 +251,24 @@ export default async function CameraDetailPage({
               }
             : null
         }
-        medianPrice={priceEstimate?.medianPrice ?? null}
-        averageRating={camera.averageRating}
-        ratingCount={camera.ratingCount}
-        saleCount={priceHistoryRows.length}
-      />
+          medianPrice={priceEstimate?.medianPrice ?? null}
+          averageRating={camera.averageRating}
+          ratingCount={camera.ratingCount}
+          saleCount={priceHistoryRows.length}
+        />
+      </div>
 
-      <p className="text-lg leading-relaxed text-zinc-700 dark:text-zinc-300">
-        {leadSentence}
-      </p>
+      <div className="mt-8 grid gap-10 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-12">
+        <article className="min-w-0 space-y-8">
+          <div className="space-y-6 lg:hidden">{rail}</div>
 
-      <ImageGallery
-        images={images.map((img) => ({ ...img, alt: img.alt || camera.name }))}
-      />
+          <p className="text-lg leading-relaxed">{leadSentence}</p>
+
+          {images.length > 0 && (
+            <ImageGallery
+              images={images.map((img) => ({ ...img, alt: img.alt || camera.name }))}
+            />
+          )}
 
       {camera.description && (
         <div className="space-y-3">
@@ -217,21 +279,6 @@ export default async function CameraDetailPage({
           ))}
         </div>
       )}
-
-      <PriceCard estimate={priceEstimate ?? null} history={priceHistoryRows} />
-
-      <EbayListings query={camera.name} entitySlug={camera.slug} />
-
-      <div>
-        <h2 className="mb-2 text-sm font-semibold tracking-wider text-muted-foreground uppercase">
-          Rate this camera
-        </h2>
-        <RatingWidget
-          cameraId={camera.id}
-          initialAverage={camera.averageRating}
-          initialCount={camera.ratingCount ?? 0}
-        />
-      </div>
 
       <div className="space-y-5">
         <div>
@@ -374,6 +421,12 @@ export default async function CameraDetailPage({
       </div>
 
       <ViewTracker type="camera" id={camera.id} />
+        </article>
+
+        <aside className="hidden lg:block">
+          <div className="sticky top-20 space-y-6">{rail}</div>
+        </aside>
+      </div>
     </div>
   );
 }
