@@ -17,6 +17,7 @@ import {
   SITE_URL,
 } from "@/lib/seo";
 import { lensJsonLd } from "@/lib/jsonld";
+import { getPriceDisplay } from "@/lib/price-display";
 import ViewTracker from "@/components/ViewTracker";
 import ImageGallery from "@/components/ImageGallery";
 import RatingWidget from "@/components/RatingWidget";
@@ -231,14 +232,7 @@ export default async function LensDetailPage({
     { label: "Mounts", value: specValue(mountNames.join(" · ")) },
   ];
 
-  const priceRange =
-    priceEstimate?.priceAverageLow && priceEstimate?.priceAverageHigh
-      ? {
-          low: Number(priceEstimate.priceAverageLow),
-          high: Number(priceEstimate.priceAverageHigh),
-          currency: priceEstimate.currency ?? "USD",
-        }
-      : null;
+  const priceDisplay = getPriceDisplay(priceEstimate);
 
   const rail = (
     <div className="space-y-6">
@@ -287,7 +281,13 @@ export default async function LensDetailPage({
             ratingCount: lens.ratingCount,
             systemNames: mountNames,
           },
-          priceRange,
+          priceDisplay && priceDisplay.low != null && priceDisplay.high != null
+            ? {
+                low: priceDisplay.low,
+                high: priceDisplay.high,
+                currency: priceDisplay.currency,
+              }
+            : null,
           crumbs,
         )}
       />
@@ -353,8 +353,7 @@ export default async function LensDetailPage({
 
       <div className="mt-5">
         <EntitySummaryLine
-          priceRange={priceRange}
-          medianPrice={priceEstimate?.medianPrice ?? null}
+          priceRange={priceDisplay}
           averageRating={lens.averageRating}
           ratingCount={lens.ratingCount}
           saleCount={priceHistoryRows.length}

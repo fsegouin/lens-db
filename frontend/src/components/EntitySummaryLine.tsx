@@ -1,9 +1,8 @@
 import { Star } from "lucide-react";
 
 type Props = {
-  /** Typical used range, already resolved from the price estimate. */
-  priceRange: { low: number; high: number; currency: string } | null;
-  medianPrice: number | null;
+  /** From getPriceDisplay, the single source of truth for price copy. */
+  priceRange: { low: number | null; high: number | null; currency: string } | null;
   averageRating: number | null;
   ratingCount: number | null;
   saleCount: number;
@@ -27,7 +26,6 @@ function formatMoney(value: number, currency: string): string {
  */
 export default function EntitySummaryLine({
   priceRange,
-  medianPrice,
   averageRating,
   ratingCount,
   saleCount,
@@ -37,12 +35,10 @@ export default function EntitySummaryLine({
   // A range whose ends round to the same figure is a single price, not a
   // range: "$420–$420" is how it read before.
   let price: string | null = null;
-  if (priceRange) {
+  if (priceRange?.low != null && priceRange.high != null) {
     const low = formatMoney(priceRange.low, currency);
     const high = formatMoney(priceRange.high, currency);
     price = low === high ? low : `${low}–${high}`;
-  } else if (medianPrice != null) {
-    price = formatMoney(medianPrice, currency);
   }
 
   if (!price && !averageRating) return null;

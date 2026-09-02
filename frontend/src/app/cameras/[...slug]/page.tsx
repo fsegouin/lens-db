@@ -7,6 +7,7 @@ import { getCameraBySlug, getCameraSlugById } from "@/lib/cameras";
 import { getCameraRelations } from "@/lib/camera-relations";
 import { cameraDescription, cameraLead, entityMetadata, SITE_URL } from "@/lib/seo";
 import { cameraJsonLd } from "@/lib/jsonld";
+import { getPriceDisplay } from "@/lib/price-display";
 import ViewTracker from "@/components/ViewTracker";
 import ImageGallery from "@/components/ImageGallery";
 import RatingWidget from "@/components/RatingWidget";
@@ -242,16 +243,7 @@ export default async function CameraDetailPage({
 
       <div className="mt-5">
         <EntitySummaryLine
-          priceRange={
-          priceEstimate?.priceAverageLow && priceEstimate?.priceAverageHigh
-            ? {
-                low: Number(priceEstimate.priceAverageLow),
-                high: Number(priceEstimate.priceAverageHigh),
-                currency: priceEstimate.currency ?? "USD",
-              }
-            : null
-        }
-          medianPrice={priceEstimate?.medianPrice ?? null}
+          priceRange={getPriceDisplay(priceEstimate)}
           averageRating={camera.averageRating}
           ratingCount={camera.ratingCount}
           saleCount={priceHistoryRows.length}
