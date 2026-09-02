@@ -458,6 +458,17 @@ export const lensSystems = pgTable(
   ]
 );
 
+// Old system slugs that now point at a surviving system. Written by
+// scripts/consolidate-systems.mjs when duplicate/variant systems are merged
+// and their rows deleted; /systems/[slug] redirects through this table.
+export const systemRedirects = pgTable("system_redirects", {
+  oldSlug: text("old_slug").primaryKey(),
+  systemId: integer("system_id")
+    .notNull()
+    .references(() => systems.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+});
+
 // Seen-registry for the DPReview new-lens watcher: one row per DPReview
 // product ever processed, so candidates are never re-proposed (including
 // after rejection) and already-matched lenses are never reprocessed.
