@@ -48,6 +48,7 @@ const footerSections = [
     title: "Browse",
     links: [
       { href: "/lenses", label: "Lenses" },
+      { href: "/brands", label: "Brands" },
       { href: "/cameras", label: "Cameras" },
       { href: "/systems", label: "Mounts" },
       { href: "/collections", label: "Collections" },
