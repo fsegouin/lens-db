@@ -1,5 +1,14 @@
 /**
- * Correct bogus release years with an LLM.
+ * Correct bogus release years with an LLM — FIRST PASS ONLY.
+ *
+ * Lesson from 2026-09-02: the unaided model's "high confidence" years were
+ * wrong for roughly a third of the lenses it changed (ZM line 2005 vs 2004,
+ * SLR Zeiss ZE vs ZF dates, Velvet 85, 645 lenses, Voigtländer VM…) and it
+ * called several real 2025/26 products non-existent. Treat its output as a
+ * candidate list, verify each year with a web search (the archived
+ * lens-db.com page slug carries the announcement year), write the result to
+ * a map like lens-years.verified.YYYY-MM-DD.json and apply that with
+ * set-lens-years.mjs, which records the source in every revision.
  *
  * Several import batches (a March 2026 DPReview scrape and the DPReview
  * watcher) stamped lenses with the year they were *seen* rather than the
