@@ -306,7 +306,6 @@ export default async function LensDetailPage({
             revisionCount={provenance.revisionCount}
             lastEditedAt={provenance.lastEditedAt}
             saleCount={priceHistoryRows.length}
-            sourceUrl={lens.url}
           />
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
@@ -539,19 +538,6 @@ export default async function LensDetailPage({
       <Separator />
 
       <div className="space-y-3">
-        {lens.url && /^https?:\/\//i.test(lens.url) && (
-          <p className="text-xs text-muted-foreground">
-            Source:{" "}
-            <a
-              href={lens.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline hover:text-zinc-700 dark:hover:text-zinc-300"
-            >
-              {lens.url}
-            </a>
-          </p>
-        )}
 
         <div className="flex items-center justify-between">
           <EditButton

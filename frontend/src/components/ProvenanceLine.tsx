@@ -6,7 +6,6 @@ type Props = {
   revisionCount: number;
   lastEditedAt: Date | string | null;
   saleCount: number;
-  sourceUrl: string | null;
 };
 
 function formatDate(value: Date | string): string {
@@ -30,7 +29,6 @@ export default function ProvenanceLine({
   revisionCount,
   lastEditedAt,
   saleCount,
-  sourceUrl,
 }: Props) {
   const edited = lastEditedAt ? formatDate(lastEditedAt) : null;
 
@@ -55,20 +53,6 @@ export default function ProvenanceLine({
       </span>,
     );
   }
-  if (sourceUrl && /^https?:\/\//i.test(sourceUrl)) {
-    parts.push(
-      <a
-        key="source"
-        href={sourceUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="underline underline-offset-2 hover:text-foreground"
-      >
-        Source
-      </a>,
-    );
-  }
-
   if (parts.length === 0) return null;
 
   return (

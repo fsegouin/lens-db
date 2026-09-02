@@ -226,7 +226,6 @@ export default async function CameraDetailPage({
             revisionCount={provenance.revisionCount}
             lastEditedAt={provenance.lastEditedAt}
             saleCount={priceHistoryRows.length}
-            sourceUrl={camera.url}
           />
         </div>
         <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -355,19 +354,6 @@ export default async function CameraDetailPage({
       <Separator />
 
       <div className="space-y-3">
-        {camera.url && /^https?:\/\//i.test(camera.url) && (
-          <p className="text-xs text-muted-foreground">
-            Source:{" "}
-            <a
-              href={camera.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline hover:text-zinc-700 dark:hover:text-zinc-300"
-            >
-              {camera.url}
-            </a>
-          </p>
-        )}
 
         <div className="flex items-center justify-between">
           <EditButton
