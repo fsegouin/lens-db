@@ -33,11 +33,17 @@ export default function EntitySummaryLine({
   saleCount,
 }: Props) {
   const currency = priceRange?.currency ?? "USD";
-  const price = priceRange
-    ? `${formatMoney(priceRange.low, currency)}–${formatMoney(priceRange.high, currency)}`
-    : medianPrice != null
-      ? formatMoney(medianPrice, currency)
-      : null;
+
+  // A range whose ends round to the same figure is a single price, not a
+  // range: "$420–$420" is how it read before.
+  let price: string | null = null;
+  if (priceRange) {
+    const low = formatMoney(priceRange.low, currency);
+    const high = formatMoney(priceRange.high, currency);
+    price = low === high ? low : `${low}–${high}`;
+  } else if (medianPrice != null) {
+    price = formatMoney(medianPrice, currency);
+  }
 
   if (!price && !averageRating) return null;
 

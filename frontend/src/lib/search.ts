@@ -29,13 +29,36 @@ function tokenize(query: string): string[] {
     .filter(Boolean);
 }
 
+/** Split a token wherever letters meet digits: "50mm" -> ["50", "mm"]. */
+function splitAtCaseChanges(token: string): string[] {
+  return token.split(/(?<=[a-zA-Z])(?=[0-9])|(?<=[0-9.])(?=[a-zA-Z])/);
+}
+
+/**
+ * Makers punctuate model designations however they like, and people type them
+ * without the punctuation: "Nikon Z 9" gets typed "z9", "Fujifilm X-T5" (which
+ * normalizes to "X T5") gets typed "xt5", "Sony a7 IV" gets typed "a7iv". For a
+ * token mixing letters and digits, allow optional whitespace between every
+ * character so any spelling finds them all. Only whitespace may sit between the
+ * parts, so this stays tight: "xt5" cannot reach across "X Mark III".
+ *
+ * Other tokens split only where letters meet digits, so "50mm" still matches
+ * "50 mm" while "nikon" cannot match a word it merely shares letters with. A
+ * decimal survives either way, because "." rides with the digits.
+ */
+function tokenPattern(token: string): string {
+  const isModelDesignation = /[a-zA-Z]/.test(token) && /[0-9]/.test(token);
+  const parts = isModelDesignation ? token.split("") : splitAtCaseChanges(token);
+  return parts.filter(Boolean).map(escapeRegex).join("\\s*");
+}
+
 /**
  * A token starting with a digit must begin a word, so "35" does not match
- * inside "135". The optional f/F lets a bare "1.4" match "F/1.4" — the way
+ * inside "135". The optional f/F lets a bare "1.4" match "F/1.4", the way
  * photographers actually type an aperture.
  */
 function toPattern(token: string, merged: string | null): string {
-  const body = merged ?? escapeRegex(token);
+  const body = merged ?? tokenPattern(token);
   return /^\d/.test(token) ? `\\m[fF]?${body}` : body;
 }
 
@@ -49,7 +72,7 @@ function buildPatterns(query: string): string[] {
       patterns.push(
         toPattern(
           words[i],
-          `${escapeRegex(words[i])}\\s*${escapeRegex(words[i + 1])}`,
+          `${tokenPattern(words[i])}\\s*${tokenPattern(words[i + 1])}`,
         ),
       );
       i += 2;

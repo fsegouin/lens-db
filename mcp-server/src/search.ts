@@ -25,6 +25,21 @@ function shouldMergeModelFragments(a: string, b: string): boolean {
 }
 
 /**
+ * A token mixing letters and digits is a model designation ("z9", "xt5",
+ * "a7iv"); makers punctuate those inconsistently, so allow optional whitespace
+ * between every character. Other tokens split only where letters meet digits.
+ *
+ * Keep in sync with frontend/src/lib/search.ts.
+ */
+function tokenPattern(token: string): string {
+  const isModelDesignation = /[a-zA-Z]/.test(token) && /[0-9]/.test(token);
+  const parts = isModelDesignation
+    ? token.split("")
+    : token.split(/(?<=[a-zA-Z])(?=[0-9])|(?<=[0-9.])(?=[a-zA-Z])/);
+  return parts.filter(Boolean).map(escapeRegex).join("\\s*");
+}
+
+/**
  * Build regex patterns from a free-text query. May return an empty array
  * when every word is stripped (non-Latin text, symbols) — callers MUST
  * treat an empty result for a non-empty query as "no matches" rather than
@@ -53,10 +68,10 @@ export function buildSearchPatterns(query: string): string[] {
       i + 1 < cleaned.length &&
       shouldMergeModelFragments(cleaned[i], cleaned[i + 1])
     ) {
-      body = `${escapeRegex(cleaned[i])}\\s*${escapeRegex(cleaned[i + 1])}`;
+      body = `${tokenPattern(cleaned[i])}\\s*${tokenPattern(cleaned[i + 1])}`;
       i += 2;
     } else {
-      body = escapeRegex(cleaned[i]);
+      body = tokenPattern(cleaned[i]);
       i++;
     }
     patterns.push(/^\d/.test(first) ? `\\m[fF]?${body}` : body);
