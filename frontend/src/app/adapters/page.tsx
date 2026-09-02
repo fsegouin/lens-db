@@ -119,8 +119,9 @@ export default async function AdaptersPage() {
         the registers differ by less than an adapter can usually be built to.{" "}
         <strong className="font-semibold text-foreground">no</strong> means a
         plain adapter cannot reach infinity, and corrective glass would be
-        needed. None of this accounts for whether an adapter is actually sold,
-        for electronic contacts, or for mirror clearance.
+        needed. All of it is about focus alone: none of it accounts for whether
+        the lens covers the body&rsquo;s sensor, whether an adapter is actually
+        sold, for electronic contacts, or for mirror clearance.
       </p>
     </div>
   );
