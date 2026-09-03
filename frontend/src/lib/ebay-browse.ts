@@ -103,6 +103,73 @@ export async function searchActiveListings(
   return { listings, total: Number(data.total ?? listings.length) };
 }
 
+export interface BrowseQuota {
+  limit: number;
+  remaining: number;
+  /** When the window rolls over. Note this is 07:00 UTC, not midnight. */
+  resetsAt: string | null;
+}
+
+interface RateLimitResponse {
+  rateLimits?: Array<{
+    resources?: Array<{
+      name?: string;
+      rates?: Array<{
+        limit?: number;
+        remaining?: number;
+        reset?: string;
+        timeWindow?: number;
+      }>;
+    }>;
+  }>;
+}
+
+/**
+ * What is left of today's Browse allowance.
+ *
+ * Reading this does not spend any of it: the Developer Analytics API has its
+ * own separate daily allowance, so the pipeline can check as often as it
+ * likes. That is what makes it usable as a guard rather than a diagnostic.
+ *
+ * Returns null when the figure cannot be read, and callers deliberately carry
+ * on in that case: the caller's own budget is the backstop, and halting the
+ * whole pipeline because a reporting endpoint hiccupped would be a worse
+ * failure than the one it is guarding against.
+ */
+export async function getBrowseQuota(): Promise<BrowseQuota | null> {
+  try {
+    const token = await getEbayAccessToken();
+    const res = await fetch(
+      "https://api.ebay.com/developer/analytics/v1_beta/rate_limit/?api_context=buy&api_name=Browse",
+      {
+        headers: { Authorization: `Bearer ${token}` },
+        signal: AbortSignal.timeout(10000),
+      },
+    );
+    if (!res.ok) return null;
+
+    const data: RateLimitResponse = await res.json();
+    for (const api of data.rateLimits ?? []) {
+      for (const resource of api.resources ?? []) {
+        // "buy.browse" is the search and item calls. "buy.browse.item.bulk"
+        // is a different allowance this pipeline never touches.
+        if (resource.name !== "buy.browse") continue;
+        const daily = (resource.rates ?? []).find((r) => r.timeWindow === 86400)
+          ?? resource.rates?.[0];
+        if (!daily || daily.remaining == null || daily.limit == null) continue;
+        return {
+          limit: daily.limit,
+          remaining: daily.remaining,
+          resetsAt: daily.reset ?? null,
+        };
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export type Resolution =
   /** Still open for bids or offers. Check again later. */
   | { state: "active" }
