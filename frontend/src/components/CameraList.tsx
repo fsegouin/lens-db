@@ -558,7 +558,7 @@ export default function CameraList({
         <>
         {/* A 975px table in a 358px viewport scrolled sideways and detached
             every value from its camera. Below lg the same rows are cards. */}
-        <div className="hidden lg:block">
+        <div className="hidden xl:block">
         <Table>
           <TableHeader>
             <TableRow>
@@ -687,18 +687,11 @@ export default function CameraList({
               );
             })}
             {loading && <TableSkeleton columns={8} rows={3} />}
-            {nextCursor !== null && (
-              <TableRow>
-                <TableCell colSpan={8} className="p-0">
-                  <div ref={sentinelRef} className="h-px w-full" />
-                </TableCell>
-              </TableRow>
-            )}
           </TableBody>
         </Table>
         </div>
 
-        <ul className="divide-y divide-border border-y border-border lg:hidden">
+        <ul className="divide-y divide-border border-y border-border xl:hidden">
           {items.map(({ camera, system: sys, avgPrice }) => {
             const specs = (camera.specs ?? {}) as Record<string, string>;
             const specLine = [
@@ -706,6 +699,7 @@ export default function CameraList({
               camera.megapixels ? `${camera.megapixels} MP` : null,
               camera.bodyType,
               camera.yearIntroduced,
+              camera.weightG ? `${camera.weightG}g` : null,
             ]
               .filter(Boolean)
               .join(" \u00b7 ");
@@ -744,10 +738,15 @@ export default function CameraList({
         {/* The skeleton lives inside the desktop wrapper, so without this the
             card list had no sign that more rows were on the way. */}
         {loading && (
-          <p className="py-3 text-center text-sm text-muted-foreground lg:hidden">
+          <p className="py-3 text-center text-sm text-muted-foreground xl:hidden">
             Loading more...
           </p>
         )}
+
+        {/* Outside both layouts, so one observer serves the table and the
+            cards. Inside the table it was inert wherever the table was
+            hidden, which capped every phone at the first page. */}
+        {nextCursor !== null && <div ref={sentinelRef} className="h-px w-full" />}
         </>
       ) : (
         <div className="rounded-xl border border-dashed border-border p-12 text-center">
