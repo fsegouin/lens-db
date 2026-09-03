@@ -310,7 +310,16 @@ export function scoreFile(file, name) {
   if (/\b(repair|disassembl|broken|box|manual|advert|ad\b|logo|patent)\b/i.test(title)) score -= 25;
   // A base-model query matches its own special editions ("Leica M3" ->
   // "Leica M3 Gold"), which are the wrong camera to show on the base page.
-  if (/\b(gold|titanium|anniversary|edition|limited|commemorative)\b/i.test(title)) score -= 30;
+  if (/\b(gold|titanium|anniversary|edition|limited|commemorative|jubil)/i.test(title)) score -= 30;
+  // Likewise anything altered from the stock body: Commons has a NASA-modified
+  // Nikon F3, an F5 carrying a Kodak DCS digital back, and a gold-plated
+  // Exakta. Each is a photograph of something that is not the camera the page
+  // is about. German terms appear because much of the Exakta and Praktica
+  // material was uploaded from German-language sources.
+  // No trailing boundary: the words appear inflected ("vergoldete") and with
+  // digits attached ("DCS660"), neither of which \b would match.
+  if (/\b(nasa|modifi|prototype|cutaway|custom|umbau|vergoldet)/i.test(title)) score -= 35;
+  if (/\bdcs\d*/i.test(title) && !/\bkodak\b/i.test(name)) score -= 35;
   if (/\b(front|body|camera)\b/i.test(title)) score += 5;
 
   return score;
