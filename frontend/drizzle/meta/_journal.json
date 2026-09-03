@@ -288,6 +288,13 @@
       "when": 1788436595304,
       "tag": "0040_watch_all_listings",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1788445921770,
+      "tag": "0041_asking_snapshot_retention",
+      "breakpoints": true
     }
   ]
 }
