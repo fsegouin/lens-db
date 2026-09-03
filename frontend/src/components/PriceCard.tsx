@@ -6,7 +6,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import PriceChart from "@/components/PriceChart";
+import PriceChart, { type AskingSnapshot } from "@/components/PriceChart";
 import { getPriceDisplay } from "@/lib/price-display";
 
 interface PriceEstimate {
@@ -34,6 +34,8 @@ interface PriceHistoryEntry {
 interface PriceCardProps {
   estimate: PriceEstimate | null;
   history: PriceHistoryEntry[];
+  /** Daily asking aggregates, charted against the recorded sales. */
+  asking?: AskingSnapshot[];
 }
 
 function formatPrice(low: number | null, high: number | null) {
@@ -61,7 +63,11 @@ function formatCondition(cond: string | null) {
   return labels[cond] ?? cond;
 }
 
-export default function PriceCard({ estimate, history }: PriceCardProps) {
+export default function PriceCard({
+  estimate,
+  history,
+  asking = [],
+}: PriceCardProps) {
   const shownEstimate =
     estimate != null &&
     (estimate.priceAverageLow != null || estimate.priceVeryGoodLow != null)
@@ -71,7 +77,7 @@ export default function PriceCard({ estimate, history }: PriceCardProps) {
   // An estimate row can exist with no prices at all (1,707 lens rows do).
   // Without prices and without sales there is nothing to show, and a bare
   // "Used prices" heading over an empty box is worse than no section.
-  if (!shownEstimate && history.length === 0) return null;
+  if (!shownEstimate && history.length === 0 && asking.length === 0) return null;
 
   const display = getPriceDisplay(shownEstimate);
   const showTiers = display?.showTiers ?? false;
@@ -147,7 +153,9 @@ export default function PriceCard({ estimate, history }: PriceCardProps) {
         </div>
       )}
 
-      {history.length >= 2 && <PriceChart history={history} />}
+      {(history.length >= 2 || asking.length >= 2) && (
+        <PriceChart history={history} asking={asking} />
+      )}
 
       {history.length > 0 && (
         <details className="group">

@@ -4,7 +4,11 @@ import Breadcrumb from "@/components/Breadcrumb";
 import JsonLd from "@/components/JsonLd";
 import { getRivalsForLens } from "@/lib/compare";
 import { getOwnersOf } from "@/lib/kit";
-import { getEntityPriceEstimate, getEntityPriceHistory } from "@/lib/prices";
+import {
+  getEntityPriceEstimate,
+  getEntityPriceHistory,
+  getEntityAskingHistory,
+} from "@/lib/prices";
 import { formatDescription } from "@/lib/format-description";
 import { formatMagnification } from "@/lib/format-magnification";
 import { getImages } from "@/lib/images";
@@ -117,10 +121,19 @@ export default async function LensDetailPage({
     if (targetSlug) permanentRedirect(`/lenses/${targetSlug}`);
   }
 
-  const [priceEstimate, priceHistoryRows, relations, provenance, rivals, owners] =
+  const [
+    priceEstimate,
+    priceHistoryRows,
+    askingRows,
+    relations,
+    provenance,
+    rivals,
+    owners,
+  ] =
     await Promise.all([
       getEntityPriceEstimate("lens", lens.id),
       getEntityPriceHistory("lens", lens.id),
+      getEntityAskingHistory("lens", lens.id),
       getLensRelations(lens.id, lens.systemId, lens.versionGroupId),
       getProvenance("lens", lens.id),
       getRivalsForLens(lens.id),
@@ -245,7 +258,11 @@ export default async function LensDetailPage({
   const rail = (
     <div className="space-y-6">
       <Infobox title="Specifications" facts={infoboxFacts} />
-      <PriceCard estimate={priceEstimate ?? null} history={priceHistoryRows} />
+      <PriceCard
+        estimate={priceEstimate ?? null}
+        history={priceHistoryRows}
+        asking={askingRows}
+      />
       <EbayListings query={lens.name} entityType="lens" entitySlug={lens.slug} />
       <div>
         <h2 className="mb-2 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
