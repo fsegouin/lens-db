@@ -16,6 +16,7 @@ import { Separator } from "@/components/ui/separator";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
+import FooterNav from "@/components/FooterNav";
 
 export const metadata: Metadata = {
   title: {
@@ -117,27 +118,7 @@ export default function RootLayout({
             <Separator />
             <footer>
               <div className="mx-auto max-w-7xl space-y-8 px-4 py-10 sm:px-6 lg:px-8">
-                <div className="grid gap-8 sm:grid-cols-3">
-                  {footerSections.map((section) => (
-                    <div key={section.title}>
-                      <h2 className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-                        {section.title}
-                      </h2>
-                      <ul className="mt-3 space-y-2">
-                        {section.links.map((link) => (
-                          <li key={link.href}>
-                            <Link
-                              href={link.href}
-                              className="text-sm text-muted-foreground underline-offset-2 hover:text-zinc-900 hover:underline dark:text-zinc-400 dark:hover:text-zinc-100"
-                            >
-                              {link.label}
-                            </Link>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ))}
-                </div>
+                <FooterNav sections={footerSections} />
                 <div className="space-y-2 border-t border-border pt-6">
                   <p className="text-sm text-muted-foreground">
                     The Lens DB, a community reference for camera lenses,

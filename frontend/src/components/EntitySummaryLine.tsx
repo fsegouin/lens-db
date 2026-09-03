@@ -49,33 +49,41 @@ export default function EntitySummaryLine({
   if (!price && !averageRating && !trailing) return null;
 
   return (
-    <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-y border-border py-3 text-sm">
-      {price && (
-        <span className="flex items-baseline gap-1.5">
-          <span className="text-muted-foreground">Used</span>
-          <span className="font-semibold text-zinc-900 tabular-nums dark:text-zinc-100">
-            {price}
+    /*
+     * The facts and the control are two flex children rather than one flat
+     * row. With justify-between they sit at either end when they fit, and a
+     * control that wraps to its own line is the only item on it, so it lands
+     * at the start instead of being pushed right by an auto margin.
+     */
+    <div className="flex flex-wrap items-center justify-between gap-x-5 gap-y-2 border-y border-border py-3 text-sm">
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+        {price && (
+          <span className="flex items-baseline gap-1.5">
+            <span className="text-muted-foreground">Used</span>
+            <span className="font-semibold text-zinc-900 tabular-nums dark:text-zinc-100">
+              {price}
+            </span>
           </span>
-        </span>
-      )}
-      {averageRating != null && (ratingCount ?? 0) > 0 && (
-        <span className="flex items-center gap-1.5">
-          <Star className="h-3.5 w-3.5 fill-amber-500 text-amber-500" aria-hidden="true" />
-          <span className="font-semibold text-zinc-900 tabular-nums dark:text-zinc-100">
-            {averageRating.toFixed(1)}
+        )}
+        {averageRating != null && (ratingCount ?? 0) > 0 && (
+          <span className="flex items-center gap-1.5">
+            <Star className="h-3.5 w-3.5 fill-amber-500 text-amber-500" aria-hidden="true" />
+            <span className="font-semibold text-zinc-900 tabular-nums dark:text-zinc-100">
+              {averageRating.toFixed(1)}
+            </span>
+            <span className="text-muted-foreground">
+              /10 from {ratingCount!.toLocaleString()}{" "}
+              {ratingCount === 1 ? "rating" : "ratings"}
+            </span>
           </span>
-          <span className="text-muted-foreground">
-            /10 from {ratingCount!.toLocaleString()}{" "}
-            {ratingCount === 1 ? "rating" : "ratings"}
+        )}
+        {saleCount > 0 && (
+          <span className="text-muted-foreground tabular-nums">
+            {saleCount.toLocaleString()} recorded {saleCount === 1 ? "sale" : "sales"}
           </span>
-        </span>
-      )}
-      {saleCount > 0 && (
-        <span className="text-muted-foreground tabular-nums">
-          {saleCount.toLocaleString()} recorded {saleCount === 1 ? "sale" : "sales"}
-        </span>
-      )}
-      {trailing && <span className="ml-auto">{trailing}</span>}
+        )}
+      </div>
+      {trailing}
     </div>
   );
 }

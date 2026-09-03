@@ -378,35 +378,61 @@ export default function KitManager({
         </label>
       </div>
 
-      <div className="mt-6 overflow-x-auto">
-        <table className="w-full border-collapse text-sm">
-          <thead>
-            <tr>
-              {["Item", "Qty", "Condition", "Acquired", `Paid (${currency})`, "Worth used (USD)", ""].map((h) => (
-                <th
-                  key={h}
-                  scope="col"
-                  className="border-b border-border bg-muted px-3 py-2 text-left text-xs font-medium tracking-wider text-muted-foreground uppercase"
-                >
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((item) => (
-              <KitRow
-                key={item.id}
-                item={item}
-                saving={savingId === item.id}
-                currency={currency}
-                onPatch={patch}
-                onRemove={remove}
-              />
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {/* Lenses and bodies are shopped for and valued separately, so they get
+          a table each rather than one list sorted by when it was added. */}
+      {(
+        [
+          ["lens", "Lenses"],
+          ["camera", "Cameras"],
+        ] as const
+      ).map(([type, label]) => {
+        const section = items.filter((i) => i.entityType === type);
+        if (section.length === 0) return null;
+        return (
+          <section key={type} className="mt-8">
+            <h2 className="mb-2 text-sm font-semibold tracking-wider text-muted-foreground uppercase">
+              {label}
+            </h2>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-sm">
+                <thead>
+                  <tr>
+                    {[
+                      "Item",
+                      "Qty",
+                      "Condition",
+                      "Acquired",
+                      `Paid (${currency})`,
+                      "Worth used (USD)",
+                      "",
+                    ].map((h) => (
+                      <th
+                        key={h}
+                        scope="col"
+                        className="border-b border-border bg-muted px-3 py-2 text-left text-xs font-medium tracking-wider text-muted-foreground uppercase"
+                      >
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {section.map((item) => (
+                    <KitRow
+                      key={item.id}
+                      item={item}
+                      saving={savingId === item.id}
+                      currency={currency}
+                      onPatch={patch}
+                      onRemove={remove}
+                    />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        );
+      })}
 
       <p className="mt-4 text-sm text-muted-foreground">
         Worth used is the midpoint of recorded sales. A guide, not a valuation.
