@@ -506,7 +506,11 @@ export const priceEstimates = pgTable(
     priceMintHigh: integer("price_mint_high"),
     medianPrice: integer("median_price"), // median of all sale prices — best single "what you'd pay" number
     currency: text("currency").default("USD"),
-    rarity: text("rarity"), // e.g. "Very common", "Common", "Uncommon", "Rare", "Very rare"
+    // Dead since the eBay blackout: rarity was derived from 90-day sold
+    // volume, which stopped being a fact about scarcity the moment ingest
+    // paused. Nothing reads or writes these; kept only so the columns can be
+    // repopulated if a reliable volume signal returns.
+    rarity: text("rarity"),
     rarityVotes: integer("rarity_votes"),
     extractedAt: timestamp("extracted_at", { withTimezone: true }).notNull().defaultNow(),
   },

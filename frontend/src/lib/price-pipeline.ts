@@ -129,6 +129,42 @@ function computeRange(prices: number[]): [number | null, number | null] {
  */
 const MIN_PLAUSIBLE_SALE_USD = 5;
 
+/**
+ * Recency windows tried in order, narrowest first, and the sample count a
+ * window needs before its median is trusted. 90 days is still the preferred
+ * answer whenever the market gives us one.
+ */
+const MEDIAN_WINDOW_DAYS = [90, 365];
+const MIN_SAMPLES_PER_WINDOW = 5;
+
+function medianOf(prices: number[]): number | null {
+  if (prices.length === 0) return null;
+  return prices[Math.floor(prices.length / 2)];
+}
+
+/**
+ * Median sale price from the narrowest window holding enough sales, falling
+ * back to the full retained history. `rows` and `allPrices` are already
+ * filtered to plausible sales inside the retention window; `allPrices` must
+ * be sorted ascending.
+ */
+function medianForWindows(
+  rows: { priceUsd: number | null; saleDate: string | null }[],
+  allPrices: number[],
+): number | null {
+  for (const days of MEDIAN_WINDOW_DAYS) {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - days);
+    const iso = cutoff.toISOString().slice(0, 10);
+    const inWindow = rows
+      .filter((r) => r.saleDate != null && r.saleDate >= iso)
+      .map((r) => r.priceUsd!)
+      .sort((a, b) => a - b);
+    if (inWindow.length >= MIN_SAMPLES_PER_WINDOW) return medianOf(inWindow);
+  }
+  return medianOf(allPrices);
+}
+
 export async function recomputePriceEstimates(
   entityType: string,
   entityId: number,
@@ -161,8 +197,6 @@ export async function recomputePriceEstimates(
         entityType,
         entityId,
         sourceName: "eBay",
-        rarity: "Extremely rare",
-        rarityVotes: 0,
         extractedAt: now,
       })
       .onConflictDoUpdate({
@@ -207,36 +241,13 @@ export async function recomputePriceEstimates(
     mintHigh = allPrices[Math.min(allPrices.length - 1, Math.floor(allPrices.length * 0.95))];
   }
 
-  // Median: prefer 90-day window if enough data
-  const ninetyDaysAgo = new Date();
-  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-
-  const recentRows = await db
-    .select({ priceUsd: priceHistory.priceUsd })
-    .from(priceHistory)
-    .where(
-      and(
-        eq(priceHistory.entityType, entityType),
-        eq(priceHistory.entityId, entityId),
-        gte(priceHistory.priceUsd, MIN_PLAUSIBLE_SALE_USD),
-        sql`${priceHistory.saleDate} >= ${ninetyDaysAgo.toISOString().slice(0, 10)}`,
-      ),
-    );
-
-  const recentPrices = recentRows.map((r) => r.priceUsd!).sort((a, b) => a - b);
-  const medianSource = recentPrices.length >= 5 ? recentPrices : allPrices;
-  const medianPrice = medianSource.length > 0
-    ? medianSource[Math.floor(medianSource.length / 2)]
-    : null;
-
-  // Rarity from 90-day volume
-  const recentCount = recentRows.length;
-  let rarity: string;
-  if (recentCount >= 20) rarity = "Very common";
-  else if (recentCount >= 10) rarity = "Common";
-  else if (recentCount >= 4) rarity = "Somewhat rare";
-  else if (recentCount >= 1) rarity = "Very scarce";
-  else rarity = "Extremely rare";
+  // Median from the narrowest recent window that still holds enough sales.
+  // A fixed 90-day window is only honest while ingest keeps up: the moment it
+  // pauses the window empties, and every lens reads as though the market went
+  // silent rather than as though we stopped looking. Widening on demand keeps
+  // the estimate meaningful through a gap and still prefers fresh data when
+  // there is fresh data to prefer.
+  const medianPrice = medianForWindows(rows, allPrices);
 
   const now = new Date();
 
@@ -253,8 +264,6 @@ export async function recomputePriceEstimates(
       priceMintLow: mintLow,
       priceMintHigh: mintHigh,
       medianPrice,
-      rarity,
-      rarityVotes: recentCount,
       extractedAt: now,
     })
     .onConflictDoUpdate({
@@ -268,8 +277,6 @@ export async function recomputePriceEstimates(
         priceMintLow: mintLow,
         priceMintHigh: mintHigh,
         medianPrice,
-        rarity,
-        rarityVotes: recentCount,
         extractedAt: now,
       },
     });
