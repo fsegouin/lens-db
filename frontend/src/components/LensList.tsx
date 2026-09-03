@@ -704,7 +704,7 @@ export default function LensList({
                       Macro
                     </Badge>
                   )}
-                  {lens.lensType === "teleconverter" && (
+                  {lens.lensType?.toLowerCase() === "teleconverter" && (
                     <Badge
                       variant="teleconverter"
                       className="min-w-[3.25rem] cursor-pointer justify-center"

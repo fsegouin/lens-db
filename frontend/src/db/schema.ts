@@ -108,6 +108,10 @@ export const cameras = pgTable(
     resolution: text("resolution"),
     yearIntroduced: integer("year_introduced"),
     bodyType: text("body_type"),
+    // The shutter mechanism ("Focal-plane", "In-lens leaf shutter"). 476
+    // cameras had it recorded in body_type, where the page showed it as though
+    // it were the body style.
+    shutterType: text("shutter_type"),
     weightG: real("weight_g"),
     viewCount: integer("view_count").default(0),
     averageRating: real("average_rating"),

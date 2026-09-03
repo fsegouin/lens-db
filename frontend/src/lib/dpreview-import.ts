@@ -6,6 +6,8 @@
  * parsing, mount-mapping, and duplicate-detection behavior server-side.
  */
 
+import { normalizeCoverage, normalizeLensType } from "@/lib/vocabularies";
+
 export const DPREVIEW_BOT_EMAIL = "dpreview-watcher@thelensdb.com";
 export const DPREVIEW_BOT_DISPLAY_NAME = "DPReview Watcher";
 
@@ -197,11 +199,10 @@ function parseFloatOrNull(str: string | null | undefined): number | null {
 
 function mapCoverage(formatSize: string | undefined): string | null {
   if (!formatSize) return null;
-  const v = formatSize.toLowerCase();
-  if (v.includes("35mm ff") || v.includes("full frame")) return "full-frame";
-  if (v.includes("aps-c")) return "aps-c";
-  if (v === "ft" || v.includes("four thirds")) return "micro-four-thirds";
-  return null;
+  // DPReview writes the Four Thirds image circle as "FT", which no general
+  // normaliser would recognise; everything else it writes is already handled.
+  if (formatSize.trim().toLowerCase() === "ft") return "micro-four-thirds";
+  return normalizeCoverage(formatSize);
 }
 
 /**
@@ -234,7 +235,7 @@ export function mapDpreviewSpecs(candidate: DpreviewCandidate): Record<string, u
     slug: generateSlug(name),
     url: candidate.dpreviewUrl,
     brand: extractBrand(name),
-    lensType: specs["Lens type"] || null,
+    lensType: normalizeLensType(specs["Lens type"]),
     focalLengthMin: focal?.min ?? null,
     focalLengthMax: focal?.max ?? null,
     apertureMin,

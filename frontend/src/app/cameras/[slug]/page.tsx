@@ -132,12 +132,13 @@ export default async function CameraDetailPage({
     },
     { label: "Sensor type", value: specValue(camera.sensorType) },
     { label: "Body", value: bodyStyle(camera.bodyType) },
+    { label: "Shutter", value: specValue(camera.shutterType) },
     { label: "Weight", value: camera.weightG, unit: "g" },
     { label: "Introduced", value: camera.yearIntroduced },
   ];
 
   const imagingRows: [string, string | number | null | undefined][] = [
-    ["Shutter type", specs["Type"]],
+    ["Shutter type", camera.shutterType || specs["Type"]],
     ["Shutter control", specs["Model"]],
     ["Film Type", specs["Film type"]],
     ["Imaging Sensor", camera.sensorType || specs["Imaging sensor"] || specs["Imaging plane"]],
