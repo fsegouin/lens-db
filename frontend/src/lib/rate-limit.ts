@@ -34,4 +34,10 @@ export const rateLimiters = {
   // One call per entity page view; kept off the shared "search" bucket so
   // browsing detail pages doesn't eat a visitor's list/typeahead allowance.
   ebay: createRateLimit(30, "60 s"),
+  // Cataloguing a shelf is bursty: someone who just found the site adds twenty
+  // bodies and lenses in a couple of minutes, which the ratings allowance this
+  // used to share would cut off after ten. Only signed-in requests ever reach
+  // this limiter, and it is keyed by account rather than by IP, so a household
+  // or an office behind one address no longer shares a single allowance.
+  kit: createRateLimit(60, "60 s"),
 };
