@@ -12,6 +12,131 @@ function money(n: number): string {
 }
 
 /**
+ * One editable row, holding its own field state.
+ *
+ * The fields are controlled from state seeded once at mount rather than from
+ * the item prop. Saving reloads the kit so the totals move, and an uncontrolled
+ * input whose defaultValue changes underneath it warns and then quietly stops
+ * tracking what was typed.
+ */
+function KitRow({
+  item,
+  saving,
+  onPatch,
+  onRemove,
+}: {
+  item: KitItem;
+  saving: boolean;
+  onPatch: (id: number, patch: Record<string, unknown>) => void;
+  onRemove: (id: number) => void;
+}) {
+  const [quantity, setQuantity] = useState(String(item.quantity));
+  const [paid, setPaid] = useState(
+    item.acquiredPriceUsd == null ? "" : String(item.acquiredPriceUsd),
+  );
+  const [condition, setCondition] = useState(item.condition ?? "");
+
+  return (
+    <tr className={saving ? "opacity-50" : ""}>
+      <td className="border-b border-border px-3 py-2">
+        <Link
+          href={`/${item.entityType === "lens" ? "lenses" : "cameras"}/${item.slug}`}
+          className="font-medium hover:underline"
+        >
+          {item.name}
+        </Link>
+        <span className="ml-2 font-mono text-xs text-muted-foreground">
+          {item.yearIntroduced ?? ""}
+        </span>
+      </td>
+      <td className="border-b border-border px-3 py-2">
+        <Input
+          type="number"
+          min={1}
+          max={999}
+          value={quantity}
+          aria-label={`Quantity of ${item.name}`}
+          className="h-8 w-16"
+          onChange={(e) => setQuantity(e.target.value)}
+          onBlur={() => {
+            const q = parseInt(quantity);
+            if (!Number.isInteger(q) || q < 1 || q > 999) {
+              setQuantity(String(item.quantity));
+              return;
+            }
+            if (q !== item.quantity) onPatch(item.id, { quantity: q });
+          }}
+        />
+      </td>
+      <td className="border-b border-border px-3 py-2">
+        <select
+          value={condition}
+          aria-label={`Condition of ${item.name}`}
+          className="h-8 rounded-md border border-border bg-transparent px-2 text-sm"
+          onChange={(e) => {
+            setCondition(e.target.value);
+            onPatch(item.id, { condition: e.target.value || null });
+          }}
+        >
+          <option value="">Not stated</option>
+          {KIT_CONDITIONS.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </select>
+      </td>
+      <td className="border-b border-border px-3 py-2">
+        <Input
+          type="number"
+          min={0}
+          max={1000000}
+          placeholder="$"
+          value={paid}
+          aria-label={`What you paid for ${item.name}`}
+          className="h-8 w-24"
+          onChange={(e) => setPaid(e.target.value)}
+          onBlur={() => {
+            const raw = paid.trim();
+            if (raw === "") {
+              if (item.acquiredPriceUsd != null) {
+                onPatch(item.id, { acquiredPriceUsd: null });
+              }
+              return;
+            }
+            const n = parseInt(raw);
+            if (!Number.isInteger(n) || n < 0) {
+              setPaid(item.acquiredPriceUsd == null ? "" : String(item.acquiredPriceUsd));
+              return;
+            }
+            if (n !== item.acquiredPriceUsd) {
+              onPatch(item.id, { acquiredPriceUsd: n });
+            }
+          }}
+        />
+      </td>
+      <td className="border-b border-border px-3 py-2 font-mono tabular-nums">
+        {item.estimatedUsd != null ? (
+          money(item.estimatedUsd)
+        ) : (
+          <span className="text-muted-foreground">Not recorded</span>
+        )}
+      </td>
+      <td className="border-b border-border px-3 py-2 text-right">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => onRemove(item.id)}
+          aria-label={`Remove ${item.name} from your kit`}
+        >
+          Remove
+        </Button>
+      </td>
+    </tr>
+  );
+}
+
+/**
  * The owner's view of their own kit: one row per thing, editable in place.
  *
  * Everything a person adds here is theirs, so the figures are stated with
@@ -199,84 +324,13 @@ export default function KitManager({
           </thead>
           <tbody>
             {items.map((item) => (
-              <tr key={item.id} className={savingId === item.id ? "opacity-50" : ""}>
-                <td className="border-b border-border px-3 py-2">
-                  <Link
-                    href={`/${item.entityType === "lens" ? "lenses" : "cameras"}/${item.slug}`}
-                    className="font-medium hover:underline"
-                  >
-                    {item.name}
-                  </Link>
-                  <span className="ml-2 font-mono text-xs text-muted-foreground">
-                    {item.yearIntroduced ?? ""}
-                  </span>
-                </td>
-                <td className="border-b border-border px-3 py-2">
-                  <Input
-                    type="number"
-                    min={1}
-                    max={999}
-                    defaultValue={item.quantity}
-                    aria-label={`Quantity of ${item.name}`}
-                    className="h-8 w-16"
-                    onBlur={(e) => {
-                      const q = parseInt(e.target.value);
-                      if (Number.isInteger(q) && q !== item.quantity) {
-                        patch(item.id, { quantity: q });
-                      }
-                    }}
-                  />
-                </td>
-                <td className="border-b border-border px-3 py-2">
-                  <select
-                    defaultValue={item.condition ?? ""}
-                    aria-label={`Condition of ${item.name}`}
-                    className="h-8 rounded-md border border-border bg-transparent px-2 text-sm"
-                    onChange={(e) =>
-                      patch(item.id, { condition: e.target.value || null })
-                    }
-                  >
-                    <option value="">Not stated</option>
-                    {KIT_CONDITIONS.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </select>
-                </td>
-                <td className="border-b border-border px-3 py-2">
-                  <Input
-                    type="number"
-                    min={0}
-                    placeholder="$"
-                    defaultValue={item.acquiredPriceUsd ?? ""}
-                    aria-label={`What you paid for ${item.name}`}
-                    className="h-8 w-24"
-                    onBlur={(e) => {
-                      const raw = e.target.value.trim();
-                      const n = raw === "" ? null : parseInt(raw);
-                      if (n !== item.acquiredPriceUsd) {
-                        patch(item.id, { acquiredPriceUsd: n });
-                      }
-                    }}
-                  />
-                </td>
-                <td className="border-b border-border px-3 py-2 font-mono tabular-nums">
-                  {item.estimatedUsd != null ? money(item.estimatedUsd) : (
-                    <span className="text-muted-foreground">Not recorded</span>
-                  )}
-                </td>
-                <td className="border-b border-border px-3 py-2 text-right">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => remove(item.id)}
-                    aria-label={`Remove ${item.name} from your kit`}
-                  >
-                    Remove
-                  </Button>
-                </td>
-              </tr>
+              <KitRow
+                key={item.id}
+                item={item}
+                saving={savingId === item.id}
+                onPatch={patch}
+                onRemove={remove}
+              />
             ))}
           </tbody>
         </table>
