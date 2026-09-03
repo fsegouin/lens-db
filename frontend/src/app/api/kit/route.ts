@@ -12,7 +12,7 @@ import {
   KIT_CURRENCIES,
   type KitEntityType,
 } from "@/lib/kit";
-import { getClientIP, rateLimitedResponse } from "@/lib/api-utils";
+import { rateLimitedResponse } from "@/lib/api-utils";
 import { rateLimiters } from "@/lib/rate-limit";
 
 const SESSION_COOKIE = "user_session";
@@ -66,7 +66,10 @@ export async function POST(request: NextRequest) {
   const auth = await requireUserAPI(request.cookies.get(SESSION_COOKIE)?.value);
   if (auth instanceof NextResponse) return auth;
 
-  const { success } = await rateLimiters.ratings.limit(getClientIP(request));
+  // Keyed by account, not by address: the request is already past
+  // requireUserAPI, so there is a real identity to count against, and two
+  // people on one connection no longer eat each other's allowance.
+  const { success } = await rateLimiters.kit.limit(`user:${auth.user.id}`);
   if (!success) return rateLimitedResponse();
 
   let body: Record<string, unknown>;

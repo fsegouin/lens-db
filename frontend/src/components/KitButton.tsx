@@ -61,6 +61,13 @@ export default function KitButton({
         : await fetch(`/api/kit?entityType=${entityType}&entityId=${entityId}`, {
             method: "DELETE",
           });
+      // Retrying is exactly what keeps this failing: every attempt refills the
+      // sliding window, so a rate-limited click has to be told to wait rather
+      // than sent round the "try again" loop that caused it.
+      if (res.status === 429) {
+        toast.error("Too many kit changes just now. Give it a minute.");
+        return;
+      }
       if (!res.ok) throw new Error(String(res.status));
       setState(next ? "in" : "out");
       toast.success(next ? "Added to your kit" : "Removed from your kit");
