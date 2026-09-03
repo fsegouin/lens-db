@@ -37,7 +37,7 @@ function MountsCell({ mounts, onSelect }: { mounts: SystemOption[]; onSelect: (s
   if (mounts.length === 0) return <>{"—"}</>;
   const shown = expanded ? mounts : mounts.slice(0, 1);
   const hidden = mounts.length - shown.length;
-  const linkClass = "text-left hover:text-zinc-900 hover:underline dark:hover:text-zinc-100";
+  const linkClass = "text-left hover:text-foreground hover:underline";
   return (
     <span
       className={expanded ? "inline-flex max-w-[11rem] flex-wrap items-baseline gap-x-1 whitespace-normal" : "inline-flex max-w-[11rem] items-baseline gap-x-1"}
@@ -48,14 +48,14 @@ function MountsCell({ mounts, onSelect }: { mounts: SystemOption[]; onSelect: (s
           <button type="button" onClick={() => onSelect(m.slug)} className={linkClass}>
             {shortMountName(m.name)}
           </button>
-          {i < shown.length - 1 && <span className="text-zinc-400 dark:text-muted-foreground">,</span>}
+          {i < shown.length - 1 && <span className="text-muted-foreground">,</span>}
         </span>
       ))}
       {hidden > 0 && (
         <button
           type="button"
           onClick={() => setExpanded(true)}
-          className="shrink-0 rounded bg-zinc-100 px-1 text-xs text-muted-foreground hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+          className="shrink-0 rounded bg-muted px-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
         >
           +{hidden}
         </button>
@@ -301,6 +301,12 @@ export default function LensList({
     minAperture, maxAperture, year, priceMin, priceMax,
   ].filter(Boolean).length;
 
+
+  // Series is filled on about a fifth of rows; a column that is mostly blank
+  // is width taken from the name, which is the only unique identifier here.
+  const showSeries = items.some((l) => (l.series?.length ?? 0) > 0);
+  const colCount = showSeries ? 10 : 9;
+
   return (
     <>
       {/* Filters */}
@@ -354,7 +360,7 @@ export default function LensList({
             id="lens-brand"
             value={formBrand}
             onChange={(e) => { setFormBrand(e.target.value); trackEvent("lens_filter_apply", { filter: "brand", value: e.target.value }); applyFilters({ brand: e.target.value }); }}
-            className="filter-select h-10 rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+            className="filter-select h-10 w-full rounded-lg border border-input bg-transparent px-3 text-base text-foreground transition-colors outline-none md:text-sm focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
           >
             <option value="">All brands</option>
             {brands.map((b) => (
@@ -370,7 +376,7 @@ export default function LensList({
             id="lens-system"
             value={formSystem}
             onChange={(e) => { setFormSystem(e.target.value); trackEvent("lens_filter_apply", { filter: "system", value: e.target.value }); applyFilters({ system: e.target.value }); }}
-            className="filter-select h-10 rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+            className="filter-select h-10 w-full rounded-lg border border-input bg-transparent px-3 text-base text-foreground transition-colors outline-none md:text-sm focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
           >
             <option value="">All systems</option>
             {systemOptions.map((s) => (
@@ -396,7 +402,7 @@ export default function LensList({
                 applyFilters({ type: val, lensType: "" });
               }
             }}
-            className="filter-select h-10 rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+            className="filter-select h-10 w-full rounded-lg border border-input bg-transparent px-3 text-base text-foreground transition-colors outline-none md:text-sm focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
           >
             <option value="">All types</option>
             <option value="prime">Prime</option>
@@ -411,7 +417,7 @@ export default function LensList({
             id="lens-series"
             value={series}
             onChange={(e) => { trackEvent("lens_filter_apply", { filter: "series", value: e.target.value }); applyFilters({ series: e.target.value }); }}
-            className="filter-select h-10 rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+            className="filter-select h-10 w-full rounded-lg border border-input bg-transparent px-3 text-base text-foreground transition-colors outline-none md:text-sm focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
           >
             <option value="">All series</option>
             {seriesOptions.map((s) => (
@@ -427,7 +433,7 @@ export default function LensList({
             id="lens-coverage"
             value={coverage}
             onChange={(e) => { trackEvent("lens_filter_apply", { filter: "coverage", value: e.target.value }); applyFilters({ coverage: e.target.value }); }}
-            className="filter-select h-10 rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+            className="filter-select h-10 w-full rounded-lg border border-input bg-transparent px-3 text-base text-foreground transition-colors outline-none md:text-sm focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
           >
             <option value="">All coverage</option>
             <option value="full-frame">Full Frame</option>
@@ -578,22 +584,23 @@ export default function LensList({
           <TableHeader>
             <TableRow>
               {[
-                { key: "name", label: "Name" },
-                { key: "brand", label: "Brand" },
-                { key: "system", label: "System" },
-                { key: "focalLength", label: "Focal Length" },
-                { key: "aperture", label: "Aperture" },
-                { key: "type", label: "Type", sortable: false, className: "w-20" },
-                { key: "series", label: "Series", sortable: false },
-                { key: "year", label: "Year" },
-                { key: "price", label: "Avg Price" },
-                { key: "weight", label: "Weight" },
-                { key: "rating", label: "Rating" },
+                { key: "name", label: "Name", className: "w-[28%]" },
+                { key: "brand", label: "Brand", className: "w-[11%]" },
+                { key: "system", label: "System", className: "w-[12%]" },
+                { key: "focalLength", label: "Focal Length", className: "w-[10%] text-right" },
+                { key: "aperture", label: "Aperture", className: "w-[9%] text-right" },
+                { key: "type", label: "Type", sortable: false, className: "w-[8%]" },
+                ...(showSeries
+                  ? [{ key: "series", label: "Series", sortable: false, className: "w-[10%]" }]
+                  : []),
+                { key: "year", label: "Year", className: "w-[6%] text-right" },
+                { key: "price", label: "Avg Price", className: "w-[9%] text-right" },
+                { key: "weight", label: "Weight", className: "w-[7%] text-right" },
               ].map((col) => (
                 <TableHead
                   key={col.key}
                   scope="col"
-                  className={`${col.sortable !== false ? "cursor-pointer select-none hover:text-zinc-900 dark:hover:text-zinc-100" : ""} ${"className" in col ? col.className : ""}`}
+                  className={`${col.sortable !== false ? "cursor-pointer select-none hover:text-foreground" : ""} ${"className" in col ? col.className : ""}`}
                   onClick={col.sortable !== false ? () => handleSort(col.key) : undefined}
                   tabIndex={col.sortable !== false ? 0 : -1}
                   aria-sort={
@@ -641,7 +648,7 @@ export default function LensList({
                   {lens.brand ? (
                     <button type="button"
                       onClick={() => applyFilters({ brand: lens.brand!, system: "", q: "", type: "", minFocal: "", maxFocal: "", minAperture: "", maxAperture: "", year: "", lensType: "", era: "", productionStatus: "", coverage: "" })}
-                      className="text-left hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
+                      className="text-left hover:text-foreground hover:underline"
                     >
                       {lens.brand}
                     </button>
@@ -653,11 +660,11 @@ export default function LensList({
                     onSelect={(slug) => applyFilters({ system: slug, brand: "", q: "", type: "", minFocal: "", maxFocal: "", minAperture: "", maxAperture: "", year: "", lensType: "", era: "", productionStatus: "", coverage: "" })}
                   />
                 </TableCell>
-                <TableCell className="text-muted-foreground">
+                <TableCell className="text-right font-mono tabular-nums text-muted-foreground">
                   {lens.focalLengthMin ? (
                     <button type="button"
                       onClick={() => applyFilters({ minFocal: String(lens.focalLengthMin), maxFocal: String(lens.focalLengthMax ?? lens.focalLengthMin), brand: "", system: "", q: "", type: "", minAperture: "", maxAperture: "", year: "", lensType: "", era: "", productionStatus: "", coverage: "" })}
-                      className="text-left hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
+                      className="text-left hover:text-foreground hover:underline"
                     >
                       {lens.focalLengthMin === lens.focalLengthMax
                         ? `${lens.focalLengthMin}mm`
@@ -665,11 +672,11 @@ export default function LensList({
                     </button>
                   ) : "\u2014"}
                 </TableCell>
-                <TableCell className="text-muted-foreground">
+                <TableCell className="text-right font-mono tabular-nums text-muted-foreground">
                   {lens.apertureMin ? (
                     <button type="button"
                       onClick={() => applyFilters({ minAperture: String(lens.apertureMin), maxAperture: String(lens.apertureMin), brand: "", system: "", q: "", type: "", minFocal: "", maxFocal: "", year: "", coverage: "" })}
-                      className="text-left hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
+                      className="text-left hover:text-foreground hover:underline"
                     >
                       f/{lens.apertureMin}
                     </button>
@@ -731,37 +738,30 @@ export default function LensList({
                     </div>
                   )}
                 </TableCell>
-                <TableCell className="text-muted-foreground">
+                <TableCell className="text-right font-mono tabular-nums text-muted-foreground">
                   {lens.yearIntroduced ? (
                     <button type="button"
                       onClick={() => applyFilters({ year: String(lens.yearIntroduced), brand: "", system: "", q: "", type: "", minFocal: "", maxFocal: "", minAperture: "", maxAperture: "", coverage: "" })}
-                      className="text-left hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
+                      className="text-left hover:text-foreground hover:underline"
                     >
                       {lens.yearIntroduced}
                     </button>
                   ) : "\u2014"}
                 </TableCell>
-                <TableCell className="text-muted-foreground">
+                <TableCell className="text-right font-mono tabular-nums text-muted-foreground">
                   {avgPrice != null
                     ? `$${avgPrice.toLocaleString()}`
                     : "\u2014"}
                 </TableCell>
-                <TableCell className="text-muted-foreground">
+                <TableCell className="text-right font-mono tabular-nums text-muted-foreground">
                   {lens.weightG ? `${lens.weightG}g` : "\u2014"}
-                </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {lens.averageRating != null ? (
-                    <span className="text-amber-600 dark:text-amber-400">
-                      {lens.averageRating.toFixed(1)}
-                    </span>
-                  ) : "\u2014"}
                 </TableCell>
               </TableRow>
             ))}
-            {loading && <TableSkeleton columns={11} rows={3} />}
+            {loading && <TableSkeleton columns={colCount} rows={3} />}
             {nextCursor !== null && (
               <TableRow>
-                <TableCell colSpan={11} className="p-0">
+                <TableCell colSpan={colCount} className="p-0">
                   <div ref={sentinelRef} className="h-px w-full" />
                 </TableCell>
               </TableRow>
@@ -770,7 +770,7 @@ export default function LensList({
         </Table>
         </div>
       ) : (
-        <div className="rounded-xl border border-dashed border-zinc-300 p-12 text-center dark:border-zinc-700">
+        <div className="rounded-xl border border-dashed border-border p-12 text-center">
           <p className="text-muted-foreground">
             No lenses found.
           </p>
