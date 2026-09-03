@@ -172,7 +172,7 @@ export default async function CompareLensesPage({
   });
 
   return (
-    <div className="mx-auto w-full max-w-4xl">
+    <div className="w-full max-w-6xl">
       <JsonLd
         data={{
           "@context": "https://schema.org",
@@ -227,7 +227,7 @@ export default async function CompareLensesPage({
           <div key={lens.id} className="rounded-lg border border-border p-4">
             <Link
               href={`/lenses/${lens.slug}`}
-              className="font-display font-semibold hover:underline"
+              className="font-semibold hover:underline"
             >
               {lens.name}
             </Link>

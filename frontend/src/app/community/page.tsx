@@ -14,7 +14,7 @@ export default async function CommunityPage() {
   const people = await getPublicKits().catch(() => []);
 
   return (
-    <div className="mx-auto w-full max-w-3xl">
+    <div className="w-full max-w-3xl">
       <h1 className="text-3xl font-bold tracking-tight">Community</h1>
       <p className="mt-2 text-muted-foreground">
         Everyone who has published what they own.
@@ -22,7 +22,7 @@ export default async function CommunityPage() {
 
       {people.length === 0 ? (
         <div className="mt-8 rounded-lg border border-border p-8 text-center">
-          <p className="font-display text-lg font-semibold">
+          <p className="text-lg font-semibold">
             Nobody has published one yet
           </p>
           <p className="mx-auto mt-2 max-w-md text-muted-foreground">

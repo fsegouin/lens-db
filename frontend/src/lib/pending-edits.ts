@@ -21,7 +21,10 @@ const entityTables = {
 
 export type ApprovalResult =
   | { ok: true; entityId: number }
-  | { ok: false; reason: "no_valid_changes" | "missing_name" | "entity_missing" };
+  | {
+      ok: false;
+      reason: "no_valid_changes" | "missing_name" | "entity_missing" | "stale_system";
+    };
 
 /**
  * Apply one pending edit (the "approve" action): re-validates the changes
@@ -117,6 +120,24 @@ export async function applyPendingEditApproval(
     // Create a new entity
     if (!changes.name) {
       return { ok: false, reason: "missing_name" };
+    }
+
+    /*
+     * A mount that has since been merged away.
+     *
+     * Edits queued before a mount consolidation still name the id they were
+     * written with, and the trigger that mirrors lenses.system_id into
+     * lens_systems fails its foreign key on insert. That surfaced as "failed
+     * query: insert into lenses", which points at the wrong table and gives an
+     * admin nothing to act on.
+     */
+    if (typeof changes.systemId === "number") {
+      const [system] = await db
+        .select({ id: systems.id })
+        .from(systems)
+        .where(eq(systems.id, changes.systemId))
+        .limit(1);
+      if (!system) return { ok: false, reason: "stale_system" };
     }
 
     const insertData: Record<string, unknown> = { ...changes };

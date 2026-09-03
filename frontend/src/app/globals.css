@@ -171,4 +171,12 @@ select.filter-select {
   [role="button"]:not([aria-disabled="true"]) {
     cursor: pointer;
   }
+  /*
+   * The site-wide default was outline-ring/50 at 1px, which lands near 1.7:1
+   * against the paper background: keyboard users could not see where they
+   * were. Full opacity, 2px, offset so it clears the control's own border.
+   */
+  *:focus-visible {
+    @apply outline-2 outline-offset-2 outline-ring;
+  }
 }
