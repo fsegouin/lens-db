@@ -100,6 +100,16 @@ export const cameras = pgTable(
     slug: text("slug").notNull().unique(),
     url: text("url"),
     systemId: integer("system_id").references(() => systems.id),
+    // The non-removable lens of a fixed-lens body (Konica C35, Fuji GW670,
+    // Hasselblad SWC, GFX 100RF). Every lens/camera relation on this site is
+    // derived from a shared system_id, so before this column a fixed-lens
+    // camera could only be recorded by lying: leaving system_id null (47
+    // bodies, whose pages then showed no mount and no lens), inventing a
+    // one-camera "system" to host it, or borrowing the mount of an
+    // interchangeable sibling that the body does not actually accept. The
+    // lens it points at is a real lenses row with a null system_id, so it
+    // gets a page, specs and price history like any other.
+    builtInLensId: integer("built_in_lens_id").references(() => lenses.id),
     description: text("description"),
     alias: text("alias"),
     sensorType: text("sensor_type"),
@@ -124,7 +134,10 @@ export const cameras = pgTable(
     mergedIntoId: integer("merged_into_id"), // self-referencing: if set, this entity was merged into another
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   },
-  (table) => [index("idx_cameras_system").on(table.systemId)]
+  (table) => [
+    index("idx_cameras_system").on(table.systemId),
+    index("idx_cameras_built_in_lens").on(table.builtInLensId),
+  ]
 );
 
 export const collections = pgTable("collections", {

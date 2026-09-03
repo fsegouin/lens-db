@@ -144,14 +144,22 @@ type CameraLike = {
 export function cameraDescription(
   camera: CameraLike,
   systemName: string | null,
+  builtInLensName: string | null = null,
 ): string {
-  return clamp(
-    `${cameraLead(camera, systemName)} Full specifications, used price history and the lenses that fit it.`,
-  );
+  // Promising "the lenses that fit it" on a body whose lens does not come off
+  // is a promise the page cannot keep.
+  const tail = builtInLensName
+    ? "Full specifications, used price history and its built-in lens."
+    : "Full specifications, used price history and the lenses that fit it.";
+  return clamp(`${cameraLead(camera, systemName, builtInLensName)} ${tail}`);
 }
 
 /** The on-page version: no truncation, no search-result tail. */
-export function cameraLead(camera: CameraLike, systemName: string | null): string {
+export function cameraLead(
+  camera: CameraLike,
+  systemName: string | null,
+  builtInLensName: string | null = null,
+): string {
   const descriptor = sentence(
     [
       camera.sensorSize,
@@ -161,17 +169,26 @@ export function cameraLead(camera: CameraLike, systemName: string | null): strin
     " ",
   );
 
-  const lead = sentence(
+  // The year goes before the mount or lens clause. Trailing it left a dangling
+  // modifier that read as though the mount or the lens was what was introduced
+  // that year, which for the Leica M is plainly false and for a built-in lens
+  // is entirely plausible, so nothing warned the reader.
+  const head = sentence(
     [
       `${camera.name} is ${indefiniteArticle(descriptor)}`,
       descriptor,
-      systemName ? `with a ${systemName} mount` : null,
       camera.yearIntroduced ? `introduced in ${camera.yearIntroduced}` : null,
     ],
     " ",
   );
 
-  return `${lead}.`;
+  const attachment = builtInLensName
+    ? `with a built-in ${builtInLensName}`
+    : systemName
+      ? `with a ${systemName} mount`
+      : null;
+
+  return attachment ? `${head}, ${attachment}.` : `${head}.`;
 }
 
 type EntityMetadataInput = {

@@ -4,6 +4,12 @@ export type Fact = {
   value: string | number | null | undefined;
   /** Shown after the value, dimmed, so the magnitude reads first. */
   unit?: string;
+  /**
+   * Values are set in tabular figures because most of them are numbers. A
+   * prose-shaped value ("Fujinon Aspherical Super EBC GF 35mm f/4") wraps to
+   * two right-aligned monospace lines, so it opts out.
+   */
+  mono?: boolean;
 };
 
 /**
@@ -40,7 +46,11 @@ export default function Infobox({
             }`}
           >
             <dt className="text-sm text-muted-foreground">{fact.label}</dt>
-            <dd className="text-right font-mono text-sm tabular-nums">
+            <dd
+              className={`text-right text-sm ${
+                fact.mono === false ? "" : "font-mono tabular-nums"
+              }`}
+            >
               {fact.value}
               {fact.unit && (
                 <span className="ml-1 text-xs text-muted-foreground">{fact.unit}</span>

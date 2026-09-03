@@ -71,14 +71,14 @@ export async function generateMetadata({
 
   if (!result) return { title: "Camera Not Found" };
 
-  const { camera, system } = result;
+  const { camera, system, builtInLens } = result;
   const images = absoluteImages(
     getImages("cameras", slug, (camera.images as { src: string; alt: string }[]) ?? []),
   );
 
   return entityMetadata({
-    title: `${camera.name} specs, price & lenses`,
-    description: cameraDescription(camera, system?.name ?? null),
+    title: `${camera.name} specs, price & ${builtInLens ? "lens" : "lenses"}`,
+    description: cameraDescription(camera, system?.name ?? null, builtInLens?.name ?? null),
     path: `/cameras/${camera.slug}`,
     images: images.slice(0, 1),
   });
@@ -95,7 +95,7 @@ export default async function CameraDetailPage({
 
   if (!result) notFound();
 
-  const { camera, system } = result;
+  const { camera, system, builtInLens } = result;
 
   // Redirect if this entity was merged into another
   if (camera.mergedIntoId) {
@@ -119,7 +119,23 @@ export default async function CameraDetailPage({
     slug,
     (camera.images as Array<{ src: string; alt: string }>) || [],
   );
-  const leadSentence = cameraLead(camera, system?.name ?? null);
+  const leadSentence = cameraLead(camera, system?.name ?? null, builtInLens?.name ?? null);
+
+  // The chips in "Lenses that fit" carry their focal length and speed; the
+  // single built-in chip reads as a button rather than a lens without them.
+  const builtInLensSpec = builtInLens
+    ? [
+        builtInLens.focalLengthMin != null
+          ? builtInLens.focalLengthMax != null &&
+            builtInLens.focalLengthMax !== builtInLens.focalLengthMin
+            ? `${builtInLens.focalLengthMin}-${builtInLens.focalLengthMax}mm`
+            : `${builtInLens.focalLengthMin}mm`
+          : null,
+        builtInLens.apertureMin != null ? `f/${builtInLens.apertureMin}` : null,
+      ]
+        .filter(Boolean)
+        .join(" · ")
+    : null;
 
   const crumbs = [
     { name: "Cameras", path: "/cameras" },
@@ -128,7 +144,10 @@ export default async function CameraDetailPage({
   ];
 
   const infoboxFacts: Fact[] = [
-    { label: "Mount", value: specValue(system?.name) },
+    // A body whose lens does not come off has no mount, and a dash there reads
+    // as missing data rather than as the fact that there is nothing to fit.
+    { label: "Mount", value: builtInLens ? "Fixed lens" : specValue(system?.name) },
+    { label: "Lens", value: builtInLens ? builtInLens.name : null, mono: false },
     { label: "Sensor", value: specValue(camera.sensorSize ?? specs["Maximum format"]) },
     {
       label: "Resolution",
@@ -240,6 +259,7 @@ export default async function CameraDetailPage({
               <Badge variant="system">{system.name}</Badge>
             </Link>
           )}
+          {builtInLens && <Badge variant="outline">Fixed lens</Badge>}
           {camera.bodyType && <Badge variant="outline">{camera.bodyType}</Badge>}
         </div>
       </div>
@@ -305,6 +325,28 @@ export default async function CameraDetailPage({
       </div>
 
       <OwnersList owners={owners} />
+
+      {builtInLens && (
+        <div>
+          <h2 className="mb-2 text-sm font-semibold tracking-wider text-muted-foreground uppercase">
+            Built-in lens
+          </h2>
+          <p className="mb-3 text-sm text-muted-foreground">
+            This lens does not come off, so no other lens fits this camera.
+          </p>
+          <Link
+            href={`/lenses/${builtInLens.slug}`}
+            className="inline-flex items-baseline gap-2 rounded-lg border border-border px-2.5 py-1 text-sm transition-colors hover:border-zinc-400 dark:hover:border-zinc-600"
+          >
+            {builtInLens.name}
+            {builtInLensSpec && (
+              <span className="font-mono text-xs tabular-nums text-muted-foreground">
+                {builtInLensSpec}
+              </span>
+            )}
+          </Link>
+        </div>
+      )}
 
       {relations.lenses.length > 0 && system && (
         <div>
