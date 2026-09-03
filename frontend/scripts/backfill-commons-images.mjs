@@ -106,6 +106,32 @@ async function classifyBackground(buffer) {
   return { background: "scene" };
 }
 
+/**
+ * dHash: 9x8 greyscale, one bit per adjacent-pixel comparison, 64 bits total.
+ *
+ * Commons often holds the same photograph twice under different names, usually
+ * because someone re-imported it from Flickr. The Pentax P30's two files are
+ * distinct pages with distinct bytes and the same picture, which the carousel
+ * then showed twice.
+ */
+async function perceptualHash(buffer) {
+  const px = await sharp(buffer).resize(9, 8, { fit: "fill" }).greyscale().raw().toBuffer();
+  const bits = [];
+  for (let y = 0; y < 8; y++) {
+    for (let x = 0; x < 8; x++) {
+      bits.push(px[y * 9 + x] < px[y * 9 + x + 1] ? 1 : 0);
+    }
+  }
+  return bits;
+}
+
+const hammingDistance = (a, b) => a.reduce((n, bit, i) => n + (bit === b[i] ? 0 : 1), 0);
+
+// Measured over the ingested pairs: genuinely different views of a camera sit
+// at 27-29, the duplicated Pentax P30 photograph at 3. Anything under 10 is the
+// same picture.
+const DUPLICATE_DISTANCE = 10;
+
 async function fetchBuffer(url) {
   const resp = await fetch(url, { headers: { "User-Agent": UA } });
   if (!resp.ok) throw new Error(`fetch ${url} -> ${resp.status}`);
@@ -142,7 +168,9 @@ for (const camera of cameras) {
 
   let resolved;
   try {
-    resolved = await resolveCommonsImages(camera.name, { limit: 3, aliases: [camera.alias] });
+    // One more candidate than we need, so discarding a duplicate does not
+    // cost the second slot outright.
+    resolved = await resolveCommonsImages(camera.name, { limit: perCamera + 2, aliases: [camera.alias] });
   } catch (err) {
     tally.errors++;
     report.push({ id: camera.id, name: camera.name, outcome: "resolve-error", error: err.message });
@@ -172,7 +200,12 @@ for (const camera of cameras) {
   for (const c of candidates) {
     try {
       const buffer = await fetchBuffer(c.thumburl || c.url);
-      fetched.push({ ...c, buffer, ...(await classifyBackground(buffer)) });
+      fetched.push({
+        ...c,
+        buffer,
+        ...(await classifyBackground(buffer)),
+        phash: await perceptualHash(buffer),
+      });
     } catch {
       /* candidate unreadable, try the next */
     }
@@ -190,9 +223,18 @@ for (const camera of cameras) {
   // The lead image is whatever ranked best: inside a category that matched the
   // model, even an oddly named file is usually the right camera. Later images
   // have to earn their place by naming the model, or a page picks up the
-  // category's stray "Shutter speed dial.png" as its second photo.
+  // category's stray "Shutter speed dial.png" as its second photo. They also
+  // have to be a different photograph from the ones already chosen.
   const NAMED = 40; // the name-match bonus in scoreFile
-  const chosen = [fetched[0], ...fetched.slice(1).filter((f) => f.score >= NAMED)].slice(0, perCamera);
+  const chosen = [fetched[0]];
+  for (const candidate of fetched.slice(1)) {
+    if (chosen.length >= perCamera) break;
+    if (candidate.score < NAMED) continue;
+    const duplicate = chosen.some(
+      (picked) => hammingDistance(picked.phash, candidate.phash) < DUPLICATE_DISTANCE,
+    );
+    if (!duplicate) chosen.push(candidate);
+  }
 
   const images = chosen.map((c, i) => ({
     src: r2KeyForSlug(camera.slug, i + 1), // replaced with the public URL on upload
