@@ -43,7 +43,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${baseUrl}/lenses/series`, changeFrequency: "monthly", priority: 0.7 },
     { url: `${baseUrl}/brands`, changeFrequency: "monthly", priority: 0.8 },
     { url: `${baseUrl}/adapters`, changeFrequency: "monthly", priority: 0.8 },
-    { url: `${baseUrl}/people`, changeFrequency: "daily", priority: 0.5 },
+    { url: `${baseUrl}/community`, changeFrequency: "daily", priority: 0.5 },
   ];
 
   const [
@@ -64,7 +64,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const kitPages: MetadataRoute.Sitemap = publicKits
     .filter((k) => k.itemCount >= 3)
     .map((k) => ({
-      url: `${baseUrl}/people/${k.handle}`,
+      url: `${baseUrl}/community/${k.handle}`,
       changeFrequency: "weekly" as const,
       priority: 0.4,
     }));

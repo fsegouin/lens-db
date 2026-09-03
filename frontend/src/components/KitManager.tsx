@@ -353,10 +353,10 @@ export default function KitManager({
           <span>Show my kit on my profile</span>
           {isPublic && handle && (
             <Link
-              href={`/people/${handle}`}
+              href={`/community/${handle}`}
               className="font-mono text-xs text-muted-foreground underline underline-offset-2"
             >
-              /people/{handle}
+              /community/{handle}
             </Link>
           )}
         </label>

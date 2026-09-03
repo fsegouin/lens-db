@@ -13,7 +13,7 @@ const navLinks = [
   { href: "/cameras", label: "Cameras" },
   { href: "/systems", label: "Systems" },
   { href: "/adapters", label: "Adapting" },
-  { href: "/people", label: "People" },
+  { href: "/community", label: "Community" },
   { href: "/compare", label: "Compare" },
   { href: "/collections", label: "Collections" },
   { href: "/submit", label: "Submit" },

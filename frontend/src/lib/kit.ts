@@ -201,6 +201,64 @@ export const getProfile = unstable_cache(
   { revalidate: 300, tags: ["kit"] },
 );
 
+export type Owner = {
+  handle: string;
+  displayName: string;
+  quantity: number;
+  condition: string | null;
+  acquiredYear: number | null;
+  acquiredPrice: number | null;
+  currency: string;
+};
+
+/**
+ * Who owns one lens or body, among the people who publish their kit.
+ *
+ * This is the surface the kit data was collected for. A directory of names
+ * nobody browses; a lens page is where the question is actually asked, and
+ * "four people here own this, one paid 170 in 2024" answers it with something
+ * no retailer has: what it went for, from the person who bought it.
+ */
+export const getOwnersOf = unstable_cache(
+  async (entityType: KitEntityType, entityId: number): Promise<Owner[]> => {
+    const rows = await db
+      .select({
+        handle: users.handle,
+        displayName: users.displayName,
+        currency: users.kitCurrency,
+        quantity: kitItems.quantity,
+        condition: kitItems.condition,
+        acquiredYear: kitItems.acquiredYear,
+        acquiredPrice: kitItems.acquiredPrice,
+      })
+      .from(kitItems)
+      .innerJoin(users, eq(users.id, kitItems.userId))
+      .where(
+        and(
+          eq(kitItems.entityType, entityType),
+          eq(kitItems.entityId, entityId),
+          eq(users.kitIsPublic, true),
+          eq(users.isBanned, false),
+        ),
+      )
+      .orderBy(kitItems.createdAt);
+
+    return rows
+      .filter((r): r is typeof r & { handle: string } => r.handle != null)
+      .map((r) => ({
+        handle: r.handle,
+        displayName: r.displayName,
+        quantity: r.quantity,
+        condition: r.condition,
+        acquiredYear: r.acquiredYear,
+        acquiredPrice: r.acquiredPrice,
+        currency: r.currency,
+      }));
+  },
+  ["owners-of"],
+  { revalidate: 604800, tags: ["kit"] },
+);
+
 export type PublicKitSummary = {
   handle: string;
   displayName: string;

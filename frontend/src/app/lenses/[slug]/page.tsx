@@ -3,6 +3,7 @@ import { notFound, permanentRedirect } from "next/navigation";
 import Breadcrumb from "@/components/Breadcrumb";
 import JsonLd from "@/components/JsonLd";
 import { getRivalsForLens } from "@/lib/compare";
+import { getOwnersOf } from "@/lib/kit";
 import { getEntityPriceEstimate, getEntityPriceHistory } from "@/lib/prices";
 import { formatDescription } from "@/lib/format-description";
 import { formatMagnification } from "@/lib/format-magnification";
@@ -33,6 +34,7 @@ import EntitySummaryLine from "@/components/EntitySummaryLine";
 import EbayListings from "@/components/EbayListings";
 import Infobox, { type Fact } from "@/components/Infobox";
 import KitButton from "@/components/KitButton";
+import OwnersList from "@/components/OwnersList";
 import ProvenanceLine from "@/components/ProvenanceLine";
 import { getProvenance } from "@/lib/provenance";
 
@@ -115,13 +117,14 @@ export default async function LensDetailPage({
     if (targetSlug) permanentRedirect(`/lenses/${targetSlug}`);
   }
 
-  const [priceEstimate, priceHistoryRows, relations, provenance, rivals] =
+  const [priceEstimate, priceHistoryRows, relations, provenance, rivals, owners] =
     await Promise.all([
       getEntityPriceEstimate("lens", lens.id),
       getEntityPriceHistory("lens", lens.id),
       getLensRelations(lens.id, lens.systemId, lens.versionGroupId),
       getProvenance("lens", lens.id),
       getRivalsForLens(lens.id),
+      getOwnersOf("lens", lens.id),
     ]);
 
   const specs = (lens.specs ?? {}) as Record<string, string>;
@@ -451,6 +454,8 @@ export default async function LensDetailPage({
           </ul>
         </div>
       )}
+
+      <OwnersList owners={owners} />
 
       {rivals.length > 0 && (
         <div>
