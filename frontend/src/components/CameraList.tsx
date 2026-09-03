@@ -6,7 +6,13 @@ import Link from "next/link";
 import type { cameras, systems } from "@/db/schema";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
+import {
+  ChevronUp,
+  ChevronDown,
+  ChevronsUpDown,
+  SlidersHorizontal,
+  X,
+} from "lucide-react";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { trackEvent } from "@/lib/analytics";
@@ -245,28 +251,96 @@ export default function CameraList({
 
   const clearAll: FilterOverrides = { q: "", system: "", sensorSize: "", type: "", model: "", filmType: "", sensorType: "", cropFactor: "", year: "", priceMin: "", priceMax: "" };
 
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
+  /**
+   * Only what the closed panel is hiding. The chips below already report the
+   * visible filters, so counting those here would say everything twice.
+   */
+  const hiddenFilterCount = [model, sensorType, cropFactor, year, filmType].filter(
+    Boolean,
+  ).length;
+
+  const systemName =
+    systemOptions.find((s) => s.slug === system)?.name ?? system;
+
+  /**
+   * Built from the URL rather than the form, so a filter arriving from a link
+   * shows up here even when no control on the page can express it.
+   */
+  const chips: { key: string; label: string; value: string; clear: FilterOverrides }[] = [];
+  if (q) chips.push({ key: "q", label: "Search", value: q, clear: { q: "" } });
+  if (system) chips.push({ key: "system", label: "System", value: systemName, clear: { system: "" } });
+  if (sensorSize) chips.push({ key: "sensorSize", label: "Sensor", value: sensorSize, clear: { sensorSize: "" } });
+  if (type) chips.push({ key: "type", label: "Body", value: type, clear: { type: "" } });
+  if (priceMin || priceMax) {
+    chips.push({
+      key: "price",
+      label: "Price",
+      value:
+        priceMin && priceMax
+          ? `$${priceMin}\u2013$${priceMax}`
+          : priceMin
+            ? `from $${priceMin}`
+            : `up to $${priceMax}`,
+      clear: { priceMin: "", priceMax: "" },
+    });
+  }
+  // Each film type is an independent value in a comma list, so removing one
+  // rewrites the list rather than clearing the filter.
+  for (const f of filmTypeList) {
+    chips.push({
+      key: `film-${f}`,
+      label: "Film",
+      value: f,
+      clear: { filmType: filmTypeList.filter((v) => v !== f).join(",") },
+    });
+  }
+  if (model) chips.push({ key: "model", label: "Shutter", value: model, clear: { model: "" } });
+  if (sensorType) chips.push({ key: "sensorType", label: "Sensor type", value: sensorType, clear: { sensorType: "" } });
+  if (cropFactor) chips.push({ key: "cropFactor", label: "Crop", value: cropFactor, clear: { cropFactor: "" } });
+  if (year) chips.push({ key: "year", label: "Year", value: year, clear: { year: "" } });
+
   return (
     <>
-      {/* Filters */}
-      <div className="flex flex-wrap gap-3">
-        <div>
-          <label className="sr-only" htmlFor="camera-search">Search cameras</label>
-          <Input
-            id="camera-search"
-            type="text"
-            placeholder="Search cameras..."
-            value={formQ}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            className="h-10"
-          />
-        </div>
+      {/* Search, then the facets people actually browse by, then the rest. */}
+      <div className="flex items-center gap-2">
+        <label className="sr-only" htmlFor="camera-search">Search cameras</label>
+        <Input
+          id="camera-search"
+          type="text"
+          placeholder="Search cameras..."
+          value={formQ}
+          onChange={(e) => handleSearchChange(e.target.value)}
+          className="h-11 flex-1"
+        />
+        <button
+          type="button"
+          onClick={() => setFiltersOpen((open) => !open)}
+          aria-expanded={filtersOpen}
+          aria-controls="camera-more-filters"
+          className="inline-flex h-11 shrink-0 items-center gap-2 rounded-lg border border-border px-4 text-sm font-medium transition-colors hover:border-zinc-500 dark:hover:border-zinc-400"
+        >
+          <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
+          <span className="max-sm:sr-only">
+            {filtersOpen ? "Fewer filters" : "More filters"}
+          </span>
+          {hiddenFilterCount > 0 && (
+            <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs tabular-nums">
+              {hiddenFilterCount}
+            </span>
+          )}
+        </button>
+      </div>
+
+      <div className="mt-4 grid grid-cols-1 gap-x-4 gap-y-4 sm:grid-cols-2 lg:grid-cols-4">
         <div>
           <label className="sr-only" htmlFor="camera-system">System</label>
           <select
             id="camera-system"
             value={formSystem}
             onChange={(e) => { setFormSystem(e.target.value); trackEvent("camera_filter_apply", { filter: "system", value: e.target.value }); applyFilters({ system: e.target.value }); }}
-            className="filter-select h-10 rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+            className="filter-select h-10 w-full rounded-lg border border-zinc-300 px-3 text-sm dark:border-zinc-700 dark:bg-zinc-900"
           >
             <option value="">All systems</option>
             {systemOptions.map((s) => (
@@ -282,7 +356,7 @@ export default function CameraList({
             id="camera-sensor-size"
             value={formSensorSize}
             onChange={(e) => { setFormSensorSize(e.target.value); trackEvent("camera_filter_apply", { filter: "sensorSize", value: e.target.value }); applyFilters({ sensorSize: e.target.value }); }}
-            className="filter-select h-10 rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+            className="filter-select h-10 w-full rounded-lg border border-zinc-300 px-3 text-sm dark:border-zinc-700 dark:bg-zinc-900"
           >
             <option value="">All sensor sizes</option>
             {sensorSizes.map((s) => (
@@ -291,36 +365,62 @@ export default function CameraList({
           </select>
         </div>
         <div>
-          <label className="sr-only" htmlFor="camera-type">Type</label>
+          <label className="sr-only" htmlFor="camera-type">Body type</label>
           <select
             id="camera-type"
             value={formType}
             onChange={(e) => { setFormType(e.target.value); trackEvent("camera_filter_apply", { filter: "type", value: e.target.value }); applyFilters({ type: e.target.value }); }}
-            className="filter-select h-10 rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+            className="filter-select h-10 w-full rounded-lg border border-zinc-300 px-3 text-sm dark:border-zinc-700 dark:bg-zinc-900"
           >
-            <option value="">All types</option>
+            <option value="">All body types</option>
             {types.map((t) => (
               <option key={t} value={t}>{t}</option>
             ))}
           </select>
         </div>
-        <div>
-          <label className="sr-only" htmlFor="camera-model">Shutter</label>
-          <select
-            id="camera-model"
-            value={formModel}
-            onChange={(e) => { setFormModel(e.target.value); applyFilters({ model: e.target.value }); }}
-            className="filter-select h-10 rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-          >
-            <option value="">All shutters</option>
-            {models.map((m) => (
-              <option key={m} value={m}>{m}</option>
-            ))}
-          </select>
+        {/* A range is one thing, so it is one cell with one caption. */}
+        <div className="space-y-1.5">
+          <span id="camera-price-label" className="block text-xs font-medium text-muted-foreground">
+            Price (USD)
+          </span>
+          <div className="flex items-center gap-1.5" role="group" aria-labelledby="camera-price-label">
+            <Input
+              id="camera-price-min"
+              type="number"
+              placeholder="Min"
+              aria-label="Minimum price in USD"
+              value={formPriceMin}
+              onChange={(e) => { setFormPriceMin(e.target.value); debouncedApply({ priceMin: e.target.value }); }}
+              className="h-10 w-full"
+            />
+            <span aria-hidden="true" className="shrink-0 text-muted-foreground">&ndash;</span>
+            <Input
+              id="camera-price-max"
+              type="number"
+              placeholder="Max"
+              aria-label="Maximum price in USD"
+              value={formPriceMax}
+              onChange={(e) => { setFormPriceMax(e.target.value); debouncedApply({ priceMax: e.target.value }); }}
+              className="h-10 w-full"
+            />
+          </div>
         </div>
+      </div>
+
+      <div
+        id="camera-more-filters"
+        className={`${filtersOpen ? "grid" : "hidden"} mt-4 grid-cols-1 gap-x-4 gap-y-4 border-t border-border pt-4 sm:grid-cols-2 lg:grid-cols-4`}
+      >
         {filmTypes.length > 0 && (
-          <div role="group" aria-label="Film type">
-            <div className="flex flex-wrap gap-1.5">
+          <div className="space-y-1.5 sm:col-span-2 lg:col-span-4">
+            <span id="camera-film-label" className="block text-xs font-medium text-muted-foreground">
+              Film type
+            </span>
+            <div
+              role="group"
+              aria-labelledby="camera-film-label"
+              className="flex flex-wrap gap-1.5"
+            >
               {filmTypes.map((f) => {
                 const active = filmTypeList.includes(f);
                 return (
@@ -340,7 +440,7 @@ export default function CameraList({
                       });
                       applyFilters({ filmType: value });
                     }}
-                    className={`rounded-full border px-2.5 py-1 text-[11px] transition-colors ${
+                    className={`h-8 rounded-full border px-3 text-xs transition-colors ${
                       active
                         ? "border-foreground bg-foreground text-background"
                         : "border-border bg-background text-muted-foreground hover:border-zinc-500 hover:text-foreground dark:text-zinc-400 dark:hover:border-zinc-400"
@@ -354,14 +454,28 @@ export default function CameraList({
           </div>
         )}
         <div>
+          <label className="sr-only" htmlFor="camera-model">Shutter type</label>
+          <select
+            id="camera-model"
+            value={formModel}
+            onChange={(e) => { setFormModel(e.target.value); applyFilters({ model: e.target.value }); }}
+            className="filter-select h-10 w-full rounded-lg border border-zinc-300 px-3 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+          >
+            <option value="">All shutter types</option>
+            {models.map((m) => (
+              <option key={m} value={m}>{m}</option>
+            ))}
+          </select>
+        </div>
+        <div>
           <label className="sr-only" htmlFor="camera-sensor-type">Sensor type</label>
           <select
             id="camera-sensor-type"
             value={formSensorType}
             onChange={(e) => { setFormSensorType(e.target.value); trackEvent("camera_filter_apply", { filter: "sensorType", value: e.target.value }); applyFilters({ sensorType: e.target.value }); }}
-            className="filter-select h-10 rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+            className="filter-select h-10 w-full rounded-lg border border-zinc-300 px-3 text-sm dark:border-zinc-700 dark:bg-zinc-900"
           >
-            <option value="">All sensors</option>
+            <option value="">All sensor types</option>
             {sensorTypes.map((s) => (
               <option key={s} value={s}>{s}</option>
             ))}
@@ -373,7 +487,7 @@ export default function CameraList({
             id="camera-crop-factor"
             value={formCropFactor}
             onChange={(e) => { setFormCropFactor(e.target.value); trackEvent("camera_filter_apply", { filter: "cropFactor", value: e.target.value }); applyFilters({ cropFactor: e.target.value }); }}
-            className="filter-select h-10 rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+            className="filter-select h-10 w-full rounded-lg border border-zinc-300 px-3 text-sm dark:border-zinc-700 dark:bg-zinc-900"
           >
             <option value="">All crop factors</option>
             {cropFactors.map((c) => (
@@ -381,40 +495,46 @@ export default function CameraList({
             ))}
           </select>
         </div>
-        <div>
-          <label className="sr-only" htmlFor="camera-year">Year</label>
+        <div className="space-y-1.5">
+          <label htmlFor="camera-year" className="block text-xs font-medium text-muted-foreground">
+            Year introduced
+          </label>
           <Input
             id="camera-year"
             type="number"
-            placeholder="Year"
+            placeholder="e.g. 1996"
             value={formYear}
             onChange={(e) => { setFormYear(e.target.value); debouncedApply({ year: e.target.value }); }}
-            className="h-10 w-28"
-          />
-        </div>
-        <div>
-          <label className="sr-only" htmlFor="camera-price-min">Min price</label>
-          <Input
-            id="camera-price-min"
-            type="number"
-            placeholder="Min $"
-            value={formPriceMin}
-            onChange={(e) => { setFormPriceMin(e.target.value); debouncedApply({ priceMin: e.target.value }); }}
-            className="h-10 w-24"
-          />
-        </div>
-        <div>
-          <label className="sr-only" htmlFor="camera-price-max">Max price</label>
-          <Input
-            id="camera-price-max"
-            type="number"
-            placeholder="Max $"
-            value={formPriceMax}
-            onChange={(e) => { setFormPriceMax(e.target.value); debouncedApply({ priceMax: e.target.value }); }}
-            className="h-10 w-24"
+            className="h-10 w-full"
           />
         </div>
       </div>
+
+      {/* What is applied, and the only way to take it off again. */}
+      {chips.length > 0 && (
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          {chips.map((chip) => (
+            <button
+              key={chip.key}
+              type="button"
+              onClick={() => applyFilters(chip.clear)}
+              aria-label={`Remove filter ${chip.label} ${chip.value}`}
+              className="inline-flex h-7 items-center gap-1.5 rounded-full border border-border bg-background pr-2 pl-3 text-xs transition-colors hover:border-zinc-500 dark:hover:border-zinc-400"
+            >
+              <span className="text-muted-foreground">{chip.label}</span>
+              <span className="text-foreground">{chip.value}</span>
+              <X className="h-3 w-3 shrink-0 text-muted-foreground" aria-hidden="true" />
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => applyFilters(clearAll)}
+            className="h-7 px-1 text-xs text-muted-foreground underline underline-offset-2 transition-colors hover:text-foreground"
+          >
+            Clear all
+          </button>
+        </div>
+      )}
 
       {/* Results */}
       {items.length > 0 ? (
