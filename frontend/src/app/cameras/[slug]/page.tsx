@@ -18,6 +18,7 @@ import PriceCard from "@/components/PriceCard";
 import EntitySummaryLine from "@/components/EntitySummaryLine";
 import EbayListings from "@/components/EbayListings";
 import Infobox, { type Fact } from "@/components/Infobox";
+import KitButton from "@/components/KitButton";
 import ProvenanceLine from "@/components/ProvenanceLine";
 import { getProvenance } from "@/lib/provenance";
 import { getImages } from "@/lib/images";
@@ -168,6 +169,7 @@ export default async function CameraDetailPage({
 
   const rail = (
     <div className="space-y-6">
+      <KitButton entityType="camera" entityId={camera.id} />
       <Infobox title="Specifications" facts={infoboxFacts} />
       <PriceCard estimate={priceEstimate ?? null} history={priceHistoryRows} />
       <EbayListings query={camera.name} entitySlug={camera.slug} />

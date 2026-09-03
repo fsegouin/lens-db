@@ -7,6 +7,7 @@ import { getClientIP, rateLimitedResponse } from "@/lib/api-utils";
 import { createRateLimit } from "@/lib/rate-limit";
 import { hashPassword } from "@/lib/user-auth";
 import { sendVerificationEmail, maskEmail } from "@/lib/email";
+import { uniqueHandle } from "@/lib/kit";
 
 const registerLimiter = createRateLimit(5, "60 s");
 
@@ -73,6 +74,7 @@ export async function POST(request: NextRequest) {
         email: normalizedEmail,
         passwordHash,
         displayName: trimmedName,
+        handle: await uniqueHandle(trimmedName),
       })
       .returning({ id: users.id });
 

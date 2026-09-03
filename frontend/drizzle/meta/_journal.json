@@ -232,6 +232,20 @@
       "when": 1788415338136,
       "tag": "0032_move_shutter_out_of_body_type",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1788422594479,
+      "tag": "0033_add_kit_items",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1788422615388,
+      "tag": "0034_backfill_user_handles",
+      "breakpoints": true
     }
   ]
 }
