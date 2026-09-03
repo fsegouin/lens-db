@@ -23,9 +23,11 @@
  */
 
 import { writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 import sharp from "sharp";
 import { createSql } from "./lib/db.mjs";
 import { resolveCommonsImages, isSpecialEdition, delay } from "./lib/commons.mjs";
+import { isSamePhoto } from "./lib/same-photo.mjs";
 
 const args = process.argv.slice(2);
 const flag = (name, fallback) => {
@@ -138,7 +140,18 @@ async function fetchBuffer(url) {
   return Buffer.from(await resp.arrayBuffer());
 }
 
-const r2KeyForSlug = (slug, n) => `cameras/${slug.replace(/^camera\//, "")}/${n}.webp`;
+/**
+ * R2 keys carry a digest of the source image.
+ *
+ * Objects are uploaded `immutable, max-age=31536000`, so a key that stays the
+ * same across a re-ingest keeps serving last week's photograph out of every
+ * cache for a year, no matter what the database says. Putting the content in
+ * the key means new content is always a new URL.
+ */
+const r2KeyForSlug = (slug, n, buffer) => {
+  const digest = createHash("sha256").update(buffer).digest("hex").slice(0, 10);
+  return `cameras/${slug.replace(/^camera\//, "")}/${n}-${digest}.webp`;
+};
 
 const sql = createSql();
 
@@ -230,14 +243,29 @@ for (const camera of cameras) {
   for (const candidate of fetched.slice(1)) {
     if (chosen.length >= perCamera) break;
     if (candidate.score < NAMED) continue;
-    const duplicate = chosen.some(
+
+    // The hash settles the cheap cases for free; the vision model is only
+    // consulted for pairs it cannot separate, which is where two photographers
+    // shooting the same view of the same camera end up.
+    const hashDuplicate = chosen.some(
       (picked) => hammingDistance(picked.phash, candidate.phash) < DUPLICATE_DISTANCE,
     );
+    if (hashDuplicate) continue;
+
+    let duplicate = false;
+    for (const picked of chosen) {
+      const verdict = await isSamePhoto(picked.buffer, candidate.buffer);
+      if (verdict.duplicate) {
+        console.log(`  dropped near-duplicate: ${candidate.title} (${verdict.reason})`);
+        duplicate = true;
+        break;
+      }
+    }
     if (!duplicate) chosen.push(candidate);
   }
 
   const images = chosen.map((c, i) => ({
-    src: r2KeyForSlug(camera.slug, i + 1), // replaced with the public URL on upload
+    src: r2KeyForSlug(camera.slug, i + 1, c.buffer), // replaced with the public URL on upload
     alt: camera.name,
     credit: c.credit || undefined,
     license: c.license || undefined,
@@ -270,7 +298,7 @@ for (const camera of cameras) {
   try {
     const { processAndUpload } = await import("./lib/r2-upload.mjs");
     for (let i = 0; i < chosen.length; i++) {
-      images[i].src = await processAndUpload(chosen[i].buffer, r2KeyForSlug(camera.slug, i + 1));
+      images[i].src = await processAndUpload(chosen[i].buffer, r2KeyForSlug(camera.slug, i + 1, chosen[i].buffer));
     }
     await sql`UPDATE cameras SET images = ${JSON.stringify(images)}::jsonb WHERE id = ${camera.id}`;
     tally.updated++;

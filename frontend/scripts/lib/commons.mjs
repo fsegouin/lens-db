@@ -36,11 +36,27 @@ const FORBIDDEN_LICENCE = /(fair\s?use|non-?free|non-?commercial|\bnc\b|\bnd\b|n
 
 export const delay = (ms) => new Promise((r) => setTimeout(r, ms));
 
-async function api(base, params) {
+// Wikimedia sheds load with a 503 under sustained querying, and a bulk run is
+// exactly that. Retrying matters more than it looks: without it a transient
+// 503 is indistinguishable from "this camera has no photograph", and the run
+// would write that verdict down for a camera that simply was not asked
+// properly.
+const RETRY_STATUSES = new Set([429, 500, 502, 503, 504]);
+const MAX_ATTEMPTS = 4;
+
+async function api(base, params, attempt = 0) {
   const url = new URL(base);
   for (const [k, v] of Object.entries({ format: "json", ...params })) url.searchParams.set(k, v);
   const resp = await fetch(url, { headers: { "User-Agent": UA } });
-  if (!resp.ok) throw new Error(`${base} -> ${resp.status}`);
+  if (!resp.ok) {
+    if (RETRY_STATUSES.has(resp.status) && attempt < MAX_ATTEMPTS - 1) {
+      const retryAfter = Number(resp.headers.get("retry-after"));
+      const wait = Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : 1000 * 2 ** attempt;
+      await delay(wait);
+      return api(base, params, attempt + 1);
+    }
+    throw new Error(`${base} -> ${resp.status}`);
+  }
   return resp.json();
 }
 
@@ -364,7 +380,7 @@ async function resolveOne(name, limit) {
   let via = "";
   let leadTitle = null;
 
-  const wd = await fromWikidata(name).catch(() => null);
+  const wd = await fromWikidata(name);
   if (wd) {
     titles.push(wd.file);
     leadTitle = wd.file;
@@ -372,7 +388,7 @@ async function resolveOne(name, limit) {
   }
   await delay(150);
 
-  const category = await findCategory(name).catch(() => null);
+  const category = await findCategory(name);
   if (category) {
     via = via || `category:${category}`;
     for (const t of await categoryFiles(category)) {
@@ -381,7 +397,7 @@ async function resolveOne(name, limit) {
   }
   if (!titles.length) {
     await delay(150);
-    const found = await fromFileSearch(name).catch(() => []);
+    const found = await fromFileSearch(name);
     if (found.length) {
       via = "filesearch";
       titles.push(...found);
