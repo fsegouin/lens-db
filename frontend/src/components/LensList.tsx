@@ -7,7 +7,13 @@ import type { lenses, systems } from "@/db/schema";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ChevronUp, ChevronDown, ChevronsUpDown, SlidersHorizontal } from "lucide-react";
+import {
+  ChevronUp,
+  ChevronDown,
+  ChevronsUpDown,
+  SlidersHorizontal,
+  X,
+} from "lucide-react";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { trackEvent } from "@/lib/analytics";
@@ -294,12 +300,55 @@ export default function LensList({
     debouncedApply({ q: value });
   }
 
-  // Thirteen always-visible controls pushed the first result below the fold on
-  // a phone. Search stays out; the rest open on demand.
-  const activeFilterCount = [
-    brand, system, type, series, coverage, minFocal, maxFocal,
-    minAperture, maxAperture, year, priceMin, priceMax,
-  ].filter(Boolean).length;
+  type LensFilters = Parameters<typeof applyFilters>[0];
+
+  /** Everything the panel hides, since the chips report the rest. */
+  const hiddenFilterCount = [type, coverage, series, year].filter(Boolean).length;
+
+  const clearAll: LensFilters = {
+    q: "", brand: "", system: "", type: "", series: "", coverage: "",
+    minFocal: "", maxFocal: "", minAperture: "", maxAperture: "", year: "",
+    priceMin: "", priceMax: "", lensType: "", era: "", productionStatus: "",
+  };
+
+  const systemName = systemOptions.find((s) => s.slug === system)?.name ?? system;
+  const seriesName = seriesOptions.find((s) => s.slug === series)?.name ?? series;
+
+  /**
+   * Built from the URL, not the form. lensType, era and productionStatus
+   * arrive from badge links on entity pages and have no control here, so
+   * without a chip there was no way to see or undo them.
+   */
+  const chips: { key: string; label: string; value: string; clear: LensFilters }[] = [];
+  const range = (lo: string, hi: string, unit: string) =>
+    lo && hi ? `${lo}\u2013${hi}${unit}` : lo ? `from ${lo}${unit}` : `up to ${hi}${unit}`;
+
+  if (q) chips.push({ key: "q", label: "Search", value: q, clear: { q: "" } });
+  if (brand) chips.push({ key: "brand", label: "Brand", value: brand, clear: { brand: "" } });
+  if (system) chips.push({ key: "system", label: "Mount", value: systemName, clear: { system: "" } });
+  if (minFocal || maxFocal) {
+    chips.push({ key: "focal", label: "Focal", value: range(minFocal, maxFocal, "mm"), clear: { minFocal: "", maxFocal: "" } });
+  }
+  if (minAperture || maxAperture) {
+    chips.push({ key: "aperture", label: "Aperture", value: `f/${range(minAperture, maxAperture, "")}`, clear: { minAperture: "", maxAperture: "" } });
+  }
+  if (priceMin || priceMax) {
+    chips.push({
+      key: "price",
+      label: "Price",
+      value: priceMin && priceMax ? `$${priceMin}\u2013$${priceMax}` : priceMin ? `from $${priceMin}` : `up to $${priceMax}`,
+      clear: { priceMin: "", priceMax: "" },
+    });
+  }
+  if (type) chips.push({ key: "type", label: "Type", value: type, clear: { type: "" } });
+  if (coverage) chips.push({ key: "coverage", label: "Coverage", value: coverage, clear: { coverage: "" } });
+  if (series) chips.push({ key: "series", label: "Series", value: seriesName, clear: { series: "" } });
+  if (year) chips.push({ key: "year", label: "Year", value: year, clear: { year: "" } });
+  if (lensType) chips.push({ key: "lensType", label: "Lens type", value: lensType, clear: { lensType: "" } });
+  if (era) chips.push({ key: "era", label: "Era", value: era, clear: { era: "" } });
+  if (productionStatus) {
+    chips.push({ key: "productionStatus", label: "Status", value: productionStatus, clear: { productionStatus: "" } });
+  }
 
 
   // Series is filled on about a fifth of rows; a column that is mostly blank
@@ -309,41 +358,10 @@ export default function LensList({
 
   return (
     <>
-      {/* Filters */}
-      <div className="flex items-center gap-2 sm:hidden">
-        <div className="flex-1">
-          <label className="sr-only" htmlFor="lens-search-mobile">Search lenses</label>
-          <Input
-            id="lens-search-mobile"
-            type="text"
-            placeholder="Search lenses..."
-            value={formQ}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            className="h-11 w-full"
-          />
-        </div>
-        <button
-          type="button"
-          onClick={() => setFiltersOpen((open) => !open)}
-          aria-expanded={filtersOpen}
-          aria-controls="lens-filters"
-          className="inline-flex h-11 shrink-0 items-center gap-2 rounded-lg border border-border px-4 text-sm font-medium"
-        >
-          <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
-          Filters
-          {activeFilterCount > 0 && (
-            <span className="rounded bg-brand-tint px-1.5 py-0.5 font-mono text-xs tabular-nums text-[color:var(--brand)]">
-              {activeFilterCount}
-            </span>
-          )}
-        </button>
-      </div>
-
-      <div
-        id="lens-filters"
-        className={`${filtersOpen ? "flex" : "hidden"} flex-wrap gap-3 sm:flex`}
-      >
-        <div className="hidden sm:block">
+      {/* Same shape as the camera bar: search, the facets people browse by,
+          the rest on demand, then what is applied. */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
           <label className="sr-only" htmlFor="lens-search">Search lenses</label>
           <Input
             id="lens-search"
@@ -351,176 +369,237 @@ export default function LensList({
             placeholder="Search lenses..."
             value={formQ}
             onChange={(e) => handleSearchChange(e.target.value)}
-            className="h-10"
+            className="h-11 flex-1 sm:h-10"
           />
-        </div>
-        <div>
-          <label className="sr-only" htmlFor="lens-brand">Brand</label>
-          <select
-            id="lens-brand"
-            value={formBrand}
-            onChange={(e) => { setFormBrand(e.target.value); trackEvent("lens_filter_apply", { filter: "brand", value: e.target.value }); applyFilters({ brand: e.target.value }); }}
-            className="filter-select h-10 w-full rounded-lg border border-input bg-transparent px-3 text-base text-foreground transition-colors outline-none md:text-sm focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
+          <button
+            type="button"
+            onClick={() => setFiltersOpen((open) => !open)}
+            aria-expanded={filtersOpen}
+            aria-controls="lens-more-filters"
+            className="inline-flex h-11 shrink-0 items-center gap-2 rounded-lg border border-border px-4 text-sm font-medium transition-colors sm:h-10 hover:border-ring"
           >
-            <option value="">All brands</option>
-            {brands.map((b) => (
-              <option key={b} value={b}>
-                {b}
-              </option>
+            <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
+            <span className="max-sm:sr-only">
+              {filtersOpen ? "Fewer filters" : "More filters"}
+            </span>
+            {hiddenFilterCount > 0 && (
+              <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs tabular-nums">
+                {hiddenFilterCount}
+              </span>
+            )}
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="space-y-1.5">
+            <label htmlFor="lens-brand" className="block text-xs font-medium text-muted-foreground">Brand</label>
+            <select
+              id="lens-brand"
+              value={formBrand}
+              onChange={(e) => { setFormBrand(e.target.value); trackEvent("lens_filter_apply", { filter: "brand", value: e.target.value }); applyFilters({ brand: e.target.value }); }}
+              className="filter-select h-10 w-full rounded-lg border border-input bg-transparent px-3 text-base text-foreground transition-colors outline-none md:text-sm focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
+            >
+              <option value="">All brands</option>
+              {brands.map((b) => (
+                <option key={b} value={b}>{b}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-1.5">
+            <label htmlFor="lens-system" className="block text-xs font-medium text-muted-foreground">Mount</label>
+            <select
+              id="lens-system"
+              value={formSystem}
+              onChange={(e) => { setFormSystem(e.target.value); trackEvent("lens_filter_apply", { filter: "system", value: e.target.value }); applyFilters({ system: e.target.value }); }}
+              className="filter-select h-10 w-full rounded-lg border border-input bg-transparent px-3 text-base text-foreground transition-colors outline-none md:text-sm focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
+            >
+              <option value="">All systems</option>
+              {systemOptions.map((s) => (
+                <option key={s.slug} value={s.slug}>{s.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-1.5">
+            <span id="lens-focal-label" className="block text-xs font-medium text-muted-foreground">Focal length (mm)</span>
+            <div className="flex items-center gap-1.5" role="group" aria-labelledby="lens-focal-label">
+              <Input
+                id="lens-min-focal"
+                type="number"
+                placeholder="From"
+                aria-label="Minimum focal length in mm"
+                value={formMinFocal}
+                onChange={(e) => { setFormMinFocal(e.target.value); debouncedApply({ minFocal: e.target.value }); }}
+                className="h-10 w-full"
+              />
+              <span aria-hidden="true" className="shrink-0 text-muted-foreground">&ndash;</span>
+              <Input
+                id="lens-max-focal"
+                type="number"
+                placeholder="To"
+                aria-label="Maximum focal length in mm"
+                value={formMaxFocal}
+                onChange={(e) => { setFormMaxFocal(e.target.value); debouncedApply({ maxFocal: e.target.value }); }}
+                className="h-10 w-full"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <span id="lens-aperture-label" className="block text-xs font-medium text-muted-foreground">Max aperture</span>
+            <div className="flex items-center gap-1.5" role="group" aria-labelledby="lens-aperture-label">
+              <Input
+                id="lens-min-aperture"
+                type="number"
+                step="0.1"
+                placeholder="From"
+                aria-label="Widest maximum aperture"
+                value={formMinAperture}
+                onChange={(e) => { setFormMinAperture(e.target.value); debouncedApply({ minAperture: e.target.value }); }}
+                className="h-10 w-full"
+              />
+              <span aria-hidden="true" className="shrink-0 text-muted-foreground">&ndash;</span>
+              <Input
+                id="lens-max-aperture"
+                type="number"
+                step="0.1"
+                placeholder="To"
+                aria-label="Narrowest maximum aperture"
+                value={formMaxAperture}
+                onChange={(e) => { setFormMaxAperture(e.target.value); debouncedApply({ maxAperture: e.target.value }); }}
+                className="h-10 w-full"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <span id="lens-price-label" className="block text-xs font-medium text-muted-foreground">Price (USD)</span>
+            <div className="flex items-center gap-1.5" role="group" aria-labelledby="lens-price-label">
+              <Input
+                id="lens-price-min"
+                type="number"
+                placeholder="Min"
+                aria-label="Minimum price in USD"
+                value={formPriceMin}
+                onChange={(e) => { setFormPriceMin(e.target.value); debouncedApply({ priceMin: e.target.value }); }}
+                className="h-10 w-full"
+              />
+              <span aria-hidden="true" className="shrink-0 text-muted-foreground">&ndash;</span>
+              <Input
+                id="lens-price-max"
+                type="number"
+                placeholder="Max"
+                aria-label="Maximum price in USD"
+                value={formPriceMax}
+                onChange={(e) => { setFormPriceMax(e.target.value); debouncedApply({ priceMax: e.target.value }); }}
+                className="h-10 w-full"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div
+          id="lens-more-filters"
+          className={`${filtersOpen ? "grid" : "hidden"} grid-cols-1 gap-4 border-t border-border pt-4 sm:grid-cols-2 lg:grid-cols-4`}
+        >
+          <div className="space-y-1.5">
+            <label htmlFor="lens-type" className="block text-xs font-medium text-muted-foreground">Lens type</label>
+            <select
+              id="lens-type"
+              value={lensType === "teleconverter" ? "teleconverter" : formType}
+              onChange={(e) => {
+                const val = e.target.value;
+                trackEvent("lens_filter_apply", { filter: "type", value: val });
+                if (val === "teleconverter") {
+                  setFormType("");
+                  applyFilters({ type: "", lensType: "teleconverter" });
+                } else {
+                  setFormType(val);
+                  applyFilters({ type: val, lensType: "" });
+                }
+              }}
+              className="filter-select h-10 w-full rounded-lg border border-input bg-transparent px-3 text-base text-foreground transition-colors outline-none md:text-sm focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
+            >
+              <option value="">All lens types</option>
+              <option value="prime">Prime</option>
+              <option value="zoom">Zoom</option>
+              <option value="macro">Macro</option>
+              <option value="teleconverter">Teleconverter</option>
+            </select>
+          </div>
+
+          <div className="space-y-1.5">
+            <label htmlFor="lens-coverage" className="block text-xs font-medium text-muted-foreground">Coverage</label>
+            <select
+              id="lens-coverage"
+              value={coverage}
+              onChange={(e) => { trackEvent("lens_filter_apply", { filter: "coverage", value: e.target.value }); applyFilters({ coverage: e.target.value }); }}
+              className="filter-select h-10 w-full rounded-lg border border-input bg-transparent px-3 text-base text-foreground transition-colors outline-none md:text-sm focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
+            >
+              <option value="">All coverage</option>
+              <option value="full-frame">Full Frame</option>
+              <option value="aps-c">APS-C</option>
+              <option value="micro-four-thirds">Micro Four Thirds</option>
+              <option value="medium-format">Medium Format</option>
+            </select>
+          </div>
+
+          <div className="space-y-1.5">
+            <label htmlFor="lens-series" className="block text-xs font-medium text-muted-foreground">Series</label>
+            <select
+              id="lens-series"
+              value={series}
+              onChange={(e) => { trackEvent("lens_filter_apply", { filter: "series", value: e.target.value }); applyFilters({ series: e.target.value }); }}
+              className="filter-select h-10 w-full rounded-lg border border-input bg-transparent px-3 text-base text-foreground transition-colors outline-none md:text-sm focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
+            >
+              <option value="">All series</option>
+              {seriesOptions.map((s) => (
+                <option key={s.slug} value={s.slug}>{s.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-1.5">
+            <label htmlFor="lens-year" className="block text-xs font-medium text-muted-foreground">Year introduced</label>
+            <Input
+              id="lens-year"
+              type="number"
+              placeholder="e.g. 1996"
+              value={formYear}
+              onChange={(e) => { setFormYear(e.target.value); debouncedApply({ year: e.target.value }); }}
+              className="h-10 w-full"
+            />
+          </div>
+        </div>
+
+        {/* Includes lensType, era and productionStatus, which arrive from badge
+            links on entity pages and have no control anywhere on this page.
+            Without these chips a visitor could not see or undo them. */}
+        {chips.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2">
+            {chips.map((chip) => (
+              <button
+                key={chip.key}
+                type="button"
+                onClick={() => applyFilters(chip.clear)}
+                aria-label={`Remove filter ${chip.label} ${chip.value}`}
+                className="inline-flex h-8 items-center gap-1.5 rounded-full border border-border bg-background pr-2.5 pl-3 text-xs transition-colors hover:border-ring hover:text-foreground"
+              >
+                <span className="text-muted-foreground">{chip.label}</span>
+                <span className="text-foreground">{chip.value}</span>
+                <X className="h-3 w-3 shrink-0 text-muted-foreground" aria-hidden="true" />
+              </button>
             ))}
-          </select>
-        </div>
-        <div>
-          <label className="sr-only" htmlFor="lens-system">System</label>
-          <select
-            id="lens-system"
-            value={formSystem}
-            onChange={(e) => { setFormSystem(e.target.value); trackEvent("lens_filter_apply", { filter: "system", value: e.target.value }); applyFilters({ system: e.target.value }); }}
-            className="filter-select h-10 w-full rounded-lg border border-input bg-transparent px-3 text-base text-foreground transition-colors outline-none md:text-sm focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
-          >
-            <option value="">All systems</option>
-            {systemOptions.map((s) => (
-              <option key={s.slug} value={s.slug}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="sr-only" htmlFor="lens-type">Type</label>
-          <select
-            id="lens-type"
-            value={lensType === "teleconverter" ? "teleconverter" : formType}
-            onChange={(e) => {
-              const val = e.target.value;
-              trackEvent("lens_filter_apply", { filter: "type", value: val });
-              if (val === "teleconverter") {
-                setFormType("");
-                applyFilters({ type: "", lensType: "teleconverter" });
-              } else {
-                setFormType(val);
-                applyFilters({ type: val, lensType: "" });
-              }
-            }}
-            className="filter-select h-10 w-full rounded-lg border border-input bg-transparent px-3 text-base text-foreground transition-colors outline-none md:text-sm focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
-          >
-            <option value="">All types</option>
-            <option value="prime">Prime</option>
-            <option value="zoom">Zoom</option>
-            <option value="macro">Macro</option>
-            <option value="teleconverter">Teleconverter</option>
-          </select>
-        </div>
-        <div>
-          <label className="sr-only" htmlFor="lens-series">Series</label>
-          <select
-            id="lens-series"
-            value={series}
-            onChange={(e) => { trackEvent("lens_filter_apply", { filter: "series", value: e.target.value }); applyFilters({ series: e.target.value }); }}
-            className="filter-select h-10 w-full rounded-lg border border-input bg-transparent px-3 text-base text-foreground transition-colors outline-none md:text-sm focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
-          >
-            <option value="">All series</option>
-            {seriesOptions.map((s) => (
-              <option key={s.slug} value={s.slug}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="sr-only" htmlFor="lens-coverage">Coverage</label>
-          <select
-            id="lens-coverage"
-            value={coverage}
-            onChange={(e) => { trackEvent("lens_filter_apply", { filter: "coverage", value: e.target.value }); applyFilters({ coverage: e.target.value }); }}
-            className="filter-select h-10 w-full rounded-lg border border-input bg-transparent px-3 text-base text-foreground transition-colors outline-none md:text-sm focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
-          >
-            <option value="">All coverage</option>
-            <option value="full-frame">Full Frame</option>
-            <option value="aps-c">APS-C</option>
-            <option value="micro-four-thirds">Micro Four Thirds</option>
-            <option value="medium-format">Medium Format</option>
-          </select>
-        </div>
-        <div>
-          <label className="sr-only" htmlFor="lens-min-focal">Min focal length</label>
-          <Input
-            id="lens-min-focal"
-            type="number"
-            placeholder="From (mm)"
-            value={formMinFocal}
-            onChange={(e) => { setFormMinFocal(e.target.value); debouncedApply({ minFocal: e.target.value }); }}
-            className="h-10 w-36"
-          />
-        </div>
-        <div>
-          <label className="sr-only" htmlFor="lens-max-focal">Max focal length</label>
-          <Input
-            id="lens-max-focal"
-            type="number"
-            placeholder="To (mm)"
-            value={formMaxFocal}
-            onChange={(e) => { setFormMaxFocal(e.target.value); debouncedApply({ maxFocal: e.target.value }); }}
-            className="h-10 w-36"
-          />
-        </div>
-        <div>
-          <label className="sr-only" htmlFor="lens-min-aperture">Min aperture</label>
-          <Input
-            id="lens-min-aperture"
-            type="number"
-            step="0.1"
-            placeholder="Min aperture"
-            value={formMinAperture}
-            onChange={(e) => { setFormMinAperture(e.target.value); debouncedApply({ minAperture: e.target.value }); }}
-            className="h-10 w-36"
-          />
-        </div>
-        <div>
-          <label className="sr-only" htmlFor="lens-max-aperture">Max aperture</label>
-          <Input
-            id="lens-max-aperture"
-            type="number"
-            step="0.1"
-            placeholder="Max aperture"
-            value={formMaxAperture}
-            onChange={(e) => { setFormMaxAperture(e.target.value); debouncedApply({ maxAperture: e.target.value }); }}
-            className="h-10 w-36"
-          />
-        </div>
-        <div>
-          <label className="sr-only" htmlFor="lens-year">Year</label>
-          <Input
-            id="lens-year"
-            type="number"
-            placeholder="Year"
-            value={formYear}
-            onChange={(e) => { setFormYear(e.target.value); debouncedApply({ year: e.target.value }); }}
-            className="h-10 w-28"
-          />
-        </div>
-        <div>
-          <label className="sr-only" htmlFor="lens-price-min">Min price</label>
-          <Input
-            id="lens-price-min"
-            type="number"
-            placeholder="Min $"
-            value={formPriceMin}
-            onChange={(e) => { setFormPriceMin(e.target.value); debouncedApply({ priceMin: e.target.value }); }}
-            className="h-10 w-24"
-          />
-        </div>
-        <div>
-          <label className="sr-only" htmlFor="lens-price-max">Max price</label>
-          <Input
-            id="lens-price-max"
-            type="number"
-            placeholder="Max $"
-            value={formPriceMax}
-            onChange={(e) => { setFormPriceMax(e.target.value); debouncedApply({ priceMax: e.target.value }); }}
-            className="h-10 w-24"
-          />
-        </div>
+            <button
+              type="button"
+              onClick={() => applyFilters(clearAll)}
+              className="inline-flex h-8 items-center rounded-md px-2 text-xs text-muted-foreground underline underline-offset-2 transition-colors hover:text-foreground"
+            >
+              Clear all
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Results: cards on a phone, the full table from lg up. A 1,008px table
@@ -576,6 +655,14 @@ export default function LensList({
             );
           })}
         </ul>
+      )}
+
+      {/* The skeleton lives inside the desktop wrapper, so without this the
+          card list had no sign that more rows were on the way. */}
+      {loading && (
+        <p className="py-3 text-center text-sm text-muted-foreground lg:hidden">
+          Loading more...
+        </p>
       )}
 
       {items.length > 0 ? (
