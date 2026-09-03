@@ -16,8 +16,6 @@ interface PriceEstimate {
   priceVeryGoodHigh: number | null;
   priceMintLow: number | null;
   priceMintHigh: number | null;
-  rarity: string | null;
-  rarityVotes: number | null;
   sourceUrl: string | null;
   sourceName: string | null;
   extractedAt: Date;
@@ -61,45 +59,6 @@ function formatCondition(cond: string | null) {
   return labels[cond] ?? cond;
 }
 
-const RARITY_SCALE: Record<string, number> = {
-  "Very common": 1,
-  "Not rare": 1,
-  "Common": 2,
-  "Somewhat rare": 3,
-  "Very scarce": 4,
-  "Extremely rare": 5,
-};
-
-function RarityDiamonds({ label }: { label: string }) {
-  const count = RARITY_SCALE[label] ?? 0;
-  if (count === 0) return <span>{label}</span>;
-  return (
-    <span className="inline-flex items-center gap-1">
-      {Array.from({ length: 5 }).map((_, i) => (
-        <svg
-          key={i}
-          aria-hidden="true"
-          viewBox="0 0 16 16"
-          className={`h-3.5 w-3.5 ${
-            i < count
-              ? "text-amber-500 dark:text-amber-400"
-              : "text-zinc-200 dark:text-foreground"
-          }`}
-          fill="currentColor"
-        >
-          <path d="M8 1l2.5 4.5L16 7l-4 4 1 5-5-2.5L3 16l1-5-4-4 5.5-1.5z" />
-        </svg>
-      ))}
-      <span className="ml-1 text-sm text-muted-foreground">
-        {label}
-      </span>
-    </span>
-  );
-}
-
-/** Rarity is a claim about scarcity, so it needs enough sales to stand up. */
-const MIN_SALES_FOR_RARITY = 20;
-
 export default function PriceCard({ estimate, history }: PriceCardProps) {
   const shownEstimate =
     estimate != null &&
@@ -107,19 +66,15 @@ export default function PriceCard({ estimate, history }: PriceCardProps) {
       ? estimate
       : null;
 
-  // An estimate row can carry a rarity label and no prices at all (1,707 lens
-  // rows do). Without prices and without sales there is nothing to show, and a
-  // bare "Used prices" heading over an empty box is worse than no section.
+  // An estimate row can exist with no prices at all (1,707 lens rows do).
+  // Without prices and without sales there is nothing to show, and a bare
+  // "Used prices" heading over an empty box is worse than no section.
   if (!shownEstimate && history.length === 0) return null;
 
   const display = getPriceDisplay(shownEstimate);
   const showTiers = display?.showTiers ?? false;
   const spanLow = display?.low ?? null;
   const spanHigh = display?.high ?? null;
-
-  const saleCount = shownEstimate?.rarityVotes ?? history.length;
-  const showRarity =
-    shownEstimate?.rarity != null && saleCount >= MIN_SALES_FOR_RARITY;
 
   return (
     <div className="@container space-y-4">
@@ -170,31 +125,16 @@ export default function PriceCard({ estimate, history }: PriceCardProps) {
             </div>
           </div>
 
-          {(showRarity || shownEstimate.sourceUrl) && (
-            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-border px-3 py-2.5">
-              {showRarity && shownEstimate.rarity && (
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <span className="text-xs font-medium text-muted-foreground uppercase">
-                    Rarity
-                  </span>
-                  <RarityDiamonds label={shownEstimate.rarity} />
-                  {shownEstimate.rarityVotes != null && shownEstimate.rarityVotes > 0 && (
-                    <span className="text-xs text-muted-foreground">
-                      ({shownEstimate.rarityVotes} sold in last 90 days)
-                    </span>
-                  )}
-                </div>
-              )}
-              <span className="text-xs text-muted-foreground">
-                Based on recent {shownEstimate.sourceName || "eBay"} sales
-                {" · "}
-                {new Date(shownEstimate.extractedAt).toLocaleDateString("en-US", {
-                  month: "short",
-                  year: "numeric",
-                })}
-              </span>
-            </div>
-          )}
+          <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-2 border-t border-border px-3 py-2.5">
+            <span className="text-xs text-muted-foreground">
+              Based on recent {shownEstimate.sourceName || "eBay"} sales
+              {" · "}
+              {new Date(shownEstimate.extractedAt).toLocaleDateString("en-US", {
+                month: "short",
+                year: "numeric",
+              })}
+            </span>
+          </div>
         </div>
       )}
 
