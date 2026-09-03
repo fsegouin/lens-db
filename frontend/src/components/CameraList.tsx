@@ -555,6 +555,10 @@ export default function CameraList({
 
       {/* Results */}
       {items.length > 0 ? (
+        <>
+        {/* A 975px table in a 358px viewport scrolled sideways and detached
+            every value from its camera. Below lg the same rows are cards. */}
+        <div className="hidden lg:block">
         <Table>
           <TableHeader>
             <TableRow>
@@ -692,6 +696,59 @@ export default function CameraList({
             )}
           </TableBody>
         </Table>
+        </div>
+
+        <ul className="divide-y divide-border border-y border-border lg:hidden">
+          {items.map(({ camera, system: sys, avgPrice }) => {
+            const specs = (camera.specs ?? {}) as Record<string, string>;
+            const specLine = [
+              camera.sensorSize || specs["Maximum format"],
+              camera.megapixels ? `${camera.megapixels} MP` : null,
+              camera.bodyType,
+              camera.yearIntroduced,
+            ]
+              .filter(Boolean)
+              .join(" \u00b7 ");
+            return (
+              <li key={camera.id}>
+                <Link
+                  href={`/cameras/${camera.slug}`}
+                  className="flex flex-col gap-1.5 py-3 transition-colors hover:bg-muted/50"
+                >
+                  <span className="font-medium leading-snug">{camera.name}</span>
+                  {specLine && (
+                    <span className="font-mono text-xs tabular-nums text-muted-foreground">
+                      {specLine}
+                    </span>
+                  )}
+                  <span className="flex items-center justify-between gap-3">
+                    {sys ? (
+                      <span className="rounded border border-border px-1.5 py-0.5 font-mono text-xs">
+                        {sys.name}
+                      </span>
+                    ) : (
+                      <span />
+                    )}
+                    {avgPrice != null && (
+                      <span className="font-mono text-sm tabular-nums">
+                        ${avgPrice.toLocaleString()}
+                      </span>
+                    )}
+                  </span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+
+        {/* The skeleton lives inside the desktop wrapper, so without this the
+            card list had no sign that more rows were on the way. */}
+        {loading && (
+          <p className="py-3 text-center text-sm text-muted-foreground lg:hidden">
+            Loading more...
+          </p>
+        )}
+        </>
       ) : (
         <div className="rounded-xl border border-dashed border-border p-12 text-center">
           <p className="text-muted-foreground">
