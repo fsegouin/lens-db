@@ -107,6 +107,11 @@ function KitRow({
           value={acquiredYear}
           aria-label={`Year you got the ${item.name}`}
           className="h-8 w-20"
+          // Most things were bought recently, so an empty box fills with this
+          // year on focus and is typed over when it was not.
+          onFocus={() => {
+            if (acquiredYear === "") setAcquiredYear(String(new Date().getFullYear()));
+          }}
           onChange={(e) => setAcquiredYear(e.target.value)}
           onBlur={() => {
             const raw = acquiredYear.trim();
