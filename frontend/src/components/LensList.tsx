@@ -580,16 +580,16 @@ export default function LensList({
 
       {items.length > 0 ? (
         <div className="hidden lg:block">
-        <Table>
+        <Table className="table-fixed">
           <TableHeader>
             <TableRow>
               {[
-                { key: "name", label: "Name", className: "w-[28%]" },
+                { key: "name", label: "Name", className: showSeries ? "w-[25%]" : "w-[28%]" },
                 { key: "brand", label: "Brand", className: "w-[11%]" },
-                { key: "system", label: "System", className: "w-[12%]" },
-                { key: "focalLength", label: "Focal Length", className: "w-[10%] text-right" },
+                { key: "system", label: "System", className: showSeries ? "w-[11%]" : "w-[12%]" },
+                { key: "focalLength", label: "Focal Length", className: showSeries ? "w-[9%] text-right" : "w-[10%] text-right" },
                 { key: "aperture", label: "Aperture", className: "w-[9%] text-right" },
-                { key: "type", label: "Type", sortable: false, className: "w-[8%]" },
+                { key: "type", label: "Type", sortable: false, className: showSeries ? "w-[7%]" : "w-[8%]" },
                 ...(showSeries
                   ? [{ key: "series", label: "Series", sortable: false, className: "w-[10%]" }]
                   : []),
@@ -639,7 +639,7 @@ export default function LensList({
                 <TableCell className="max-w-[22rem] whitespace-normal">
                   <Link
                     href={`/lenses/${lens.slug}`}
-                    className="block break-words leading-snug font-medium text-zinc-900 hover:underline line-clamp-2 dark:text-zinc-100"
+                    className="block break-words leading-snug font-medium text-foreground hover:underline line-clamp-2"
                   >
                     {lens.name}
                   </Link>
@@ -722,22 +722,26 @@ export default function LensList({
                   )}
                   </div>
                 </TableCell>
-                <TableCell>
-                  {lensSeries.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      {lensSeries.map((s) => (
-                        <Badge
-                          key={s.slug}
-                          variant="series"
-                          className="cursor-pointer"
-                          onClick={() => applyFilters({ series: s.slug, brand: "", system: "", q: "", type: "", minFocal: "", maxFocal: "", minAperture: "", maxAperture: "", year: "", lensType: "", era: "", productionStatus: "", coverage: "" })}
-                        >
-                          {s.name}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                </TableCell>
+                {/* Gated on the same flag as its header, or every value to
+                    the right of it shifts one column. */}
+                {showSeries && (
+                  <TableCell>
+                    {lensSeries.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {lensSeries.map((s) => (
+                          <Badge
+                            key={s.slug}
+                            variant="series"
+                            className="cursor-pointer"
+                            onClick={() => applyFilters({ series: s.slug, brand: "", system: "", q: "", type: "", minFocal: "", maxFocal: "", minAperture: "", maxAperture: "", year: "", lensType: "", era: "", productionStatus: "", coverage: "" })}
+                          >
+                            {s.name}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                  </TableCell>
+                )}
                 <TableCell className="text-right font-mono tabular-nums text-muted-foreground">
                   {lens.yearIntroduced ? (
                     <button type="button"
