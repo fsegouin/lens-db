@@ -693,5 +693,8 @@ export const ebayAskingSnapshots = pgTable(
       table.observedOn,
     ),
     index("idx_ebay_asking_entity").on(table.entityType, table.entityId),
+    // Serves retention. The unique index above cannot: observed_on is its
+    // last column, so a plain date-range delete would scan the whole table.
+    index("idx_ebay_asking_observed_on").on(table.observedOn),
   ]
 );

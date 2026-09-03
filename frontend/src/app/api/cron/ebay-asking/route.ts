@@ -7,7 +7,7 @@ import {
   ebayAskingSnapshots,
   ebayListingWatch,
 } from "@/db/schema";
-import { sql, isNull, desc, and, eq, inArray } from "drizzle-orm";
+import { sql, isNull, desc, and, eq, inArray, lt } from "drizzle-orm";
 import {
   searchActiveListings,
   EbayApiError,
@@ -83,6 +83,20 @@ const MIN_PLAUSIBLE_USD = 5;
 
 /** Relevant listings below which a camera's alias is worth a second search. */
 const ALIAS_SEARCH_THRESHOLD = 5;
+
+/**
+ * How long a daily asking snapshot is kept.
+ *
+ * The chart is the only thing that reads more than the newest row, and it
+ * reads the trailing year, so beyond that a snapshot is read by nothing at
+ * all. The extra five weeks are margin rather than slack: they keep the far
+ * end of a year-long chart from being clipped by a sweep that ran late.
+ *
+ * Without this the table grows forever. Every entity is swept about weekly,
+ * so the catalogue produces roughly 600,000 rows a year, and on a 500 MB
+ * database that is not something to leave unbounded.
+ */
+const SNAPSHOT_RETENTION_DAYS = 400;
 
 export const maxDuration = 300;
 
@@ -456,6 +470,16 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // Drop snapshots nothing reads any more. Cheap enough to run every call:
+  // with the index on observed_on this is a range scan that matches nothing
+  // until the table is over a year old.
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - SNAPSHOT_RETENTION_DAYS);
+  const pruned = await db
+    .delete(ebayAskingSnapshots)
+    .where(lt(ebayAskingSnapshots.observedOn, cutoff.toISOString().slice(0, 10)))
+    .returning({ id: ebayAskingSnapshots.id });
+
   return NextResponse.json({
     entityType,
     requested: batch.length,
@@ -463,6 +487,7 @@ export async function GET(request: NextRequest) {
     withListings,
     failed,
     rateLimited,
+    prunedSnapshots: pruned.length,
     remainingToday: await countDue(entityType),
   });
 }
