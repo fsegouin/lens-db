@@ -174,6 +174,28 @@ function medianForWindows(
 const MIN_SOLD_SALES_FOR_ESTIMATE = 3;
 
 /**
+ * Live listings needed before an asking snapshot is worth publishing.
+ *
+ * Below this the percentiles are not percentiles. On three listings p25 and
+ * p75 are simply the cheapest and the dearest, so the "range" is the spread
+ * of whatever three items happened to be up: a Canon Serenar 50mm read
+ * "$78 to $4,112" and a Canon 85mm f/1.5 "$1,154 to $11,638", both off three
+ * listings. Entities thin enough to need an asking estimate are exactly the
+ * ones least likely to have the listings to support one.
+ */
+const MIN_ASKING_SAMPLE = 8;
+
+/**
+ * Widest p75/p25 ratio still treated as one coherent market. Beyond it the
+ * result set is measuring more than one thing: short model names match far
+ * more than themselves ("Canon EF" pulls in every EF-mount lens, "Sony a7"
+ * every a7 variant), and unlike the old scraper there is no relevance pass
+ * between the search and the estimate. The median survives that better than
+ * the range does, so a wide sample keeps its midpoint and loses its bounds.
+ */
+const MAX_ASKING_SPREAD = 4;
+
+/**
  * Write an estimate derived from the most recent asking snapshot, correcting
  * for the markup sellers ask over what buyers pay.
  *
@@ -193,6 +215,7 @@ async function upsertFromAsking(
       medianUsd: ebayAskingSnapshots.medianUsd,
       p25Usd: ebayAskingSnapshots.p25Usd,
       p75Usd: ebayAskingSnapshots.p75Usd,
+      sampleCount: ebayAskingSnapshots.sampleCount,
     })
     .from(ebayAskingSnapshots)
     .where(
@@ -205,15 +228,22 @@ async function upsertFromAsking(
     .limit(1);
 
   if (!snapshot?.medianUsd) return false;
+  if (snapshot.sampleCount < MIN_ASKING_SAMPLE) return false;
 
   const correct = (v: number | null) =>
     v == null ? null : Math.round(v / ASKING_TO_SOLD_RATIO);
 
+  // A sample spanning more than one market keeps its midpoint but loses its
+  // bounds: publishing no range is honest, publishing a 50x one is not.
+  const spread =
+    snapshot.p25Usd && snapshot.p75Usd ? snapshot.p75Usd / snapshot.p25Usd : null;
+  const rangeIsCoherent = spread != null && spread <= MAX_ASKING_SPREAD;
+
   const now = new Date();
   const values = {
     sourceName: "eBay",
-    priceAverageLow: correct(snapshot.p25Usd),
-    priceAverageHigh: correct(snapshot.p75Usd),
+    priceAverageLow: rangeIsCoherent ? correct(snapshot.p25Usd) : null,
+    priceAverageHigh: rangeIsCoherent ? correct(snapshot.p75Usd) : null,
     priceVeryGoodLow: null,
     priceVeryGoodHigh: null,
     priceMintLow: null,
@@ -233,6 +263,39 @@ async function upsertFromAsking(
 
   revalidateTag(priceTag(entityType, entityId), "max");
   return true;
+}
+
+/**
+ * Clear an asking-derived estimate that no longer earns its place, so a
+ * figure published under a looser rule does not simply sit there once the
+ * rule tightens. Sold-derived estimates are deliberately left alone: a lens
+ * with no sale this year still has its history behind it, whereas an asking
+ * estimate is only ever as good as today's listings.
+ */
+async function retractAskingEstimate(
+  entityType: string,
+  entityId: number,
+): Promise<void> {
+  await db
+    .update(priceEstimates)
+    .set({
+      priceAverageLow: null,
+      priceAverageHigh: null,
+      priceVeryGoodLow: null,
+      priceVeryGoodHigh: null,
+      priceMintLow: null,
+      priceMintHigh: null,
+      medianPrice: null,
+      extractedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(priceEstimates.entityType, entityType),
+        eq(priceEstimates.entityId, entityId),
+        eq(priceEstimates.priceSource, "asking"),
+      ),
+    );
+  revalidateTag(priceTag(entityType, entityId), "max");
 }
 
 export async function recomputePriceEstimates(
@@ -263,6 +326,9 @@ export async function recomputePriceEstimates(
   // promotion rule: every lens starts on asking and graduates to sold.
   if (rows.length < MIN_SOLD_SALES_FOR_ESTIMATE) {
     if (await upsertFromAsking(entityType, entityId)) return;
+    // The asking sample was too thin or too incoherent to publish. Anything
+    // written from an earlier, looser reading has to come down.
+    await retractAskingEstimate(entityType, entityId);
   }
 
   // No sales and no asking sample: upsert a bare tracking row so the entity
