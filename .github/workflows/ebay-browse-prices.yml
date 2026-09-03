@@ -18,10 +18,10 @@ on:
     inputs:
       asking_budget:
         description: "Max asking calls (1 per entity)"
-        default: "1700"
+        default: "1600"
       resolve_budget:
         description: "Max resolve calls (1 per ended listing)"
-        default: "2800"
+        default: "2600"
 
 permissions:
   contents: read
@@ -34,21 +34,38 @@ jobs:
     env:
       API_URL: ${{ secrets.API_URL }}
       CRON_SECRET: ${{ secrets.CRON_SECRET }}
-      # eBay's documented default is 5000 Browse calls/day for the whole app.
-      # ~1700 sweeps the 11,486-entity catalogue weekly, ~2800 resolves the
-      # listings that ended, and the remaining ~500 covers the listings shown
-      # on entity pages.
-      ASKING_BUDGET: ${{ inputs.asking_budget || '1700' }}
-      RESOLVE_BUDGET: ${{ inputs.resolve_budget || '2800' }}
+      # eBay's documented default is 5000 Browse calls/day for the whole app,
+      # and it could not be confirmed against the account because the
+      # developer analytics scope is refused on these keys, so the split is
+      # deliberately short of the ceiling. 1600 sweeps the 11,486-entity
+      # catalogue in about a week, 2600 resolves the listings that ended, and
+      # both loops check the budget before fetching a page, so each can
+      # overrun by up to one page. Worst case lands near 4350, leaving room
+      # for the listings shown on entity pages.
+      ASKING_BUDGET: ${{ inputs.asking_budget || '1600' }}
+      RESOLVE_BUDGET: ${{ inputs.resolve_budget || '2600' }}
       PAGE: "50"
     steps:
       - name: Asking-price snapshots
         run: |
           set -euo pipefail
+          # ASKING_BUDGET is the total across both catalogues, split in
+          # proportion to their size so each sweeps in about the same number
+          # of days: 9,299 lenses and 2,187 cameras, so roughly 80/20. Giving
+          # each type the full budget instead would double the day's spend,
+          # and running them off one shared counter would let whichever went
+          # first eat the whole allowance and starve the other.
+          LENS_BUDGET=$(( ASKING_BUDGET * 80 / 100 ))
+          CAMERA_BUDGET=$(( ASKING_BUDGET - LENS_BUDGET ))
+          echo "budget: $LENS_BUDGET lens + $CAMERA_BUDGET camera = $ASKING_BUDGET"
           for TYPE in lens camera; do
+            case "$TYPE" in
+              lens)   BUDGET=$LENS_BUDGET ;;
+              camera) BUDGET=$CAMERA_BUDGET ;;
+            esac
             SPENT=0
-            echo "::group::asking: $TYPE"
-            while [ "$SPENT" -lt "$ASKING_BUDGET" ]; do
+            echo "::group::asking: $TYPE (budget $BUDGET)"
+            while [ "$SPENT" -lt "$BUDGET" ]; do
               RESP=$(curl -sS --fail-with-body \
                 -H "Authorization: Bearer $CRON_SECRET" \
                 "$API_URL/api/cron/ebay-asking?entityType=$TYPE&limit=$PAGE")
