@@ -507,7 +507,7 @@ export default function LensList({
             <label htmlFor="lens-type" className="block text-xs font-medium text-muted-foreground">Lens type</label>
             <select
               id="lens-type"
-              value={lensType === "teleconverter" ? "teleconverter" : formType}
+              value={lensType?.toLowerCase() === "teleconverter" ? "teleconverter" : formType}
               onChange={(e) => {
                 const val = e.target.value;
                 trackEvent("lens_filter_apply", { filter: "type", value: val });
@@ -605,7 +605,7 @@ export default function LensList({
       {/* Results: cards on a phone, the full table from lg up. A 1,008px table
           in a 358px viewport scrolled sideways and detached names from values. */}
       {items.length > 0 && (
-        <ul className="divide-y divide-border border-y border-border lg:hidden">
+        <ul className="divide-y divide-border border-y border-border xl:hidden">
           {items.map(({ lens, system, mounts = [], avgPrice }) => {
             const focal = lens.focalLengthMin
               ? lens.focalLengthMin === lens.focalLengthMax
@@ -660,13 +660,13 @@ export default function LensList({
       {/* The skeleton lives inside the desktop wrapper, so without this the
           card list had no sign that more rows were on the way. */}
       {loading && (
-        <p className="py-3 text-center text-sm text-muted-foreground lg:hidden">
+        <p className="py-3 text-center text-sm text-muted-foreground xl:hidden">
           Loading more...
         </p>
       )}
 
       {items.length > 0 ? (
-        <div className="hidden lg:block">
+        <div className="hidden xl:block">
         <Table className="table-fixed">
           <TableHeader>
             <TableRow>
@@ -850,13 +850,6 @@ export default function LensList({
               </TableRow>
             ))}
             {loading && <TableSkeleton columns={colCount} rows={3} />}
-            {nextCursor !== null && (
-              <TableRow>
-                <TableCell colSpan={colCount} className="p-0">
-                  <div ref={sentinelRef} className="h-px w-full" />
-                </TableCell>
-              </TableRow>
-            )}
           </TableBody>
         </Table>
         </div>
@@ -867,6 +860,10 @@ export default function LensList({
           </p>
         </div>
       )}
+      {/* Outside both layouts, so one observer serves the table and the cards.
+          Inside the table it was inert wherever the table was hidden, which
+          capped every phone at the first page. */}
+      {nextCursor !== null && <div ref={sentinelRef} className="h-px w-full" />}
 
       <ScrollToTop />
     </>
