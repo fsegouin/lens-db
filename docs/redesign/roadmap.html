@@ -238,16 +238,18 @@
         <li><span class="mark done">✓</span><span>Brand pages, 266 of them, plus the brand column normalised</span></li>
         <li><span class="mark done">✓</span><span>318 duplicate lenses merged, and 1,662 double-counted sales removed
           <span class="item-note">The twins had recorded the same eBay sales twice, so prices were computed from inflated evidence.</span></span></li>
-        <li><span class="mark now">→</span><span>Mount facts: flange distance per mount
-          <span class="item-note">In flight. The figures turned out to be already in the corpus, embedded in a spec string on 6,708 lenses: 68 mounts, values verified against published references. Column added and migration written; seeding next.</span></span></li>
-        <li><span class="mark todo">○</span><span>The adapter solver
-          <span class="item-note">Any lens on any body: fits, adapts with infinity focus, or needs corrective glass, derived from the flange figures rather than folklore. The signature feature.</span></span></li>
-        <li><span class="mark todo">○</span><span>Static comparison pages
-          <span class="item-note">"X vs Y" is a large query class; today comparison is query-string only and uncrawlable.</span></span></li>
+        <li><span class="mark done">✓</span><span>Mount facts: flange distance per mount, 76 of 132
+          <span class="item-note">The figures were already in the corpus, embedded in a spec string on 6,708 lenses. Two passes read them out, including the mounts the source spells under another name, and three were filled by hand. T-mount and Tamron Adaptall stay blank on purpose: they ship with a swappable rear adapter, so no single register describes them.</span></span></li>
+        <li><span class="mark done">✓</span><span>The adapter solver
+          <span class="item-note">A matrix of 34 lens mounts against the 8 shortest-register bodies, and 289 pair pages that state the verdict and show the register arithmetic so the answer can be checked. Verified against known pairings: Canon EF to Nikon F needs corrective glass, Sony E to Fujifilm X is too tight at 0.3 mm.</span></span></li>
+        <li><span class="mark done">✓</span><span>Static comparison pages, 3,023 of them
+          <span class="item-note">A pair earns a page when the two are genuinely cross-shopped: same mount, same focal length, within a stop, and each traded at least 20 times. Recorded sales are the one real-world signal this database owns, since only 54 comparisons have ever been recorded and view counts top out at 127.</span></span></li>
+        <li><span class="mark done">✓</span><span>Price estimates re-derived for the 353 merged survivors
+          <span class="item-note">Their evidence changed underneath them when the duplicate sales went. 165 landed on different figures. A $5 floor now keeps parts listings from setting a headline price: a Mamiya-Sekor C 127mm read "$2" against a $190 median.</span></span></li>
         <li><span class="mark todo">○</span><span>Controlled vocabularies
-          <span class="item-note">"coverage" has 17 spellings for about five concepts, which blocks faceted filtering.</span></span></li>
-        <li><span class="mark todo">○</span><span>Recompute price estimates for the 316 merged survivors
-          <span class="item-note">Their evidence changed underneath them when the duplicate sales went.</span></span></li>
+          <span class="item-note">"coverage" has 17 spellings for about five concepts, which blocks faceted filtering. Next.</span></span></li>
+        <li><span class="mark todo">○</span><span>The eBay classifier attributes cheap listings to expensive variants
+          <span class="item-note">Surfaced by the merge: a Minolta MD Shift 35mm F/2.8 carries thirteen sub-$150 sales that are plain non-shift 35mm listings, dragging its median from $761 to $120. The merge and the estimate are both right; the classification underneath is not.</span></span></li>
       </ul>
     </div>
 
