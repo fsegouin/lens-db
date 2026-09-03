@@ -24,7 +24,7 @@ export async function generateMetadata({
     description: profile.kitIsPublic
       ? `The lenses and cameras ${profile.displayName} owns.`
       : `${profile.displayName} on The Lens DB.`,
-    path: `/people/${handle}`,
+    path: `/community/${handle}`,
   });
 }
 
@@ -59,15 +59,17 @@ export default async function ProfilePage({
   return (
     <div className="mx-auto w-full max-w-3xl">
       <Breadcrumb
-        crumbs={[{ name: "People", path: "/people" }, { name: profile.displayName }]}
+        crumbs={[{ name: "Community", path: "/community" }, { name: profile.displayName }]}
       />
 
-      <h1 className="mt-4 text-3xl font-bold tracking-tight text-balance">
-        {profile.displayName}
-      </h1>
-      {since && (
-        <p className="mt-1 text-sm text-muted-foreground">Here since {since}</p>
-      )}
+      <div className="mt-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <h1 className="text-3xl font-bold tracking-tight text-balance">
+          {profile.displayName}
+        </h1>
+        {since && (
+          <p className="text-sm text-muted-foreground">Here since {since}</p>
+        )}
+      </div>
 
       <h2 className="mt-8 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
         Their kit

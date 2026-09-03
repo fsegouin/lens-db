@@ -18,7 +18,9 @@ import PriceCard from "@/components/PriceCard";
 import EntitySummaryLine from "@/components/EntitySummaryLine";
 import EbayListings from "@/components/EbayListings";
 import Infobox, { type Fact } from "@/components/Infobox";
+import { getOwnersOf } from "@/lib/kit";
 import KitButton from "@/components/KitButton";
+import OwnersList from "@/components/OwnersList";
 import ProvenanceLine from "@/components/ProvenanceLine";
 import { getProvenance } from "@/lib/provenance";
 import { getImages } from "@/lib/images";
@@ -103,12 +105,14 @@ export default async function CameraDetailPage({
 
   const specs = (camera.specs ?? {}) as Record<string, string>;
 
-  const [priceEstimate, priceHistoryRows, relations, provenance] = await Promise.all([
-    getEntityPriceEstimate("camera", camera.id),
-    getEntityPriceHistory("camera", camera.id),
-    getCameraRelations(camera.systemId),
-    getProvenance("camera", camera.id),
-  ]);
+  const [priceEstimate, priceHistoryRows, relations, provenance, owners] =
+    await Promise.all([
+      getEntityPriceEstimate("camera", camera.id),
+      getEntityPriceHistory("camera", camera.id),
+      getCameraRelations(camera.systemId),
+      getProvenance("camera", camera.id),
+      getOwnersOf("camera", camera.id),
+    ]);
 
   const images = getImages(
     "cameras",
@@ -300,6 +304,8 @@ export default async function CameraDetailPage({
           />
         </div>
       </div>
+
+      <OwnersList owners={owners} />
 
       {relations.lenses.length > 0 && system && (
         <div>

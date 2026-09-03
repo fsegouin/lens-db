@@ -68,7 +68,7 @@ export function UserMenu() {
 
           {user.handle && (
             <Link
-              href={`/people/${user.handle}`}
+              href={`/community/${user.handle}`}
               className={ITEM}
               onClick={() => setOpen(false)}
             >
