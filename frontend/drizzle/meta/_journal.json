@@ -281,6 +281,13 @@
       "when": 1788432249886,
       "tag": "0039_ebay_asking_and_watch",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1788436595304,
+      "tag": "0040_watch_all_listings",
+      "breakpoints": true
     }
   ]
 }

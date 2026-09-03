@@ -18,10 +18,10 @@ on:
     inputs:
       asking_budget:
         description: "Max asking calls (1 per entity)"
-        default: "3000"
+        default: "1700"
       resolve_budget:
-        description: "Max resolve calls (1 per watched listing)"
-        default: "1500"
+        description: "Max resolve calls (1 per ended listing)"
+        default: "2800"
 
 permissions:
   contents: read
@@ -35,9 +35,11 @@ jobs:
       API_URL: ${{ secrets.API_URL }}
       CRON_SECRET: ${{ secrets.CRON_SECRET }}
       # eBay's documented default is 5000 Browse calls/day for the whole app.
-      # These budgets leave roughly 500 for the listings shown on lens pages.
-      ASKING_BUDGET: ${{ inputs.asking_budget || '3000' }}
-      RESOLVE_BUDGET: ${{ inputs.resolve_budget || '1500' }}
+      # ~1700 sweeps the 11,486-entity catalogue weekly, ~2800 resolves the
+      # listings that ended, and the remaining ~500 covers the listings shown
+      # on entity pages.
+      ASKING_BUDGET: ${{ inputs.asking_budget || '1700' }}
+      RESOLVE_BUDGET: ${{ inputs.resolve_budget || '2800' }}
       PAGE: "50"
     steps:
       - name: Asking-price snapshots

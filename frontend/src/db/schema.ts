@@ -631,6 +631,13 @@ export const ebayListingWatch = pgTable(
     condition: text("condition"),
     askingPriceUsd: integer("asking_price_usd"),
     firstSeenAt: timestamp("first_seen_at", { withTimezone: true }).notNull().defaultNow(),
+    // Last search that still returned this listing. A watched listing that
+    // stops coming back has ended, which is how the pipeline finds sales
+    // without spending an API call per listing per cycle.
+    lastSeenActiveAt: timestamp("last_seen_active_at", { withTimezone: true }),
+    // Set by the ingest pass when a search no longer returns this listing.
+    // Only rows with this set are worth spending a resolve call on.
+    disappearedAt: timestamp("disappeared_at", { withTimezone: true }),
     lastCheckedAt: timestamp("last_checked_at", { withTimezone: true }),
     // "sold" | "expired" | "gone" (item no longer resolvable), null = pending
     resolution: text("resolution"),
@@ -647,6 +654,14 @@ export const ebayListingWatch = pgTable(
     index("idx_ebay_watch_pending")
       .on(table.firstSeenAt)
       .where(sql`resolution IS NULL`),
+    // Finding the listings a given entity's latest search stopped returning.
+    index("idx_ebay_watch_last_seen")
+      .on(table.entityType, table.entityId, table.lastSeenActiveAt)
+      .where(sql`resolution IS NULL`),
+    // The resolve queue proper: gone, and not yet accounted for.
+    index("idx_ebay_watch_disappeared")
+      .on(table.disappearedAt)
+      .where(sql`resolution IS NULL AND disappeared_at IS NOT NULL`),
   ]
 );
 
