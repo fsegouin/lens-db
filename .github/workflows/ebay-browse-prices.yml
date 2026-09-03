@@ -1,0 +1,91 @@
+name: eBay Price Pipeline (Browse API)
+
+# Replaces the scraped sold-listing pipeline, which eBay's bot wall closed in
+# July 2026. Everything here goes through the official Browse API server-side,
+# so there is no browser, no session and nothing to be blocked. The runner only
+# drives the loop; all the work happens in the cron routes.
+#
+# Two passes:
+#   asking  — one call per entity, records the day's asking aggregate and
+#             starts watching a sample of the live listings.
+#   resolve — one call per watched listing, turning the ones that have ended
+#             into real recorded sales.
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+    inputs:
+      asking_budget:
+        description: "Max asking calls (1 per entity)"
+        default: "3000"
+      resolve_budget:
+        description: "Max resolve calls (1 per watched listing)"
+        default: "1500"
+
+permissions:
+  contents: read
+
+jobs:
+  browse-pipeline:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 120
+    env:
+      API_URL: ${{ secrets.API_URL }}
+      CRON_SECRET: ${{ secrets.CRON_SECRET }}
+      # eBay's documented default is 5000 Browse calls/day for the whole app.
+      # These budgets leave roughly 500 for the listings shown on lens pages.
+      ASKING_BUDGET: ${{ inputs.asking_budget || '3000' }}
+      RESOLVE_BUDGET: ${{ inputs.resolve_budget || '1500' }}
+      PAGE: "50"
+    steps:
+      - name: Asking-price snapshots
+        run: |
+          set -euo pipefail
+          for TYPE in lens camera; do
+            SPENT=0
+            echo "::group::asking: $TYPE"
+            while [ "$SPENT" -lt "$ASKING_BUDGET" ]; do
+              RESP=$(curl -sS --fail-with-body \
+                -H "Authorization: Bearer $CRON_SECRET" \
+                "$API_URL/api/cron/ebay-asking?entityType=$TYPE&limit=$PAGE")
+              PROCESSED=$(jq -r '.processed // 0' <<<"$RESP")
+              REMAINING=$(jq -r '.remainingToday // 0' <<<"$RESP")
+              LIMITED=$(jq -r '.rateLimited // false' <<<"$RESP")
+              FAILED=$(jq -r '.failed // 0' <<<"$RESP")
+              SPENT=$((SPENT + PROCESSED))
+              echo "  +$PROCESSED (failed $FAILED, spent $SPENT, $REMAINING due)"
+              if [ "$LIMITED" = "true" ]; then
+                echo "  eBay refused further calls; stopping this pass"
+                break
+              fi
+              # No progress means the queue is drained or every call is
+              # failing. Either way, looping again achieves nothing.
+              if [ "$PROCESSED" -eq 0 ] || [ "$REMAINING" -eq 0 ]; then break; fi
+            done
+            echo "::endgroup::"
+          done
+
+      - name: Resolve ended listings into sales
+        run: |
+          set -euo pipefail
+          SPENT=0
+          echo "::group::resolve"
+          while [ "$SPENT" -lt "$RESOLVE_BUDGET" ]; do
+            RESP=$(curl -sS --fail-with-body \
+              -H "Authorization: Bearer $CRON_SECRET" \
+              "$API_URL/api/cron/ebay-resolve?limit=100")
+            CHECKED=$(jq -r '.checked // 0' <<<"$RESP")
+            SOLD=$(jq -r '.sold // 0' <<<"$RESP")
+            PENDING=$(jq -r '.stillPending // 0' <<<"$RESP")
+            LIMITED=$(jq -r '.rateLimited // false' <<<"$RESP")
+            SPENT=$((SPENT + CHECKED))
+            echo "  checked $CHECKED, sold $SOLD (spent $SPENT, $PENDING pending)"
+            if [ "$LIMITED" = "true" ]; then
+              echo "  eBay refused further calls; stopping this pass"
+              break
+            fi
+            if [ "$CHECKED" -eq 0 ]; then break; fi
+          done
+          echo "::endgroup::"
