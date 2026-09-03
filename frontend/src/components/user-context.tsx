@@ -5,6 +5,8 @@ import { createContext, useContext, useEffect, useState, useCallback } from "rea
 type User = {
   id: number;
   displayName: string;
+  handle: string | null;
+  kitIsPublic: boolean;
   role: string;
   editCount: number;
   emailVerifiedAt: string | null;

@@ -41,9 +41,12 @@ function KitRow({
 }) {
   const [quantity, setQuantity] = useState(String(item.quantity));
   const [paid, setPaid] = useState(
-    item.acquiredPriceUsd == null ? "" : String(item.acquiredPriceUsd),
+    item.acquiredPrice == null ? "" : String(item.acquiredPrice),
   );
   const [condition, setCondition] = useState(item.condition ?? "");
+  const [acquiredYear, setAcquiredYear] = useState(
+    item.acquiredYear == null ? "" : String(item.acquiredYear),
+  );
 
   return (
     <tr className={saving ? "opacity-50" : ""}>
@@ -98,6 +101,31 @@ function KitRow({
       <td className="border-b border-border px-3 py-2">
         <Input
           type="number"
+          min={1830}
+          max={new Date().getFullYear() + 1}
+          placeholder="Year"
+          value={acquiredYear}
+          aria-label={`Year you got the ${item.name}`}
+          className="h-8 w-20"
+          onChange={(e) => setAcquiredYear(e.target.value)}
+          onBlur={() => {
+            const raw = acquiredYear.trim();
+            if (raw === "") {
+              if (item.acquiredYear != null) onPatch(item.id, { acquiredYear: null });
+              return;
+            }
+            const n = parseInt(raw);
+            if (!Number.isInteger(n) || n < 1830 || n > new Date().getFullYear() + 1) {
+              setAcquiredYear(item.acquiredYear == null ? "" : String(item.acquiredYear));
+              return;
+            }
+            if (n !== item.acquiredYear) onPatch(item.id, { acquiredYear: n });
+          }}
+        />
+      </td>
+      <td className="border-b border-border px-3 py-2">
+        <Input
+          type="number"
           min={0}
           max={1000000}
           placeholder={currency}
@@ -108,18 +136,18 @@ function KitRow({
           onBlur={() => {
             const raw = paid.trim();
             if (raw === "") {
-              if (item.acquiredPriceUsd != null) {
-                onPatch(item.id, { acquiredPriceUsd: null });
+              if (item.acquiredPrice != null) {
+                onPatch(item.id, { acquiredPrice: null });
               }
               return;
             }
             const n = parseInt(raw);
             if (!Number.isInteger(n) || n < 0) {
-              setPaid(item.acquiredPriceUsd == null ? "" : String(item.acquiredPriceUsd));
+              setPaid(item.acquiredPrice == null ? "" : String(item.acquiredPrice));
               return;
             }
-            if (n !== item.acquiredPriceUsd) {
-              onPatch(item.id, { acquiredPriceUsd: n });
+            if (n !== item.acquiredPrice) {
+              onPatch(item.id, { acquiredPrice: n });
             }
           }}
         />
@@ -247,8 +275,7 @@ export default function KitManager({
       <div className="mt-8 rounded-lg border border-border p-8 text-center">
         <p className="font-display text-lg font-semibold">Nothing here yet</p>
         <p className="mx-auto mt-2 max-w-md text-muted-foreground">
-          Open any lens or camera and press <strong>I own this</strong>. What
-          you add shows up here with what it is worth used.
+          Open any lens or camera and press <strong>I own this</strong>.
         </p>
         <div className="mt-4 flex justify-center gap-2">
           <Link href="/lenses" className={buttonVariants({ variant: "outline", size: "sm" })}>
@@ -279,10 +306,8 @@ export default function KitManager({
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
             {unpriced === 0
-              ? `Across all ${value.totalItems} items`
-              : `From ${value.pricedItems} of ${value.totalItems} items; ${unpriced} ${
-                  unpriced === 1 ? "has" : "have"
-                } no recorded price`}
+              ? "All items priced"
+              : `${value.pricedItems} of ${value.totalItems} items priced`}
           </p>
         </div>
         <div className="rounded-lg border border-border p-4">
@@ -291,13 +316,13 @@ export default function KitManager({
           </p>
           <p className="mt-1 font-mono text-2xl tabular-nums">
             {value.paidItems > 0
-              ? formatMoney(value.paidUsd, currency)
+              ? formatMoney(value.paid, currency)
               : "Not recorded"}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
             {value.paidItems > 0
-              ? `From the ${value.paidItems} you have filled in`
-              : "Fill in what you paid to compare against the estimate"}
+              ? `${value.paidItems} of ${value.totalItems} filled in`
+              : "Not filled in yet"}
           </p>
         </div>
         <div className="rounded-lg border border-border p-4">
@@ -312,61 +337,47 @@ export default function KitManager({
         </div>
       </div>
 
-      <div className="mt-6 flex flex-wrap items-center gap-3 rounded-lg border border-border p-4">
-        <div className="min-w-0 flex-1">
-          <p className="font-medium">
-            {isPublic ? "Your kit is public" : "Your kit is private"}
-          </p>
-          <p className="text-sm text-muted-foreground">
-            {isPublic && handle ? (
-              <>
-                Anyone with the link can see it at{" "}
-                <Link href={`/kit/${handle}`} className="underline underline-offset-2">
-                  /kit/{handle}
-                </Link>
-                . Serial numbers, notes and what you paid are never shown.
-              </>
-            ) : (
-              "Only you can see it. A list of what you own and what it is worth is worth keeping to yourself unless you choose otherwise."
-            )}
-          </p>
-        </div>
-        <Button variant="outline" size="sm" onClick={togglePublic}>
-          {isPublic ? "Make private" : "Publish"}
-        </Button>
-      </div>
-
-      <div className="mt-4 flex flex-wrap items-center gap-3 rounded-lg border border-border p-4">
-        <div className="min-w-0 flex-1">
-          <p className="font-medium">What you paid is in {currency}</p>
-          <p className="text-sm text-muted-foreground">
-            Nothing is converted. The estimates come from sales priced in USD
-            and stay labelled that way, since converting them would need an
-            exchange rate, and a date for it, that this database does not have.
-          </p>
-        </div>
-        <label className="sr-only" htmlFor="kit-currency">
-          Currency you paid in
+      <div className="mt-5 flex flex-wrap items-center justify-between gap-x-6 gap-y-3 text-sm">
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={isPublic}
+            onChange={togglePublic}
+            className="h-4 w-4 rounded border-border"
+          />
+          <span>Show my kit on my profile</span>
+          {isPublic && handle && (
+            <Link
+              href={`/people/${handle}`}
+              className="font-mono text-xs text-muted-foreground underline underline-offset-2"
+            >
+              /people/{handle}
+            </Link>
+          )}
         </label>
-        <select
-          id="kit-currency"
-          value={currency}
-          className="h-9 rounded-md border border-border bg-transparent px-2 text-sm"
-          onChange={(e) => changeCurrency(e.target.value)}
-        >
-          {KIT_CURRENCIES.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
+
+        <label className="flex items-center gap-2">
+          <span className="text-muted-foreground">Paid in</span>
+          <select
+            value={currency}
+            aria-label="Currency you paid in"
+            className="h-8 rounded-md border border-border bg-transparent px-2 text-sm"
+            onChange={(e) => changeCurrency(e.target.value)}
+          >
+            {KIT_CURRENCIES.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
 
       <div className="mt-6 overflow-x-auto">
         <table className="w-full border-collapse text-sm">
           <thead>
             <tr>
-              {["Item", "Qty", "Condition", `Paid (${currency})`, "Worth used (USD)", ""].map((h) => (
+              {["Item", "Qty", "Condition", "Acquired", `Paid (${currency})`, "Worth used (USD)", ""].map((h) => (
                 <th
                   key={h}
                   scope="col"
@@ -393,10 +404,7 @@ export default function KitManager({
       </div>
 
       <p className="mt-4 text-sm text-muted-foreground">
-        Worth used is the midpoint of the range this site records for each item,
-        which comes from completed sales rather than asking prices. It is a
-        guide, not a valuation, and it says nothing about the condition of your
-        particular copy.
+        Worth used is the midpoint of recorded sales. A guide, not a valuation.
       </p>
     </>
   );

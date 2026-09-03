@@ -317,7 +317,7 @@ export const users = pgTable(
  * entityId is polymorphic over lenses and cameras, following priceHistory and
  * priceEstimates, so there is no foreign key to enforce it.
  *
- * acquiredPriceUsd is the one price on this site that nobody licensed from
+ * acquiredPrice is the one price on this site that nobody licensed from
  * anywhere: it is what the owner says they paid. The eBay pipeline cannot be
  * redistributed and has recorded nothing since July; this can be both.
  */
@@ -333,8 +333,10 @@ export const kitItems = pgTable(
     quantity: integer("quantity").notNull().default(1),
     condition: text("condition"), // "Excellent" | "Good" | "Fair" | "For parts"
     serialNumber: text("serial_number"),
-    acquiredOn: date("acquired_on"),
-    acquiredPriceUsd: integer("acquired_price_usd"),
+    // The year is all anyone remembers, and a full date would be invented.
+    acquiredYear: integer("acquired_year"),
+    // In the owner's kitCurrency, not necessarily USD.
+    acquiredPrice: integer("acquired_price"),
     notes: text("notes"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),

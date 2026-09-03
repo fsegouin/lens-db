@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { lenses, cameras, systems, collections, lensSeries } from "@/db/schema";
 import { getAdapterMatrix } from "@/lib/adapters";
 import { getComparableLensPairs } from "@/lib/compare";
+import { getPublicKits } from "@/lib/kit";
 import { getBrands } from "@/lib/brands";
 import { isNull } from "drizzle-orm";
 
@@ -42,6 +43,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${baseUrl}/lenses/series`, changeFrequency: "monthly", priority: 0.7 },
     { url: `${baseUrl}/brands`, changeFrequency: "monthly", priority: 0.8 },
     { url: `${baseUrl}/adapters`, changeFrequency: "monthly", priority: 0.8 },
+    { url: `${baseUrl}/people`, changeFrequency: "daily", priority: 0.5 },
   ];
 
   const [
@@ -49,12 +51,23 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     brands,
     { sources, targets },
     lensPairs,
+    publicKits,
   ] = await Promise.all([
     getSitemapSlugs(),
     getBrands(),
     getAdapterMatrix(),
     getComparableLensPairs(),
+    getPublicKits(1000),
   ]);
+
+  // A profile is worth a listing once there is something in the kit to read.
+  const kitPages: MetadataRoute.Sitemap = publicKits
+    .filter((k) => k.itemCount >= 3)
+    .map((k) => ({
+      url: `${baseUrl}/people/${k.handle}`,
+      changeFrequency: "weekly" as const,
+      priority: 0.4,
+    }));
 
   // "X vs Y" is a query class the site could not answer at a crawlable URL.
   const comparePages: MetadataRoute.Sitemap = lensPairs.map((p) => ({
@@ -131,5 +144,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...brandPages,
     ...adapterPages,
     ...comparePages,
+    ...kitPages,
   ];
 }

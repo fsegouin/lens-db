@@ -11,6 +11,8 @@ export async function GET() {
       user: {
         id: user.id,
         displayName: user.displayName,
+        handle: user.handle,
+        kitIsPublic: user.kitIsPublic,
         role: user.role,
         editCount: user.editCount,
         emailVerifiedAt: user.emailVerifiedAt,

@@ -9,17 +9,15 @@ import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/s
 import { useUser } from "@/components/user-context";
 
 const navLinks = [
-  { href: "/", label: "Home" },
-  { href: "/systems", label: "Systems" },
   { href: "/lenses", label: "Lenses" },
   { href: "/cameras", label: "Cameras" },
-  { href: "/collections", label: "Collections" },
+  { href: "/systems", label: "Systems" },
   { href: "/adapters", label: "Adapting" },
-  { href: "/kit", label: "My kit" },
+  { href: "/people", label: "People" },
   { href: "/compare", label: "Compare" },
+  { href: "/collections", label: "Collections" },
   { href: "/submit", label: "Submit" },
   { href: "/chat", label: "Chat" },
-  { href: "/search", label: "Search" },
 ];
 
 export function MobileNav() {

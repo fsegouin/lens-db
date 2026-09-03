@@ -25,10 +25,6 @@ export default async function KitPage() {
       <Breadcrumb crumbs={[{ name: "Your kit" }]} />
 
       <h1 className="mt-4 text-3xl font-bold tracking-tight">Your kit</h1>
-      <p className="mt-3 max-w-2xl text-lg leading-relaxed">
-        The lenses and cameras you own, valued against the completed sales this
-        site records. Add what you paid and the two figures sit side by side.
-      </p>
 
       <KitManager
         initialItems={items}

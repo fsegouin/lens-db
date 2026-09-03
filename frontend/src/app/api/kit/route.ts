@@ -131,16 +131,16 @@ export async function PATCH(request: NextRequest) {
     }
     updates.condition = c;
   }
-  if (body.acquiredPriceUsd !== undefined) {
-    const p = body.acquiredPriceUsd;
+  if (body.acquiredPrice !== undefined) {
+    const p = body.acquiredPrice;
     if (p !== null) {
       const n = Number(p);
       if (!Number.isInteger(n) || n < 0 || n > 1_000_000) {
-        return NextResponse.json({ error: "acquiredPriceUsd out of range" }, { status: 400 });
+        return NextResponse.json({ error: "acquiredPrice out of range" }, { status: 400 });
       }
-      updates.acquiredPriceUsd = n;
+      updates.acquiredPrice = n;
     } else {
-      updates.acquiredPriceUsd = null;
+      updates.acquiredPrice = null;
     }
   }
   if (body.serialNumber !== undefined) {
@@ -150,10 +150,18 @@ export async function PATCH(request: NextRequest) {
   if (body.notes !== undefined) {
     updates.notes = typeof body.notes === "string" ? body.notes.slice(0, 2000) || null : null;
   }
-  if (body.acquiredOn !== undefined) {
-    const d = body.acquiredOn;
-    updates.acquiredOn =
-      typeof d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : null;
+  if (body.acquiredYear !== undefined) {
+    const y = body.acquiredYear;
+    if (y === null) {
+      updates.acquiredYear = null;
+    } else {
+      const n = Number(y);
+      const nextYear = new Date().getFullYear() + 1;
+      if (!Number.isInteger(n) || n < 1830 || n > nextYear) {
+        return NextResponse.json({ error: "acquiredYear out of range" }, { status: 400 });
+      }
+      updates.acquiredYear = n;
+    }
   }
 
   try {

@@ -142,8 +142,8 @@ export async function getKitItems(userId: number): Promise<KitItem[]> {
       quantity: row.quantity,
       condition: row.condition,
       serialNumber: row.serialNumber,
-      acquiredOn: row.acquiredOn,
-      acquiredPriceUsd: row.acquiredPriceUsd,
+      acquiredYear: row.acquiredYear,
+      acquiredPrice: row.acquiredPrice,
       notes: row.notes,
       estimatedUsd,
     });
@@ -154,7 +154,7 @@ export async function getKitItems(userId: number): Promise<KitItem[]> {
 export function kitValue(items: KitItem[]): KitValue {
   let estimatedUsd = 0;
   let pricedItems = 0;
-  let paidUsd = 0;
+  let paid = 0;
   let paidItems = 0;
   let totalItems = 0;
 
@@ -164,33 +164,92 @@ export function kitValue(items: KitItem[]): KitValue {
       estimatedUsd += item.estimatedUsd * item.quantity;
       pricedItems += item.quantity;
     }
-    if (item.acquiredPriceUsd != null) {
-      paidUsd += item.acquiredPriceUsd * item.quantity;
+    if (item.acquiredPrice != null) {
+      paid += item.acquiredPrice * item.quantity;
       paidItems += item.quantity;
     }
   }
 
-  return { estimatedUsd, pricedItems, totalItems, paidUsd, paidItems };
+  return { estimatedUsd, pricedItems, totalItems, paid, paidItems };
 }
 
-/** A published kit, by handle. Returns null when there is none to show. */
-export const getPublicKitOwner = unstable_cache(
+/**
+ * A profile, by handle.
+ *
+ * Everyone who has an account has a profile page. Whether their kit is shown
+ * on it is a separate choice, carried here as kitIsPublic for the page to act
+ * on, so that having an account and showing what you own stay distinct.
+ */
+export const getProfile = unstable_cache(
   async (handle: string) => {
-    const [owner] = await db
+    const [profile] = await db
       .select({
         id: users.id,
         displayName: users.displayName,
         handle: users.handle,
         kitIsPublic: users.kitIsPublic,
+        kitCurrency: users.kitCurrency,
+        editCount: users.editCount,
         createdAt: users.createdAt,
       })
       .from(users)
       .where(and(eq(users.handle, handle), eq(users.isBanned, false)))
       .limit(1);
-    if (!owner || !owner.kitIsPublic) return null;
-    return owner;
+    return profile ?? null;
   },
-  ["public-kit-owner"],
+  ["profile-by-handle"],
+  { revalidate: 300, tags: ["kit"] },
+);
+
+export type PublicKitSummary = {
+  handle: string;
+  displayName: string;
+  itemCount: number;
+  lensCount: number;
+  cameraCount: number;
+};
+
+/**
+ * The published kits, most furnished first.
+ *
+ * Publishing has to lead somewhere or it is just a link its owner can send.
+ * Kits with nothing in them are left out: an empty page is not worth a row,
+ * and it is the one case where a listing would embarrass its owner.
+ */
+export const getPublicKits = unstable_cache(
+  async (limit = 100): Promise<PublicKitSummary[]> => {
+    const rows = await db
+      .select({
+        handle: users.handle,
+        displayName: users.displayName,
+        entityType: kitItems.entityType,
+        quantity: kitItems.quantity,
+      })
+      .from(users)
+      .innerJoin(kitItems, eq(kitItems.userId, users.id))
+      .where(and(eq(users.kitIsPublic, true), eq(users.isBanned, false)));
+
+    const byHandle = new Map<string, PublicKitSummary>();
+    for (const row of rows) {
+      if (!row.handle) continue;
+      const entry = byHandle.get(row.handle) ?? {
+        handle: row.handle,
+        displayName: row.displayName,
+        itemCount: 0,
+        lensCount: 0,
+        cameraCount: 0,
+      };
+      entry.itemCount += row.quantity;
+      if (row.entityType === "lens") entry.lensCount += row.quantity;
+      else entry.cameraCount += row.quantity;
+      byHandle.set(row.handle, entry);
+    }
+
+    return [...byHandle.values()]
+      .sort((a, b) => b.itemCount - a.itemCount || a.displayName.localeCompare(b.displayName))
+      .slice(0, limit);
+  },
+  ["public-kits"],
   { revalidate: 300, tags: ["kit"] },
 );
 
