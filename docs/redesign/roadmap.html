@@ -257,16 +257,20 @@
       <div class="phase-head">
         <span class="phase-n">Phase 3</span>
         <span class="phase-name">The engine</span>
-        <span class="badge next">Not started</span>
+        <span class="badge now">In progress</span>
         <p class="phase-note">Make it worth integrating with, and make it survive its maintainer.</p>
       </div>
       <ul class="items">
-        <li><span class="mark todo">○</span><span>Open the data: CC0 fact dump, documented read API, the MCP server published</span></li>
+        <li><span class="mark done">✓</span><span>The ownership registry: build your kit, and see what it is worth
+          <span class="item-note">Press "I own this" on any lens or body and it lands in a private kit, valued against the used ranges, with what you paid beside the estimate. That second column is the only price here that is nobody else's data. A kit is private until its owner publishes it, and a published one never shows serial numbers, notes or what was paid.</span></span></li>
+        <li><span class="mark now">→</span><span>Open the data: read API, bulk dump, MCP endpoint
+          <span class="item-note">Built and in the tree, switched off until we choose to open it. A versioned read API over lenses, bodies and mounts; the whole set as one newline-delimited file; and the MCP tools reachable over HTTP for anything that cannot run the stdio server. Used prices are excluded throughout: eBay completed listings may be shown here but not redistributed. Whether the fact dump can carry a CC0 label is a decision, not a build step.</span></span></li>
         <li><span class="mark todo">○</span><span>Identifier crosswalk: Wikidata QIDs, ExifTool LensID, Lensfun model strings
-          <span class="item-note">Becomes the hub other tools resolve through.</span></span></li>
-        <li><span class="mark todo">○</span><span>Photographs and an ownership registry
-          <span class="item-note">Five lens records in six have no photograph. "I own this" yields images, licence-clean prices and serial ranges.</span></span></li>
-        <li><span class="mark todo">○</span><span>Per-field citations and a visible patrol queue; 574 edits sit pending</span></li>
+          <span class="item-note">Becomes the hub other tools resolve through. The mounts are the tractable place to start: 132 of them, against 9,257 lenses that would have to be matched by name.</span></span></li>
+        <li><span class="mark todo">○</span><span>Photographs
+          <span class="item-note">7,642 of 9,257 lenses have no photograph, and 1,454 of 2,187 bodies. Now that people can say what they own, they are the ones holding the missing pictures.</span></span></li>
+        <li><span class="mark todo">○</span><span>Per-field citations
+          <span class="item-note">The patrol queue this line used to promise is not needed: 2 edits are pending, not 574, and all 2,221 revisions are already patrolled. The earlier figure counted every edit ever submitted.</span></span></li>
         <li><span class="mark todo">○</span><span>Announcement-day pages and a weekly digest, from the watcher that already runs</span></li>
       </ul>
     </div>
