@@ -22,6 +22,11 @@ const ENDPOINTS: { method: string; path: string; what: string }[] = [
     path: "/api/v1/adapt?from={mount}&to={mount}",
     what: "Whether that lens mount reaches infinity focus on that body mount, with both registers and the gap.",
   },
+  {
+    method: "GET",
+    path: "/api/v1/dump?type=lenses",
+    what: "The whole set as newline-delimited JSON, one record per line. Also cameras and mounts.",
+  },
 ];
 
 export default async function DevelopersPage() {
@@ -96,6 +101,22 @@ export default async function DevelopersPage() {
   "adapterRoomMm": 24
 }`}</code>
       </pre>
+
+      <h2 className="mt-10 text-xl font-semibold">Taking all of it</h2>
+      <p className="mt-3 leading-relaxed">
+        Paging works and is the polite way to do it, but if you want the corpus
+        you want one file:{" "}
+        <code className="rounded bg-muted px-1 py-0.5 font-mono text-sm">
+          /api/v1/dump?type=lenses
+        </code>{" "}
+        streams every record as newline-delimited JSON, one per line, and the
+        same for{" "}
+        <code className="rounded bg-muted px-1 py-0.5 font-mono text-sm">cameras</code>{" "}
+        and{" "}
+        <code className="rounded bg-muted px-1 py-0.5 font-mono text-sm">mounts</code>.
+        The first line is a header naming the licence, so the terms travel with
+        the file.
+      </p>
 
       <h2 className="mt-10 text-xl font-semibold">Paging</h2>
       <p className="mt-3 leading-relaxed">
