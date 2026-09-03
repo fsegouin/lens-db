@@ -18,7 +18,7 @@ export default async function AdaptersPage() {
   }));
 
   return (
-    <div className="mx-auto w-full max-w-5xl">
+    <div className="w-full max-w-6xl">
       <Breadcrumb crumbs={[{ name: "Adapting" }]} />
 
       <div className="mt-4">
@@ -110,16 +110,18 @@ export default async function AdaptersPage() {
         </table>
       </div>
 
-      <p className="mt-6 max-w-2xl text-sm text-muted-foreground">
-        <strong className="font-semibold text-foreground">yes</strong> means a
-        plain adapter reaches infinity focus.{" "}
-        <strong className="font-semibold text-foreground">tight</strong> means
-        the registers differ by less than an adapter can usually be built to.{" "}
-        <strong className="font-semibold text-foreground">no</strong> means a
-        plain adapter cannot reach infinity, and corrective glass would be
-        needed. All of it is about focus alone: none of it accounts for whether
-        the lens covers the body&rsquo;s sensor, whether an adapter is actually
-        sold, for electronic contacts, or for mirror clearance.
+      {/* Every space around a <strong> is explicit: JSX drops the one after a
+          tag that opens a line, which ran "no" into "means". */}
+      <p className="mt-6 text-sm text-muted-foreground">
+        <strong className="font-semibold text-foreground">yes</strong>
+        {" means a plain adapter reaches infinity focus. "}
+        <strong className="font-semibold text-foreground">tight</strong>
+        {" means the registers differ by less than an adapter can usually be built to. "}
+        <strong className="font-semibold text-foreground">no</strong>
+        {" means a plain adapter cannot reach infinity, and corrective glass would be needed. "}
+        All of it is about focus alone: none of it accounts for whether the lens
+        covers the body&rsquo;s sensor, whether an adapter is actually sold, for
+        electronic contacts, or for mirror clearance.
       </p>
     </div>
   );

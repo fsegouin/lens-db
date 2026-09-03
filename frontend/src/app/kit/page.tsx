@@ -21,7 +21,7 @@ export default async function KitPage() {
   const items = await getKitItems(user.id);
 
   return (
-    <div className="mx-auto w-full max-w-4xl">
+    <div className="w-full max-w-6xl">
       <Breadcrumb crumbs={[{ name: "Your kit" }]} />
 
       <h1 className="mt-4 text-3xl font-bold tracking-tight">Your kit</h1>

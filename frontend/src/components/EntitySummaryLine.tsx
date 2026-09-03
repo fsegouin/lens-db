@@ -6,7 +6,6 @@ type Props = {
   priceRange: { low: number | null; high: number | null; currency: string } | null;
   averageRating: number | null;
   ratingCount: number | null;
-  saleCount: number;
   /** Sits at the end of the line: the "I own this" control. */
   trailing?: ReactNode;
 };
@@ -31,7 +30,6 @@ export default function EntitySummaryLine({
   priceRange,
   averageRating,
   ratingCount,
-  saleCount,
   trailing,
 }: Props) {
   const currency = priceRange?.currency ?? "USD";
@@ -75,11 +73,6 @@ export default function EntitySummaryLine({
               /10 from {ratingCount!.toLocaleString()}{" "}
               {ratingCount === 1 ? "rating" : "ratings"}
             </span>
-          </span>
-        )}
-        {saleCount > 0 && (
-          <span className="text-muted-foreground tabular-nums">
-            {saleCount.toLocaleString()} recorded {saleCount === 1 ? "sale" : "sales"}
           </span>
         )}
       </div>

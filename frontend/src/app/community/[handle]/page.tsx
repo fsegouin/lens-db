@@ -57,7 +57,7 @@ export default async function ProfilePage({
   const since = monthYear(profile.createdAt);
 
   return (
-    <div className="mx-auto w-full max-w-3xl">
+    <div className="w-full max-w-3xl">
       <Breadcrumb
         crumbs={[{ name: "Community", path: "/community" }, { name: profile.displayName }]}
       />

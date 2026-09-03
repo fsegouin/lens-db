@@ -261,7 +261,7 @@ export default async function LensDetailPage({
   );
 
   return (
-    <div className="mx-auto w-full max-w-6xl">
+    <div className="w-full max-w-6xl">
       <JsonLd
         data={lensJsonLd(
           {
@@ -363,7 +363,6 @@ export default async function LensDetailPage({
           priceRange={priceDisplay}
           averageRating={lens.averageRating}
           ratingCount={lens.ratingCount}
-          saleCount={priceHistoryRows.length}
           trailing={<KitButton entityType="lens" entityId={lens.id} />}
         />
       </div>

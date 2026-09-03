@@ -278,7 +278,7 @@ export default function KitManager({
   if (items.length === 0) {
     return (
       <div className="mt-8 rounded-lg border border-border p-8 text-center">
-        <p className="font-display text-lg font-semibold">Nothing here yet</p>
+        <p className="text-lg font-semibold">Nothing here yet</p>
         <p className="mx-auto mt-2 max-w-md text-muted-foreground">
           Open any lens or camera and press <strong>I own this</strong>.
         </p>

@@ -190,7 +190,7 @@ export default async function CameraDetailPage({
   );
 
   return (
-    <div className="mx-auto w-full max-w-6xl">
+    <div className="w-full max-w-6xl">
       <JsonLd
         data={cameraJsonLd(
           {
@@ -249,7 +249,6 @@ export default async function CameraDetailPage({
           priceRange={getPriceDisplay(priceEstimate)}
           averageRating={camera.averageRating}
           ratingCount={camera.ratingCount}
-          saleCount={priceHistoryRows.length}
           trailing={<KitButton entityType="camera" entityId={camera.id} />}
         />
       </div>

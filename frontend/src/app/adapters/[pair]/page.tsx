@@ -80,7 +80,7 @@ export default async function AdapterPage({
   ];
 
   return (
-    <div className="mx-auto w-full max-w-3xl">
+    <div className="w-full max-w-3xl">
       <JsonLd
         data={{
           "@context": "https://schema.org",
@@ -106,7 +106,7 @@ export default async function AdapterPage({
       </h1>
 
       <div className={`mt-6 rounded-lg border p-5 ${TONE[verdict.kind]}`}>
-        <p className="font-display text-xl font-semibold">{verdict.summary}</p>
+        <p className="text-xl font-semibold">{verdict.summary}</p>
         <p className="mt-2 leading-relaxed">{verdict.detail}</p>
       </div>
 
