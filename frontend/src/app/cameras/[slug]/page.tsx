@@ -2,7 +2,11 @@ import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import Breadcrumb from "@/components/Breadcrumb";
 import JsonLd from "@/components/JsonLd";
-import { getEntityPriceEstimate, getEntityPriceHistory } from "@/lib/prices";
+import {
+  getEntityPriceEstimate,
+  getEntityPriceHistory,
+  getEntityAskingHistory,
+} from "@/lib/prices";
 import { getCameraBySlug, getCameraSlugById } from "@/lib/cameras";
 import { getCameraRelations } from "@/lib/camera-relations";
 import { cameraDescription, cameraLead, entityMetadata, SITE_URL } from "@/lib/seo";
@@ -105,10 +109,18 @@ export default async function CameraDetailPage({
 
   const specs = (camera.specs ?? {}) as Record<string, string>;
 
-  const [priceEstimate, priceHistoryRows, relations, provenance, owners] =
+  const [
+    priceEstimate,
+    priceHistoryRows,
+    askingRows,
+    relations,
+    provenance,
+    owners,
+  ] =
     await Promise.all([
       getEntityPriceEstimate("camera", camera.id),
       getEntityPriceHistory("camera", camera.id),
+      getEntityAskingHistory("camera", camera.id),
       getCameraRelations(camera.systemId),
       getProvenance("camera", camera.id),
       getOwnersOf("camera", camera.id),
@@ -193,7 +205,11 @@ export default async function CameraDetailPage({
   const rail = (
     <div className="space-y-6">
       <Infobox title="Specifications" facts={infoboxFacts} />
-      <PriceCard estimate={priceEstimate ?? null} history={priceHistoryRows} />
+      <PriceCard
+        estimate={priceEstimate ?? null}
+        history={priceHistoryRows}
+        asking={askingRows}
+      />
       <EbayListings query={camera.name} entitySlug={camera.slug} />
       <div>
         <h2 className="mb-2 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
