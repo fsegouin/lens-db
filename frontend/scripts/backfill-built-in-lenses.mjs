@@ -182,10 +182,11 @@ function buildLensName(designation, focal, aperture) {
     parts.push(focal.min === focal.max ? `${focal.min}mm` : `${focal.min}-${focal.max}mm`);
   }
   if (aperture) {
+    // The catalogue writes the speed with a capital F.
     parts.push(
       aperture.min === aperture.max
-        ? `f/${aperture.min}`
-        : `f/${aperture.min}-${aperture.max}`,
+        ? `F/${aperture.min}`
+        : `F/${aperture.min}-${aperture.max}`,
     );
   }
   return parts.join(" ").trim();
