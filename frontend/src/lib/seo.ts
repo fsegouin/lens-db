@@ -182,8 +182,13 @@ export function cameraLead(
     " ",
   );
 
-  const attachment = builtInLensName
-    ? `with a built-in ${builtInLensName}`
+  // A built-in lens name may carry a trailing disambiguator, as in "Nikon
+  // Nikkor 35mm F/2.8 (L35AF)", which tells a lens list which of two identical
+  // designations this is. On the camera's own page it says nothing.
+  const lensInSentence = builtInLensName?.replace(/\s*\([^)]*\)\s*$/, "") ?? null;
+
+  const attachment = lensInSentence
+    ? `with a built-in ${lensInSentence}`
     : systemName
       ? `with a ${systemName} mount`
       : null;
