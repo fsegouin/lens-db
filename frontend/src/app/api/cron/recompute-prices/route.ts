@@ -15,6 +15,8 @@ export const maxDuration = 300;
 // recomputes entities it has just scraped, so a survivor keeps a stale range
 // until it happens to sell again. Run this after any merge:
 // GET ?entityType=lens|camera&offset=N&limit=M until done: true.
+// Pass ids=1,2,3 instead to re-derive a specific set, which is what a change
+// to the estimator's own rules needs.
 export async function GET(request: NextRequest) {
   if (!isCronAuthorized(request.headers.get("authorization"))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -27,19 +29,34 @@ export async function GET(request: NextRequest) {
   const rawLimit = parseInt(searchParams.get("limit") || "100");
   const limit = Math.min(Math.max(Number.isFinite(rawLimit) ? rawLimit : 100, 1), 500);
 
+  // An explicit list wins, for re-deriving a known set after a rule change.
+  const explicit = (searchParams.get("ids") || "")
+    .split(",")
+    .map((s) => parseInt(s.trim()))
+    .filter((n) => Number.isFinite(n) && n > 0);
+
   try {
     const table = entityType === "camera" ? cameras : lenses;
 
-    // The survivors: every id some other row was merged into.
-    const rows = await db
-      .selectDistinct({ id: table.mergedIntoId })
-      .from(table)
-      .where(isNotNull(table.mergedIntoId))
-      .orderBy(sql`1`)
-      .offset(offset)
-      .limit(limit);
+    let ids: number[];
+    let pageSize: number;
 
-    const ids = rows.map((r) => r.id).filter((id): id is number => id != null);
+    if (explicit.length > 0) {
+      ids = explicit;
+      pageSize = explicit.length;
+    } else {
+      // The survivors: every id some other row was merged into.
+      const rows = await db
+        .selectDistinct({ id: table.mergedIntoId })
+        .from(table)
+        .where(isNotNull(table.mergedIntoId))
+        .orderBy(sql`1`)
+        .offset(offset)
+        .limit(limit);
+
+      ids = rows.map((r) => r.id).filter((id): id is number => id != null);
+      pageSize = rows.length;
+    }
 
     // Each recompute is two reads plus a write; stay within the pg pool.
     const CONCURRENCY = 4;
@@ -56,7 +73,7 @@ export async function GET(request: NextRequest) {
       offset,
       limit,
       recomputed: ids.length,
-      done: rows.length < limit,
+      done: explicit.length > 0 || pageSize < limit,
     });
   } catch (error) {
     console.error("recompute-prices failed:", error);
