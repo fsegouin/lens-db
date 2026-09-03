@@ -315,14 +315,14 @@ export default function CameraList({
           placeholder="Search cameras..."
           value={formQ}
           onChange={(e) => handleSearchChange(e.target.value)}
-          className="h-10 flex-1"
+          className="h-11 flex-1 sm:h-10"
         />
         <button
           type="button"
           onClick={() => setFiltersOpen((open) => !open)}
           aria-expanded={filtersOpen}
           aria-controls="camera-more-filters"
-          className="inline-flex h-10 shrink-0 items-center gap-2 rounded-lg border border-border px-4 text-sm font-medium transition-colors hover:border-ring"
+          className="inline-flex h-11 shrink-0 items-center gap-2 rounded-lg border border-border px-4 text-sm font-medium transition-colors sm:h-10 hover:border-ring"
         >
           <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
           <span className="max-sm:sr-only">
@@ -612,7 +612,7 @@ export default function CameraList({
                   <TableCell className="max-w-[22rem] whitespace-normal">
                     <Link
                       href={`/cameras/${camera.slug}`}
-                      className="block break-words leading-snug font-medium text-zinc-900 hover:underline line-clamp-2 dark:text-zinc-100"
+                      className="block break-words leading-snug font-medium text-foreground hover:underline line-clamp-2"
                     >
                       {camera.name}
                     </Link>
