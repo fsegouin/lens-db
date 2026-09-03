@@ -2,7 +2,7 @@ import { revalidateTag } from "next/cache";
 import { db } from "@/db";
 import { priceTag } from "@/lib/prices";
 import { priceHistory, priceEstimates } from "@/db/schema";
-import { eq, and, sql, gt, inArray, isNull } from "drizzle-orm";
+import { eq, and, sql, gte, inArray, isNull } from "drizzle-orm";
 import type { RawListing } from "@/lib/price-classify";
 
 const GRADE_MAP: Record<string, string> = {
@@ -120,6 +120,15 @@ function computeRange(prices: number[]): [number | null, number | null] {
   return [prices[lowIdx], prices[highIdx]];
 }
 
+/**
+ * Sales below this are not used-market prices. They are parts listings, empty
+ * boxes, caps sold under the lens's name, or a mis-parsed amount, and because
+ * the headline range spans the lowest tier bound to the highest, a single one
+ * of them sets what the page says a lens is worth: a Mamiya-Sekor C 127mm
+ * read "$2" against a $190 median. 97 of 92,870 recorded lens sales sit here.
+ */
+const MIN_PLAUSIBLE_SALE_USD = 5;
+
 export async function recomputePriceEstimates(
   entityType: string,
   entityId: number,
@@ -138,7 +147,7 @@ export async function recomputePriceEstimates(
       and(
         eq(priceHistory.entityType, entityType),
         eq(priceHistory.entityId, entityId),
-        gt(priceHistory.priceUsd, 0),
+        gte(priceHistory.priceUsd, MIN_PLAUSIBLE_SALE_USD),
         sql`${priceHistory.saleDate} >= ${twoYearsAgo.toISOString().slice(0, 10)}`,
       ),
     );
@@ -209,7 +218,7 @@ export async function recomputePriceEstimates(
       and(
         eq(priceHistory.entityType, entityType),
         eq(priceHistory.entityId, entityId),
-        gt(priceHistory.priceUsd, 0),
+        gte(priceHistory.priceUsd, MIN_PLAUSIBLE_SALE_USD),
         sql`${priceHistory.saleDate} >= ${ninetyDaysAgo.toISOString().slice(0, 10)}`,
       ),
     );
