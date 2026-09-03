@@ -162,4 +162,13 @@ select.filter-select {
   html {
     @apply font-sans;
   }
+  /*
+   * Tailwind v4 stopped giving buttons a pointer cursor, so every control on
+   * the site read as unclickable: the header's search, theme and account
+   * buttons, and every shared Button including "I own this".
+   */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
 }
