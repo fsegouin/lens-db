@@ -7,6 +7,9 @@ import type { KitEntityType, KitItem, KitValue } from "@/lib/kit-shared";
 
 export {
   KIT_CONDITIONS,
+  KIT_CURRENCIES,
+  formatMoney,
+  type KitCurrency,
   type KitEntityType,
   type KitItem,
   type KitValue,

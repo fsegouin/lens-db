@@ -161,6 +161,7 @@ export type SessionUser = {
   displayName: string;
   handle: string | null;
   kitIsPublic: boolean;
+  kitCurrency: string;
   role: string;
   editCount: number;
   emailVerifiedAt: Date | null;
@@ -185,6 +186,7 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
       displayName: users.displayName,
       handle: users.handle,
       kitIsPublic: users.kitIsPublic,
+      kitCurrency: users.kitCurrency,
       role: users.role,
       editCount: users.editCount,
       emailVerifiedAt: users.emailVerifiedAt,
@@ -215,6 +217,7 @@ export async function requireUserAPI(
       displayName: users.displayName,
       handle: users.handle,
       kitIsPublic: users.kitIsPublic,
+      kitCurrency: users.kitCurrency,
       role: users.role,
       editCount: users.editCount,
       emailVerifiedAt: users.emailVerifiedAt,

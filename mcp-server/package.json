@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./ai-tools": "./src/ai-tools.ts"
+    "./ai-tools": "./src/ai-tools.ts",
+    "./tools": "./src/tools/index.ts"
   },
   "scripts": {
     "build": "tsc",

@@ -62,7 +62,6 @@ const footerSections = [
       { href: "/compare", label: "Compare" },
       { href: "/search", label: "Search" },
       { href: "/chat", label: "Ask the database" },
-      { href: "/developers", label: "Using the data" },
     ],
   },
   {

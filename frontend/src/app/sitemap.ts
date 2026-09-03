@@ -42,7 +42,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${baseUrl}/lenses/series`, changeFrequency: "monthly", priority: 0.7 },
     { url: `${baseUrl}/brands`, changeFrequency: "monthly", priority: 0.8 },
     { url: `${baseUrl}/adapters`, changeFrequency: "monthly", priority: 0.8 },
-    { url: `${baseUrl}/developers`, changeFrequency: "monthly", priority: 0.6 },
   ];
 
   const [

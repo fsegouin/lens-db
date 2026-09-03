@@ -5,10 +5,17 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { KIT_CONDITIONS, type KitItem, type KitValue } from "@/lib/kit-shared";
+import {
+  KIT_CONDITIONS,
+  KIT_CURRENCIES,
+  formatMoney,
+  type KitItem,
+  type KitValue,
+} from "@/lib/kit-shared";
 
-function money(n: number): string {
-  return `$${n.toLocaleString()}`;
+/** Estimates come from sales priced in USD and are never converted. */
+function usd(n: number): string {
+  return formatMoney(n, "USD");
 }
 
 /**
@@ -22,11 +29,13 @@ function money(n: number): string {
 function KitRow({
   item,
   saving,
+  currency,
   onPatch,
   onRemove,
 }: {
   item: KitItem;
   saving: boolean;
+  currency: string;
   onPatch: (id: number, patch: Record<string, unknown>) => void;
   onRemove: (id: number) => void;
 }) {
@@ -91,9 +100,9 @@ function KitRow({
           type="number"
           min={0}
           max={1000000}
-          placeholder="$"
+          placeholder={currency}
           value={paid}
-          aria-label={`What you paid for ${item.name}`}
+          aria-label={`What you paid for ${item.name}, in ${currency}`}
           className="h-8 w-24"
           onChange={(e) => setPaid(e.target.value)}
           onBlur={() => {
@@ -117,7 +126,7 @@ function KitRow({
       </td>
       <td className="border-b border-border px-3 py-2 font-mono tabular-nums">
         {item.estimatedUsd != null ? (
-          money(item.estimatedUsd)
+          usd(item.estimatedUsd)
         ) : (
           <span className="text-muted-foreground">Not recorded</span>
         )}
@@ -147,16 +156,19 @@ export default function KitManager({
   initialItems,
   initialValue,
   initialIsPublic,
+  initialCurrency,
   handle,
 }: {
   initialItems: KitItem[];
   initialValue: KitValue;
   initialIsPublic: boolean;
+  initialCurrency: string;
   handle: string | null;
 }) {
   const [items, setItems] = useState(initialItems);
   const [value, setValue] = useState(initialValue);
   const [isPublic, setIsPublic] = useState(initialIsPublic);
+  const [currency, setCurrency] = useState(initialCurrency);
   const [savingId, setSavingId] = useState<number | null>(null);
 
   async function refresh() {
@@ -199,18 +211,33 @@ export default function KitManager({
     }
   }
 
+  async function savePrefs(patch: Record<string, unknown>) {
+    const res = await fetch("/api/kit", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    });
+    if (!res.ok) throw new Error(String(res.status));
+  }
+
   async function togglePublic() {
     const next = !isPublic;
     try {
-      const res = await fetch("/api/kit", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ kitIsPublic: next }),
-      });
-      if (!res.ok) throw new Error(String(res.status));
+      await savePrefs({ kitIsPublic: next });
       setIsPublic(next);
       toast.success(next ? "Your kit is now public" : "Your kit is private again");
     } catch {
+      toast.error("That did not save.");
+    }
+  }
+
+  async function changeCurrency(next: string) {
+    const previous = currency;
+    setCurrency(next);
+    try {
+      await savePrefs({ kitCurrency: next });
+    } catch {
+      setCurrency(previous);
       toast.error("That did not save.");
     }
   }
@@ -248,7 +275,7 @@ export default function KitManager({
             Estimated value
           </p>
           <p className="mt-1 font-mono text-2xl tabular-nums">
-            {money(value.estimatedUsd)}
+            {usd(value.estimatedUsd)}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
             {unpriced === 0
@@ -263,7 +290,9 @@ export default function KitManager({
             What you paid
           </p>
           <p className="mt-1 font-mono text-2xl tabular-nums">
-            {value.paidItems > 0 ? money(value.paidUsd) : "Not recorded"}
+            {value.paidItems > 0
+              ? formatMoney(value.paidUsd, currency)
+              : "Not recorded"}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
             {value.paidItems > 0
@@ -307,11 +336,37 @@ export default function KitManager({
         </Button>
       </div>
 
+      <div className="mt-4 flex flex-wrap items-center gap-3 rounded-lg border border-border p-4">
+        <div className="min-w-0 flex-1">
+          <p className="font-medium">What you paid is in {currency}</p>
+          <p className="text-sm text-muted-foreground">
+            Nothing is converted. The estimates come from sales priced in USD
+            and stay labelled that way, since converting them would need an
+            exchange rate, and a date for it, that this database does not have.
+          </p>
+        </div>
+        <label className="sr-only" htmlFor="kit-currency">
+          Currency you paid in
+        </label>
+        <select
+          id="kit-currency"
+          value={currency}
+          className="h-9 rounded-md border border-border bg-transparent px-2 text-sm"
+          onChange={(e) => changeCurrency(e.target.value)}
+        >
+          {KIT_CURRENCIES.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </select>
+      </div>
+
       <div className="mt-6 overflow-x-auto">
         <table className="w-full border-collapse text-sm">
           <thead>
             <tr>
-              {["Item", "Qty", "Condition", "Paid", "Worth used", ""].map((h) => (
+              {["Item", "Qty", "Condition", `Paid (${currency})`, "Worth used (USD)", ""].map((h) => (
                 <th
                   key={h}
                   scope="col"
@@ -328,6 +383,7 @@ export default function KitManager({
                 key={item.id}
                 item={item}
                 saving={savingId === item.id}
+                currency={currency}
                 onPatch={patch}
                 onRemove={remove}
               />

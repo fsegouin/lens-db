@@ -6,8 +6,14 @@ export type Crumb = { name: string; path?: string };
 /**
  * Where you are in the catalogue, on every entity page. Replaces the
  * history-dependent "Back to lenses" button as the primary orientation cue.
+ *
+ * A single crumb is not a trail: it leads nowhere and only repeats the heading
+ * underneath it, which reads as the title printed twice. Top-level pages get
+ * nothing rather than an echo.
  */
 export default function Breadcrumb({ crumbs }: { crumbs: Crumb[] }) {
+  if (crumbs.length < 2) return null;
+
   return (
     <nav aria-label="Breadcrumb">
       <ol className="flex flex-wrap items-center gap-1 text-sm text-muted-foreground">
