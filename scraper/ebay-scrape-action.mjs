@@ -4,19 +4,20 @@
  * 1. GET /api/cron/ebay-prices → get batch of cameras needing price updates
  * 2. For each camera: scrape eBay sold listings with Playwright
  * 3. POST /api/cron/ebay-prices → send listings for LLM classification + storage
+ *
+ * A camera eBay refused to show us is skipped, not submitted: see
+ * ebay-sold-scrape.mjs for why an unread page must never be stored.
  */
 
 import { chromium } from "playwright-core";
+import { scrapeSoldListings, OUTCOME } from "./ebay-sold-scrape.mjs";
 
 const API_URL = process.env.API_URL || "https://thelensdb.com";
 const CRON_SECRET = process.env.CRON_SECRET;
 const DELAY_BETWEEN_CAMERAS_MS = 2000;
 
-const MONTHS = {
-  Jan: "01", Feb: "02", Mar: "03", Apr: "04",
-  May: "05", Jun: "06", Jul: "07", Aug: "08",
-  Sep: "09", Oct: "10", Nov: "11", Dec: "12",
-};
+// Consecutive blocks that mean eBay has stopped serving this run entirely.
+const CONSECUTIVE_BLOCK_ABORT = 10;
 
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -29,7 +30,6 @@ function buildSearchQuery(cameraName) {
       name = name.slice(prefix.length);
     }
   }
-  // Strip parenthesized content
   name = name.replace(/\s*\([^)]*\)/g, "").trim();
   return name;
 }
@@ -50,98 +50,20 @@ async function getCameraBatchState(staleBefore) {
   return res.json();
 }
 
-async function submitListings(cameraId, cameraName, listings) {
+async function submitListings(cameraId, cameraName, listings, outcome) {
   const res = await fetch(`${API_URL}/api/cron/ebay-prices`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       ...(CRON_SECRET ? { Authorization: `Bearer ${CRON_SECRET}` } : {}),
     },
-    body: JSON.stringify({ cameraId, cameraName, listings }),
+    body: JSON.stringify({ cameraId, cameraName, listings, outcome }),
   });
   if (!res.ok) {
     console.error(`  Failed to submit: ${res.status}`);
     return { relevant: 0, stored: 0 };
   }
   return res.json();
-}
-
-async function scrapeSoldListings(page, cameraName) {
-  const query = buildSearchQuery(cameraName);
-  const params = new URLSearchParams({
-    _nkw: query,
-    _sacat: "625",
-    LH_Sold: "1",
-    LH_Complete: "1",
-    _sop: "13",
-    _ipg: "60",
-  });
-
-  const url = `https://www.ebay.com/sch/i.html?${params}`;
-
-  await page.goto(url, { waitUntil: "load", timeout: 20000 });
-
-  // Wait for listing cards to render
-  try {
-    await page.waitForSelector(".s-card__title", { timeout: 8000 });
-  } catch {
-    return [];
-  }
-
-  return page.evaluate((months) => {
-    const cards = document.querySelectorAll(".su-card-container");
-    const results = [];
-
-    for (const card of cards) {
-      const titleEl = card.querySelector(".s-card__title .su-styled-text");
-      if (!titleEl || titleEl.textContent?.includes("Shop on eBay")) continue;
-
-      const captionEl = card.querySelector(".s-card__caption .su-styled-text");
-      const soldText = captionEl?.textContent?.trim() ?? "";
-      const soldMatch = soldText.match(/Sold\s+(\w+)\s+(\d+),\s+(\d+)/);
-      if (!soldMatch) continue;
-
-      const month = months[soldMatch[1]] ?? "01";
-      const day = soldMatch[2].padStart(2, "0");
-      const year = soldMatch[3];
-      const date = `${year}-${month}-${day}`;
-
-      const title = (titleEl.textContent ?? "")
-        .replace("Opens in a new window or tab", "")
-        .trim()
-        .slice(0, 120);
-      if (!title) continue;
-
-      const priceEl = card.querySelector(
-        ".su-card-container__attributes__primary .s-card__attribute-row:first-child .su-styled-text"
-      );
-      const priceText = priceEl?.textContent?.trim() ?? "";
-      const priceMatch = priceText.match(/([\d,]+\.\d{2})/);
-      if (!priceMatch) continue;
-      const price = parseFloat(priceMatch[1].replace(/,/g, ""));
-      if (price <= 0) continue;
-
-      const condEl = card.querySelector(".s-card__subtitle .su-styled-text");
-      const condition = condEl?.textContent?.trim() ?? "";
-
-      const linkEl = card.querySelector("a.s-card__link");
-      const href = linkEl?.getAttribute("href") ?? "";
-      const itemIdMatch = href.match(/\/itm\/(\d+)/);
-      if (!itemIdMatch) continue;
-
-      results.push({
-        itemId: itemIdMatch[1],
-        title,
-        price,
-        currency: "USD",
-        date,
-        condition,
-        url: `https://www.ebay.com/itm/${itemIdMatch[1]}`,
-      });
-    }
-
-    return results.slice(0, 20);
-  }, MONTHS);
 }
 
 async function main() {
@@ -168,41 +90,79 @@ async function main() {
   const page = await context.newPage();
 
   let totalStored = 0;
+  let attempted = 0;
+  let blockedCount = 0;
+  let consecutiveBlocks = 0;
+  let aborted = false;
+  const blockReasons = new Map();
 
   try {
     for (let i = 0; i < cameras.length; i++) {
       const camera = cameras[i];
       if (i > 0) await delay(DELAY_BETWEEN_CAMERAS_MS);
 
-      // Scrape primary name
-      let listings = [];
-      try {
-        listings = await scrapeSoldListings(page, camera.name);
+      attempted++;
+      const result = await scrapeSoldListings(page, buildSearchQuery(camera.name));
 
-        // If alias exists and few results, also search alias
-        if (camera.alias && listings.length < 5) {
-          await delay(DELAY_BETWEEN_CAMERAS_MS);
-          const aliasListings = await scrapeSoldListings(page, camera.alias);
+      if (result.outcome === OUTCOME.BLOCKED) {
+        blockedCount++;
+        consecutiveBlocks++;
+        blockReasons.set(result.reason, (blockReasons.get(result.reason) ?? 0) + 1);
+        console.warn(
+          `${i + 1}/${cameras.length} ${camera.name}: BLOCKED (${result.reason}) — ` +
+          `not submitted, stays in the queue`,
+        );
+        if (consecutiveBlocks >= CONSECUTIVE_BLOCK_ABORT) {
+          console.error(
+            `\nAborting: ${consecutiveBlocks} consecutive blocks. ` +
+            `eBay is not serving this run.`,
+          );
+          aborted = true;
+          break;
+        }
+        continue;
+      }
+
+      consecutiveBlocks = 0;
+      let listings = result.listings;
+
+      // If an alias exists and the primary name found little, try the alias
+      // too. A block on the alias only costs us the extra results — the
+      // primary read still stands, so it is not counted as a failure.
+      if (camera.alias && listings.length < 5) {
+        await delay(DELAY_BETWEEN_CAMERAS_MS);
+        const aliasResult = await scrapeSoldListings(
+          page,
+          buildSearchQuery(camera.alias),
+        );
+        if (aliasResult.outcome === OUTCOME.OK) {
           const seen = new Set(listings.map((l) => l.itemId));
-          for (const l of aliasListings) {
+          for (const l of aliasResult.listings) {
             if (!seen.has(l.itemId)) listings.push(l);
           }
           listings = listings.slice(0, 20);
         }
-      } catch (error) {
-        console.error(`  Error scraping: ${error.message}`);
       }
 
-      console.log(`${i + 1}/${cameras.length} ${camera.name}: ${listings.length} listings`);
+      console.log(
+        `${i + 1}/${cameras.length} ${camera.name}: ${listings.length} listings` +
+        (result.outcome === OUTCOME.EMPTY ? " (no sold items)" : ""),
+      );
 
-      // Always submit to API — even with 0 listings, so the camera is marked as scraped
-      // and gets rotated out of the "never-scraped" priority queue
+      // Submit `ok` and `empty` alike: both are real answers about this
+      // camera, and `empty` still needs to mark it scraped so it rotates out
+      // of the never-scraped priority queue.
       try {
-        const result = await submitListings(camera.id, camera.name, listings);
+        const submitted = await submitListings(
+          camera.id,
+          camera.name,
+          listings,
+          result.outcome,
+        );
         if (listings.length > 0) {
-          console.log(`  Relevant: ${result.relevant}, Stored: ${result.stored}`);
+          console.log(`  Relevant: ${submitted.relevant}, Stored: ${submitted.stored}`);
         }
-        totalStored += result.stored || 0;
+        totalStored += submitted.stored || 0;
       } catch (error) {
         console.error(`  Error submitting: ${error.message}`);
       }
@@ -210,7 +170,18 @@ async function main() {
   } finally {
     await browser.close();
   }
-  console.log(`\nDone: ${cameras.length} cameras, ${totalStored} stored`);
+
+  const succeeded = attempted - blockedCount;
+  console.log(
+    `\nDone: ${succeeded}/${attempted} cameras read, ${blockedCount} blocked, ` +
+    `${totalStored} stored`,
+  );
+  if (blockReasons.size > 0) {
+    console.log("Block reasons:");
+    for (const [reason, n] of [...blockReasons].sort((a, b) => b[1] - a[1])) {
+      console.log(`  ${n}× ${reason}`);
+    }
+  }
 
   try {
     const finalState = await getCameraBatchState(rotationStartedAt);
@@ -224,9 +195,20 @@ async function main() {
   } catch (error) {
     console.warn(`Could not fetch rotation stats: ${error.message}`);
   }
+
+  // Fail the workflow when eBay locked us out. A run that reads nothing used
+  // to exit 0 and look identical to a healthy one.
+  if (aborted) {
+    throw new Error("Run aborted: eBay blocked consecutive requests");
+  }
+  if (attempted > 0 && blockedCount / attempted > 0.5) {
+    throw new Error(
+      `Run degraded: ${blockedCount}/${attempted} requests blocked by eBay`,
+    );
+  }
 }
 
 main().catch((error) => {
-  console.error("Fatal error:", error);
+  console.error("Fatal error:", error.message);
   process.exit(1);
 });

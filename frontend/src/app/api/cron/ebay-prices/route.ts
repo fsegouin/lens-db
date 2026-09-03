@@ -115,14 +115,26 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json().catch(() => ({}));
-  const { cameraId, cameraName, listings } = body as {
+  const { cameraId, cameraName, listings, outcome } = body as {
     cameraId: number;
     cameraName: string;
     listings: EbayListing[];
+    outcome?: "ok" | "empty" | "blocked";
   };
 
   if (!cameraId || !cameraName) {
     return NextResponse.json({ error: "cameraId and cameraName required" }, { status: 400 });
+  }
+
+  // A blocked scrape says nothing about this camera, so it must not reach
+  // recomputePriceEstimates: that call stamps extracted_at and rotates the
+  // camera out of the priority queue on the strength of a page nobody read.
+  // The scraper already skips these; this is the backstop.
+  if (outcome === "blocked") {
+    return NextResponse.json(
+      { error: "Blocked scrapes are not stored", cameraName },
+      { status: 400 },
+    );
   }
 
   console.log(`[ebay-prices] Processing ${cameraName}: ${listings?.length ?? 0} listings`);
