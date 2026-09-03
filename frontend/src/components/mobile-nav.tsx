@@ -15,6 +15,7 @@ const navLinks = [
   { href: "/cameras", label: "Cameras" },
   { href: "/collections", label: "Collections" },
   { href: "/adapters", label: "Adapting" },
+  { href: "/kit", label: "My kit" },
   { href: "/compare", label: "Compare" },
   { href: "/submit", label: "Submit" },
   { href: "/chat", label: "Chat" },

@@ -12,8 +12,7 @@ export const metadata = {
 };
 
 export default async function AdaptersPage() {
-  const { mounts, sources, targets } = await getAdapterMatrix().catch(() => ({
-    mounts: [],
+  const { sources, targets } = await getAdapterMatrix().catch(() => ({
     sources: [],
     targets: [],
   }));
@@ -30,8 +29,7 @@ export default async function AdaptersPage() {
           A plain adapter is a spacer: it can only add distance between the lens
           and the sensor. So old glass reaches infinity focus on a new body when
           its own mount sits further from the film plane than the body&rsquo;s
-          does. {mounts.length} mounts here have a recorded register, which is
-          enough to answer the question by arithmetic instead of folklore.
+          does.
         </p>
       </div>
 

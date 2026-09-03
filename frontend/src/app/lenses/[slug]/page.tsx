@@ -32,6 +32,7 @@ import PriceCard from "@/components/PriceCard";
 import EntitySummaryLine from "@/components/EntitySummaryLine";
 import EbayListings from "@/components/EbayListings";
 import Infobox, { type Fact } from "@/components/Infobox";
+import KitButton from "@/components/KitButton";
 import ProvenanceLine from "@/components/ProvenanceLine";
 import { getProvenance } from "@/lib/provenance";
 
@@ -240,6 +241,7 @@ export default async function LensDetailPage({
 
   const rail = (
     <div className="space-y-6">
+      <KitButton entityType="lens" entityId={lens.id} />
       <Infobox title="Specifications" facts={infoboxFacts} />
       <PriceCard estimate={priceEstimate ?? null} history={priceHistoryRows} />
       <EbayListings query={lens.name} entityType="lens" entitySlug={lens.slug} />

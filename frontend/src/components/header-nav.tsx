@@ -13,6 +13,7 @@ const navLinks: { href: string; label: string; badge?: string }[] = [
   { href: "/cameras", label: "Cameras" },
   { href: "/collections", label: "Collections" },
   { href: "/adapters", label: "Adapting" },
+  { href: "/kit", label: "My kit" },
   { href: "/compare", label: "Compare" },
   { href: "/submit", label: "Submit" },
   { href: "/chat", label: "Chat", badge: "New" },

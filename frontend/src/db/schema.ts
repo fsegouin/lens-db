@@ -283,6 +283,15 @@ export const users = pgTable(
     email: text("email").notNull().unique(),
     passwordHash: text("password_hash").notNull(),
     displayName: text("display_name").notNull().unique(),
+    // URL-safe form of displayName, for /kit/<handle>. Display names may hold
+    // spaces and punctuation that do not belong in a path.
+    handle: text("handle").unique(),
+    /**
+     * A kit is an inventory of what someone owns and what it is worth, which
+     * is a theft-target list as much as a profile. It is private until the
+     * owner publishes it.
+     */
+    kitIsPublic: boolean("kit_is_public").notNull().default(false),
     role: text("role").notNull().default("user"), // "user" | "trusted" | "admin"
     editCount: integer("edit_count").default(0),
     emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
@@ -293,6 +302,51 @@ export const users = pgTable(
   (table) => [
     index("idx_users_email").on(table.email),
     index("idx_users_role").on(table.role),
+  ]
+);
+
+/**
+ * What a signed-in person owns: their kit.
+ *
+ * entityId is polymorphic over lenses and cameras, following priceHistory and
+ * priceEstimates, so there is no foreign key to enforce it.
+ *
+ * acquiredPriceUsd is the one price on this site that nobody licensed from
+ * anywhere: it is what the owner says they paid. The eBay pipeline cannot be
+ * redistributed and has recorded nothing since July; this can be both.
+ */
+export const kitItems = pgTable(
+  "kit_items",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    entityType: text("entity_type").notNull(), // "lens" | "camera"
+    entityId: integer("entity_id").notNull(),
+    quantity: integer("quantity").notNull().default(1),
+    condition: text("condition"), // "Excellent" | "Good" | "Fair" | "For parts"
+    serialNumber: text("serial_number"),
+    acquiredOn: date("acquired_on"),
+    acquiredPriceUsd: integer("acquired_price_usd"),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+  },
+  (table) => [
+    // One row per thing owned; owning two of the same lens is a quantity.
+    unique("uq_kit_items_user_entity").on(
+      table.userId,
+      table.entityType,
+      table.entityId,
+    ),
+    index("idx_kit_items_user").on(table.userId),
+    index("idx_kit_items_entity").on(table.entityType, table.entityId),
+    check("chk_kit_quantity", sql`${table.quantity} >= 1 AND ${table.quantity} <= 999`),
+    check(
+      "chk_kit_entity_type",
+      sql`${table.entityType} IN ('lens', 'camera')`,
+    ),
   ]
 );
 
