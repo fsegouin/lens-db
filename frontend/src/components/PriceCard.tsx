@@ -16,6 +16,8 @@ interface PriceEstimate {
   priceVeryGoodHigh: number | null;
   priceMintLow: number | null;
   priceMintHigh: number | null;
+  /** "sold" (real completed sales) or "asking" (live listings, corrected). */
+  priceSource: string;
   sourceUrl: string | null;
   sourceName: string | null;
   extractedAt: Date;
@@ -76,6 +78,11 @@ export default function PriceCard({ estimate, history }: PriceCardProps) {
   const spanLow = display?.low ?? null;
   const spanHigh = display?.high ?? null;
 
+  // An asking-derived figure is an inference from live listings, so it never
+  // claims to be what something sold for. Condition tiers only ever come from
+  // graded sales, so this branch is always the untiered one.
+  const fromAsking = shownEstimate?.priceSource === "asking";
+
   return (
     <div className="@container space-y-4">
       <h2 className="text-sm font-semibold tracking-wider text-muted-foreground uppercase">
@@ -85,13 +92,15 @@ export default function PriceCard({ estimate, history }: PriceCardProps) {
       {shownEstimate && !showTiers && (
         <div className="rounded-lg border border-border p-3">
           <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-            Typical used price
+            {fromAsking ? "Estimated used price" : "Typical used price"}
           </div>
           <div className="mt-1 font-mono text-base font-semibold tabular-nums">
             {formatPrice(spanLow, spanHigh)}
           </div>
           <p className="mt-1.5 text-xs text-muted-foreground">
-            Too few graded sales to separate conditions.
+            {fromAsking
+              ? "Estimated from current eBay listings, adjusted for the gap between what sellers ask and what buyers pay."
+              : "Too few graded sales to separate conditions."}
           </p>
         </div>
       )}

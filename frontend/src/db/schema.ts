@@ -506,6 +506,11 @@ export const priceEstimates = pgTable(
     priceMintHigh: integer("price_mint_high"),
     medianPrice: integer("median_price"), // median of all sale prices — best single "what you'd pay" number
     currency: text("currency").default("USD"),
+    // What this estimate is actually built from, so the page can say the
+    // true thing rather than one label for both. "sold" means real completed
+    // sales; "asking" means live listings corrected by the calibration
+    // factor, which is an inference and must not be presented as a sale.
+    priceSource: text("price_source").default("sold").notNull(),
     // Dead since the eBay blackout: rarity was derived from 90-day sold
     // volume, which stopped being a fact about scarcity the moment ingest
     // paused. Nothing reads or writes these; kept only so the columns can be
@@ -603,5 +608,75 @@ export const priceHistory = pgTable(
     uniqueIndex("uq_price_history_entity_source_url")
       .on(table.entityType, table.entityId, table.sourceUrl)
       .where(sql`source_url IS NOT NULL`),
+  ]
+);
+
+// One row per eBay listing we have seen active, per entity it was found for.
+//
+// eBay's API cannot search sold listings — that capability is gated behind
+// Marketplace Insights, which our keys are refused. It will, however, resolve
+// any item by id long after it ends and report its final price. So real sale
+// prices are reachable only by noticing a listing while it is live and
+// checking back once it is over. This table is that memory.
+//
+// `resolution` is null while the listing is still open or not yet checked.
+export const ebayListingWatch = pgTable(
+  "ebay_listing_watch",
+  {
+    id: serial("id").primaryKey(),
+    entityType: text("entity_type").notNull(), // "camera" | "lens"
+    entityId: integer("entity_id").notNull(),
+    legacyItemId: text("legacy_item_id").notNull(),
+    title: text("title"),
+    condition: text("condition"),
+    askingPriceUsd: integer("asking_price_usd"),
+    firstSeenAt: timestamp("first_seen_at", { withTimezone: true }).notNull().defaultNow(),
+    lastCheckedAt: timestamp("last_checked_at", { withTimezone: true }),
+    // "sold" | "expired" | "gone" (item no longer resolvable), null = pending
+    resolution: text("resolution"),
+    soldPriceUsd: integer("sold_price_usd"),
+    soldOn: date("sold_on"),
+  },
+  (table) => [
+    unique("uq_ebay_watch_entity_item").on(
+      table.entityType,
+      table.entityId,
+      table.legacyItemId,
+    ),
+    // The resolve queue: unresolved listings, oldest first.
+    index("idx_ebay_watch_pending")
+      .on(table.firstSeenAt)
+      .where(sql`resolution IS NULL`),
+  ]
+);
+
+// Daily asking-price aggregate per entity, from the Browse API's active
+// listings. Deliberately not written into price_history: an asking price is
+// not a sale, and mixing the two would make the sale record unusable. Kept as
+// its own series so the site can show what sellers want against what buyers
+// actually pay, and so the chart carries exactly one point per day.
+export const ebayAskingSnapshots = pgTable(
+  "ebay_asking_snapshots",
+  {
+    id: serial("id").primaryKey(),
+    entityType: text("entity_type").notNull(), // "camera" | "lens"
+    entityId: integer("entity_id").notNull(),
+    observedOn: date("observed_on").notNull(),
+    medianUsd: integer("median_usd"),
+    p25Usd: integer("p25_usd"),
+    p75Usd: integer("p75_usd"),
+    sampleCount: integer("sample_count").notNull(),
+    // eBay's reported total matching listings, which is far larger than the
+    // sample we page through. A usable liquidity signal in its own right.
+    totalAvailable: integer("total_available"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    unique("uq_ebay_asking_entity_day").on(
+      table.entityType,
+      table.entityId,
+      table.observedOn,
+    ),
+    index("idx_ebay_asking_entity").on(table.entityType, table.entityId),
   ]
 );

@@ -1,8 +1,9 @@
 import { revalidateTag } from "next/cache";
 import { db } from "@/db";
 import { priceTag } from "@/lib/prices";
-import { priceHistory, priceEstimates } from "@/db/schema";
-import { eq, and, sql, gte, inArray, isNull } from "drizzle-orm";
+import { priceHistory, priceEstimates, ebayAskingSnapshots } from "@/db/schema";
+import { eq, and, sql, gte, inArray, isNull, desc } from "drizzle-orm";
+import { ASKING_TO_SOLD_RATIO } from "@/lib/ebay-browse";
 import type { RawListing } from "@/lib/price-classify";
 
 const GRADE_MAP: Record<string, string> = {
@@ -165,6 +166,75 @@ function medianForWindows(
   return medianOf(allPrices);
 }
 
+/**
+ * Confirmed sales needed before sold data outranks the asking sample. Below
+ * this a lens's "sold price" would rest on one or two listings, which is a
+ * worse answer than the median of two hundred live ones.
+ */
+const MIN_SOLD_SALES_FOR_ESTIMATE = 3;
+
+/**
+ * Write an estimate derived from the most recent asking snapshot, correcting
+ * for the markup sellers ask over what buyers pay.
+ *
+ * The p25–p75 span becomes the headline range and the corrected median the
+ * point estimate. No condition tiers: the Browse API grades everything
+ * "Used", and inventing Fair/Good/Excellent bands out of one bucket would
+ * dress a guess up as a measurement.
+ *
+ * Returns false when there is no snapshot to work from.
+ */
+async function upsertFromAsking(
+  entityType: string,
+  entityId: number,
+): Promise<boolean> {
+  const [snapshot] = await db
+    .select({
+      medianUsd: ebayAskingSnapshots.medianUsd,
+      p25Usd: ebayAskingSnapshots.p25Usd,
+      p75Usd: ebayAskingSnapshots.p75Usd,
+    })
+    .from(ebayAskingSnapshots)
+    .where(
+      and(
+        eq(ebayAskingSnapshots.entityType, entityType),
+        eq(ebayAskingSnapshots.entityId, entityId),
+      ),
+    )
+    .orderBy(desc(ebayAskingSnapshots.observedOn))
+    .limit(1);
+
+  if (!snapshot?.medianUsd) return false;
+
+  const correct = (v: number | null) =>
+    v == null ? null : Math.round(v / ASKING_TO_SOLD_RATIO);
+
+  const now = new Date();
+  const values = {
+    sourceName: "eBay",
+    priceAverageLow: correct(snapshot.p25Usd),
+    priceAverageHigh: correct(snapshot.p75Usd),
+    priceVeryGoodLow: null,
+    priceVeryGoodHigh: null,
+    priceMintLow: null,
+    priceMintHigh: null,
+    medianPrice: correct(snapshot.medianUsd),
+    priceSource: "asking",
+    extractedAt: now,
+  };
+
+  await db
+    .insert(priceEstimates)
+    .values({ entityType, entityId, ...values })
+    .onConflictDoUpdate({
+      target: [priceEstimates.entityType, priceEstimates.entityId],
+      set: values,
+    });
+
+  revalidateTag(priceTag(entityType, entityId), "max");
+  return true;
+}
+
 export async function recomputePriceEstimates(
   entityType: string,
   entityId: number,
@@ -188,7 +258,15 @@ export async function recomputePriceEstimates(
       ),
     );
 
-  // If no price history, just upsert a tracking row so we know this camera was scraped
+  // A handful of sales is a worse estimate than a 200-listing asking sample,
+  // so sold data only takes over once there is enough of it. This is the
+  // promotion rule: every lens starts on asking and graduates to sold.
+  if (rows.length < MIN_SOLD_SALES_FOR_ESTIMATE) {
+    if (await upsertFromAsking(entityType, entityId)) return;
+  }
+
+  // No sales and no asking sample: upsert a bare tracking row so the entity
+  // still rotates out of the never-checked queue.
   if (rows.length === 0) {
     const now = new Date();
     await db
@@ -212,7 +290,13 @@ export async function recomputePriceEstimates(
 
   for (const row of rows) {
     const price = row.priceUsd!;
-    const cond = row.condition ?? "";
+    const cond = row.condition;
+    // Sales resolved through the Browse API carry no grade: eBay reports a
+    // bare "Used", and the old pipeline only had grades because an LLM read
+    // the seller's wording off the sold page. An ungraded sale still counts
+    // toward the median, but bucketing it would invent a condition tier —
+    // and the `else` below would quietly file every one of them as Fair.
+    if (cond == null || cond === "") continue;
     if (["A", "A+", "A-B"].includes(cond)) {
       buckets.excellent.push(price);
     } else if (["B", "B+", "B-A"].includes(cond)) {
@@ -264,6 +348,7 @@ export async function recomputePriceEstimates(
       priceMintLow: mintLow,
       priceMintHigh: mintHigh,
       medianPrice,
+      priceSource: "sold",
       extractedAt: now,
     })
     .onConflictDoUpdate({
@@ -277,6 +362,7 @@ export async function recomputePriceEstimates(
         priceMintLow: mintLow,
         priceMintHigh: mintHigh,
         medianPrice,
+        priceSource: "sold",
         extractedAt: now,
       },
     });
