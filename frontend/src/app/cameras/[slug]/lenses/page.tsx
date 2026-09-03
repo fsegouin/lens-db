@@ -37,14 +37,15 @@ export async function generateMetadata({
   const result = await getCameraBySlug(slug);
   if (!result) return { title: "Camera Not Found" };
 
-  const { camera, system } = result;
+  const { camera, system, builtInLens } = result;
   const lenses = await getLensesForMount(camera.systemId);
 
   return entityMetadata({
     title: `Lenses for the ${camera.name}`,
-    description:
-      `Every lens that fits the ${camera.name}: ${lenses.length.toLocaleString()} lenses made for the ` +
-      `${system?.name ?? "same"} mount, with focal length, maximum aperture, weight and release year.`,
+    description: builtInLens
+      ? `The ${camera.name} has a built-in ${builtInLens.name}. It does not come off, so no other lens fits this camera.`
+      : `Every lens that fits the ${camera.name}: ${lenses.length.toLocaleString()} lenses made for the ` +
+        `${system?.name ?? "same"} mount, with focal length, maximum aperture, weight and release year.`,
     path: `/cameras/${camera.slug}/lenses`,
   });
 }
@@ -58,7 +59,7 @@ export default async function CameraLensesPage({
   const result = await getCameraBySlug(slug);
   if (!result) notFound();
 
-  const { camera, system } = result;
+  const { camera, system, builtInLens } = result;
   if (camera.mergedIntoId) {
     const targetSlug = await getCameraSlugById(camera.mergedIntoId);
     if (targetSlug) permanentRedirect(`/cameras/${targetSlug}/lenses`);
@@ -82,8 +83,12 @@ export default async function CameraLensesPage({
         data={hubJsonLd({
           path: `/cameras/${camera.slug}/lenses`,
           name: `Lenses for the ${camera.name}`,
-          description: `Lenses made for the ${system?.name ?? "camera's"} mount.`,
-          items: fitting.map((l) => ({ name: l.name, path: `/lenses/${l.slug}` })),
+          description: builtInLens
+            ? `The ${camera.name} has a built-in ${builtInLens.name} that cannot be removed.`
+            : `Lenses made for the ${system?.name ?? "camera's"} mount.`,
+          items: builtInLens
+            ? [{ name: builtInLens.name, path: `/lenses/${builtInLens.slug}` }]
+            : fitting.map((l) => ({ name: l.name, path: `/lenses/${l.slug}` })),
           crumbs,
         })}
       />
@@ -106,6 +111,17 @@ export default async function CameraLensesPage({
               </Link>{" "}
               mount. {fitting.length.toLocaleString()} lenses in the database were
               made for it.
+            </>
+          ) : builtInLens ? (
+            <>
+              The {camera.name} has a built-in{" "}
+              <Link
+                href={`/lenses/${builtInLens.slug}`}
+                className="underline underline-offset-2"
+              >
+                {builtInLens.name}
+              </Link>
+              . It does not come off, so no other lens fits this camera.
             </>
           ) : (
             <>No mount is recorded for the {camera.name}, so its lenses cannot be
@@ -201,18 +217,21 @@ export default async function CameraLensesPage({
             </p>
           )}
         </>
-      ) : (
+      ) : builtInLens ? null : (
         <p className="mt-8 rounded-lg border border-dashed border-border p-8 text-center text-muted-foreground">
           No lenses are recorded for this mount yet.
         </p>
       )}
 
       {/* Only native fit is shown: adapted combinations need mount register
-          data the systems table does not carry yet. */}
-      <p className="mt-8 border-t border-border pt-4 text-xs text-muted-foreground">
-        Native fit only. Lenses from other mounts may fit with an adapter, which
-        this database does not model yet.
-      </p>
+          data the systems table does not carry yet. A body with no mount has
+          nothing to adapt to, so the note would only confuse. */}
+      {!builtInLens && (
+        <p className="mt-8 border-t border-border pt-4 text-xs text-muted-foreground">
+          Native fit only. Lenses from other mounts may fit with an adapter,
+          which this database does not model yet.
+        </p>
+      )}
     </div>
   );
 }

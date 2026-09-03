@@ -20,6 +20,12 @@ export type LensRelations = {
   /** Bodies that take one of those mounts natively. */
   cameras: { name: string; slug: string; yearIntroduced: number | null }[];
   cameraCount: number;
+  /**
+   * Bodies this lens is built into and cannot be removed from. A fixed-lens
+   * camera has no mount, so it can never appear in `cameras` above, and
+   * without this the lens page is a dead end back to its own camera.
+   */
+  builtInto: { name: string; slug: string; yearIntroduced: number | null }[];
   /** Other lenses in the same version group. */
   versions: {
     id: number;
@@ -57,8 +63,14 @@ export const getLensRelations = unstable_cache(
     ];
     const systemIds = mounts.map((m) => m.id);
 
-    const [seriesRows, collectionRows, cameraRows, cameraCountRows, versionRows] =
-      await Promise.all([
+    const [
+      seriesRows,
+      collectionRows,
+      cameraRows,
+      cameraCountRows,
+      versionRows,
+      builtIntoRows,
+    ] = await Promise.all([
         db
           .select({ name: lensSeries.name, slug: lensSeries.slug })
           .from(lensSeriesMemberships)
@@ -117,6 +129,17 @@ export const getLensRelations = unstable_cache(
               )
               .orderBy(lenses.yearIntroduced)
           : Promise.resolve([]),
+        db
+          .select({
+            name: cameras.name,
+            slug: cameras.slug,
+            yearIntroduced: cameras.yearIntroduced,
+          })
+          .from(cameras)
+          .where(
+            and(eq(cameras.builtInLensId, lensId), isNull(cameras.mergedIntoId)),
+          )
+          .orderBy(cameras.name),
       ]);
 
     return {
@@ -125,6 +148,7 @@ export const getLensRelations = unstable_cache(
       collections: collectionRows,
       cameras: cameraRows,
       cameraCount: cameraCountRows[0]?.count ?? 0,
+      builtInto: builtIntoRows,
       versions: versionRows,
     };
   },

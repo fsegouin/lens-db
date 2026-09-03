@@ -484,6 +484,38 @@ export default async function LensDetailPage({
         </div>
       )}
 
+      {relations.builtInto.length > 0 && (
+        <div>
+          <h2 className="mb-2 text-sm font-semibold tracking-wider text-muted-foreground uppercase">
+            {relations.builtInto.length > 1 ? "Built into these cameras" : "Built into"}
+          </h2>
+          <p className="mb-3 text-sm text-muted-foreground">
+            This lens is not removable. It was fitted to{" "}
+            {relations.builtInto.length > 1
+              ? `${relations.builtInto.length} bodies`
+              : "one body"}
+            , and was not sold on its own.
+          </p>
+          <ul className="flex flex-wrap gap-2">
+            {relations.builtInto.map((c) => (
+              <li key={c.slug}>
+                <Link
+                  href={`/cameras/${c.slug}`}
+                  className="inline-flex items-baseline gap-1.5 rounded-lg border border-border px-2.5 py-1 text-sm transition-colors hover:border-zinc-400 dark:hover:border-zinc-600"
+                >
+                  {c.name}
+                  {c.yearIntroduced && (
+                    <span className="text-xs text-muted-foreground">
+                      {c.yearIntroduced}
+                    </span>
+                  )}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {relations.cameras.length > 0 && (
         <div>
           <h2 className="mb-2 text-sm font-semibold tracking-wider text-muted-foreground uppercase">
