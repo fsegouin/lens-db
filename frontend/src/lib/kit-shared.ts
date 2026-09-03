@@ -62,8 +62,8 @@ export type KitItem = {
   quantity: number;
   condition: string | null;
   serialNumber: string | null;
-  acquiredOn: string | null;
-  acquiredPriceUsd: number | null;
+  acquiredYear: number | null;
+  acquiredPrice: number | null;
   notes: string | null;
   /** Midpoint of the used range, per item, or null when nothing is recorded. */
   estimatedUsd: number | null;
@@ -75,6 +75,6 @@ export type KitValue = {
   pricedItems: number;
   totalItems: number;
   /** What the owner says they paid, for the items where they said. */
-  paidUsd: number;
+  paid: number;
   paidItems: number;
 };

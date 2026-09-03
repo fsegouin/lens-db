@@ -7,15 +7,11 @@ import { useSearch } from "@/components/search-context";
 import { HeaderSearchExpanded } from "@/components/HeaderSearch";
 
 const navLinks: { href: string; label: string; badge?: string }[] = [
-  { href: "/", label: "Home" },
-  { href: "/systems", label: "Systems" },
   { href: "/lenses", label: "Lenses" },
   { href: "/cameras", label: "Cameras" },
-  { href: "/collections", label: "Collections" },
+  { href: "/systems", label: "Systems" },
   { href: "/adapters", label: "Adapting" },
-  { href: "/kit", label: "My kit" },
-  { href: "/compare", label: "Compare" },
-  { href: "/submit", label: "Submit" },
+  { href: "/people", label: "People" },
   { href: "/chat", label: "Chat", badge: "New" },
 ];
 

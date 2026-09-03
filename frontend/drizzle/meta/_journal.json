@@ -253,6 +253,20 @@
       "when": 1788424483363,
       "tag": "0035_add_kit_currency",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1788425914132,
+      "tag": "0036_rename_acquired_price",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1788426239867,
+      "tag": "0037_acquired_year",
+      "breakpoints": true
     }
   ]
 }

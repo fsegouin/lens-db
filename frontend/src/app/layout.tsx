@@ -68,6 +68,7 @@ const footerSections = [
     title: "Contribute",
     links: [
       { href: "/kit", label: "Your kit" },
+      { href: "/people", label: "People" },
       { href: "/submit", label: "Submit a lens or camera" },
       { href: "/register", label: "Create an account" },
       { href: "/login", label: "Sign in" },
