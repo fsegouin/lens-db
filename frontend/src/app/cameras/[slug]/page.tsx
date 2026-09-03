@@ -169,7 +169,6 @@ export default async function CameraDetailPage({
 
   const rail = (
     <div className="space-y-6">
-      <KitButton entityType="camera" entityId={camera.id} />
       <Infobox title="Specifications" facts={infoboxFacts} />
       <PriceCard estimate={priceEstimate ?? null} history={priceHistoryRows} />
       <EbayListings query={camera.name} entitySlug={camera.slug} />
@@ -247,6 +246,7 @@ export default async function CameraDetailPage({
           averageRating={camera.averageRating}
           ratingCount={camera.ratingCount}
           saleCount={priceHistoryRows.length}
+          trailing={<KitButton entityType="camera" entityId={camera.id} />}
         />
       </div>
 

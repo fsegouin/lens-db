@@ -241,7 +241,6 @@ export default async function LensDetailPage({
 
   const rail = (
     <div className="space-y-6">
-      <KitButton entityType="lens" entityId={lens.id} />
       <Infobox title="Specifications" facts={infoboxFacts} />
       <PriceCard estimate={priceEstimate ?? null} history={priceHistoryRows} />
       <EbayListings query={lens.name} entityType="lens" entitySlug={lens.slug} />
@@ -362,6 +361,7 @@ export default async function LensDetailPage({
           averageRating={lens.averageRating}
           ratingCount={lens.ratingCount}
           saleCount={priceHistoryRows.length}
+          trailing={<KitButton entityType="lens" entityId={lens.id} />}
         />
       </div>
 

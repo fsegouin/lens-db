@@ -292,6 +292,12 @@ export const users = pgTable(
      * owner publishes it.
      */
     kitIsPublic: boolean("kit_is_public").notNull().default(false),
+    /**
+     * The currency the owner records what they paid in. Nothing is converted:
+     * the site's own estimates are in USD and stay labelled that way, since
+     * converting would need an exchange rate this database does not have.
+     */
+    kitCurrency: text("kit_currency").notNull().default("USD"),
     role: text("role").notNull().default("user"), // "user" | "trusted" | "admin"
     editCount: integer("edit_count").default(0),
     emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),

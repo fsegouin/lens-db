@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Star } from "lucide-react";
 
 type Props = {
@@ -6,6 +7,8 @@ type Props = {
   averageRating: number | null;
   ratingCount: number | null;
   saleCount: number;
+  /** Sits at the end of the line: the "I own this" control. */
+  trailing?: ReactNode;
 };
 
 function formatMoney(value: number, currency: string): string {
@@ -29,6 +32,7 @@ export default function EntitySummaryLine({
   averageRating,
   ratingCount,
   saleCount,
+  trailing,
 }: Props) {
   const currency = priceRange?.currency ?? "USD";
 
@@ -41,7 +45,8 @@ export default function EntitySummaryLine({
     price = low === high ? low : `${low}–${high}`;
   }
 
-  if (!price && !averageRating) return null;
+  // The line still earns its place when it carries only the kit control.
+  if (!price && !averageRating && !trailing) return null;
 
   return (
     <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-y border-border py-3 text-sm">
@@ -70,6 +75,7 @@ export default function EntitySummaryLine({
           {saleCount.toLocaleString()} recorded {saleCount === 1 ? "sale" : "sales"}
         </span>
       )}
+      {trailing && <span className="ml-auto">{trailing}</span>}
     </div>
   );
 }

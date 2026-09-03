@@ -1,0 +1,1 @@
+ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "kit_currency" text DEFAULT 'USD' NOT NULL;

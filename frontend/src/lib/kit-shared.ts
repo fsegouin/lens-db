@@ -15,6 +15,42 @@ export const KIT_CONDITIONS = [
   "For parts",
 ] as const;
 
+/**
+ * The currencies an owner can record what they paid in.
+ *
+ * Nothing is converted between them. The site's own estimates come from sales
+ * priced in USD, and turning those into another currency would need an
+ * exchange rate, and a date for it, that this database does not have. So the
+ * paid column is shown in the owner's currency, the estimate stays labelled
+ * USD, and the two are never added together.
+ */
+export const KIT_CURRENCIES = [
+  "USD",
+  "EUR",
+  "GBP",
+  "JPY",
+  "CHF",
+  "CAD",
+  "AUD",
+  "SEK",
+  "PLN",
+  "BRL",
+] as const;
+
+export type KitCurrency = (typeof KIT_CURRENCIES)[number];
+
+export function formatMoney(amount: number, currency: string): string {
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  } catch {
+    return `${currency} ${amount.toLocaleString()}`;
+  }
+}
+
 export type KitItem = {
   id: number;
   entityType: KitEntityType;

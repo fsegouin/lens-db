@@ -34,6 +34,7 @@ export default async function KitPage() {
         initialItems={items}
         initialValue={kitValue(items)}
         initialIsPublic={user.kitIsPublic}
+        initialCurrency={user.kitCurrency}
         handle={user.handle}
       />
     </div>

@@ -9,6 +9,7 @@ import {
   isInKit,
   kitValue,
   KIT_CONDITIONS,
+  KIT_CURRENCIES,
   type KitEntityType,
 } from "@/lib/kit";
 import { getClientIP, rateLimitedResponse } from "@/lib/api-utils";
@@ -218,14 +219,28 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  if (typeof body.kitIsPublic !== "boolean") {
-    return NextResponse.json({ error: "kitIsPublic must be a boolean" }, { status: 400 });
+  const updates: Record<string, unknown> = {};
+
+  if (body.kitIsPublic !== undefined) {
+    if (typeof body.kitIsPublic !== "boolean") {
+      return NextResponse.json({ error: "kitIsPublic must be a boolean" }, { status: 400 });
+    }
+    updates.kitIsPublic = body.kitIsPublic;
   }
 
-  await db
-    .update(users)
-    .set({ kitIsPublic: body.kitIsPublic })
-    .where(eq(users.id, auth.user.id));
+  if (body.kitCurrency !== undefined) {
+    const c = body.kitCurrency;
+    if (!KIT_CURRENCIES.includes(c as (typeof KIT_CURRENCIES)[number])) {
+      return NextResponse.json({ error: "Unsupported currency" }, { status: 400 });
+    }
+    updates.kitCurrency = c;
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return NextResponse.json({ error: "Nothing to change" }, { status: 400 });
+  }
+
+  await db.update(users).set(updates).where(eq(users.id, auth.user.id));
   revalidateTag("kit", "max");
-  return NextResponse.json({ ok: true, kitIsPublic: body.kitIsPublic });
+  return NextResponse.json({ ok: true, ...updates });
 }
