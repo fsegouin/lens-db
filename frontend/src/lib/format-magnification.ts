@@ -1,6 +1,9 @@
-export function formatMagnification(value: number | null | undefined): string {
+export function formatMagnification(
+  value: number | null | undefined,
+  fallback = "\u2014",
+): string {
   if (value == null || !Number.isFinite(value) || value <= 0) {
-    return "\u2014";
+    return fallback;
   }
 
   if (value < 1) {

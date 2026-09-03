@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import Breadcrumb from "@/components/Breadcrumb";
 import JsonLd from "@/components/JsonLd";
+import { getRivalsForLens } from "@/lib/compare";
 import { getEntityPriceEstimate, getEntityPriceHistory } from "@/lib/prices";
 import { formatDescription } from "@/lib/format-description";
 import { formatMagnification } from "@/lib/format-magnification";
@@ -113,12 +114,14 @@ export default async function LensDetailPage({
     if (targetSlug) permanentRedirect(`/lenses/${targetSlug}`);
   }
 
-  const [priceEstimate, priceHistoryRows, relations, provenance] = await Promise.all([
-    getEntityPriceEstimate("lens", lens.id),
-    getEntityPriceHistory("lens", lens.id),
-    getLensRelations(lens.id, lens.systemId, lens.versionGroupId),
-    getProvenance("lens", lens.id),
-  ]);
+  const [priceEstimate, priceHistoryRows, relations, provenance, rivals] =
+    await Promise.all([
+      getEntityPriceEstimate("lens", lens.id),
+      getEntityPriceHistory("lens", lens.id),
+      getLensRelations(lens.id, lens.systemId, lens.versionGroupId),
+      getProvenance("lens", lens.id),
+      getRivalsForLens(lens.id),
+    ]);
 
   const specs = (lens.specs ?? {}) as Record<string, string>;
   const mountFromSpecs =
@@ -441,6 +444,34 @@ export default async function LensDetailPage({
                     .filter(Boolean)
                     .join(" · ")}
                 </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {rivals.length > 0 && (
+        <div>
+          <h2 className="mb-2 text-sm font-semibold tracking-wider text-muted-foreground uppercase">
+            Compared with
+          </h2>
+          <p className="mb-3 text-sm text-muted-foreground">
+            Lenses of the same focal length and roughly the same speed that fit
+            the same bodies, and that change hands often enough to price.
+          </p>
+          <ul className="flex flex-wrap gap-2">
+            {rivals.map((r) => (
+              <li key={r.id}>
+                <Link
+                  href={
+                    lens.id < r.id
+                      ? `/compare/lenses/${lens.slug}-vs-${r.slug}`
+                      : `/compare/lenses/${r.slug}-vs-${lens.slug}`
+                  }
+                  className="inline-flex items-baseline gap-1.5 rounded-lg border border-border px-2.5 py-1 text-sm transition-colors hover:border-zinc-400 dark:hover:border-zinc-600"
+                >
+                  {r.name}
+                </Link>
               </li>
             ))}
           </ul>

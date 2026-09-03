@@ -5,7 +5,13 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowUpDown, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
-import { formatMagnification } from "@/lib/format-magnification";
+import {
+  CAMERA_SPEC_ROWS,
+  EMPTY,
+  LENS_SPEC_ROWS,
+  type ComparableCamera,
+  type ComparableLens,
+} from "@/lib/compare-rows";
 import { trackEvent } from "@/lib/analytics";
 import { useEntitySearch, type EntityType } from "@/hooks/use-entity-search";
 import { Button } from "@/components/ui/button";
@@ -29,95 +35,12 @@ import {
 
 type ItemType = "lens" | "camera";
 
-type Lens = {
-  id: number;
-  name: string;
-  slug: string;
-  brand: string | null;
-  focalLengthMin: number | null;
-  focalLengthMax: number | null;
-  apertureMin: number | null;
-  apertureMax: number | null;
-  weightG: number | null;
-  filterSizeMm: number | null;
-  minFocusDistanceM: number | null;
-  maxMagnification: number | null;
-  lensElements: number | null;
-  lensGroups: number | null;
-  diaphragmBlades: number | null;
-  yearIntroduced: number | null;
-  isZoom: boolean | null;
-  isMacro: boolean | null;
-  isPrime: boolean | null;
-  hasStabilization: boolean | null;
-  hasAutofocus: boolean | null;
-  lensType: string | null;
-  era: string | null;
-  productionStatus: string | null;
-  specs: Record<string, string> | null;
-};
-
-type Camera = {
-  id: number;
-  name: string;
-  slug: string;
-  sensorType: string | null;
-  sensorSize: string | null;
-  megapixels: number | null;
-  resolution: string | null;
-  yearIntroduced: number | null;
-  bodyType: string | null;
-  weightG: number | null;
-  specs: Record<string, string> | null;
-};
+type Lens = ComparableLens;
+type Camera = ComparableCamera;
 
 type SelectedItem =
   | { type: "lens"; data: Lens }
   | { type: "camera"; data: Camera };
-
-const LENS_SPEC_ROWS: { label: string; getValue: (l: Lens) => string }[] = [
-  { label: "Brand", getValue: (l) => l.brand || "\u2014" },
-  { label: "Type", getValue: (l) => l.lensType || "\u2014" },
-  {
-    label: "Focal Length",
-    getValue: (l) =>
-      l.focalLengthMin
-        ? l.focalLengthMin === l.focalLengthMax
-          ? `${l.focalLengthMin}mm`
-          : `${l.focalLengthMin}-${l.focalLengthMax}mm`
-        : "\u2014",
-  },
-  {
-    label: "Max Aperture",
-    getValue: (l) => (l.apertureMin ? `f/${l.apertureMin}` : "\u2014"),
-  },
-  {
-    label: "Min Aperture",
-    getValue: (l) => (l.apertureMax && l.apertureMax !== l.apertureMin ? `f/${l.apertureMax}` : "\u2014"),
-  },
-  { label: "Weight", getValue: (l) => (l.weightG ? `${l.weightG}g` : "\u2014") },
-  { label: "Filter Size", getValue: (l) => (l.filterSizeMm ? `${l.filterSizeMm}mm` : "\u2014") },
-  { label: "Lens Elements", getValue: (l) => l.lensElements?.toString() || "\u2014" },
-  { label: "Lens Groups", getValue: (l) => l.lensGroups?.toString() || "\u2014" },
-  { label: "Diaphragm Blades", getValue: (l) => l.diaphragmBlades?.toString() || "\u2014" },
-  {
-    label: "Min Focus Distance",
-    getValue: (l) => (l.minFocusDistanceM ? `${l.minFocusDistanceM}m` : "\u2014"),
-  },
-  {
-    label: "Max Magnification",
-    getValue: (l) => formatMagnification(l.maxMagnification),
-  },
-  { label: "Autofocus", getValue: (l) => (l.hasAutofocus ? "Yes" : "No") },
-  { label: "Stabilization", getValue: (l) => (l.hasStabilization ? "Yes" : "No") },
-  { label: "Year Introduced", getValue: (l) => l.yearIntroduced?.toString() || "\u2014" },
-  { label: "Status", getValue: (l) => l.productionStatus || "\u2014" },
-  { label: "Era", getValue: (l) => l.era || "\u2014" },
-  {
-    label: "Lens Hood",
-    getValue: (l) => (l.specs as Record<string, string>)?.["Lens hood"] || "\u2014",
-  },
-];
 
 function capitalizeFirstLetter(value: string) {
   return value.replace(/^([a-z])/, (match) => match.toUpperCase());
@@ -125,7 +48,7 @@ function capitalizeFirstLetter(value: string) {
 
 function formatCellValue(value: string) {
   const trimmed = value.trim();
-  if (!trimmed || trimmed === "\u2014") return trimmed;
+  if (!trimmed || trimmed === EMPTY) return trimmed;
   const separator = trimmed.includes(";") ? /;\s*/ : /,\s+/;
   const parts = trimmed.split(separator).map((p) => p.trim()).filter(Boolean);
   if (parts.length <= 1) return capitalizeFirstLetter(trimmed);
@@ -137,33 +60,6 @@ function formatCellValue(value: string) {
     </ul>
   );
 }
-
-function cameraSpec(c: Camera, ...keys: string[]): string {
-  const specs = (c.specs || {}) as Record<string, string>;
-  for (const k of keys) {
-    if (specs[k]) return specs[k];
-  }
-  return "\u2014";
-}
-
-const CAMERA_SPEC_ROWS: { label: string; getValue: (c: Camera) => string }[] = [
-  { label: "Type", getValue: (c) => cameraSpec(c, "Type") },
-  { label: "Model", getValue: (c) => cameraSpec(c, "Model") },
-  { label: "Film Type", getValue: (c) => cameraSpec(c, "Film type") },
-  { label: "Imaging Sensor", getValue: (c) => cameraSpec(c, "Imaging sensor", "Imaging plane") },
-  { label: "Sensor Size", getValue: (c) => c.sensorSize || cameraSpec(c, "Maximum format") },
-  { label: "Megapixels", getValue: (c) => (c.megapixels ? `${c.megapixels} MP` : "\u2014") },
-  { label: "Resolution", getValue: (c) => c.resolution || "\u2014" },
-  { label: "Crop Factor", getValue: (c) => cameraSpec(c, "Crop factor") },
-  { label: "Image Stabilization", getValue: (c) => cameraSpec(c, "Sensor-shift image stabilization") },
-  { label: "Speeds", getValue: (c) => cameraSpec(c, "Speeds") },
-  { label: "Exposure Modes", getValue: (c) => cameraSpec(c, "Exposure modes") },
-  { label: "Exposure Metering", getValue: (c) => cameraSpec(c, "Exposure metering") },
-  { label: "Dimensions", getValue: (c) => cameraSpec(c, "Dimensions") },
-  { label: "Year Introduced", getValue: (c) => c.yearIntroduced?.toString() || "\u2014" },
-  { label: "Weight", getValue: (c) => (c.weightG ? `${c.weightG}g` : "\u2014") },
-  { label: "Body Type", getValue: (c) => c.bodyType || "\u2014" },
-];
 
 function ItemSearch({
   label,
@@ -409,7 +305,7 @@ export default function CompareClient() {
             </TableHeader>
             <TableBody>
               {rows.map(({ label, v1, v2 }) => {
-                const isDiff = v1 !== v2 && v1 !== "\u2014" && v2 !== "\u2014";
+                const isDiff = v1 !== v2 && v1 !== EMPTY && v2 !== EMPTY;
                 return (
                   <TableRow key={label} className={isDiff ? "bg-amber-50/50 dark:bg-amber-950/20" : ""}>
                     <TableCell className="font-medium text-muted-foreground">{label}</TableCell>

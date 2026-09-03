@@ -3,6 +3,7 @@ import { unstable_cache } from "next/cache";
 import { db } from "@/db";
 import { lenses, cameras, systems, collections, lensSeries } from "@/db/schema";
 import { getAdapterMatrix } from "@/lib/adapters";
+import { getComparableLensPairs } from "@/lib/compare";
 import { getBrands } from "@/lib/brands";
 import { isNull } from "drizzle-orm";
 
@@ -47,7 +48,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { lensRows, cameraRows, systemRows, collectionRows, seriesRows },
     brands,
     { sources, targets },
-  ] = await Promise.all([getSitemapSlugs(), getBrands(), getAdapterMatrix()]);
+    lensPairs,
+  ] = await Promise.all([
+    getSitemapSlugs(),
+    getBrands(),
+    getAdapterMatrix(),
+    getComparableLensPairs(),
+  ]);
+
+  // "X vs Y" is a query class the site could not answer at a crawlable URL.
+  const comparePages: MetadataRoute.Sitemap = lensPairs.map((p) => ({
+    url: `${baseUrl}/compare/lenses/${p.slug1}-vs-${p.slug2}`,
+    changeFrequency: "monthly" as const,
+    priority: 0.5,
+  }));
 
   // "Can I use X lenses on Y bodies" is the question these pages answer, and
   // it is asked one mount pair at a time.
@@ -116,5 +130,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...seriesPages,
     ...brandPages,
     ...adapterPages,
+    ...comparePages,
   ];
 }
