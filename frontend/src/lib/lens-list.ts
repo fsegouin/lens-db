@@ -3,6 +3,12 @@ import { db } from "@/db";
 import { lenses, systems, lensSeries, lensSeriesMemberships, lensSystems, priceEstimates } from "@/db/schema";
 import { asc, desc, eq, and, gte, lte, sql, inArray, isNull, type AnyColumn } from "drizzle-orm";
 import { buildNameSearch } from "@/lib/search";
+import {
+  normalizeCoverage,
+  normalizeEra,
+  normalizeLensType,
+  normalizeProductionStatus,
+} from "@/lib/vocabularies";
 
 const PAGE_SIZE = 50;
 
@@ -77,8 +83,11 @@ export const listLenses = unstable_cache(
         )`
       );
     }
-    if (p.coverage) {
-      conditions.push(eq(lenses.coverage, p.coverage));
+    // Filter values go through the same normaliser as the stored ones, so a
+    // link written before the vocabularies were settled still matches.
+    const coverage = normalizeCoverage(p.coverage);
+    if (coverage) {
+      conditions.push(eq(lenses.coverage, coverage));
     }
     if (p.type === "zoom") {
       conditions.push(eq(lenses.isZoom, true));
@@ -107,14 +116,17 @@ export const listLenses = unstable_cache(
       const val = parseInt(p.year);
       if (Number.isFinite(val)) conditions.push(eq(lenses.yearIntroduced, val));
     }
-    if (p.lensType) {
-      conditions.push(eq(lenses.lensType, p.lensType));
+    const lensType = normalizeLensType(p.lensType);
+    if (lensType) {
+      conditions.push(eq(lenses.lensType, lensType));
     }
-    if (p.era) {
-      conditions.push(eq(lenses.era, p.era));
+    const era = normalizeEra(p.era);
+    if (era) {
+      conditions.push(eq(lenses.era, era));
     }
-    if (p.productionStatus) {
-      conditions.push(eq(lenses.productionStatus, p.productionStatus));
+    const productionStatus = normalizeProductionStatus(p.productionStatus);
+    if (productionStatus) {
+      conditions.push(eq(lenses.productionStatus, productionStatus));
     }
     if (p.priceMin) {
       const val = parseInt(p.priceMin);
