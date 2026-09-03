@@ -13,7 +13,11 @@ name: eBay Price Pipeline (Browse API)
 
 on:
   schedule:
-    - cron: "0 6 * * *"
+    # eBay's daily Browse allowance rolls over at 07:00 UTC, not midnight, so
+    # this runs just after it. At 06:00 a sweep started on the tail of the
+    # expiring window and crossed the boundary partway through, splitting its
+    # spend across two days' allowances and leaving neither cleanly accounted.
+    - cron: "15 7 * * *"
   workflow_dispatch:
     inputs:
       asking_budget:
@@ -73,8 +77,14 @@ jobs:
               REMAINING=$(jq -r '.remainingToday // 0' <<<"$RESP")
               LIMITED=$(jq -r '.rateLimited // false' <<<"$RESP")
               FAILED=$(jq -r '.failed // 0' <<<"$RESP")
+              EXHAUSTED=$(jq -r '.quotaExhausted // false' <<<"$RESP")
+              QUOTA=$(jq -r '.quotaRemaining // "?"' <<<"$RESP")
               SPENT=$((SPENT + PROCESSED))
-              echo "  +$PROCESSED (failed $FAILED, spent $SPENT, $REMAINING due)"
+              echo "  +$PROCESSED (failed $FAILED, spent $SPENT, $REMAINING due, quota $QUOTA)"
+              if [ "$EXHAUSTED" = "true" ]; then
+                echo "  daily Browse allowance is down to its reserve; stopping"
+                break
+              fi
               if [ "$LIMITED" = "true" ]; then
                 echo "  eBay refused further calls; stopping this pass"
                 break
@@ -99,8 +109,14 @@ jobs:
             SOLD=$(jq -r '.sold // 0' <<<"$RESP")
             PENDING=$(jq -r '.stillPending // 0' <<<"$RESP")
             LIMITED=$(jq -r '.rateLimited // false' <<<"$RESP")
+            EXHAUSTED=$(jq -r '.quotaExhausted // false' <<<"$RESP")
+            QUOTA=$(jq -r '.quotaRemaining // "?"' <<<"$RESP")
             SPENT=$((SPENT + CHECKED))
-            echo "  checked $CHECKED, sold $SOLD (spent $SPENT, $PENDING pending)"
+            echo "  checked $CHECKED, sold $SOLD (spent $SPENT, $PENDING pending, quota $QUOTA)"
+            if [ "$EXHAUSTED" = "true" ]; then
+              echo "  daily Browse allowance is down to its reserve; stopping"
+              break
+            fi
             if [ "$LIMITED" = "true" ]; then
               echo "  eBay refused further calls; stopping this pass"
               break

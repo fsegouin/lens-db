@@ -10,6 +10,7 @@ import {
 import { sql, isNull, desc, and, eq, inArray, lt } from "drizzle-orm";
 import {
   searchActiveListings,
+  getBrowseQuota,
   EbayApiError,
   type ActiveListing,
 } from "@/lib/ebay-browse";
@@ -97,6 +98,17 @@ const ALIAS_SEARCH_THRESHOLD = 5;
  * database that is not something to leave unbounded.
  */
 const SNAPSHOT_RETENTION_DAYS = 400;
+
+/**
+ * Browse calls held back for the listings shown on entity pages.
+ *
+ * The pipeline and the site draw on one shared daily allowance, and the site
+ * is the half a visitor notices. Reading the remaining figure costs nothing
+ * against it (the analytics endpoint has its own allowance), so the pipeline
+ * can check before every batch and stop while there is still enough left for
+ * a day's page views rather than discovering the ceiling by hitting it.
+ */
+const QUOTA_RESERVED_FOR_SITE = 400;
 
 export const maxDuration = 300;
 
@@ -427,6 +439,28 @@ export async function GET(request: NextRequest) {
     Math.max(1, Number(params.get("limit")) || DEFAULT_LIMIT),
   );
 
+  // Size this batch against what eBay says is actually left, not against what
+  // the caller asked for. A budget agreed in advance cannot know what else
+  // spent the allowance today.
+  const quota = await getBrowseQuota();
+  const spendable = quota
+    ? Math.max(0, quota.remaining - QUOTA_RESERVED_FOR_SITE)
+    : limit;
+  if (spendable === 0) {
+    return NextResponse.json({
+      entityType,
+      requested: 0,
+      processed: 0,
+      withListings: 0,
+      failed: 0,
+      rateLimited: false,
+      quotaExhausted: true,
+      quotaRemaining: quota?.remaining ?? null,
+      remainingToday: await countDue(entityType),
+    });
+  }
+  const batchLimit = Math.min(limit, spendable);
+
   // A single entity can be re-ingested on demand, which is the only way to
   // refresh one without waiting for it to come round in the rotation.
   const onlyId = Number(params.get("entityId")) || null;
@@ -440,7 +474,7 @@ export async function GET(request: NextRequest) {
         .from(entityType === "lens" ? lenses : cameras)
         .where(eq(entityType === "lens" ? lenses.id : cameras.id, onlyId))
         .limit(1)
-    : await getBatch(entityType, limit);
+    : await getBatch(entityType, batchLimit);
 
   let processed = 0;
   let withListings = 0;
@@ -487,6 +521,8 @@ export async function GET(request: NextRequest) {
     withListings,
     failed,
     rateLimited,
+    quotaExhausted: false,
+    quotaRemaining: quota?.remaining ?? null,
     prunedSnapshots: pruned.length,
     remainingToday: await countDue(entityType),
   });

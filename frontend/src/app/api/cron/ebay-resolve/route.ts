@@ -3,7 +3,7 @@ import { isCronAuthorized } from "@/lib/api-utils";
 import { db } from "@/db";
 import { ebayListingWatch, priceHistory } from "@/db/schema";
 import { sql, eq, and, isNull, isNotNull, asc, or, lt } from "drizzle-orm";
-import { resolveListing, EbayApiError } from "@/lib/ebay-browse";
+import { resolveListing, getBrowseQuota, EbayApiError } from "@/lib/ebay-browse";
 import { recomputePriceEstimates } from "@/lib/price-pipeline";
 
 /**
@@ -35,6 +35,13 @@ const RECHECK_AFTER_DAYS = 14;
  */
 const RESOLVED_RETENTION_DAYS = 30;
 
+/**
+ * Browse calls held back for the listings shown on entity pages. Resolving is
+ * never urgent, since an ended listing stays resolvable for months, so this
+ * pass yields the allowance to the site without losing anything.
+ */
+const QUOTA_RESERVED_FOR_SITE = 400;
+
 export const maxDuration = 300;
 
 export async function GET(request: NextRequest) {
@@ -51,6 +58,21 @@ export async function GET(request: NextRequest) {
   staleCheck.setDate(staleCheck.getDate() - RECHECK_AFTER_DAYS);
   const minAge = new Date();
   minAge.setDate(minAge.getDate() - MIN_AGE_DAYS_BEFORE_CHECK);
+
+  // Nothing here expires, so when the allowance runs low this pass simply
+  // waits for tomorrow rather than competing with the site for the last of it.
+  const quota = await getBrowseQuota();
+  const spendable = quota
+    ? Math.max(0, quota.remaining - QUOTA_RESERVED_FOR_SITE)
+    : limit;
+  if (spendable === 0) {
+    return NextResponse.json({
+      checked: 0,
+      quotaExhausted: true,
+      quotaRemaining: quota?.remaining ?? null,
+    });
+  }
+  const batchLimit = Math.min(limit, spendable);
 
   const columns = {
     id: ebayListingWatch.id,
@@ -72,13 +94,13 @@ export async function GET(request: NextRequest) {
       ),
     )
     .orderBy(asc(ebayListingWatch.disappearedAt))
-    .limit(limit);
+    .limit(batchLimit);
 
   // Entities with more live listings than the API's 200-result page never get
   // a trustworthy disappearance signal, because a listing can fall off the
   // page while still being active. Their rows still need a slow timer sweep,
   // but only with whatever budget the disappeared queue left over.
-  const room = limit - disappeared.length;
+  const room = batchLimit - disappeared.length;
   const timed =
     room > 0
       ? await db
@@ -224,6 +246,8 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({
     checked: pending.length,
+    quotaExhausted: false,
+    quotaRemaining: quota?.remaining ?? null,
     fromDisappeared: disappeared.length,
     fromTimer: timed.length,
     ...counts,
