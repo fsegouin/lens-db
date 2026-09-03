@@ -28,6 +28,7 @@ import OwnersList from "@/components/OwnersList";
 import ProvenanceLine from "@/components/ProvenanceLine";
 import { getProvenance } from "@/lib/provenance";
 import { getImages } from "@/lib/images";
+import type { ImageData } from "@/lib/image-types";
 import { specValue } from "@/lib/spec-value";
 import { formatDescription } from "@/lib/format-description";
 import { Badge } from "@/components/ui/badge";
@@ -77,7 +78,7 @@ export async function generateMetadata({
 
   const { camera, system, builtInLens } = result;
   const images = absoluteImages(
-    getImages("cameras", slug, (camera.images as { src: string; alt: string }[]) ?? []),
+    getImages("cameras", slug, (camera.images as ImageData[]) ?? []),
   );
 
   return entityMetadata({
@@ -129,7 +130,7 @@ export default async function CameraDetailPage({
   const images = getImages(
     "cameras",
     slug,
-    (camera.images as Array<{ src: string; alt: string }>) || [],
+    (camera.images as ImageData[]) || [],
   );
   const leadSentence = cameraLead(camera, system?.name ?? null, builtInLens?.name ?? null);
 

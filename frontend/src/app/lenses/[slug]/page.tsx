@@ -12,6 +12,7 @@ import {
 import { formatDescription } from "@/lib/format-description";
 import { formatMagnification } from "@/lib/format-magnification";
 import { getImages } from "@/lib/images";
+import type { ImageData } from "@/lib/image-types";
 import { specValue } from "@/lib/spec-value";
 import { getLensBySlug, getLensSlugById } from "@/lib/lenses";
 import { getLensRelations } from "@/lib/lens-relations";
@@ -91,7 +92,7 @@ export async function generateMetadata({
       : [];
 
   const images = absoluteImages(
-    getImages("lenses", slug, (lens.images as { src: string; alt: string }[]) ?? []),
+    getImages("lenses", slug, (lens.images as ImageData[]) ?? []),
   );
 
   return entityMetadata({
@@ -164,7 +165,7 @@ export default async function LensDetailPage({
   const images = getImages(
     "lenses",
     slug,
-    (lens.images as Array<{ src: string; alt: string }>) || [],
+    (lens.images as ImageData[]) || [],
   );
   const leadSentence = lensLead(lens, mountNames);
 
