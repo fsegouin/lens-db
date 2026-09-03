@@ -89,6 +89,13 @@ export default function PriceCard({
   // graded sales, so this branch is always the untiered one.
   const fromAsking = shownEstimate?.priceSource === "asking";
 
+  // How many live listings the figure rests on. Naming it matters most where
+  // the number is smallest: an estimate from three listings and one from
+  // eighty read identically otherwise.
+  const askingSample = fromAsking
+    ? (asking[asking.length - 1]?.sampleCount ?? null)
+    : null;
+
   return (
     <div className="@container space-y-4">
       <h2 className="text-sm font-semibold tracking-wider text-muted-foreground uppercase">
@@ -105,7 +112,11 @@ export default function PriceCard({
           </div>
           <p className="mt-1.5 text-xs text-muted-foreground">
             {fromAsking
-              ? "Estimated from current eBay listings, adjusted for the gap between what sellers ask and what buyers pay."
+              ? `Estimated from ${
+                  askingSample != null
+                    ? `${askingSample} current eBay ${askingSample === 1 ? "listing" : "listings"}`
+                    : "current eBay listings"
+                }, adjusted for the gap between what sellers ask and what buyers pay.`
               : "Too few graded sales to separate conditions."}
           </p>
         </div>
