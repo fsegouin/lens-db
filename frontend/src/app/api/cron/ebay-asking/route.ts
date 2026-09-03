@@ -7,7 +7,7 @@ import {
   ebayAskingSnapshots,
   ebayListingWatch,
 } from "@/db/schema";
-import { sql, isNull, desc } from "drizzle-orm";
+import { sql, isNull, desc, and, eq, inArray } from "drizzle-orm";
 import {
   searchActiveListings,
   EbayApiError,
@@ -32,13 +32,23 @@ const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 200;
 
 /**
- * Listings watched per entity per run. Recording all 200 would mean ~1.8M
- * pending rows across the catalogue and a resolve queue that could never be
- * drained inside eBay's daily call budget. The sample is spread evenly across
- * the price-sorted listings so the sales we eventually confirm keep the shape
- * of the distribution instead of clustering at one end.
+ * Listings watched per entity, derived from the call budget rather than
+ * picked by feel.
+ *
+ * eBay allows 5,000 Browse calls a day. Reserving ~500 for the listings shown
+ * on entity pages and sweeping the 11,486-entity catalogue weekly costs ~1,640
+ * searches a day, leaving ~2,850 for resolves. A watched listing needs one
+ * resolve call when it ends, and used camera gear sits listed for roughly 45
+ * days, so the sustainable watch set is about 2,850 x 45 = 128,000 listings,
+ * or ~11 per entity on average. Most entities have fewer live listings than
+ * any cap, so the cap only binds on the popular ones; 30 leaves those better
+ * covered while keeping the total near budget.
+ *
+ * The right number is measurable rather than estimated: every snapshot records
+ * `totalAvailable`, so after one full sweep the real distribution can replace
+ * the 45-day assumption behind this figure.
  */
-const WATCH_SAMPLE_PER_ENTITY = 20;
+const WATCH_CAP_PER_ENTITY = 30;
 
 export const maxDuration = 300;
 
@@ -143,33 +153,110 @@ async function ingestOne(
       set: snapshot,
     });
 
-  const sample = spreadSample(listings, WATCH_SAMPLE_PER_ENTITY);
-  if (sample.length > 0) {
-    await db
-      .insert(ebayListingWatch)
-      .values(
-        sample.map((l) => ({
-          entityType,
-          entityId,
-          legacyItemId: l.legacyItemId,
-          title: l.title.slice(0, 200),
-          condition: l.condition,
-          askingPriceUsd: Math.round(l.priceUsd),
-        })),
-      )
-      // Already watching it: keep the original first_seen_at, which is what
-      // dates the listing's life.
-      .onConflictDoNothing({
-        target: [
-          ebayListingWatch.entityType,
-          ebayListingWatch.entityId,
-          ebayListingWatch.legacyItemId,
-        ],
-      });
-  }
-
+  await syncWatchList(entityType, entityId, listings, total);
   await recomputePriceEstimates(entityType, entityId);
   return { sampled: prices.length, total, median };
+}
+
+/**
+ * Reconcile what we are watching for one entity against what the search just
+ * returned.
+ *
+ * This is where sales are detected. A watched listing that stops coming back
+ * has ended, and marking it here means the resolve pass spends a call only on
+ * listings that might be a sale, instead of re-checking live ones on a timer.
+ */
+async function syncWatchList(
+  entityType: "lens" | "camera",
+  entityId: number,
+  listings: ActiveListing[],
+  total: number,
+): Promise<void> {
+  const now = new Date();
+  const seenIds = new Set(listings.map((l) => l.legacyItemId));
+
+  const existing = await db
+    .select({ legacyItemId: ebayListingWatch.legacyItemId })
+    .from(ebayListingWatch)
+    .where(
+      and(
+        eq(ebayListingWatch.entityType, entityType),
+        eq(ebayListingWatch.entityId, entityId),
+        isNull(ebayListingWatch.resolution),
+      ),
+    );
+  const watchedIds = new Set(existing.map((r) => r.legacyItemId));
+
+  // Still listed. Clearing disappearedAt matters: eBay's result pages shuffle,
+  // so a listing can drop out of one search and come back in the next, and a
+  // returning listing must leave the resolve queue rather than burn a call.
+  const stillListed = [...seenIds].filter((id) => watchedIds.has(id));
+  if (stillListed.length > 0) {
+    await db
+      .update(ebayListingWatch)
+      .set({ lastSeenActiveAt: now, disappearedAt: null })
+      .where(
+        and(
+          eq(ebayListingWatch.entityType, entityType),
+          eq(ebayListingWatch.entityId, entityId),
+          inArray(ebayListingWatch.legacyItemId, stillListed),
+        ),
+      );
+  }
+
+  // Gone. Only meaningful when this search saw the whole pool: the API returns
+  // at most 200 matches, and on anything larger a listing can fall off the
+  // page while still being perfectly alive. Those keep resolving on the timer.
+  const sawWholePool = total <= listings.length;
+  const vanished = sawWholePool
+    ? [...watchedIds].filter((id) => !seenIds.has(id))
+    : [];
+  if (vanished.length > 0) {
+    await db
+      .update(ebayListingWatch)
+      .set({ disappearedAt: now })
+      .where(
+        and(
+          eq(ebayListingWatch.entityType, entityType),
+          eq(ebayListingWatch.entityId, entityId),
+          isNull(ebayListingWatch.resolution),
+          isNull(ebayListingWatch.disappearedAt),
+          inArray(ebayListingWatch.legacyItemId, vanished),
+        ),
+      );
+  }
+
+  // New listings, up to the per-entity cap. Sampled across the price-sorted
+  // set so a capped entity keeps the shape of its distribution rather than
+  // only its cheapest or dearest listings.
+  const room = WATCH_CAP_PER_ENTITY - watchedIds.size;
+  if (room <= 0) return;
+  const fresh = listings.filter((l) => !watchedIds.has(l.legacyItemId));
+  const toAdd = spreadSample(fresh, room);
+  if (toAdd.length === 0) return;
+
+  await db
+    .insert(ebayListingWatch)
+    .values(
+      toAdd.map((l) => ({
+        entityType,
+        entityId,
+        legacyItemId: l.legacyItemId,
+        title: l.title.slice(0, 200),
+        condition: l.condition,
+        askingPriceUsd: Math.round(l.priceUsd),
+        lastSeenActiveAt: now,
+      })),
+    )
+    // Already watching it: keep the original first_seen_at, which is what
+    // dates the listing's life.
+    .onConflictDoNothing({
+      target: [
+        ebayListingWatch.entityType,
+        ebayListingWatch.entityId,
+        ebayListingWatch.legacyItemId,
+      ],
+    });
 }
 
 export async function GET(request: NextRequest) {
@@ -184,7 +271,19 @@ export async function GET(request: NextRequest) {
     Math.max(1, Number(params.get("limit")) || DEFAULT_LIMIT),
   );
 
-  const batch = await getBatch(entityType, limit);
+  // A single entity can be re-ingested on demand, which is the only way to
+  // refresh one without waiting for it to come round in the rotation.
+  const onlyId = Number(params.get("entityId")) || null;
+  const batch = onlyId
+    ? await db
+        .select({
+          id: entityType === "lens" ? lenses.id : cameras.id,
+          name: entityType === "lens" ? lenses.name : cameras.name,
+        })
+        .from(entityType === "lens" ? lenses : cameras)
+        .where(eq(entityType === "lens" ? lenses.id : cameras.id, onlyId))
+        .limit(1)
+    : await getBatch(entityType, limit);
 
   let processed = 0;
   let withListings = 0;

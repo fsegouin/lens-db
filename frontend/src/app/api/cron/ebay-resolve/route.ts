@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { isCronAuthorized } from "@/lib/api-utils";
 import { db } from "@/db";
 import { ebayListingWatch, priceHistory } from "@/db/schema";
-import { sql, eq, and, isNull, asc, or, lt } from "drizzle-orm";
+import { sql, eq, and, isNull, isNotNull, asc, or, lt } from "drizzle-orm";
 import { resolveListing, EbayApiError } from "@/lib/ebay-browse";
 import { recomputePriceEstimates } from "@/lib/price-pipeline";
 
@@ -23,8 +23,17 @@ const MAX_LIMIT = 400;
 
 /** Listings rarely end the day they are found; checking sooner wastes calls. */
 const MIN_AGE_DAYS_BEFORE_CHECK = 3;
-/** How long to leave a still-active listing before looking again. */
-const RECHECK_AFTER_DAYS = 7;
+/**
+ * Timer sweep interval for listings with no disappearance signal, which is
+ * only entities whose live pool exceeds the API's 200-result page. Kept long
+ * because every such check usually just reports "still active".
+ */
+const RECHECK_AFTER_DAYS = 14;
+/**
+ * How long a resolved watch row is kept before deletion. The sale it produced
+ * lives permanently in price_history; the row itself is only scaffolding.
+ */
+const RESOLVED_RETENTION_DAYS = 30;
 
 export const maxDuration = 300;
 
@@ -61,27 +70,57 @@ export async function GET(request: NextRequest) {
   const minAge = new Date();
   minAge.setDate(minAge.getDate() - MIN_AGE_DAYS_BEFORE_CHECK);
 
-  const pending = await db
-    .select({
-      id: ebayListingWatch.id,
-      entityType: ebayListingWatch.entityType,
-      entityId: ebayListingWatch.entityId,
-      legacyItemId: ebayListingWatch.legacyItemId,
-      condition: ebayListingWatch.condition,
-    })
+  const columns = {
+    id: ebayListingWatch.id,
+    entityType: ebayListingWatch.entityType,
+    entityId: ebayListingWatch.entityId,
+    legacyItemId: ebayListingWatch.legacyItemId,
+    condition: ebayListingWatch.condition,
+  };
+
+  // Listings that a complete search stopped returning. These have ended, so
+  // every call spent here is a call spent on a possible sale.
+  const disappeared = await db
+    .select(columns)
     .from(ebayListingWatch)
     .where(
       and(
         isNull(ebayListingWatch.resolution),
-        lt(ebayListingWatch.firstSeenAt, minAge),
-        or(
-          isNull(ebayListingWatch.lastCheckedAt),
-          lt(ebayListingWatch.lastCheckedAt, staleCheck),
-        ),
+        isNotNull(ebayListingWatch.disappearedAt),
       ),
     )
-    .orderBy(asc(ebayListingWatch.lastCheckedAt), asc(ebayListingWatch.firstSeenAt))
+    .orderBy(asc(ebayListingWatch.disappearedAt))
     .limit(limit);
+
+  // Entities with more live listings than the API's 200-result page never get
+  // a trustworthy disappearance signal, because a listing can fall off the
+  // page while still being active. Their rows still need a slow timer sweep,
+  // but only with whatever budget the disappeared queue left over.
+  const room = limit - disappeared.length;
+  const timed =
+    room > 0
+      ? await db
+          .select(columns)
+          .from(ebayListingWatch)
+          .where(
+            and(
+              isNull(ebayListingWatch.resolution),
+              isNull(ebayListingWatch.disappearedAt),
+              lt(ebayListingWatch.firstSeenAt, minAge),
+              or(
+                isNull(ebayListingWatch.lastCheckedAt),
+                lt(ebayListingWatch.lastCheckedAt, staleCheck),
+              ),
+            ),
+          )
+          .orderBy(
+            asc(ebayListingWatch.lastCheckedAt),
+            asc(ebayListingWatch.firstSeenAt),
+          )
+          .limit(room)
+      : [];
+
+  const pending = [...disappeared, ...timed];
 
   const counts = { sold: 0, expired: 0, active: 0, ambiguous: 0, gone: 0, failed: 0 };
   const touched = new Set<string>();
@@ -169,16 +208,44 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // Resolved rows are scaffolding. The sale itself is already recorded in
+  // price_history, which is the durable artefact, so keeping the watch row
+  // beyond a short grace period only spends storage. This is what stops the
+  // table growing without bound on a 500 MB database.
+  const pruneBefore = new Date();
+  pruneBefore.setDate(pruneBefore.getDate() - RESOLVED_RETENTION_DAYS);
+  await db
+    .delete(ebayListingWatch)
+    .where(
+      and(
+        isNotNull(ebayListingWatch.resolution),
+        lt(ebayListingWatch.lastCheckedAt, pruneBefore),
+      ),
+    );
+
   const [{ stillPending }] = await db
     .select({ stillPending: sql<number>`count(*)` })
     .from(ebayListingWatch)
     .where(isNull(ebayListingWatch.resolution));
 
+  const [{ queued }] = await db
+    .select({ queued: sql<number>`count(*)` })
+    .from(ebayListingWatch)
+    .where(
+      and(
+        isNull(ebayListingWatch.resolution),
+        isNotNull(ebayListingWatch.disappearedAt),
+      ),
+    );
+
   return NextResponse.json({
     checked: pending.length,
+    fromDisappeared: disappeared.length,
+    fromTimer: timed.length,
     ...counts,
     entitiesRecomputed: touched.size,
     rateLimited,
+    queuedDisappeared: Number(queued),
     stillPending: Number(stillPending),
   });
 }
