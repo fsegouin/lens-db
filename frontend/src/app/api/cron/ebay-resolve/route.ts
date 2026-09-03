@@ -37,24 +37,6 @@ const RESOLVED_RETENTION_DAYS = 30;
 
 export const maxDuration = 300;
 
-/**
- * eBay's coarse condition mapped to the site's grades. "Used" is deliberately
- * absent: it covers everything from beaten to mint, and the old pipeline only
- * had a grade because an LLM read the seller's own wording off the sold page.
- * Browse gives no such wording, so those sales carry an unknown grade and
- * count toward the median without inventing a condition tier.
- */
-const CONDITION_GRADE: Record<string, string> = {
-  "Brand New": "A",
-  New: "A",
-  "Open Box": "A",
-  "New other (see details)": "A",
-  "Very Good - Refurbished": "A",
-  "Excellent - Refurbished": "A",
-  "Certified - Refurbished": "A",
-  "For parts or not working": "D",
-};
-
 export async function GET(request: NextRequest) {
   if (!isCronAuthorized(request.headers.get("authorization"))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -171,7 +153,9 @@ export async function GET(request: NextRequest) {
           entityType: row.entityType,
           entityId: row.entityId,
           saleDate: outcome.soldOn,
-          condition: row.condition ? CONDITION_GRADE[row.condition] ?? null : null,
+          // Already a grade: the classifier assigned it from the listing's own
+          // wording when the listing was first seen, while it was still up.
+          condition: row.condition,
           priceUsd: Math.round(outcome.priceUsd),
           source: "eBay",
           sourceUrl: `https://www.ebay.com/itm/${row.legacyItemId}`,

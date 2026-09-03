@@ -30,7 +30,7 @@ jobs:
   browse-pipeline:
     runs-on: ubuntu-latest
     environment: production
-    timeout-minutes: 120
+    timeout-minutes: 180
     env:
       API_URL: ${{ secrets.API_URL }}
       CRON_SECRET: ${{ secrets.CRON_SECRET }}
@@ -44,7 +44,7 @@ jobs:
       # for the listings shown on entity pages.
       ASKING_BUDGET: ${{ inputs.asking_budget || '1600' }}
       RESOLVE_BUDGET: ${{ inputs.resolve_budget || '2600' }}
-      PAGE: "50"
+      PAGE: "20"
     steps:
       - name: Asking-price snapshots
         run: |

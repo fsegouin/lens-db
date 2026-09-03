@@ -15,6 +15,8 @@ import {
 } from "@/lib/ebay-browse";
 import { recomputePriceEstimates } from "@/lib/price-pipeline";
 import { buildEbaySearchQuery, buildEbayLensSearchQuery } from "@/lib/ebay-search-query";
+import { classifyListings, type RawListing } from "@/lib/price-classify";
+import { classifyLensListings } from "@/lib/price-classify-lens";
 
 /**
  * Daily asking-price ingest over the Browse API.
@@ -50,6 +52,38 @@ const MAX_LIMIT = 200;
  */
 const WATCH_CAP_PER_ENTITY = 30;
 
+/**
+ * Listings put through the relevance classifier per entity.
+ *
+ * Everything stored here passes the same LLM check the scraped pipeline used,
+ * because a keyword search is not a model match: "Canon EF" is a 1973 body but
+ * the query pulls in every EF-mount lens on the site, "Sony a7" matches every
+ * a7 variant, and without a filter those all land in the median. The first run
+ * without one published a Canon EF at $100.
+ *
+ * Bounded at 40 rather than the full 200 a search can return: two batches of
+ * twenty is ample for a median, while classifying every result would mean ten
+ * LLM round trips per entity and blow the route's 300s ceiling.
+ */
+const CLASSIFY_SAMPLE = 40;
+
+/** LLM condition grade to the grade stored on sales. */
+const GRADE_MAP: Record<string, string> = {
+  excellent: "A",
+  good: "B",
+  fair: "C",
+};
+
+/**
+ * Mirrors the floor the sold estimator applies. Anything under this is a cap,
+ * a box, a filter listed under the lens's name, or a mis-read amount, and one
+ * of them at the bottom of a thin sample drags the whole range down.
+ */
+const MIN_PLAUSIBLE_USD = 5;
+
+/** Relevant listings below which a camera's alias is worth a second search. */
+const ALIAS_SEARCH_THRESHOLD = 5;
+
 export const maxDuration = 300;
 
 function percentile(sorted: number[], p: number): number | null {
@@ -75,7 +109,14 @@ function spreadSample(listings: ActiveListing[], n: number): ActiveListing[] {
 async function getBatch(entityType: "lens" | "camera", limit: number) {
   const table = entityType === "lens" ? lenses : cameras;
   return db
-    .select({ id: table.id, name: table.name })
+    .select({
+      id: table.id,
+      name: table.name,
+      // Cameras carry a second name they were sold under in other markets
+      // (16 of them do). The scraped pipeline searched it when the primary
+      // name came back thin, and dropping that would quietly lose those.
+      alias: entityType === "camera" ? cameras.alias : sql<string | null>`NULL`,
+    })
     .from(table)
     .leftJoin(
       ebayAskingSnapshots,
@@ -115,28 +156,119 @@ async function countDue(entityType: "lens" | "camera"): Promise<number> {
   return due.length;
 }
 
+/** A listing the classifier accepted, carrying the grade it assigned. */
+interface RelevantListing {
+  listing: ActiveListing;
+  grade: string | null;
+}
+
+/**
+ * Drop everything that is not actually this entity, in working order, sold on
+ * its own. Reuses the classifier the scraped pipeline used, so relevance is
+ * judged by the same rules whichever way a listing arrived.
+ *
+ * The classifier throws when every batch fails, and that is deliberate: an
+ * unclassified sample must not be stored, because "no relevant listings" and
+ * "the classifier was down" would otherwise look identical and the entity
+ * would be marked done on the strength of a check that never ran.
+ */
+async function keepRelevant(
+  entityType: "lens" | "camera",
+  name: string,
+  listings: ActiveListing[],
+): Promise<RelevantListing[]> {
+  if (listings.length === 0) return [];
+
+  const today = new Date().toISOString().slice(0, 10);
+  const raw: RawListing[] = listings.map((l) => ({
+    title: l.title,
+    price: l.priceUsd,
+    date: today,
+    condition: l.condition ?? undefined,
+  }));
+
+  // The classifier batches twenty at a time internally and runs those batches
+  // one after another, which for a forty-listing sample is two round trips
+  // spent in series. Splitting the sample and calling it twice at once halves
+  // the time an entity holds the request open, and the route has a 300s
+  // ceiling to stay under. Promise.all preserves order, which matters: the
+  // verdicts are joined back to the listings positionally.
+  const CHUNK = 20;
+  const chunks: RawListing[][] = [];
+  for (let i = 0; i < raw.length; i += CHUNK) chunks.push(raw.slice(i, i + CHUNK));
+
+  const classify = (batch: RawListing[]) =>
+    entityType === "lens"
+      ? classifyLensListings(name, batch)
+      : classifyListings(name, batch);
+
+  const classified = (await Promise.all(chunks.map(classify))).flat();
+
+  const kept: RelevantListing[] = [];
+  for (let i = 0; i < listings.length; i++) {
+    const verdict = classified[i];
+    if (!verdict?.isRelevant || verdict.conditionGrade === "skip") continue;
+    kept.push({
+      listing: listings[i],
+      grade: GRADE_MAP[verdict.conditionGrade] ?? null,
+    });
+  }
+  return kept;
+}
+
 async function ingestOne(
   entityType: "lens" | "camera",
   entityId: number,
   name: string,
+  alias: string | null,
 ): Promise<{ sampled: number; total: number; median: number | null }> {
-  const query =
-    entityType === "lens"
-      ? buildEbayLensSearchQuery(name)
-      : buildEbaySearchQuery(name);
+  const buildQuery = (n: string) =>
+    entityType === "lens" ? buildEbayLensSearchQuery(n) : buildEbaySearchQuery(n);
 
-  const { listings, total } = await searchActiveListings(query);
+  const { listings, total: rawTotal } = await searchActiveListings(buildQuery(name));
 
-  const prices = listings.map((l) => l.priceUsd).sort((a, b) => a - b);
+  // Spread the classified sample across the price-sorted results so the
+  // relevance rate is measured over the whole range, not just the cheap end.
+  const sample = spreadSample(listings, CLASSIFY_SAMPLE);
+  let relevant = await keepRelevant(entityType, name, sample);
+  let total = rawTotal;
+  let classified = sample.length;
+
+  // A camera sold under a second name can be nearly invisible under its
+  // primary one, so fall back to the alias when the first search comes back
+  // thin. Costs an extra call only for the handful of cameras that need it.
+  if (alias && relevant.length < ALIAS_SEARCH_THRESHOLD) {
+    const aliasResult = await searchActiveListings(buildQuery(alias));
+    const aliasSample = spreadSample(aliasResult.listings, CLASSIFY_SAMPLE);
+    const aliasRelevant = await keepRelevant(entityType, alias, aliasSample);
+    const seen = new Set(relevant.map((r) => r.listing.legacyItemId));
+    for (const r of aliasRelevant) {
+      if (!seen.has(r.listing.legacyItemId)) relevant.push(r);
+    }
+    total += aliasResult.total;
+    classified += aliasSample.length;
+  }
+
+  // The same floor the sold estimator uses: a cap or a box listed under the
+  // lens's name would otherwise sit at the bottom of a thin sample and drag
+  // the range down with it.
+  relevant = relevant.filter((r) => r.listing.priceUsd >= MIN_PLAUSIBLE_USD);
+
+  const prices = relevant.map((r) => r.listing.priceUsd).sort((a, b) => a - b);
   const median = percentile(prices, 0.5);
   const observedOn = new Date().toISOString().slice(0, 10);
+
+  // eBay's own total counts every keyword match, which for a short model name
+  // is mostly other products. Scaling it by the share of the sample that
+  // survived classification gives a figure that means what the column says.
+  const relevantRate = classified > 0 ? relevant.length / classified : 0;
 
   const snapshot = {
     medianUsd: median == null ? null : Math.round(median),
     p25Usd: (v => (v == null ? null : Math.round(v)))(percentile(prices, 0.25)),
     p75Usd: (v => (v == null ? null : Math.round(v)))(percentile(prices, 0.75)),
     sampleCount: prices.length,
-    totalAvailable: total,
+    totalAvailable: Math.round(total * relevantRate),
   };
 
   // Re-running the same day corrects the day's figures rather than adding a
@@ -153,7 +285,10 @@ async function ingestOne(
       set: snapshot,
     });
 
-  await syncWatchList(entityType, entityId, listings, total);
+  // The disappearance signal is only trustworthy when the classified sample
+  // covered everything eBay had: past that, a listing can be missing from our
+  // slice while still being perfectly alive.
+  await syncWatchList(entityType, entityId, relevant, total <= classified);
   await recomputePriceEstimates(entityType, entityId);
   return { sampled: prices.length, total, median };
 }
@@ -169,11 +304,11 @@ async function ingestOne(
 async function syncWatchList(
   entityType: "lens" | "camera",
   entityId: number,
-  listings: ActiveListing[],
-  total: number,
+  relevant: RelevantListing[],
+  sawWholePool: boolean,
 ): Promise<void> {
   const now = new Date();
-  const seenIds = new Set(listings.map((l) => l.legacyItemId));
+  const seenIds = new Set(relevant.map((r) => r.listing.legacyItemId));
 
   const existing = await db
     .select({ legacyItemId: ebayListingWatch.legacyItemId })
@@ -204,10 +339,9 @@ async function syncWatchList(
       );
   }
 
-  // Gone. Only meaningful when this search saw the whole pool: the API returns
-  // at most 200 matches, and on anything larger a listing can fall off the
-  // page while still being perfectly alive. Those keep resolving on the timer.
-  const sawWholePool = total <= listings.length;
+  // Gone from a sample that covered the whole pool, so it really has ended.
+  // Where the pool was larger than what we classified, absence proves nothing
+  // and those rows keep resolving on the timer instead.
   const vanished = sawWholePool
     ? [...watchedIds].filter((id) => !seenIds.has(id))
     : [];
@@ -231,9 +365,15 @@ async function syncWatchList(
   // only its cheapest or dearest listings.
   const room = WATCH_CAP_PER_ENTITY - watchedIds.size;
   if (room <= 0) return;
-  const fresh = listings.filter((l) => !watchedIds.has(l.legacyItemId));
-  const toAdd = spreadSample(fresh, room);
+  const fresh = relevant.filter((r) => !watchedIds.has(r.listing.legacyItemId));
+  const toAdd = spreadSample(
+    fresh.map((r) => r.listing),
+    room,
+  );
   if (toAdd.length === 0) return;
+  const gradeById = new Map(
+    fresh.map((r) => [r.listing.legacyItemId, r.grade] as const),
+  );
 
   await db
     .insert(ebayListingWatch)
@@ -243,7 +383,9 @@ async function syncWatchList(
         entityId,
         legacyItemId: l.legacyItemId,
         title: l.title.slice(0, 200),
-        condition: l.condition,
+        // The classifier's grade, not eBay's bare "Used". This is what lets a
+        // sale recovered later carry a real condition instead of none.
+        condition: gradeById.get(l.legacyItemId) ?? null,
         askingPriceUsd: Math.round(l.priceUsd),
         lastSeenActiveAt: now,
       })),
@@ -279,6 +421,7 @@ export async function GET(request: NextRequest) {
         .select({
           id: entityType === "lens" ? lenses.id : cameras.id,
           name: entityType === "lens" ? lenses.name : cameras.name,
+          alias: entityType === "camera" ? cameras.alias : sql<string | null>`NULL`,
         })
         .from(entityType === "lens" ? lenses : cameras)
         .where(eq(entityType === "lens" ? lenses.id : cameras.id, onlyId))
@@ -292,7 +435,12 @@ export async function GET(request: NextRequest) {
 
   for (const entity of batch) {
     try {
-      const result = await ingestOne(entityType, entity.id, entity.name);
+      const result = await ingestOne(
+        entityType,
+        entity.id,
+        entity.name,
+        entity.alias ?? null,
+      );
       processed++;
       if (result.sampled > 0) withListings++;
     } catch (error) {
