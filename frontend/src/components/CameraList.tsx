@@ -257,7 +257,7 @@ export default function CameraList({
    * Only what the closed panel is hiding. The chips below already report the
    * visible filters, so counting those here would say everything twice.
    */
-  const hiddenFilterCount = [model, sensorType, cropFactor, year, filmType].filter(
+  const hiddenFilterCount = [model, sensorType, cropFactor, year].filter(
     Boolean,
   ).length;
 
@@ -303,7 +303,10 @@ export default function CameraList({
 
   return (
     <>
-      {/* Search, then the facets people actually browse by, then the rest. */}
+      {/* One wrapper so the bar reads as a group. Its own mt-4s were dead:
+          the parent is space-y-8, which collapses with them to 32px, so the
+          bar was spaced exactly like the gap to the results below it. */}
+      <div className="space-y-4">
       <div className="flex items-center gap-2">
         <label className="sr-only" htmlFor="camera-search">Search cameras</label>
         <Input
@@ -312,14 +315,14 @@ export default function CameraList({
           placeholder="Search cameras..."
           value={formQ}
           onChange={(e) => handleSearchChange(e.target.value)}
-          className="h-11 flex-1"
+          className="h-10 flex-1"
         />
         <button
           type="button"
           onClick={() => setFiltersOpen((open) => !open)}
           aria-expanded={filtersOpen}
           aria-controls="camera-more-filters"
-          className="inline-flex h-11 shrink-0 items-center gap-2 rounded-lg border border-border px-4 text-sm font-medium transition-colors hover:border-zinc-500 dark:hover:border-zinc-400"
+          className="inline-flex h-10 shrink-0 items-center gap-2 rounded-lg border border-border px-4 text-sm font-medium transition-colors hover:border-ring"
         >
           <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
           <span className="max-sm:sr-only">
@@ -333,14 +336,16 @@ export default function CameraList({
         </button>
       </div>
 
-      <div className="mt-4 grid grid-cols-1 gap-x-4 gap-y-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div>
-          <label className="sr-only" htmlFor="camera-system">System</label>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="space-y-1.5">
+          <label htmlFor="camera-system" className="block text-xs font-medium text-muted-foreground">
+            Mount
+          </label>
           <select
             id="camera-system"
             value={formSystem}
             onChange={(e) => { setFormSystem(e.target.value); trackEvent("camera_filter_apply", { filter: "system", value: e.target.value }); applyFilters({ system: e.target.value }); }}
-            className="filter-select h-10 w-full rounded-lg border border-zinc-300 px-3 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+            className="filter-select h-10 w-full rounded-lg border border-input bg-transparent px-3 text-base text-foreground transition-colors outline-none md:text-sm focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
           >
             <option value="">All systems</option>
             {systemOptions.map((s) => (
@@ -350,13 +355,15 @@ export default function CameraList({
             ))}
           </select>
         </div>
-        <div>
-          <label className="sr-only" htmlFor="camera-sensor-size">Sensor size</label>
+        <div className="space-y-1.5">
+          <label htmlFor="camera-sensor-size" className="block text-xs font-medium text-muted-foreground">
+            Sensor size
+          </label>
           <select
             id="camera-sensor-size"
             value={formSensorSize}
             onChange={(e) => { setFormSensorSize(e.target.value); trackEvent("camera_filter_apply", { filter: "sensorSize", value: e.target.value }); applyFilters({ sensorSize: e.target.value }); }}
-            className="filter-select h-10 w-full rounded-lg border border-zinc-300 px-3 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+            className="filter-select h-10 w-full rounded-lg border border-input bg-transparent px-3 text-base text-foreground transition-colors outline-none md:text-sm focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
           >
             <option value="">All sensor sizes</option>
             {sensorSizes.map((s) => (
@@ -364,13 +371,15 @@ export default function CameraList({
             ))}
           </select>
         </div>
-        <div>
-          <label className="sr-only" htmlFor="camera-type">Body type</label>
+        <div className="space-y-1.5">
+          <label htmlFor="camera-type" className="block text-xs font-medium text-muted-foreground">
+            Body type
+          </label>
           <select
             id="camera-type"
             value={formType}
             onChange={(e) => { setFormType(e.target.value); trackEvent("camera_filter_apply", { filter: "type", value: e.target.value }); applyFilters({ type: e.target.value }); }}
-            className="filter-select h-10 w-full rounded-lg border border-zinc-300 px-3 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+            className="filter-select h-10 w-full rounded-lg border border-input bg-transparent px-3 text-base text-foreground transition-colors outline-none md:text-sm focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
           >
             <option value="">All body types</option>
             {types.map((t) => (
@@ -409,8 +418,69 @@ export default function CameraList({
 
       <div
         id="camera-more-filters"
-        className={`${filtersOpen ? "grid" : "hidden"} mt-4 grid-cols-1 gap-x-4 gap-y-4 border-t border-border pt-4 sm:grid-cols-2 lg:grid-cols-4`}
+        className={`${filtersOpen ? "grid" : "hidden"} grid-cols-1 gap-4 border-t border-border pt-4 sm:grid-cols-2 lg:grid-cols-4`}
       >
+        <div className="space-y-1.5">
+          <label htmlFor="camera-model" className="block text-xs font-medium text-muted-foreground">
+            Shutter type
+          </label>
+          <select
+            id="camera-model"
+            value={formModel}
+            onChange={(e) => { setFormModel(e.target.value); applyFilters({ model: e.target.value }); }}
+            className="filter-select h-10 w-full rounded-lg border border-input bg-transparent px-3 text-base text-foreground transition-colors outline-none md:text-sm focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
+          >
+            <option value="">All shutter types</option>
+            {models.map((m) => (
+              <option key={m} value={m}>{m}</option>
+            ))}
+          </select>
+        </div>
+        <div className="space-y-1.5">
+          <label htmlFor="camera-sensor-type" className="block text-xs font-medium text-muted-foreground">
+            Sensor type
+          </label>
+          <select
+            id="camera-sensor-type"
+            value={formSensorType}
+            onChange={(e) => { setFormSensorType(e.target.value); trackEvent("camera_filter_apply", { filter: "sensorType", value: e.target.value }); applyFilters({ sensorType: e.target.value }); }}
+            className="filter-select h-10 w-full rounded-lg border border-input bg-transparent px-3 text-base text-foreground transition-colors outline-none md:text-sm focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
+          >
+            <option value="">All sensor types</option>
+            {sensorTypes.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+        </div>
+        <div className="space-y-1.5">
+          <label htmlFor="camera-crop-factor" className="block text-xs font-medium text-muted-foreground">
+            Crop factor
+          </label>
+          <select
+            id="camera-crop-factor"
+            value={formCropFactor}
+            onChange={(e) => { setFormCropFactor(e.target.value); trackEvent("camera_filter_apply", { filter: "cropFactor", value: e.target.value }); applyFilters({ cropFactor: e.target.value }); }}
+            className="filter-select h-10 w-full rounded-lg border border-input bg-transparent px-3 text-base text-foreground transition-colors outline-none md:text-sm focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
+          >
+            <option value="">All crop factors</option>
+            {cropFactors.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+        </div>
+        <div className="space-y-1.5">
+          <label htmlFor="camera-year" className="block text-xs font-medium text-muted-foreground">
+            Year introduced
+          </label>
+          <Input
+            id="camera-year"
+            type="number"
+            placeholder="e.g. 1996"
+            value={formYear}
+            onChange={(e) => { setFormYear(e.target.value); debouncedApply({ year: e.target.value }); }}
+            className="h-10 w-full"
+          />
+        </div>
         {filmTypes.length > 0 && (
           <div className="space-y-1.5 sm:col-span-2 lg:col-span-4">
             <span id="camera-film-label" className="block text-xs font-medium text-muted-foreground">
@@ -443,7 +513,7 @@ export default function CameraList({
                     className={`h-8 rounded-full border px-3 text-xs transition-colors ${
                       active
                         ? "border-foreground bg-foreground text-background"
-                        : "border-border bg-background text-muted-foreground hover:border-zinc-500 hover:text-foreground dark:text-zinc-400 dark:hover:border-zinc-400"
+                        : "border-border bg-background text-muted-foreground hover:border-ring hover:text-foreground"
                     }`}
                   >
                     {f}
@@ -453,73 +523,18 @@ export default function CameraList({
             </div>
           </div>
         )}
-        <div>
-          <label className="sr-only" htmlFor="camera-model">Shutter type</label>
-          <select
-            id="camera-model"
-            value={formModel}
-            onChange={(e) => { setFormModel(e.target.value); applyFilters({ model: e.target.value }); }}
-            className="filter-select h-10 w-full rounded-lg border border-zinc-300 px-3 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-          >
-            <option value="">All shutter types</option>
-            {models.map((m) => (
-              <option key={m} value={m}>{m}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="sr-only" htmlFor="camera-sensor-type">Sensor type</label>
-          <select
-            id="camera-sensor-type"
-            value={formSensorType}
-            onChange={(e) => { setFormSensorType(e.target.value); trackEvent("camera_filter_apply", { filter: "sensorType", value: e.target.value }); applyFilters({ sensorType: e.target.value }); }}
-            className="filter-select h-10 w-full rounded-lg border border-zinc-300 px-3 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-          >
-            <option value="">All sensor types</option>
-            {sensorTypes.map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="sr-only" htmlFor="camera-crop-factor">Crop factor</label>
-          <select
-            id="camera-crop-factor"
-            value={formCropFactor}
-            onChange={(e) => { setFormCropFactor(e.target.value); trackEvent("camera_filter_apply", { filter: "cropFactor", value: e.target.value }); applyFilters({ cropFactor: e.target.value }); }}
-            className="filter-select h-10 w-full rounded-lg border border-zinc-300 px-3 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-          >
-            <option value="">All crop factors</option>
-            {cropFactors.map((c) => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
-        </div>
-        <div className="space-y-1.5">
-          <label htmlFor="camera-year" className="block text-xs font-medium text-muted-foreground">
-            Year introduced
-          </label>
-          <Input
-            id="camera-year"
-            type="number"
-            placeholder="e.g. 1996"
-            value={formYear}
-            onChange={(e) => { setFormYear(e.target.value); debouncedApply({ year: e.target.value }); }}
-            className="h-10 w-full"
-          />
-        </div>
       </div>
 
       {/* What is applied, and the only way to take it off again. */}
       {chips.length > 0 && (
-        <div className="mt-4 flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {chips.map((chip) => (
             <button
               key={chip.key}
               type="button"
               onClick={() => applyFilters(chip.clear)}
               aria-label={`Remove filter ${chip.label} ${chip.value}`}
-              className="inline-flex h-7 items-center gap-1.5 rounded-full border border-border bg-background pr-2 pl-3 text-xs transition-colors hover:border-zinc-500 dark:hover:border-zinc-400"
+              className="inline-flex h-8 items-center gap-1.5 rounded-full border border-border bg-background pr-2.5 pl-3 text-xs transition-colors hover:border-ring hover:text-foreground"
             >
               <span className="text-muted-foreground">{chip.label}</span>
               <span className="text-foreground">{chip.value}</span>
@@ -529,12 +544,14 @@ export default function CameraList({
           <button
             type="button"
             onClick={() => applyFilters(clearAll)}
-            className="h-7 px-1 text-xs text-muted-foreground underline underline-offset-2 transition-colors hover:text-foreground"
+            className="inline-flex h-8 items-center rounded-md px-2 text-xs text-muted-foreground underline underline-offset-2 transition-colors hover:text-foreground"
           >
             Clear all
           </button>
         </div>
       )}
+
+      </div>
 
       {/* Results */}
       {items.length > 0 ? (
@@ -554,7 +571,7 @@ export default function CameraList({
                 <TableHead
                   key={col.key}
                   scope="col"
-                  className={col.sortable !== false ? "cursor-pointer select-none hover:text-zinc-900 dark:hover:text-zinc-100" : ""}
+                  className={col.sortable !== false ? "cursor-pointer select-none hover:text-foreground" : ""}
                   onClick={col.sortable !== false ? () => handleSort(col.key) : undefined}
                   tabIndex={col.sortable !== false ? 0 : -1}
                   aria-sort={
@@ -605,7 +622,7 @@ export default function CameraList({
                       <button
                         type="button"
                         onClick={() => applyFilters({ ...clearAll, system: sys.slug })}
-                        className="text-left hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
+                        className="text-left hover:text-foreground hover:underline"
                       >
                         {sys.name}
                       </button>
@@ -626,7 +643,7 @@ export default function CameraList({
                             : specs["Model"];
                           applyFilters({ ...clearAll, model: prefix });
                         }}
-                        className="text-left hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
+                        className="text-left hover:text-foreground hover:underline"
                       >
                         {specs["Model"]}
                       </button>
@@ -637,7 +654,7 @@ export default function CameraList({
                       <button
                         type="button"
                         onClick={() => applyFilters({ ...clearAll, filmType: specs["Film type"] })}
-                        className="text-left hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
+                        className="text-left hover:text-foreground hover:underline"
                       >
                         {specs["Film type"]}
                       </button>
@@ -648,7 +665,7 @@ export default function CameraList({
                       <button
                         type="button"
                         onClick={() => applyFilters({ ...clearAll, year: String(camera.yearIntroduced) })}
-                        className="text-left hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
+                        className="text-left hover:text-foreground hover:underline"
                       >
                         {camera.yearIntroduced}
                       </button>
@@ -676,7 +693,7 @@ export default function CameraList({
           </TableBody>
         </Table>
       ) : (
-        <div className="rounded-xl border border-dashed border-zinc-300 p-12 text-center dark:border-zinc-700">
+        <div className="rounded-xl border border-dashed border-border p-12 text-center">
           <p className="text-muted-foreground">
             No cameras found.
           </p>
