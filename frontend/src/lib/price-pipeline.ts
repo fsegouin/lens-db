@@ -174,16 +174,25 @@ function medianForWindows(
 const MIN_SOLD_SALES_FOR_ESTIMATE = 3;
 
 /**
- * Live listings needed before an asking snapshot is worth publishing.
+ * Live listings needed before an asking snapshot is published at all.
  *
- * Below this the percentiles are not percentiles. On three listings p25 and
- * p75 are simply the cheapest and the dearest, so the "range" is the spread
- * of whatever three items happened to be up: a Canon Serenar 50mm read
- * "$78 to $4,112" and a Canon 85mm f/1.5 "$1,154 to $11,638", both off three
- * listings. Entities thin enough to need an asking estimate are exactly the
- * ones least likely to have the listings to support one.
+ * A median of three is thin but it is still the middle of three real prices.
+ * What could not be defended was the *range*: on three listings p25 and p75
+ * are simply the cheapest and the dearest, which is how a Canon Serenar 50mm
+ * came to read "$78 to $4,112" and a Canon 85mm f/1.5 "$1,154 to $11,638".
  */
-const MIN_ASKING_SAMPLE = 8;
+const MIN_ASKING_SAMPLE = 3;
+
+/**
+ * Listings needed before the p25 to p75 range is published alongside the
+ * median. Between this and MIN_ASKING_SAMPLE an entity shows a single figure.
+ *
+ * Splitting the two thresholds is what keeps the fallback useful. Requiring
+ * eight for anything at all left it publishing for 1 entity in 601: an entity
+ * with no sold history is obscure, and obscure entities have few live
+ * listings too, so the two conditions rule each other out.
+ */
+const MIN_ASKING_SAMPLE_FOR_RANGE = 8;
 
 /**
  * Widest p75/p25 ratio still treated as one coherent market. Beyond it the
@@ -233,11 +242,16 @@ async function upsertFromAsking(
   const correct = (v: number | null) =>
     v == null ? null : Math.round(v / ASKING_TO_SOLD_RATIO);
 
-  // A sample spanning more than one market keeps its midpoint but loses its
-  // bounds: publishing no range is honest, publishing a 50x one is not.
+  // The range needs both a big enough sample for percentiles to mean anything
+  // and a spread narrow enough to be one market rather than several. Failing
+  // either, the entity shows its median alone, which is honest about what a
+  // handful of listings can actually tell you.
   const spread =
     snapshot.p25Usd && snapshot.p75Usd ? snapshot.p75Usd / snapshot.p25Usd : null;
-  const rangeIsCoherent = spread != null && spread <= MAX_ASKING_SPREAD;
+  const rangeIsCoherent =
+    snapshot.sampleCount >= MIN_ASKING_SAMPLE_FOR_RANGE &&
+    spread != null &&
+    spread <= MAX_ASKING_SPREAD;
 
   const now = new Date();
   const values = {
