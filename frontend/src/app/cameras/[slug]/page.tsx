@@ -428,7 +428,9 @@ export default async function CameraDetailPage({
             entityId={camera.id}
             currentValues={{
               name: camera.name,
-              url: camera.url,
+              // url is deliberately absent. It holds the import source, and
+              // React serialises these props into the HTML of every visit, so
+              // listing it here published that source on every page.
               description: camera.description,
               alias: camera.alias,
               systemId: camera.systemId,
@@ -452,7 +454,6 @@ export default async function CameraDetailPage({
               { name: "yearIntroduced", label: "Year Introduced", type: "number" },
               { name: "bodyType", label: "Body Type", type: "text" },
               { name: "weightG", label: "Weight (g)", type: "number" },
-              { name: "url", label: "Source URL", type: "text" },
             ]}
           />
           <div className="flex items-center gap-2">

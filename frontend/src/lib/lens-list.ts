@@ -35,8 +35,14 @@ export type LensListParams = {
   cursor: number;
 };
 
+/**
+ * Two columns are omitted at the type level, not merely stripped at runtime,
+ * so a future caller cannot reach for them: `url` is the import source and
+ * `submittedByIp` is a hash of a contributor's address. Neither belongs in a
+ * payload the browser receives.
+ */
 export type LensListItem = {
-  lens: typeof lenses.$inferSelect;
+  lens: Omit<typeof lenses.$inferSelect, "url" | "submittedByIp">;
   system: typeof systems.$inferSelect | null;
   avgPrice: number | null;
   series: { name: string; slug: string }[];
@@ -258,11 +264,20 @@ export const listLenses = unstable_cache(
       }
     }
 
-    const itemsWithRelations = items.map((r) => ({
-      ...r,
-      series: seriesMap[r.lens.id] || [],
-      mounts: mountsMap[r.lens.id] || [],
-    }));
+    // The query selects the whole lens row, so two columns that have no
+    // business leaving the server ride along with it: `url`, which holds the
+    // import source, and `submittedByIp`, which is a hash of a contributor's
+    // address. Both were being serialised into the payload of every list page
+    // and every /api/lenses response, once per lens.
+    const itemsWithRelations = items.map(({ lens, ...r }) => {
+      const { url: _url, submittedByIp: _ip, ...safeLens } = lens;
+      return {
+        ...r,
+        lens: safeLens,
+        series: seriesMap[lens.id] || [],
+        mounts: mountsMap[lens.id] || [],
+      };
+    });
 
     return { items: itemsWithRelations, nextCursor, total };
   },
