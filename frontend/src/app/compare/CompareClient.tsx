@@ -291,12 +291,12 @@ export default function CompareClient() {
             <TableHeader>
               <TableRow>
                 <TableHead scope="col">Spec</TableHead>
-                <TableHead scope="col" className="text-sm normal-case text-foreground">
+                <TableHead scope="col" className="text-sm normal-case tracking-normal text-foreground">
                   <Link href={`/${item1.type === "lens" ? "lenses" : "cameras"}/${item1.data.slug}`} className="hover:underline">
                     {item1.data.name}
                   </Link>
                 </TableHead>
-                <TableHead scope="col" className="text-sm normal-case text-foreground">
+                <TableHead scope="col" className="text-sm normal-case tracking-normal text-foreground">
                   <Link href={`/${item2.type === "lens" ? "lenses" : "cameras"}/${item2.data.slug}`} className="hover:underline">
                     {item2.data.name}
                   </Link>
