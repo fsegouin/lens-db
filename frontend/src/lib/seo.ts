@@ -207,6 +207,22 @@ type EntityMetadataInput = {
  * Title/description/canonical/OG in one place so every entity route emits the
  * same shape. The root layout supplies the "| The Lens DB" suffix.
  */
+/**
+ * A meta description trimmed to fit, ending on a word.
+ *
+ * A hard character cut lands mid-word in the search result it is written for
+ * ("...fisheyes are not corrected f"), which reads as a truncated page rather
+ * than a truncated sentence.
+ */
+export function metaDescription(text: string, max = 158): string {
+  const t = text.trim();
+  if (t.length <= max) return t;
+  // Leave room for the ellipsis, then step back to the last word boundary.
+  const cut = t.slice(0, max - 1);
+  const at = cut.lastIndexOf(" ");
+  return `${(at > max * 0.6 ? cut.slice(0, at) : cut).replace(/[,;:]$/, "")}\u2026`;
+}
+
 export function entityMetadata({
   title,
   description,

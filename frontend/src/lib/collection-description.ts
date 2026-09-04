@@ -41,9 +41,10 @@ function looksLikeProse(sentence: string): boolean {
   const s = sentence.trim();
   if (!s) return false;
 
-  // A real sentence is made of words.
+  // Three words is a sentence. "Fisheye lenses distort." is prose, and a
+  // higher bar here discards everything after it as well.
   const spaces = (s.match(/\s/g) ?? []).length;
-  if (spaces < 5) return false;
+  if (spaces < 2) return false;
 
   // Bullets and diameter marks only ever appear in the flattened lists.
   if (/[●⌀•]/.test(s)) return false;
@@ -51,9 +52,14 @@ function looksLikeProse(sentence: string): boolean {
   // "avalable:51C- Canon FD;55C-" — a separator followed by a part code.
   if (/[:;]\s*\d{1,3}[A-Z]\b/.test(s)) return false;
 
-  // Dense figures, or a word no human typed, mean a table lost its columns.
-  const digits = (s.match(/\d/g) ?? []).length;
-  if (digits / s.length > 0.12) return false;
+  // Lowercase density is what actually separates prose from a flattened
+  // table. Digit density does not: on a lens site the junk runs to 0.122 and
+  // an ordinary sentence like "The range runs from 21mm to 300mm across 14
+  // lenses" reaches 0.137, so the two classes overlap. Measured on this
+  // corpus, junk sits at 0.28-0.34 lowercase and prose at 0.58-0.83.
+  const lower = (s.match(/[a-z]/g) ?? []).length;
+  if (lower / s.length < 0.45) return false;
+
   if (longestToken(s) > 30) return false;
 
   return true;
@@ -85,7 +91,12 @@ export function cleanCollectionDescription(
   // lens and camera text; the same join shows up here for the same reason.
   text = text.replace(/([a-z])([A-Z])/g, "$1 $2").trim();
 
-  const sentences = text.match(/[^.!?]+[.!?]+(?:\s|$)/g) ?? [];
+  // Only a stop followed by whitespace or the end of the text closes a
+  // sentence. Matching the stop itself cannot span "43.27mm" or "f/1.4": the
+  // engine restarts after the decimal point and silently drops the clause
+  // before it, which is how a complete sentence about a 43.27mm image circle
+  // came out beginning "27mm so that all four corners".
+  const sentences = text.match(/[\s\S]+?[.!?]+(?=\s|$)/g) ?? [];
   const kept: string[] = [];
   for (const sentence of sentences) {
     if (!looksLikeProse(sentence)) break;
