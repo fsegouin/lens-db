@@ -26,6 +26,12 @@ export async function GET(_request: NextRequest) {
         url: `https://thelensdb.com/systems/${m.slug}`,
         name: m.name,
         flangeDistanceMm: m.flangeDistanceMm,
+        wikidata: m.wikidataQid
+          ? {
+              id: m.wikidataQid,
+              url: `https://www.wikidata.org/wiki/${m.wikidataQid}`,
+            }
+          : null,
         lensCount: m.lensCount,
         cameraCount: m.cameraCount,
       })),

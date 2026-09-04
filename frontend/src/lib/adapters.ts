@@ -8,6 +8,7 @@ export type Mount = {
   name: string;
   slug: string;
   flangeDistanceMm: number | null;
+  wikidataQid?: string | null;
 };
 
 export type AdaptVerdict =
@@ -97,6 +98,7 @@ export const getMountsWithFlange = unstable_cache(
         name: systems.name,
         slug: systems.slug,
         flangeDistanceMm: systems.flangeDistanceMm,
+        wikidataQid: systems.wikidataQid,
         lensCount: sql<number>`(
           select count(*)::int from ${lensSystems} ls
           join ${lenses} l on l.id = ls.lens_id

@@ -295,6 +295,13 @@
       "when": 1788445921770,
       "tag": "0041_asking_snapshot_retention",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1788511522106,
+      "tag": "0042_add_wikidata_qid",
+      "breakpoints": true
     }
   ]
 }
