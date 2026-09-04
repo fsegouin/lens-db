@@ -132,6 +132,17 @@ export default async function SystemDetailPage({
               {system.flangeDistanceMm} mm register
             </Badge>
           )}
+          {system.wikidataQid && (
+            <a
+              href={`https://www.wikidata.org/wiki/${system.wikidataQid}`}
+              rel="noopener noreferrer external"
+              target="_blank"
+              className="font-mono text-xs text-muted-foreground underline underline-offset-2 transition-colors hover:text-foreground"
+              title="This mount on Wikidata"
+            >
+              {system.wikidataQid}
+            </a>
+          )}
           {(system.viewCount ?? 0) > 0 && (
             <span className="text-muted-foreground">{(system.viewCount ?? 0).toLocaleString()} views</span>
           )}

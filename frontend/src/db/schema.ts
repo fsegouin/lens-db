@@ -26,6 +26,13 @@ export const systems = pgTable("systems", {
   // what decides whether one mount's lenses can reach infinity focus on
   // another's body, so it is the basis of every adapting answer.
   flangeDistanceMm: real("flange_distance_mm"),
+  /**
+   * The Wikidata item for this mount, so other tools can resolve our record
+   * to theirs. Only set where the item is demonstrably the mount: Wikidata
+   * files most mounts as a "technical standard" rather than a lens mount, and
+   * a name search alone returns the camera or the manufacturer just as often.
+   */
+  wikidataQid: text("wikidata_qid"),
   manufacturer: text("manufacturer"),
   viewCount: integer("view_count").default(0),
   protectionLevel: text("protection_level").default("none"), // "none" | "autoconfirmed" | "trusted" | "admin"
