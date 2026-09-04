@@ -80,7 +80,7 @@ export default async function SeriesDetailPage({
   ];
 
   return (
-    <div className="mx-auto max-w-4xl space-y-8">
+    <div className="mx-auto w-full max-w-4xl space-y-8">
       <JsonLd
         data={hubJsonLd({
           path: `/lenses/series/${series.slug}`,

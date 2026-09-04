@@ -57,13 +57,19 @@ export default async function CollectionsPage() {
             <Link
               key={collection.id}
               href={`/collections/${collection.slug}`}
-              className="rounded-lg border border-zinc-200 p-4 transition-all duration-200 hover:border-zinc-400 hover:shadow-md dark:border-zinc-800 dark:hover:border-zinc-600"
+              /*
+               * min-w-0: a grid item defaults to min-width:auto, so one card
+               * whose text cannot wrap sizes the shared column for every card.
+               * A scraped description carrying table headings did exactly that
+               * and pushed the page 149px wider than the phone it was on.
+               */
+              className="min-w-0 rounded-lg border border-zinc-200 p-4 transition-all duration-200 hover:border-zinc-400 hover:shadow-md dark:border-zinc-800 dark:hover:border-zinc-600"
             >
-              <h2 className="font-semibold text-zinc-900 dark:text-zinc-100">
+              <h2 className="font-semibold break-words text-zinc-900 dark:text-zinc-100">
                 {collection.name}
               </h2>
               {collection.description && (
-                <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">
+                <p className="mt-2 line-clamp-2 text-sm break-words text-muted-foreground">
                   {collection.description}
                 </p>
               )}
