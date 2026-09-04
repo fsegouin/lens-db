@@ -9,7 +9,6 @@ import {
   splitPairSlug,
 } from "@/lib/compare";
 import {
-  EMPTY,
   LENS_SPEC_ROWS,
   focalLengthLabel,
   type ComparableLens,
@@ -62,8 +61,14 @@ export async function generateMetadata({
   });
 }
 
-function priceLabel(display: PriceDisplay | null): string {
-  if (!display || display.low == null) return EMPTY;
+/**
+ * Null when there is no estimate, so the caller can drop the line entirely.
+ * The spec table below says "Not recorded" because a blank cell there cannot
+ * be told apart from a recorded "No"; a lone price line has no such ambiguity,
+ * and "Used Not recorded" is just a sentence about nothing.
+ */
+function priceLabel(display: PriceDisplay | null): string | null {
+  if (!display || display.low == null) return null;
   return display.low === display.high
     ? `$${display.low}`
     : `$${display.low} to $${display.high}`;
@@ -232,9 +237,21 @@ export default async function CompareLensesPage({
             >
               {lens.name}
             </Link>
-            <p className="mt-2 font-mono text-sm tabular-nums text-muted-foreground">
-              Used {priceLabel(price)}
-            </p>
+            {priceLabel(price) ? (
+              <p className="mt-2 font-mono text-sm tabular-nums text-muted-foreground">
+                Used {priceLabel(price)}
+              </p>
+            ) : (
+              /*
+               * The cards stretch to a shared height, so dropping this line
+               * outright left a price-shaped hole under the name that read as
+               * a figure which had failed to load. Mono and tabular-nums are
+               * for digits; on a sentence they read as placeholder text.
+               */
+              <p className="mt-2 text-sm text-muted-foreground">
+                No used price recorded
+              </p>
+            )}
           </div>
         ))}
       </div>
