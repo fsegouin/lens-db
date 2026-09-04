@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils"
  * five tables cannot drift apart again.
  */
 const tableHeadClass =
-  "border-b border-border bg-muted px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase"
+  "h-10 border-b border-border bg-muted px-2 py-2 text-left text-xs font-medium text-muted-foreground uppercase"
 
 function Table({ className, ...props }: React.ComponentProps<"table">) {
   return (
@@ -82,7 +82,12 @@ function TableHead({ className, ...props }: React.ComponentProps<"th">) {
         // --foreground while the cells under it were --muted-foreground, so
         // the chrome read 33 L* darker than the content it labelled. The
         // quiet filled treatment is what /adapters and /kit already used.
-        "h-10 border-b border-border bg-muted px-3 py-2 text-left align-middle text-xs font-medium whitespace-nowrap text-muted-foreground uppercase [&:has([role=checkbox])]:pr-0",
+        //
+        // Keep px-2 in step with TableCell's p-2: the label has to sit on the
+        // same edge as the data under it. A px-3 header also widened every
+        // short label, and auto table layout took that back out of the name
+        // column, which wrapped rows and pushed PriceCard past its 320px card.
+        "h-10 border-b border-border bg-muted px-2 py-2 text-left align-middle text-xs font-medium whitespace-nowrap text-muted-foreground uppercase [&:has([role=checkbox])]:pr-0",
         className
       )}
       {...props}
