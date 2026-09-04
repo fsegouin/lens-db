@@ -48,6 +48,9 @@ export async function storeClassifiedSales(
       priceUsd: Math.round(cl.effectivePrice),
       source: "eBay",
       sourceUrl: rawListing.url ?? null,
+      // The evidence, kept with the figure. A sold listing stops being public,
+      // so the url alone does not let anyone check this price later.
+      title: rawListing.title ?? null,
       extractedAt: extractedAtDate,
     };
     if (row.sourceUrl) withUrl.push(row);
