@@ -8,6 +8,7 @@ import { asc, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { collections, lensCollections, lenses, systems } from "@/db/schema";
 import { Badge } from "@/components/ui/badge";
+import { cleanCollectionDescription } from "@/lib/collection-description";
 import {
   Table,
   TableBody,
@@ -40,10 +41,11 @@ export async function generateMetadata({
   if (!result) return { title: "Collection Not Found" };
 
   const { collection } = result;
+  const blurb = cleanCollectionDescription(collection.description);
   return entityMetadata({
     title: `${collection.name}`,
     description:
-      collection.description?.slice(0, 158) ??
+      blurb?.slice(0, 158) ??
       `${collection.name}: A curated list of lenses with specifications, release years and used prices.`,
     path: `/collections/${collection.slug}`,
   });
@@ -65,6 +67,7 @@ export default async function CollectionDetailPage({
   if (!result) notFound();
 
   const { collection } = result;
+  const description = cleanCollectionDescription(collection.description);
 
   const collectionLenses = await db
     .select({ lens: lenses, system: systems })
@@ -85,7 +88,7 @@ export default async function CollectionDetailPage({
         data={hubJsonLd({
           path: `/collections/${collection.slug}`,
           name: collection.name,
-          description: collection.description,
+          description,
           items: collectionLenses.map(({ lens }) => ({
             name: lens.name,
             path: `/lenses/${lens.slug}`,
@@ -100,8 +103,8 @@ export default async function CollectionDetailPage({
         <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100">
           {collection.name}
         </h1>
-        {collection.description && (
-          <p className="mt-2 text-muted-foreground">{collection.description}</p>
+        {description && (
+          <p className="mt-2 text-muted-foreground">{description}</p>
         )}
         <div className="mt-2">
           <Badge variant="secondary">
