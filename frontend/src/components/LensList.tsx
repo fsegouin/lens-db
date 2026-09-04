@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import type { lenses, systems } from "@/db/schema";
 import { Input } from "@/components/ui/input";
+import { normalizeLensType } from "@/lib/vocabularies";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
@@ -303,7 +304,9 @@ export default function LensList({
   type LensFilters = Parameters<typeof applyFilters>[0];
 
   /** Everything the panel hides, since the chips report the rest. */
-  const hiddenFilterCount = [type, coverage, series, year].filter(Boolean).length;
+  const hiddenFilterCount = [type, lensType, coverage, series, year].filter(
+    Boolean,
+  ).length;
 
   const clearAll: LensFilters = {
     q: "", brand: "", system: "", type: "", series: "", coverage: "",
@@ -344,7 +347,14 @@ export default function LensList({
   if (coverage) chips.push({ key: "coverage", label: "Coverage", value: coverage, clear: { coverage: "" } });
   if (series) chips.push({ key: "series", label: "Series", value: seriesName, clear: { series: "" } });
   if (year) chips.push({ key: "year", label: "Year", value: year, clear: { year: "" } });
-  if (lensType) chips.push({ key: "lensType", label: "Lens type", value: lensType, clear: { lensType: "" } });
+  if (lensType) {
+    chips.push({
+      key: "lensType",
+      label: "Lens type",
+      value: normalizeLensType(lensType) ?? lensType,
+      clear: { lensType: "" },
+    });
+  }
   if (era) chips.push({ key: "era", label: "Era", value: era, clear: { era: "" } });
   if (productionStatus) {
     chips.push({ key: "productionStatus", label: "Status", value: productionStatus, clear: { productionStatus: "" } });
@@ -602,7 +612,7 @@ export default function LensList({
         )}
       </div>
 
-      {/* Results: cards on a phone, the full table from lg up. A 1,008px table
+      {/* Results: cards on a phone, the full table from xl up. A 1,008px table
           in a 358px viewport scrolled sideways and detached names from values. */}
       {items.length > 0 && (
         <ul className="divide-y divide-border border-y border-border xl:hidden">

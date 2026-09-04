@@ -557,7 +557,7 @@ export default function CameraList({
       {items.length > 0 ? (
         <>
         {/* A 975px table in a 358px viewport scrolled sideways and detached
-            every value from its camera. Below lg the same rows are cards. */}
+            every value from its camera. Below xl the same rows are cards. */}
         <div className="hidden xl:block">
         <Table>
           <TableHeader>
@@ -698,11 +698,11 @@ export default function CameraList({
               camera.sensorSize || specs["Maximum format"],
               camera.megapixels ? `${camera.megapixels} MP` : null,
               camera.bodyType,
-              camera.yearIntroduced,
               camera.weightG ? `${camera.weightG}g` : null,
+              camera.yearIntroduced,
             ]
               .filter(Boolean)
-              .join(" \u00b7 ");
+              .join("\u00a0\u00b7 ");
             return (
               <li key={camera.id}>
                 <Link
