@@ -608,6 +608,11 @@ export const priceHistory = pgTable(
     priceUsd: integer("price_usd"),
     source: text("source"), // eBay, LP Foto Auction, etc.
     sourceUrl: text("source_url"), // link to the original listing
+    // The listing title the classifier judged. Kept because without it a
+    // recorded sale cannot be re-checked: a sold listing disappears from eBay,
+    // so sourceUrl stops resolving and the evidence for the price is gone.
+    // This is what made the misattributed shift-lens sales impossible to audit.
+    title: text("title"),
     extractedAt: timestamp("extracted_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
