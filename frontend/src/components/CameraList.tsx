@@ -18,7 +18,9 @@ import { ScrollToTop } from "@/components/scroll-to-top";
 import { trackEvent } from "@/lib/analytics";
 
 type CameraRow = {
-  camera: typeof cameras.$inferSelect;
+  // Serialised into the page, so the import source and the contributor IP
+  // hash are omitted at the type level. See LensList.
+  camera: Omit<typeof cameras.$inferSelect, "url" | "submittedByIp">;
   system: typeof systems.$inferSelect | null;
   avgPrice: number | null;
 };

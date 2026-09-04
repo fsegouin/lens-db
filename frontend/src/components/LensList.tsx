@@ -22,7 +22,10 @@ import { trackEvent } from "@/lib/analytics";
 type SeriesInfo = { name: string; slug: string };
 
 type LensRow = {
-  lens: typeof lenses.$inferSelect;
+  // This is a client component: whatever it declares is serialised into the
+  // page. `url` (the import source) and `submittedByIp` are omitted so they
+  // cannot be sent here even by accident.
+  lens: Omit<typeof lenses.$inferSelect, "url" | "submittedByIp">;
   system: typeof systems.$inferSelect | null;
   series: SeriesInfo[];
   mounts?: SystemOption[];

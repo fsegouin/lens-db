@@ -632,7 +632,9 @@ export default async function LensDetailPage({
             entityId={lens.id}
             currentValues={{
               name: lens.name,
-              url: lens.url,
+              // url is deliberately absent. It holds the import source, and
+              // React serialises these props into the HTML of every visit, so
+              // listing it here published that source on every page.
               brand: lens.brand,
               description: lens.description,
               systemId: lens.systemId,
@@ -684,7 +686,6 @@ export default async function LensDetailPage({
               { name: "isZoom", label: "Zoom", type: "boolean" },
               { name: "isMacro", label: "Macro", type: "boolean" },
               { name: "isPrime", label: "Prime", type: "boolean" },
-              { name: "url", label: "Source URL", type: "text" },
             ]}
           />
           <div className="flex items-center gap-2">

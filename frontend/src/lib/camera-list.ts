@@ -25,8 +25,9 @@ export type CameraListParams = {
   cursor: number;
 };
 
+/** `url` and `submittedByIp` omitted at the type level; see LensListItem. */
 export type CameraListItem = {
-  camera: typeof cameras.$inferSelect;
+  camera: Omit<typeof cameras.$inferSelect, "url" | "submittedByIp">;
   system: typeof systems.$inferSelect | null;
   avgPrice: number | null;
 };
@@ -165,7 +166,15 @@ export const listCameras = unstable_cache(
     const nextCursor =
       items.length === PAGE_SIZE ? cursor + PAGE_SIZE : null;
 
-    return { items, nextCursor, total };
+    // Same as the lens list: the whole camera row is selected, so `url` (the
+    // import source) and `submittedByIp` (a hash of a contributor's address)
+    // were being serialised into every list payload once per camera.
+    const safeItems = items.map(({ camera, ...r }) => {
+      const { url: _url, submittedByIp: _ip, ...safeCamera } = camera;
+      return { ...r, camera: safeCamera };
+    });
+
+    return { items: safeItems, nextCursor, total };
   },
   ["camera-list-v2"],
   { revalidate: 3600, tags: ["cameras"] }
