@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Breadcrumb from "@/components/Breadcrumb";
 import { adaptVerdict, getAdapterMatrix } from "@/lib/adapters";
+import { tableHeadClass } from "@/components/ui/table";
 
 export const revalidate = 604800;
 
@@ -42,7 +43,7 @@ export default async function AdaptersPage() {
             <tr>
               <th
                 scope="col"
-                className="border-b border-border bg-muted px-3 py-2 text-left text-xs font-medium tracking-wider text-muted-foreground uppercase"
+                className={tableHeadClass}
               >
                 Lens mount
               </th>
@@ -50,7 +51,7 @@ export default async function AdaptersPage() {
                 <th
                   key={t.slug}
                   scope="col"
-                  className="border-b border-border bg-muted px-2 py-2 text-left text-xs font-medium tracking-wider text-muted-foreground uppercase"
+                  className={tableHeadClass}
                 >
                   {t.name}
                   <span className="block font-mono text-[10px] normal-case tracking-normal">
