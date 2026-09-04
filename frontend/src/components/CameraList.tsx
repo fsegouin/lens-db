@@ -602,7 +602,7 @@ export default function CameraList({
                   {col.sortable !== false && (
                     sort === col.key
                       ? (order === "desc" ? <ChevronDown className="ml-1 inline h-3 w-3" /> : <ChevronUp className="ml-1 inline h-3 w-3" />)
-                      : <ChevronsUpDown className="ml-1 inline h-3 w-3 text-muted-foreground/70" />
+                      : <ChevronsUpDown className="ml-1 inline h-3 w-3 text-muted-foreground" />
                   )}
                 </TableHead>
               ))}

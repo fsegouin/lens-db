@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils"
  * five tables cannot drift apart again.
  */
 const tableHeadClass =
-  "border-b border-border bg-muted px-3 py-2 text-left text-xs font-medium tracking-wider text-muted-foreground uppercase"
+  "border-b border-border bg-muted px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase"
 
 function Table({ className, ...props }: React.ComponentProps<"table">) {
   return (
@@ -65,7 +65,7 @@ function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
     <tr
       data-slot="table-row"
       className={cn(
-        "border-b transition-colors data-[state=selected]:bg-muted",
+        "border-b data-[state=selected]:bg-muted",
         className
       )}
       {...props}
@@ -82,7 +82,7 @@ function TableHead({ className, ...props }: React.ComponentProps<"th">) {
         // --foreground while the cells under it were --muted-foreground, so
         // the chrome read 33 L* darker than the content it labelled. The
         // quiet filled treatment is what /adapters and /kit already used.
-        "h-10 border-b border-border bg-muted px-3 py-2 text-left align-middle text-xs font-medium tracking-wider whitespace-nowrap text-muted-foreground uppercase [&:has([role=checkbox])]:pr-0",
+        "h-10 border-b border-border bg-muted px-3 py-2 text-left align-middle text-xs font-medium whitespace-nowrap text-muted-foreground uppercase [&:has([role=checkbox])]:pr-0",
         className
       )}
       {...props}
