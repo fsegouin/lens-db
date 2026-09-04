@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import Breadcrumb from "@/components/Breadcrumb";
 import JsonLd from "@/components/JsonLd";
-import { entityMetadata } from "@/lib/seo";
+import { entityMetadata, metaDescription } from "@/lib/seo";
 import { hubJsonLd } from "@/lib/jsonld";
 import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
@@ -44,7 +44,7 @@ export async function generateMetadata({
   return entityMetadata({
     title: `${system.name} lenses and cameras`,
     description:
-      system.description?.slice(0, 158) ??
+      system.description ? metaDescription(system.description) :
       `Every lens and camera body made for the ${system.name} mount, with specifications, release years and used prices.`,
     path: `/systems/${system.slug}`,
   });
