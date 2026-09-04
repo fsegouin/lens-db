@@ -388,6 +388,51 @@ export const emailVerificationTokens = pgTable("email_verification_tokens", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
 
+/**
+ * Where one field's value came from, when that is not the bulk import.
+ *
+ * Almost every fact here arrived in one scrape: 8,543 of 9,320 lenses carry a
+ * lens-db.com url and 880 field-level edits have ever been made against some
+ * 62,000 populated lens fields. Storing a citation per field would therefore
+ * be 60,000 rows repeating the same sentence, so the entity's own url stays
+ * the default and this table holds only the exceptions: a field somebody
+ * re-sourced, verified against the manufacturer, imported from DPReview, or
+ * corrected by hand.
+ *
+ * That makes the re-sourcing backlog a query rather than a spreadsheet: a
+ * field with no row here has never been checked against anything but the
+ * original scrape.
+ */
+export const fieldCitations = pgTable(
+  "field_citations",
+  {
+    id: serial("id").primaryKey(),
+    entityType: text("entity_type").notNull(), // "lens" | "camera" | "system"
+    entityId: integer("entity_id").notNull(),
+    /** Schema field name, e.g. "weightG". "specs.Mount" addresses one spec key. */
+    field: text("field").notNull(),
+    /** Human-readable publisher: "Nikon", "DPReview", "Wikidata", "camera-wiki". */
+    sourceName: text("source_name").notNull(),
+    sourceUrl: text("source_url"),
+    /** When the source was consulted, which is what makes a citation checkable. */
+    retrievedAt: timestamp("retrieved_at", { withTimezone: true }).notNull().defaultNow(),
+    /** The revision that introduced it, when a person made the change here. */
+    revisionId: integer("revision_id"),
+    note: text("note"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  },
+  (table) => [
+    index("idx_field_citations_entity").on(table.entityType, table.entityId),
+    // One live citation per field: re-sourcing a field replaces its citation
+    // rather than stacking a second one beside it.
+    uniqueIndex("uq_field_citations_entity_field").on(
+      table.entityType,
+      table.entityId,
+      table.field,
+    ),
+  ]
+);
+
 export const revisions = pgTable(
   "revisions",
   {
