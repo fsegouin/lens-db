@@ -20,6 +20,8 @@
  *   --digital        include digital bodies too (default: film only)
  *   --per-camera N   images to store per camera (default 2)
  *   --report PATH    write the full per-camera outcome as JSON
+ *   --created-since  ISO date; only cameras added on or after it. New rows have
+ *                    no views and sort last, so use this after an import.
  */
 
 import { writeFileSync } from "node:fs";
@@ -40,6 +42,7 @@ const limit = Number(flag("--limit", 50));
 const perCamera = Number(flag("--per-camera", 2));
 const includeDigital = args.includes("--digital");
 const reportPath = flag("--report", null);
+const createdSince = flag("--created-since", null);
 
 const UA = "lens-db-image-backfill/1.0 (https://thelensdb.com; florent@segouin.me)";
 
@@ -92,12 +95,21 @@ const r2KeyForSlug = (slug, n, buffer) => {
 const sql = createSql();
 
 const filmClause = includeDigital ? "" : "AND sensor_type IS NULL";
+
+// A camera added today has no views, so it sorts to the very bottom of the
+// view_count ordering and a normal run never reaches it. Newly imported bodies
+// are exactly the ones that need their assets fetched, hence this filter.
+if (createdSince && Number.isNaN(Date.parse(createdSince))) {
+  throw new Error(`--created-since expects an ISO date, got "${createdSince}"`);
+}
+const createdClause = createdSince ? `AND created_at >= '${createdSince}'::timestamptz` : "";
 const cameras = await sql.unsafe(`
   SELECT id, name, slug, alias, view_count
   FROM cameras
   WHERE merged_into_id IS NULL
     AND jsonb_array_length(COALESCE(images, '[]'::jsonb)) = 0
     ${filmClause}
+    ${createdClause}
   ORDER BY view_count DESC NULLS LAST, id
   LIMIT ${Number.isFinite(limit) ? limit : 50}
 `);
