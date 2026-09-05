@@ -2,19 +2,22 @@
 
 Generated 2026-09-05 by `scripts/map-mir-to-lenses.mjs`, read-only.
 
-- mir pages carrying a usable spec block: **115**
-- Matched to one of our lens rows: **30** (**30** distinct lenses)
-- Matches that would fill an empty column: **1**
-- Matches that contradict a value we hold: **5**
-- Unmatched or ambiguous: **35**
+- mir pages carrying a usable spec block: **277**
+- Matched to one of our lens rows: **57** (**54** distinct lenses)
+- Matches that would fill an empty column: **2**
+- Matches that contradict a value we hold: **11**
+- Unmatched or ambiguous: **89**
 
-## Would fill empty columns: 1
+## Would fill empty columns: 2
 
 - **Nikon AI Nikkor 1200-1700mm F/5.6-8P IF-ED** (id 4493)
   - filter_size_mm=52
   - https://www.mir.com.my/rb/photography/companies/nikon/nikkoresources/zoomsMF/12001700mm.htm
+- **Nikon Reflex-Nikkor[·C] 2000mm F/11** (id 4897)
+  - filter_size_mm=254
+  - https://www.mir.com.my/rb/photography/companies/nikon/nikkoresources/6070nikkor/reflex/2000mm.htm
 
-## Contradicts what we hold: 5
+## Contradicts what we hold: 11
 
 - **Nikon Zoom-Nikkor Auto 85-250mm F/4** (id 4947)
   - lens_elements 16 vs mir 20
@@ -31,8 +34,28 @@ Generated 2026-09-05 by `scripts/map-mir-to-lenses.mjs`, read-only.
 - **Nikon Nikkor 300mm F/2.8 ED** (id 4668)
   - weight_g 2800 vs mir 3000
   - https://www.mir.com.my/rb/photography/companies/nikon/nikkoresources/preAI70/300mmf28.htm
+- **Nikon AF Nikkor 20mm F/2.8D** (id 4265)
+  - lens_elements 12 vs mir 14
+  - weight_g 270 vs mir 585
+  - https://www.mir.com.my/rb/photography/companies/nikon/nikkoresources/AFNikkor/AFNikkor2035mmf28D/index.htm
+- **Nikon AF-S Nikkor 120-300mm F/2.8E FL ED SR VR** (id 4381)
+  - lens_elements 25 vs mir 16
+  - weight_g 3250 vs mir 1200
+  - https://www.mir.com.my/rb/photography/companies/nikon/nikkoresources/AFNikkor/AF-Nikkor80200mm/index1.htm
+- **Nikon AF-S Nikkor 120-300mm F/2.8E FL ED SR VR** (id 4381)
+  - lens_elements 25 vs mir 18
+  - https://www.mir.com.my/rb/photography/companies/nikon/nikkoresources/AFNikkor/AF-Nikkor80200mm/index4.htm
+- **Nikon Nikkor 800mm F/8 ED** (id 4682)
+  - weight_g 3500 vs mir 4100
+  - https://www.mir.com.my/rb/photography/companies/nikon/nikkoresources/preAI70/800mmf8ed.htm
+- **Nikon Nikkor 1200mm F/11 ED** (id 4654)
+  - weight_g 4300 vs mir 3700
+  - https://www.mir.com.my/rb/photography/companies/nikon/nikkoresources/preAI70/1200mmf11ed.htm
+- **Nikon AF Nikkor 300mm F/2.8 ED-IF [II]** (id 4297)
+  - weight_g 2700 vs mir 2400
+  - https://www.mir.com.my/rb/photography/companies/nikon/nikkoresources/telephotos/300mmedif28/index1.htm
 
-## Unmatched or ambiguous: 35
+## Unmatched or ambiguous: 89
 
 - Nikkor 50mm Standard Lenses - Version History - Early versions Part I: ambiguous, several versions score the same
   - candidates: Nippon Kogaku / Nikon NIKKOR-H[·C] Auto 50mm F/2 (7), Nikon Nikkor-H[·C] Auto 50mm F/2 (7), Nippon Kogaku NIKKOR-H Auto 50mm F/2 (7), Nikon Nikkor-H Auto 50mm F/2 (7)
@@ -100,3 +123,98 @@ Generated 2026-09-05 by `scripts/map-mir-to-lenses.mjs`, read-only.
   - candidates: Nikon AI Nikkor 200mm F/4 (7), Nikon Nikkor 200mm F/4 (7), Nippon Kogaku / Nikon NIKKOR-P[·C] 200mm F/4 Type 2 (5), Nippon Kogaku NIKKOR-P 200mm F/4 Type 1 (5)
 - Zoom-Nikkor 50-300mm f/4.5 Lenses Part II: ambiguous, several versions score the same
   - candidates: Nikon Zoom-Nikkor Auto 50-300mm F/4.5 (6), Nikon AI Zoom-Nikkor 50-300mm F/4.5 (6), Nikon AI-S Zoom-Nikkor 50-300mm F/4.5 ED (4), Nikon AI Zoom-Nikkor 50-300mm F/4.5 ED (4)
+- Verson history of Nikon AF Nikkor 24mm f/2.8 Ultra-Wideangle Lens - Index Page: ambiguous, several versions score the same
+  - candidates: Nikon AF Nikkor 24mm F/2.8D (7), Nikon AF Nikkor 24mm F/2.8 [II] (7), Nikon AF Nikkor 24mm F/2.8 [I] (7), Nikon AI Nikkor 24mm F/2.8 (5)
+- Nikon AF Nikkor 28mm f/1.4D wideangle lense - Index Page: ambiguous, several versions score the same
+  - candidates: Nikon AF Nikkor 28mm F/2.8 [I] (9), Nikon AF Nikkor 28mm F/2.8 [II] (9), Nikon AF Nikkor 28mm F/2.8D (6), Nikon Series E 28mm F/2.8 (5)
+- Verson history of Nikon AF Nikkor 35mm f/2.0 wideangle Lenses - Index Page: ambiguous, several versions score the same
+  - candidates: Nikon AF Nikkor 35mm F/2 (9), Nikon AF Nikkor 35mm F/2D (9), Nikon AI-S Nikkor 35mm F/2 (2), Nikon AI Nikkor 35mm F/2 (2)
+- Verson history of Nikon AF (Autofocus) Nikkor 85mm medium telephoto e Lenses - Index Page: ambiguous, several versions score the same
+  - candidates: Nikon AF-S Nikkor 35mm F/1.8G ED (2), Nikon AF-S DX Nikkor 35mm F/1.8G (2), Nikon W-Nikkor·C 35mm F/1.8 (0), Nippon Kogaku W-NIKKOR[·C] 35mm F/1.8 (0)
+- Nikon AF (Autofocus) Nikkor 85mm f/1.8D medium telephoto lens - part II: ambiguous, several versions score the same
+  - candidates: Nikon AF-S Nikkor 35mm F/1.8G ED (2), Nikon AF-S DX Nikkor 35mm F/1.8G (2), Nikon W-Nikkor·C 35mm F/1.8 (0), Nippon Kogaku W-NIKKOR[·C] 35mm F/1.8 (0)
+- Nikon AF (Autofocus) Nikkor 85mm f/1.4D medium telephoto lens - Part III: ambiguous, several versions score the same
+  - candidates: Nikon AI-S Nikkor 35mm F/1.4 (3), Nikon Nikkor 35mm F/1.4 (3), Nikon AI Nikkor 35mm F/1.4 (3), Nikon Nikkor-N[·C] Auto 35mm F/1.4 (3)
+- Verson history of Nikon AF (Autofocus) Nikkor 180mm telephoto e Lenses - Index Page: ambiguous, several versions score the same
+  - candidates: Nikon AF Nikkor 24mm F/2.8D (2), Nikon AF Nikkor 24mm F/2.8 [II] (2), Nikon AF Nikkor 24mm F/2.8 [I] (2), Nikon AI Nikkor 24mm F/2.8 (0)
+- Verson history of Nikon AF (Autofocus) Nikkor 180mm telephoto e Lenses - Part III: ambiguous, several versions score the same
+  - candidates: Nikon AF Nikkor 180mm f/2.8D ED-IF (9), Nikon AF Nikkor 180mm F/2.8 IF-ED [I] (9), Nikon AF Nikkor 180mm F/2.8 IF-ED [II] (9), Nikon AF Nikkor 180mm F/2.8 IF-ED (4)
+- AF Zoom-Nikkor 24-50mm f/3.3~4.5 lens group - Index Page: no lens with that focal/aperture
+- AF Zoom Nikkor 24-120mm f/3.5~5.6D IF wide-telephoto zoom lens -INDEX PAGE: no lens with that focal/aperture
+- NIkon Autofocus (AF) Zoom Nikkor 28-80mm f/3.5~5.6D lens group - Index Page: no lens with that focal/aperture
+- AF Zoom-Nikkor 28-85mm f/3.5~4.5 Ai-S lens group - Index Page: ambiguous, several versions score the same
+  - candidates: Nikon AI Nikkor 28mm F/3.5 (2), Nikon AI-S Nikkor 28mm F/3.5 (2), Nikon W-NIKKOR·C 28mm F/3.5 (0), Nikon Nikkor-H(·C) Auto 28mm F/3.5 (0)
+- AF Zoom-Nikkor 28-85mm f/3.5~4.5 lens group - Index Page: ambiguous, several versions score the same
+  - candidates: Nikon W-NIKKOR·C 28mm F/3.5 (0), Nikon Nikkor-H(·C) Auto 28mm F/3.5 (0), Nikon Nikkor-H 28mm F/3.5 (0), Nikon AI Nikkor 28mm F/3.5 (0)
+- Nikon's AF Zoom Nikkor 28-105mm f/3.5~4.5D IF MACRO wide-telephoto zoom lens: ambiguous, several versions score the same
+  - candidates: Nikon W-NIKKOR·C 28mm F/3.5 (0), Nikon Nikkor-H(·C) Auto 28mm F/3.5 (0), Nikon Nikkor-H 28mm F/3.5 (0), Nikon AI Nikkor 28mm F/3.5 (0)
+- Nikon autofocus (AF) Zoom Nikkor 35-70mm lens Group - Index Page: no lens with that focal/aperture
+- Nikon autofocus (AF) Nikkor Zoom 35-70mm f/2.8S: ambiguous, several versions score the same
+  - candidates: Nikon AF-S Nikkor 120-300mm F/2.8E FL ED SR VR (2)
+- Nikon autofocus (AF) Zoom Nikkor 35-70mm f/2.8D wide-tele lens: ambiguous, several versions score the same
+  - candidates: Nikon AF-S Nikkor 120-300mm F/2.8E FL ED SR VR (2)
+- Nikon Autofocus (AF) Zoom Nikkor 35-80mm f/4~5.6D zoom lens - Index Page: no lens with that focal/aperture
+- Nikon AF (Autofocus) Zoom Nikkor 35-105mm f/3.5~4.5 zoom lens group- Index Page: ambiguous, several versions score the same
+  - candidates: Nippon Kogaku PC-NIKKOR 35mm F/3.5 (0), Nippon Kogaku W-NIKKOR·C 35mm F/3.5 (0), Nikon PC-Nikkor 35mm F/3.5 (0), Nikon W-Nikkor[·C] 35mm F/3.5 LSM (0)
+- Nikon AF (Autofocus) Zoom Nikkor 35-105mm f/3.5~4.5 zoom lens group- Part II: ambiguous, several versions score the same
+  - candidates: Nippon Kogaku PC-NIKKOR 35mm F/3.5 (0), Nippon Kogaku W-NIKKOR·C 35mm F/3.5 (0), Nikon PC-Nikkor 35mm F/3.5 (0), Nikon W-Nikkor[·C] 35mm F/3.5 LSM (0)
+- Nikon Autofocus (AF) Zoom Nikkor 35-105mm f/3.5~4.5D IF wide-tele zoom lens- Part III: ambiguous, several versions score the same
+  - candidates: Nippon Kogaku PC-NIKKOR 35mm F/3.5 (0), Nippon Kogaku W-NIKKOR·C 35mm F/3.5 (0), Nikon PC-Nikkor 35mm F/3.5 (0), Nikon W-Nikkor[·C] 35mm F/3.5 LSM (0)
+- Nikon AF (Autofocus) Zoom Nikkor 35-135mm f/3.5~4.5 Ai-S zoom lens group- Index Page: ambiguous, several versions score the same
+  - candidates: Nippon Kogaku PC-NIKKOR 35mm F/3.5 (0), Nippon Kogaku W-NIKKOR·C 35mm F/3.5 (0), Nikon PC-Nikkor 35mm F/3.5 (0), Nikon W-Nikkor[·C] 35mm F/3.5 LSM (0)
+- Nikon AF (Autofocus) Zoom Nikkor 35-135mm f/3.5~4.5 Ai-S zoom lens group- Index Page: ambiguous, several versions score the same
+  - candidates: Nippon Kogaku PC-NIKKOR 35mm F/3.5 (0), Nippon Kogaku W-NIKKOR·C 35mm F/3.5 (0), Nikon PC-Nikkor 35mm F/3.5 (0), Nikon W-Nikkor[·C] 35mm F/3.5 LSM (0)
+- AF (Autofocus) Nikkor 70-210mm zoom lenses - Index Page: no lens with that focal/aperture
+- AF (Autofocus) Nikkor 70-210mm f/4~5.6S zoom lenses - Index Page: no lens with that focal/aperture
+- AF (Autofocus) Nikkor 70-210mm f/4~5.6D zoom lenses - Index Page: no lens with that focal/aperture
+- AF (Autofocus) Nikkor Zoom lenses 75-300mm f/4.5~5.6 - Index Page: no lens with that focal/aperture
+- Nikon AF (Autofocus) Nikkor Zoom lenses 80-200mm lens group - index page: ambiguous, several versions score the same
+  - candidates: Nikon AF-S Nikkor 120-300mm F/2.8E FL ED SR VR (2)
+- Nikon's AF Nikkor Zoom 80-200mm f/2.8D ED with Dual Control Rings (Zoom / Manual Focus) Design - Part IV: ambiguous, several versions score the same
+  - candidates: Nikon Nikkor 80mm F/2.8 (0)
+- 6mm f5.6 Fisheye-Nikkor Lens: ambiguous, several versions score the same
+  - candidates: Nikon Fisheye-Nikkor 6mm F/5.6 (9), Nippon Kogaku / Nikon Fisheye-Nikkor 6mm F/5.6 (9)
+- 400 mm f/3.5 Nikkor IF-ED & Nikkor 400mm f/5.6 Nikkor ED: ambiguous, several versions score the same
+  - candidates: Nikon AI Nikkor 400mm F/3.5 IF-ED (11), Nikon AI-S Nikkor 400mm F/3.5 IF-ED (11), Nikon Nikkor 400mm F/3.5 IF-ED (11)
+- 400mm f4.5 Nikkor-Q Auto Lens: ambiguous, several versions score the same
+  - candidates: Nippon Kogaku / Nikon NIKKOR-Q Auto 400mm F/4.5 (7), Nikon Nikkor-Q[·C] Auto 400mm F/4.5 (7), Nikon Nikkor-Q 400mm F/4.5 (2), Nikon Nikkor-Q·C 400mm F/4.5 (2)
+- Nikkor AI 600mm Telephoto lenses - f/4.0 ED-IF, f/5.6 ED-IF and f/5.6: ambiguous, several versions score the same
+  - candidates: Nikon AI Nikkor 600mm F/4 ED-IF (13), Nikon AI-S Nikkor 600mm F/4 ED-IF (13), Nikon AF-I Nikkor 600mm F/4D ED-IF (6), Nikon AF-S Nikkor 600mm F/4D IF-ED (6)
+- Nikkor 6mm f/2.8 Fisheye Nikkor lens: ambiguous, several versions score the same
+  - candidates: Nikon AI Fisheye-Nikkor 6mm F/2.8 (9), Nikon AI-S Fisheye-Nikkor 6mm F/2.8 (9), Nikon Fisheye-Nikkor Auto 6mm F/2.8 (9), Nikon Fisheye-Nikkor 6mm F/2.8 (4)
+- Fisheye Nikkor 8mm f/2.8s lens: ambiguous, several versions score the same
+  - candidates: Nikon AI Fisheye-Nikkor 8mm F/2.8 (9), Nikon AI-S Fisheye-Nikkor 8mm F/2.8 (9), Nippon Kogaku / Nikon Fisheye-NIKKOR Auto 8mm F/2.8 (7), Nikon Fisheye-Nikkor Auto 8mm F/2.8 (7)
+- 10mm f5.6 OP-Fisheye Nikkor Lens: ambiguous, several versions score the same
+  - candidates: Nippon Kogaku / Nikon OP-Fisheye-NIKKOR 10mm F/5.6 (9), Nikon OP-Fisheye-Nikkor 10mm F/5.6 (9)
+- Micro-Nikkor 55mm f/2.8 MFocus Lens - Instruction Manual: ambiguous, several versions score the same
+  - candidates: Nikon AI Micro-Nikkor 55mm F/2.8 (9), Nikon AI-S Micro-Nikkor 55mm F/2.8 (9), Nikon AF Micro-Nikkor 55mm F/2.8 (7)
+- Pre-AI version of the Micro-Nikkor 105mm f/4.0: ambiguous, several versions score the same
+  - candidates: Nikon AI Micro-Nikkor 105mm F/4 (11), Nikon AI-S Micro-Nikkor 105mm F/4 (11), Nikon Micro-Nikkor 105mm F/4 (9), Nippon Kogaku / Nikon NIKKOR-P 105mm F/4 Bellows (5)
+- Manual Focus Zoom-Nikkor 70-210mm f/4~5.6 telephoto zoom lens: no lens with that focal/aperture
+- MF Zoom-Nikkor 43-86mm f/3.5: ambiguous, several versions score the same
+  - candidates: Nikon Zoom-Nikkor 43-86mm F/3.5 (6), Nikon AI Zoom-Nikkor 43-86mm F/3.5 (6), Nikon Zoom-Nikkor[·C] Auto 43-86mm F/3.5 (4)
+- 7.5mm f5.6 Fisheye-Nikkor Lens: ambiguous, several versions score the same
+  - candidates: Nikon Fisheye-Nikkor 7.5mm F/5.6 (7), Nippon Kogaku Fisheye-Nikkor 7.5mm F/5.6 (7)
+- Nikkor 85mm f/1.8 Telephoto Lenses - Pre AI Era: ambiguous, several versions score the same
+  - candidates: Nikon Nikkor 85mm F/1.8 (7), Nikon Nikkor-H[·C] Auto 85mm F/1.8 (7), Nikon AF Nikkor 85mm F/1.8 (5), Nikon AF Nikkor 85mm F/1.8D (5)
+- Nikkor 85mm f/2.0 Telephoto lens: ambiguous, several versions score the same
+  - candidates: Nikon AI Nikkor 85mm F/2 (7), Nikon AI-S Nikkor 85mm F/2 (7), Nikon Nikkor-P·C 85mm F/2 LSM (5), Nikon Nikkor-P·C 85mm F/2 (5)
+- Nikkor 85mm f/2.0 Telephoto Lens: ambiguous, several versions score the same
+  - candidates: Nikon AI Nikkor 85mm F/2 (7), Nikon AI-S Nikkor 85mm F/2 (7), Nikon Nikkor-P·C 85mm F/2 LSM (5), Nikon Nikkor-P·C 85mm F/2 (5)
+- Nikon / Nippon Kogaku Japan Micro-Nikkor, Ultra-Micro-Nikkor, Macro-Nikkor and others for Industrial / Scientific / Medical applications - Index Page: no lens with that focal/aperture
+- 15mm f/5.6 -QD.C Non-Ai Nikkor Lens: ambiguous, several versions score the same
+  - candidates: Nikon AI Nikkor 15mm F/5.6 (7), Nikon Nikkor-QD[·C] Auto 15mm F/5.6 (7), Nikon Nikkor 15mm F/5.6 (5)
+- Nikkor 135mm f/2.0 Telephoto Lenses - Pre AI Era: ambiguous, several versions score the same
+  - candidates: Nikon AI-S Nikkor 135mm F/2 (9), Nikon AI Nikkor 135mm F/2 (9), Nikon Nikkor 135mm F/2 (7), Nikon AF DC-Nikkor 135mm F/2 (4)
+- Nikkor 35mm f/1.4 Wideangle Lenses - Pre AI Era: ambiguous, several versions score the same
+  - candidates: Nikon AI-S Nikkor 35mm F/1.4 (9), Nikon AI Nikkor 35mm F/1.4 (9), Nikon Nikkor 35mm F/1.4 (7), Nikon Nikkor-N[·C] Auto 35mm F/1.4 (7)
+- Manual Focus Nikkor 24mm f/2.0s wideangle lens: ambiguous, several versions score the same
+  - candidates: Nikon AI-S Nikkor 24mm F/2 (7), Nikon AI Nikkor 24mm F/2 (7)
+- 8mm f2.8 Fisheye-Nikkor Lens: ambiguous, several versions score the same
+  - candidates: Nippon Kogaku / Nikon Fisheye-NIKKOR Auto 8mm F/2.8 (9), Nikon Fisheye-Nikkor Auto 8mm F/2.8 (9), Nikon AI Fisheye-Nikkor 8mm F/2.8 (7), Nikon AI-S Fisheye-Nikkor 8mm F/2.8 (7)
+- Nikkor Ultra-Wideangle Lens 15mm f/3.5s: ambiguous, several versions score the same
+  - candidates: Nikon AI Nikkor 15mm F/3.5 (7), Nikon AI-S Nikkor 15mm F/3.5 (7)
+- Nikkor 35mm f/2.0. 2.8 Wideangle Lenses - Pre AI Era: ambiguous, several versions score the same
+  - candidates: Nikon AI-S Nikkor 35mm F/2 (9), Nikon AI Nikkor 35mm F/2 (9), Nikon Nikkor 35mm F/2 (7), Nikon Nikkor-O[·C] Auto 35mm F/2 (7)
+- Nikon / Nippon Kogaku Japan Ultra-Micro-NIKKOR 1:1.2 f=29.5mm, 30mm f/1.2, 50mm f/1.8, 55mm f/2 lenses: no lens with that focal/aperture
+- Nikon / Nippon Kogaku Japan Ultra-Micro-NIKKOR 1:1.2 f=29.5mm, 30mm f/1.2, 50mm f/1.8, 55mm f/2 lenses: no lens with that focal/aperture

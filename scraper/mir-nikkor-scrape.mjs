@@ -91,7 +91,7 @@ function htmlToText(html) {
 
 // The spec keys mir actually uses, mapped onto the vocabulary our `specs`
 // JSONB already speaks. Anything not in here is kept under its own key.
-const SPEC_KEYS = [
+const LENS_SPEC_KEYS = [
   "focal length", "maximum aperture", "minimum aperture", "lens construction",
   "picture angle", "angle of view", "distance scale", "aperture scale",
   "aperture diaphragm", "diaphragm", "meter coupling prong", "attachment size",
@@ -101,7 +101,30 @@ const SPEC_KEYS = [
   "lens case", "serial", "serial numbers", "introduced", "production",
   "number of diaphragm blades", "reproduction ratio", "magnification",
 ];
-const SPEC_KEY_SET = new Set(SPEC_KEYS);
+
+// Body pages use the same "Key : Value" runs with an entirely different
+// vocabulary, which is why a lens-only key list came back from them almost
+// empty (6 of 232 body pages yielded a spec block on the first pass).
+const CAMERA_SPEC_KEYS = [
+  "type of camera", "type", "applicable film format", "film format",
+  "picture frame size", "picture size", "lens mount", "shutter",
+  "shutter speed settings", "shutter speeds", "shutter-speed settings",
+  "viewfinder", "eyepoint", "focusing screen", "viewfinder frame coverage",
+  "viewfinder magnification", "viewfinder information", "reflex mirror",
+  "exposure meter sync", "metering system", "metering range",
+  "exposure metering", "film-sensitivity settings", "film speed range",
+  "exposure compensation", "exposure control", "exposure modes",
+  "auto exposure lock", "film advance lever", "film advance", "frame counter",
+  "film rewinding", "self-timer", "lens aperture", "multiple exposure",
+  "sync contact", "flash control", "flash synchronization", "hot shoe",
+  "camera back", "power source", "battery", "batteries", "body material",
+  "depth-of-field preview", "mirror lock-up", "tripod socket",
+  "dimensions", "weight", "dimensions (w x h x d)",
+];
+
+const SPEC_KEYS = [...new Set([...LENS_SPEC_KEYS, ...CAMERA_SPEC_KEYS])];
+const CAMERA_KEY_SET = new Set(CAMERA_SPEC_KEYS);
+const LENS_KEY_SET = new Set(LENS_SPEC_KEYS);
 
 // "Specifications :", "Specification:", "Technical specifications" ...
 const SPEC_HEADING = /^\s*(technical\s+)?specifications?\b/i;
@@ -159,7 +182,37 @@ function parseSpecs(text) {
     const canonical = key[0].toUpperCase() + key.slice(1).toLowerCase();
     if (value && !specs[canonical]) specs[canonical] = value;
   }
-  return { specs, specNote };
+
+  // "Weight" and "Dimensions" are in both vocabularies, so the kind is decided
+  // by the keys that belong to only one of them.
+  let lensOnly = 0;
+  let cameraOnly = 0;
+  for (const key of Object.keys(specs)) {
+    const k = key.toLowerCase();
+    if (LENS_KEY_SET.has(k) && !CAMERA_KEY_SET.has(k)) lensOnly++;
+    if (CAMERA_KEY_SET.has(k) && !LENS_KEY_SET.has(k)) cameraOnly++;
+  }
+  const kind = lensOnly === cameraOnly ? null : lensOnly > cameraOnly ? "lens" : "camera";
+
+  return { specs, specNote, kind };
+}
+
+/**
+ * Who to name under a photo taken from this page.
+ *
+ * mir credits per page rather than per image, in a line like "Credit : Image
+ * courtesy of Photo_Arsenal-Worldwide ® Germany" or "Image(s) copyright ©
+ * 2008 ... contributing photographer". Where a page names someone, they are
+ * the credit; where it does not, the credit is the site.
+ */
+function extractCredits(text) {
+  const credits = [];
+  for (const line of text.split("\n")) {
+    if (!/\b(credit|courtesy of|copyright ©|all rights reserved)\b/i.test(line)) continue;
+    const courtesy = line.match(/courtesy of\s+([^.,;]{3,80})/i);
+    credits.push({ line: line.trim().slice(0, 300), name: courtesy ? courtesy[1].trim() : null });
+  }
+  return credits;
 }
 
 // ---------------------------------------------------------------------------
@@ -282,11 +335,15 @@ async function main() {
     }
 
     const text = htmlToText(html);
-    const { specs, specNote } = parseSpecs(text);
+    const { specs, specNote, kind } = parseSpecs(text);
+    const credits = extractCredits(text);
     const record = {
       url,
       title: extractTitle(html),
       isIndex: /\/index\w*\.html?$/i.test(url),
+      kind,
+      credits,
+      creditName: credits.find((c) => c.name)?.name ?? null,
       introYear: extractIntroYear(text),
       years: extractYears(text),
       models: extractModels(text),
