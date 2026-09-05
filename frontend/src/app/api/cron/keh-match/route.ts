@@ -50,7 +50,14 @@ export async function GET(request: NextRequest) {
     .orderBy(kehProducts.id)
     .limit(limit);
 
-  const counts = { examined: 0, unparseable: 0, noCandidates: 0, matched: 0, noMatch: 0 };
+  const counts = {
+    examined: 0,
+    unparseable: 0,
+    noCandidates: 0,
+    matched: 0,
+    noMatch: 0,
+    classifierFailed: 0,
+  };
   const sets: KehCandidateSet[] = [];
   const settled: string[] = [];
 
@@ -101,6 +108,11 @@ export async function GET(request: NextRequest) {
   if (sets.length > 0) {
     const verdicts = await matchKehProducts(sets);
     for (const v of verdicts) {
+      if (v.failed) {
+        // Left unexamined on purpose, so the next run asks again.
+        counts.classifierFailed++;
+        continue;
+      }
       if (v.lensId != null) {
         await db
           .update(kehProducts)
@@ -131,9 +143,16 @@ export async function GET(request: NextRequest) {
     .from(kehProducts)
     .where(eq(kehProducts.matchState, "matched"));
 
+  // When most of what we asked never came back, the run learned nothing and
+  // saying so is the point: a caller looping until the queue drains would
+  // otherwise spin forever against a classifier that is down, and the queue
+  // would never drain because failures no longer settle anything.
+  const degraded = sets.length > 0 && counts.classifierFailed > sets.length / 2;
+
   return NextResponse.json({
     ...counts,
     askedClassifier: sets.length,
+    degraded,
     remaining: Number(remaining),
     totalMatched: Number(totalMatched),
   });
