@@ -172,11 +172,25 @@ const report = [];
 const tally = { resolved: 0, skippedEdition: 0, noMatch: 0, licenceRejected: 0, errors: 0, updated: 0 };
 const backgrounds = { alpha: 0, white: 0, plain: 0, scene: 0 };
 
+// A run that keeps going after the network dies burns the whole camera list
+// recording failures against nothing. Ten in a row is well past bad luck.
+const ABORT_AFTER_CONSECUTIVE_ERRORS = 10;
+let consecutiveErrors = 0;
+
 for (const camera of cameras) {
   if (isSpecialEdition(camera.name)) {
     tally.skippedEdition++;
     report.push({ id: camera.id, name: camera.name, outcome: "skipped-special-edition" });
     continue;
+  }
+
+  if (consecutiveErrors >= ABORT_AFTER_CONSECUTIVE_ERRORS) {
+    console.log(
+      `\nAborting: ${consecutiveErrors} cameras in a row failed, which means the network or the ` +
+        `API is gone rather than these particular cameras being unlucky. Re-run to resume: the ` +
+        `query only selects cameras that still have no images.`,
+    );
+    break;
   }
 
   let resolved;
@@ -186,6 +200,7 @@ for (const camera of cameras) {
     resolved = await resolveCommonsImages(camera.name, { limit: perCamera + 2, aliases: [camera.alias] });
   } catch (err) {
     tally.errors++;
+    consecutiveErrors++;
     report.push({ id: camera.id, name: camera.name, outcome: "resolve-error", error: err.message });
     console.log(`[${camera.id}] ${camera.name}\n  resolve failed: ${err.message}`);
     continue;
@@ -201,6 +216,7 @@ for (const camera of cameras) {
       outcome: resolved.rejectedByLicence ? "no-free-licence" : "no-match",
       rejectedByLicence: resolved.rejectedByLicence,
     });
+    consecutiveErrors = 0;
     const why = resolved.rejectedByLicence
       ? `${resolved.rejectedByLicence} file(s) found but none under a usable licence`
       : "no usable Commons match";
@@ -226,6 +242,7 @@ for (const camera of cameras) {
   }
   if (!fetched.length) {
     tally.errors++;
+    consecutiveErrors++;
     report.push({ id: camera.id, name: camera.name, outcome: "download-error" });
     continue;
   }
@@ -276,6 +293,7 @@ for (const camera of cameras) {
   }));
 
   tally.resolved++;
+  consecutiveErrors = 0;
   for (const c of chosen) backgrounds[c.background]++;
 
   console.log(`[${camera.id}] ${camera.name}  (${camera.view_count ?? 0} views, via ${chosen[0].via})`);
@@ -305,6 +323,7 @@ for (const camera of cameras) {
     console.log(`  updated with ${images.length} image(s)`);
   } catch (err) {
     tally.errors++;
+    consecutiveErrors++;
     report.push({ id: camera.id, name: camera.name, outcome: "upload-error", error: err.message });
     console.log(`  upload/update failed: ${err.message}`);
     continue;
