@@ -68,15 +68,44 @@ type LensNode = {
 };
 
 /**
+ * What the used-price figure actually is.
+ *
+ * This one is machine-readable and gets quoted back without the page around
+ * it, so the label has to be true on its own. It was hardcoded to recent eBay
+ * sales, which was already wrong for a figure inferred from live listings and
+ * became wronger once a dealer's graded stock could be the source.
+ */
+function usedPriceLabel(source: string | undefined): string {
+  if (source === "keh") return "Estimated used price (dealer's graded stock)";
+  if (source === "asking") return "Estimated used price (current eBay listings)";
+  return "Typical used price (recent eBay sales)";
+}
+
+/**
+ * A range whose ends are equal is one price, not a span. The card already
+ * knows this; the structured data was still emitting "USD 2712–2712".
+ */
+function usedPriceValue(
+  range: { low: number; high: number; currency: string } | null,
+): string | null {
+  if (!range) return null;
+  return range.low === range.high
+    ? `${range.currency} ${range.low}`
+    : `${range.currency} ${range.low}–${range.high}`;
+}
+
+/**
  * Product + WebPage + BreadcrumbList for a lens.
  *
- * Deliberately omits `offers`: our prices are an estimate derived from past
- * eBay sales, not an offer this page makes, so they go in `additionalProperty`
- * instead. `bestRating` is spelled out because our scale is 1-10, not 5.
+ * Deliberately omits `offers`: our prices are an estimate, not an offer this
+ * page makes, so they go in `additionalProperty` instead. `bestRating` is
+ * spelled out because our scale is 1-10, not 5.
  */
 export function lensJsonLd(
   lens: LensNode,
-  priceRange: { low: number; high: number; currency: string } | null,
+  priceRange:
+    | { low: number; high: number; currency: string; source?: string }
+    | null,
   crumbs: { name: string; path?: string }[],
 ): Json {
   const page = `${SITE_URL}/lenses/${lens.slug}`;
@@ -112,12 +141,7 @@ export function lensJsonLd(
       property("Autofocus", lens.hasAutofocus === true ? "Yes" : null),
       property("Image stabilization", lens.hasStabilization === true ? "Yes" : null),
       property("Production status", lens.productionStatus),
-      property(
-        "Typical used price (recent eBay sales)",
-        priceRange
-          ? `${priceRange.currency} ${priceRange.low}–${priceRange.high}`
-          : null,
-      ),
+      property(usedPriceLabel(priceRange?.source), usedPriceValue(priceRange)),
     ].filter(Boolean),
     aggregateRating:
       lens.averageRating && (lens.ratingCount ?? 0) > 0

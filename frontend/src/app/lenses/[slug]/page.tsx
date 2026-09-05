@@ -349,6 +349,7 @@ export default async function LensDetailPage({
                 low: priceDisplay.low,
                 high: priceDisplay.high,
                 currency: priceDisplay.currency,
+                source: priceEstimate?.priceSource,
               }
             : null,
           crumbs,
