@@ -108,10 +108,47 @@ const squash = (name) => tokenize(name).join("");
  * token matches inside almost any string, which had "Salyut-S" resolving to a
  * Soyuz mission patch and a photo of a stadium entrance.
  */
+// Roman numerals from II up, optionally suffixed ("IIb"). Bare "I", "V" and "X"
+// are left out: they collide with ordinary model names. "X" with the suffix
+// allowed would read the "XD" of "Minolta XD-11" as numeral ten plus a letter.
+const ROMAN = /^(?:ii|iii|iv|vi|vii|viii|ix|xi|xii)[a-z]?$/;
+const GENERATION_WORD = /^(?:typ|type|mk|mark)$/;
+
+/**
+ * Tokens that name a *generation* rather than describe the photo: the "II" in
+ * "X1D II", the "Typ 220" in "M-E Typ 220".
+ *
+ * `known` are the other name's tokens. A "Type M" is only a generation marker
+ * when the M is not already part of what we asked for, or the Nikon M would
+ * refuse its own photograph filed as "Nikon Type M".
+ */
+function generationMarkers(name, known = new Set()) {
+  const tokens = tokenize(name);
+  const markers = new Set();
+  tokens.forEach((token, i) => {
+    if (ROMAN.test(token)) markers.add(token);
+    const next = tokens[i + 1];
+    if (GENERATION_WORD.test(token) && next && !known.has(next)) markers.add(token + next);
+  });
+  return markers;
+}
+
 export function nameMatches(query, candidate) {
   const q = tokenize(query);
   if (!q.length) return false;
   const c = tokenize(candidate);
+
+  // Extra tokens in the candidate are normally fine ("Canonet QL17" should match
+  // "Canonet G-III QL17"), but a generation marker is not a harmless extra: it
+  // names a different camera. Without this, "Hasselblad X1D 50c" matched the
+  // X1D *II* 50C, "Exa" matched an Exa *IIb*, and "Leica M-E (Typ 240)" matched
+  // a Typ *220*.
+  const queryTokens = new Set(q);
+  const queryMarkers = generationMarkers(query);
+  for (const marker of generationMarkers(candidate, queryTokens)) {
+    if (!queryMarkers.has(marker)) return false;
+  }
+
   if (q.every((t) => c.includes(t))) return true;
 
   // Rule (b): the query must line up with a whole number of leading candidate
