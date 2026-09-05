@@ -351,6 +351,13 @@
       "when": 1788646531439,
       "tag": "0049_camera_slug_unique_index",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1788646769980,
+      "tag": "0050_orphan_mounts_and_junk_row",
+      "breakpoints": true
     }
   ]
 }
