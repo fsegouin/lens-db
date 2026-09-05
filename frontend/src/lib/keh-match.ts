@@ -42,6 +42,13 @@ export interface KehCandidateSet {
 export interface KehMatchVerdict {
   kehId: string;
   lensId: number | null;
+  /**
+   * True when the classifier never actually answered. Distinct from a null
+   * lensId, which is the classifier saying none of the candidates fit: one is
+   * a verdict to record, the other is a question still outstanding, and
+   * conflating them writes "no match" for a check that never ran.
+   */
+  failed: boolean;
 }
 
 const BATCH_SIZE = 12;
@@ -102,12 +109,15 @@ ${body}`;
           v?.confident && n >= 1 && n <= s.candidates.length
             ? s.candidates[n - 1].id
             : null;
-        out.push({ kehId: s.kehId, lensId: picked });
+        out.push({ kehId: s.kehId, lensId: picked, failed: false });
       });
     } catch (error) {
       console.error(`[keh-match] batch ${Math.floor(i / BATCH_SIZE) + 1} failed:`, error);
-      // Unmatched, not mismatched.
-      for (const s of batch) out.push({ kehId: s.kehId, lensId: null });
+      // Not a verdict. These stay unexamined so the next run asks again: an
+      // outage in the classifier must not be recorded as an answer about the
+      // product, or a gateway with no credit quietly decides that nothing in
+      // the catalogue matches anything.
+      for (const s of batch) out.push({ kehId: s.kehId, lensId: null, failed: true });
     }
   }
 
