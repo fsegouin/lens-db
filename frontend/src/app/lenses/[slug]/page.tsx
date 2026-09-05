@@ -26,6 +26,7 @@ import {
 } from "@/lib/seo";
 import { lensJsonLd } from "@/lib/jsonld";
 import { getPriceDisplay } from "@/lib/price-display";
+import { getCitations } from "@/lib/citations";
 import ViewTracker from "@/components/ViewTracker";
 import ImageGallery from "@/components/ImageGallery";
 import RatingWidget from "@/components/RatingWidget";
@@ -230,6 +231,18 @@ export default async function LensDetailPage({
     ["Year Discontinued", lens.yearDiscontinued],
   ];
 
+  // Which of these figures has been checked against something other than the
+  // import. Most have not, and those rows stay unmarked.
+  const citations = await getCitations("lens", lens.id);
+  /** A fact is sourced when any of the columns behind it is. */
+  const citeOf = (...fields: string[]) => {
+    for (const f of fields) {
+      const c = citations.get(f);
+      if (c) return c;
+    }
+    return null;
+  };
+
   const infoboxFacts: Fact[] = [
     {
       label: "Focal length",
@@ -239,19 +252,43 @@ export default async function LensDetailPage({
           : `${lens.focalLengthMin}-${lens.focalLengthMax}`
         : null,
       unit: "mm",
+      citation: citeOf("focalLengthMin", "focalLengthMax"),
     },
-    { label: "Max aperture", value: lens.apertureMin ? `f/${lens.apertureMin}` : null },
+    {
+      label: "Max aperture",
+      value: lens.apertureMin ? `f/${lens.apertureMin}` : null,
+      citation: citeOf("apertureMin"),
+    },
     {
       label: "Construction",
       value: opticalConstruction(lens.lensElements, lens.lensGroups)
         ? `${lens.lensElements} / ${lens.lensGroups}`
         : null,
+      citation: citeOf("lensElements", "lensGroups"),
     },
-    { label: "Min focus", value: lens.minFocusDistanceM, unit: "m" },
-    { label: "Filter", value: lens.filterSizeMm, unit: "mm" },
-    { label: "Weight", value: lens.weightG, unit: "g" },
-    { label: "Introduced", value: lens.yearIntroduced },
-    { label: "Mounts", value: specValue(mountNames.join(" · ")) },
+    {
+      label: "Min focus",
+      value: lens.minFocusDistanceM,
+      unit: "m",
+      citation: citeOf("minFocusDistanceM"),
+    },
+    {
+      label: "Filter",
+      value: lens.filterSizeMm,
+      unit: "mm",
+      citation: citeOf("filterSizeMm"),
+    },
+    { label: "Weight", value: lens.weightG, unit: "g", citation: citeOf("weightG") },
+    {
+      label: "Introduced",
+      value: lens.yearIntroduced,
+      citation: citeOf("yearIntroduced"),
+    },
+    {
+      label: "Mounts",
+      value: specValue(mountNames.join(" · ")),
+      citation: citeOf("systemId"),
+    },
   ];
 
   const priceDisplay = getPriceDisplay(priceEstimate);
