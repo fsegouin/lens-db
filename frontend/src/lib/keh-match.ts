@@ -147,7 +147,13 @@ export function parseKehTitle(title: string): {
 
   // The first f-number is the maximum aperture; a variable zoom lists the
   // long end second and we ignore it, matching how we store apertureMin.
-  const ap = title.match(/f\/?\s*(\d+(?:\.\d+)?)/i);
+  //
+  // The slash is required. Without it the f is just a letter, and the letter
+  // before a number is exactly what a modern mount name looks like: "Canon RF
+  // 50mm f/1.8" was read as f/50, "Fujifilm XF 16-55mm f/2.8" as f/16. That
+  // aperture then matched no lens we hold, so 206 products, most of the RF,
+  // XF and GF catalogue, were quietly settled as belonging to nothing.
+  const ap = title.match(/\bf\/\s*(\d+(?:\.\d+)?)/i);
   return {
     focalMin,
     focalMax,
