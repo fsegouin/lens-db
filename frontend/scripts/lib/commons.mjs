@@ -47,7 +47,22 @@ const MAX_ATTEMPTS = 4;
 async function api(base, params, attempt = 0) {
   const url = new URL(base);
   for (const [k, v] of Object.entries({ format: "json", ...params })) url.searchParams.set(k, v);
-  const resp = await fetch(url, { headers: { "User-Agent": UA } });
+
+  let resp;
+  try {
+    resp = await fetch(url, { headers: { "User-Agent": UA } });
+  } catch (err) {
+    // `fetch` throws rather than returning a status when the network itself is
+    // gone: a dropped connection, DNS failure, a sleeping laptop. A whole
+    // overnight run was lost to this, because only HTTP statuses were retried
+    // and every camera after the outage was recorded as a hard failure.
+    if (attempt < MAX_ATTEMPTS - 1) {
+      await delay(1000 * 2 ** attempt);
+      return api(base, params, attempt + 1);
+    }
+    throw err;
+  }
+
   if (!resp.ok) {
     if (RETRY_STATUSES.has(resp.status) && attempt < MAX_ATTEMPTS - 1) {
       const retryAfter = Number(resp.headers.get("retry-after"));
