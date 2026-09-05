@@ -48,6 +48,17 @@ const { rows: edits } = await pool.query(`
   order by r.entity_type, r.entity_id, f, r.created_at desc
 `);
 
+// The DPReview watcher edits through a normal account, so its changes look
+// like community edits in `revisions`. They are not: the value came off a
+// DPReview product page, and that page is the citation. Without this the
+// corpus reads "Community edit by DPReview Watcher" on 759 of 867 rows,
+// which credits the wrong thing and links to our own history instead of the
+// source.
+const { rows: dpr } = await pool.query(
+  `select lens_id, dpreview_url from dpreview_lens_candidates where lens_id is not null`);
+const dprUrl = new Map(dpr.map((r) => [r.lens_id, r.dpreview_url]));
+const WATCHER = "DPReview Watcher";
+
 const { rows: mounts } = await pool.query(
   `select id, name, wikidata_qid from systems where wikidata_qid is not null`);
 
@@ -81,13 +92,19 @@ const upsert = `
 
 let n = 0;
 for (const e of edits) {
+  const isWatcher = e.username === WATCHER;
+  const url = isWatcher ? dprUrl.get(e.entity_id) ?? null : null;
   await pool.query(upsert, [
     e.entity_type, e.entity_id, e.field,
-    // Not dressed up as a source: it says a person changed it here, and the
-    // revision is where that claim can be checked.
-    e.username ? `Community edit by ${e.username}` : "Community edit",
-    `/history/${e.entity_type}/${e.entity_id}`,
-    e.created_at, e.revision_id, e.summary ?? null,
+    // A watcher import is cited to DPReview. Everything else is labelled an
+    // edit rather than dressed as a source: it says a person changed it here,
+    // and the revision is where that claim can be checked.
+    isWatcher
+      ? "DPReview"
+      : e.username ? `Community edit by ${e.username}` : "Community edit",
+    isWatcher ? url : `/history/${e.entity_type}/${e.entity_id}`,
+    e.created_at, e.revision_id,
+    isWatcher ? (url ? null : "Imported from DPReview; product page not recorded.") : e.summary ?? null,
   ]);
   n++;
 }
