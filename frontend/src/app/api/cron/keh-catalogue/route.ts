@@ -12,9 +12,15 @@ import { searchKehProducts, KehApiError, KEH_MAX_PAGE_SIZE } from "@/lib/keh";
  * only place in the pipeline that spends anything. Matching, pricing and
  * everything downstream reads the mirror.
  *
- * A full sweep is ~4,700 products over 47 pages. Fortnightly is plenty: used
- * dealer prices move slowly, and at ~94 credits a month it leaves most of the
- * allowance spare.
+ * There is a second, tighter limit the plan does not advertise: 100 requests
+ * a day. It is the one that actually bites, and it refuses with the same 429
+ * as everything else, so a sweep that runs long looks identical to a sweep
+ * that has run out of money. The body says which, and how many seconds until
+ * it lifts.
+ *
+ * A full sweep is ~4,700 products over 47 pages, which fits inside both
+ * limits with room to spare. Fortnightly is plenty: used dealer prices move
+ * slowly, and at ~94 credits a month it leaves most of the allowance spare.
  */
 
 /**
@@ -59,9 +65,10 @@ export async function GET(request: NextRequest) {
       result = await searchKehProducts(LENS_QUERY, page, KEH_MAX_PAGE_SIZE);
       creditsSpent++;
     } catch (error) {
-      // Every failure mode here means stop: a 429 says we are over the rate
-      // limit, a 401 says the key is wrong, and neither improves by retrying
-      // in the same run. Carrying on would spend credits to no purpose.
+      // Every failure mode here means stop: a 429 says we are over the daily
+      // cap or the monthly allowance, a 401 says the key is wrong, and none
+      // of them improves by retrying inside the same run. Carrying on would
+      // spend credits to no purpose.
       stoppedBecause =
         error instanceof KehApiError
           ? error.message
