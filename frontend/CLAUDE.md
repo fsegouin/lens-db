@@ -11,6 +11,7 @@ pnpm db:migrate       # Apply Drizzle migrations (drizzle-kit migrate)
 pnpm build            # Production build (runs db:migrate first)
 pnpm start            # Start production server
 pnpm lint             # ESLint (next/core-web-vitals + typescript)
+pnpm test             # node:test suites (src/**/*.test.ts), no database needed
 ```
 
 ## Tech Stack
@@ -164,10 +165,10 @@ All API routes return JSON. Error responses: 400 (validation), 401 (auth), 409 (
 - API returns `{ items, nextCursor, total }`
 
 ### Search
-- Regex-based word matching: query split into words, each wrapped in word boundaries
-- Punctuation stripped before matching
-- Max 10 search words per query, query trimmed to 100 chars
-- Lenses: regex matching on name. Cameras: simple `ilike`. Search page: `ilike` across all tables.
+- Regex-based word matching (`src/lib/search.ts`): every query token must match, so more words narrow the result
+- Punctuation separates rather than disappears, accents fold to ASCII, and a token starting with a digit may not continue a longer number (`35` misses `135mm`, but `617` finds `GX617`)
+- Max 10 search words per query, query trimmed to 200 chars
+- Two matchers must agree: `buildNameSearch` (Postgres, used by the list and search pages) and `buildNameMatchers` (in-process, used by the typeahead's cached index). `src/lib/search.test.ts` pins that parity, and `mcp-server/src/search.ts` is a deliberate duplicate kept in sync by the same suite.
 
 ### Client Components
 - URL-driven state: filters synced to `searchParams` via `router.push`
