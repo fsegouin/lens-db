@@ -330,6 +330,13 @@
       "when": 1788611416483,
       "tag": "0046_keh_products",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1788613508180,
+      "tag": "0047_listing_verdict_cache",
+      "breakpoints": true
     }
   ]
 }

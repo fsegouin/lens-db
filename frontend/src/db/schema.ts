@@ -764,6 +764,42 @@ export const ebayAskingSnapshots = pgTable(
   ]
 );
 
+// What the classifier already decided about a listing.
+//
+// The ingest re-samples the same entity every sweep and eBay listings live
+// for weeks, so without this the same listing is sent to the model six or
+// more times over its life and judged identically each time. 37,680 watched
+// listings all carry a grade the model produced; recomputing them is the
+// single largest avoidable cost in the pipeline.
+//
+// Keyed per entity because relevance is a question about a pairing, not about
+// a listing: the same listing can be the right lens for one record and the
+// wrong one for its near neighbour.
+export const ebayListingVerdicts = pgTable(
+  "ebay_listing_verdicts",
+  {
+    id: serial("id").primaryKey(),
+    entityType: text("entity_type").notNull(),
+    entityId: integer("entity_id").notNull(),
+    legacyItemId: text("legacy_item_id").notNull(),
+    isRelevant: boolean("is_relevant").notNull(),
+    // The grade the classifier assigned, null when it judged the listing
+    // irrelevant and so never graded it.
+    grade: text("grade"),
+    judgedAt: timestamp("judged_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    unique("uq_ebay_verdict_entity_item").on(
+      table.entityType,
+      table.entityId,
+      table.legacyItemId,
+    ),
+    // Retention: verdicts outlive the listings they describe and are dead
+    // weight once the listing is gone.
+    index("idx_ebay_verdicts_judged_at").on(table.judgedAt),
+  ]
+);
+
 // KEH's used-lens catalogue, mirrored locally.
 //
 // KEH is a graded dealer rather than a marketplace, so a row here is a price

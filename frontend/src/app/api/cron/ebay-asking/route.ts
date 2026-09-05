@@ -6,6 +6,7 @@ import {
   cameras,
   ebayAskingSnapshots,
   ebayListingWatch,
+  ebayListingVerdicts,
 } from "@/db/schema";
 import { sql, isNull, desc, and, eq, inArray, lt } from "drizzle-orm";
 import {
@@ -16,8 +17,7 @@ import {
 } from "@/lib/ebay-browse";
 import { recomputePriceEstimates } from "@/lib/price-pipeline";
 import { buildEbaySearchQuery, buildEbayLensSearchQuery } from "@/lib/ebay-search-query";
-import { classifyListings, type RawListing } from "@/lib/price-classify";
-import { classifyLensListings } from "@/lib/price-classify-lens";
+import { classifyRelevance } from "@/lib/price-classify-relevance";
 
 /**
  * Daily asking-price ingest over the Browse API.
@@ -62,18 +62,11 @@ const WATCH_CAP_PER_ENTITY = 30;
  * a7 variant, and without a filter those all land in the median. The first run
  * without one published a Canon EF at $100.
  *
- * Bounded at 40 rather than the full 200 a search can return: two batches of
- * twenty is ample for a median, while classifying every result would mean ten
- * LLM round trips per entity and blow the route's 300s ceiling.
+ * Bounded at 20, which is one batch. A median does not get meaningfully
+ * better from forty listings than twenty, and the second batch doubled both
+ * the bill and the time an entity held the request open.
  */
-const CLASSIFY_SAMPLE = 40;
-
-/** LLM condition grade to the grade stored on sales. */
-const GRADE_MAP: Record<string, string> = {
-  excellent: "A",
-  good: "B",
-  fair: "C",
-};
+const CLASSIFY_SAMPLE = 20;
 
 /**
  * Mirrors the floor the sold estimator applies. Anything under this is a cap,
@@ -109,6 +102,13 @@ const SNAPSHOT_RETENTION_DAYS = 400;
  * a day's page views rather than discovering the ceiling by hitting it.
  */
 const QUOTA_RESERVED_FOR_SITE = 400;
+
+/**
+ * How long a classifier verdict is remembered. Listings run for weeks and are
+ * resolvable for months after they end, but a verdict on one that has been
+ * gone this long will never be asked for again.
+ */
+const VERDICT_RETENTION_DAYS = 180;
 
 export const maxDuration = 300;
 
@@ -190,56 +190,109 @@ interface RelevantListing {
 
 /**
  * Drop everything that is not actually this entity, in working order, sold on
- * its own. Reuses the classifier the scraped pipeline used, so relevance is
- * judged by the same rules whichever way a listing arrived.
+ * its own, judged by the same rules the scraped pipeline used but through a
+ * classifier that returns only what this path reads.
  *
  * The classifier throws when every batch fails, and that is deliberate: an
  * unclassified sample must not be stored, because "no relevant listings" and
  * "the classifier was down" would otherwise look identical and the entity
  * would be marked done on the strength of a check that never ran.
  */
+interface RelevanceResult {
+  kept: RelevantListing[];
+  /** Listings answered from the verdict cache, costing nothing. */
+  cached: number;
+  /** Listings that had to be sent to the classifier. */
+  classified: number;
+}
+
 async function keepRelevant(
   entityType: "lens" | "camera",
+  entityId: number,
   name: string,
   listings: ActiveListing[],
-): Promise<RelevantListing[]> {
-  if (listings.length === 0) return [];
+): Promise<RelevanceResult> {
+  if (listings.length === 0) return { kept: [], cached: 0, classified: 0 };
 
-  const today = new Date().toISOString().slice(0, 10);
-  const raw: RawListing[] = listings.map((l) => ({
-    title: l.title,
-    price: l.priceUsd,
-    date: today,
-    condition: l.condition ?? undefined,
-  }));
+  // Anything judged before is judged. A listing lives for weeks and the same
+  // entity is swept every few days, so without this the same listings are
+  // bought from the model over and over for the same answer.
+  const ids = listings.map((l) => l.legacyItemId);
+  const remembered = await db
+    .select({
+      legacyItemId: ebayListingVerdicts.legacyItemId,
+      isRelevant: ebayListingVerdicts.isRelevant,
+      grade: ebayListingVerdicts.grade,
+    })
+    .from(ebayListingVerdicts)
+    .where(
+      and(
+        eq(ebayListingVerdicts.entityType, entityType),
+        eq(ebayListingVerdicts.entityId, entityId),
+        inArray(ebayListingVerdicts.legacyItemId, ids),
+      ),
+    );
 
-  // The classifier batches twenty at a time internally and runs those batches
-  // one after another, which for a forty-listing sample is two round trips
-  // spent in series. Splitting the sample and calling it twice at once halves
-  // the time an entity holds the request open, and the route has a 300s
-  // ceiling to stay under. Promise.all preserves order, which matters: the
-  // verdicts are joined back to the listings positionally.
-  const CHUNK = 20;
-  const chunks: RawListing[][] = [];
-  for (let i = 0; i < raw.length; i += CHUNK) chunks.push(raw.slice(i, i + CHUNK));
+  const known = new Map(
+    remembered.map((r) => [r.legacyItemId, { isRelevant: r.isRelevant, grade: r.grade }]),
+  );
 
-  const classify = (batch: RawListing[]) =>
-    entityType === "lens"
-      ? classifyLensListings(name, batch)
-      : classifyListings(name, batch);
+  const unseen = listings.filter((l) => !known.has(l.legacyItemId));
+  if (unseen.length > 0) {
+    const verdicts = await classifyRelevance(
+      entityType,
+      name,
+      unseen.map((l) => ({
+        title: l.title,
+        price: l.priceUsd,
+        condition: l.condition,
+      })),
+    );
 
-  const classified = (await Promise.all(chunks.map(classify))).flat();
+    // Every answer missing means the classifier is down, and an entity must
+    // not be recorded on the strength of a check that never ran. Throwing
+    // leaves it due for the next sweep.
+    if (verdicts.every((v) => v == null)) {
+      throw new Error(`Classifier returned nothing for "${name}"`);
+    }
+
+    const fresh = [];
+    for (let i = 0; i < unseen.length; i++) {
+      const v = verdicts[i];
+      if (!v) continue; // unanswered: leave unknown rather than caching a guess
+      known.set(unseen[i].legacyItemId, v);
+      fresh.push({
+        entityType,
+        entityId,
+        legacyItemId: unseen[i].legacyItemId,
+        isRelevant: v.isRelevant,
+        grade: v.grade,
+      });
+    }
+    if (fresh.length > 0) {
+      await db
+        .insert(ebayListingVerdicts)
+        .values(fresh)
+        .onConflictDoNothing({
+          target: [
+            ebayListingVerdicts.entityType,
+            ebayListingVerdicts.entityId,
+            ebayListingVerdicts.legacyItemId,
+          ],
+        });
+    }
+  }
 
   const kept: RelevantListing[] = [];
-  for (let i = 0; i < listings.length; i++) {
-    const verdict = classified[i];
-    if (!verdict?.isRelevant || verdict.conditionGrade === "skip") continue;
-    kept.push({
-      listing: listings[i],
-      grade: GRADE_MAP[verdict.conditionGrade] ?? null,
-    });
+  for (const l of listings) {
+    const v = known.get(l.legacyItemId);
+    if (v?.isRelevant) kept.push({ listing: l, grade: v.grade });
   }
-  return kept;
+  return {
+    kept,
+    cached: listings.length - unseen.length,
+    classified: unseen.length,
+  };
 }
 
 async function ingestOne(
@@ -247,7 +300,13 @@ async function ingestOne(
   entityId: number,
   name: string,
   alias: string | null,
-): Promise<{ sampled: number; total: number; median: number | null }> {
+): Promise<{
+  sampled: number;
+  total: number;
+  median: number | null;
+  cached: number;
+  classified: number;
+}> {
   const buildQuery = (n: string) =>
     entityType === "lens" ? buildEbayLensSearchQuery(n) : buildEbaySearchQuery(n);
 
@@ -256,23 +315,31 @@ async function ingestOne(
   // Spread the classified sample across the price-sorted results so the
   // relevance rate is measured over the whole range, not just the cheap end.
   const sample = spreadSample(listings, CLASSIFY_SAMPLE);
-  let relevant = await keepRelevant(entityType, name, sample);
+  const primary = await keepRelevant(entityType, entityId, name, sample);
+  let relevant = primary.kept;
+  let cached = primary.cached;
+  let classified = primary.classified;
   let total = rawTotal;
-  let classified = sample.length;
+  // Listings put through relevance judging, whether answered from cache or by
+  // the model. This is the denominator for the relevance rate and the measure
+  // of how much of the pool we actually saw, so it counts both.
+  let examined = sample.length;
 
   // A camera sold under a second name can be nearly invisible under its
   // primary one, so fall back to the alias when the first search comes back
   // thin. Costs an extra call only for the handful of cameras that need it.
   if (alias && relevant.length < ALIAS_SEARCH_THRESHOLD) {
-    const aliasResult = await searchActiveListings(buildQuery(alias));
-    const aliasSample = spreadSample(aliasResult.listings, CLASSIFY_SAMPLE);
-    const aliasRelevant = await keepRelevant(entityType, alias, aliasSample);
+    const aliasSearch = await searchActiveListings(buildQuery(alias));
+    const aliasSample = spreadSample(aliasSearch.listings, CLASSIFY_SAMPLE);
+    const aliasJudged = await keepRelevant(entityType, entityId, alias, aliasSample);
+    cached += aliasJudged.cached;
+    classified += aliasJudged.classified;
     const seen = new Set(relevant.map((r) => r.listing.legacyItemId));
-    for (const r of aliasRelevant) {
+    for (const r of aliasJudged.kept) {
       if (!seen.has(r.listing.legacyItemId)) relevant.push(r);
     }
-    total += aliasResult.total;
-    classified += aliasSample.length;
+    total += aliasSearch.total;
+    examined += aliasSample.length;
   }
 
   // The same floor the sold estimator uses: a cap or a box listed under the
@@ -287,7 +354,7 @@ async function ingestOne(
   // eBay's own total counts every keyword match, which for a short model name
   // is mostly other products. Scaling it by the share of the sample that
   // survived classification gives a figure that means what the column says.
-  const relevantRate = classified > 0 ? relevant.length / classified : 0;
+  const relevantRate = examined > 0 ? relevant.length / examined : 0;
 
   const snapshot = {
     medianUsd: median == null ? null : Math.round(median),
@@ -314,9 +381,9 @@ async function ingestOne(
   // The disappearance signal is only trustworthy when the classified sample
   // covered everything eBay had: past that, a listing can be missing from our
   // slice while still being perfectly alive.
-  await syncWatchList(entityType, entityId, relevant, total <= classified);
+  await syncWatchList(entityType, entityId, relevant, total <= examined);
   await recomputePriceEstimates(entityType, entityId);
-  return { sampled: prices.length, total, median };
+  return { sampled: prices.length, total, median, cached, classified };
 }
 
 /**
@@ -482,6 +549,11 @@ export async function GET(request: NextRequest) {
 
   let processed = 0;
   let withListings = 0;
+  // How much of the relevance judging was answered from the verdict cache
+  // rather than bought from the model. This is the pipeline's largest running
+  // cost, so the run says plainly how much of it was avoided.
+  let listingsFromCache = 0;
+  let listingsClassified = 0;
   let failed = 0;
   let rateLimited = false;
 
@@ -494,6 +566,8 @@ export async function GET(request: NextRequest) {
         entity.alias ?? null,
       );
       processed++;
+      listingsFromCache += result.cached;
+      listingsClassified += result.classified;
       if (result.sampled > 0) withListings++;
     } catch (error) {
       // A quota refusal means every remaining call fails too, so stop rather
@@ -518,6 +592,14 @@ export async function GET(request: NextRequest) {
     .where(lt(ebayAskingSnapshots.observedOn, cutoff.toISOString().slice(0, 10)))
     .returning({ id: ebayAskingSnapshots.id });
 
+  // A verdict is only worth keeping while the listing it describes might still
+  // be live. Past that it is a judgement about something nobody can buy.
+  const verdictCutoff = new Date();
+  verdictCutoff.setDate(verdictCutoff.getDate() - VERDICT_RETENTION_DAYS);
+  await db
+    .delete(ebayListingVerdicts)
+    .where(lt(ebayListingVerdicts.judgedAt, verdictCutoff));
+
   return NextResponse.json({
     entityType,
     requested: batch.length,
@@ -527,6 +609,8 @@ export async function GET(request: NextRequest) {
     rateLimited,
     quotaExhausted: false,
     quotaRemaining: quota?.remaining ?? null,
+    listingsFromCache,
+    listingsClassified,
     prunedSnapshots: pruned.length,
     remainingToday: await countDue(entityType),
   });
