@@ -27,6 +27,28 @@ const MAX_CANDIDATES = 6;
 /** Focal lengths are written to the millimetre; apertures need slack for float. */
 const APERTURE_TOLERANCE = 0.05;
 
+/**
+ * KEH's own product types that are actually lenses.
+ *
+ * The catalogue is reached by searching for "lens", which also returns every
+ * hood, cap, case and adapter named after the lens it fits. Those carry a
+ * focal length and an aperture in the title, so they find candidates and read
+ * as plausible: a first pass matched 90 lens hoods, 6 cases, 3 caps and a
+ * camera body to real lenses, which would have priced a Nikon 17-55mm f/2.8
+ * at the $23 its hood sells for.
+ *
+ * Checked against the type KEH assigns rather than argued about in the prompt,
+ * because "this is a hood, not a lens" is a fact we are given, and a fact
+ * beats a judgement. An explicit list rather than a pattern: "Lens Shades"
+ * and "Lens Cases" both contain the word lens.
+ */
+const LENS_PRODUCT_TYPES = new Set([
+  "Fixed Focal Length Lenses, Mfg",
+  "Fixed Focal Length Lenses, Non-Mfg",
+  "Zoom Lenses, Mfg",
+  "Zoom Lenses, Non-Mfg",
+]);
+
 export const maxDuration = 300;
 
 export async function GET(request: NextRequest) {
@@ -44,6 +66,7 @@ export async function GET(request: NextRequest) {
       id: kehProducts.id,
       kehId: kehProducts.kehId,
       title: kehProducts.title,
+      productType: kehProducts.productType,
     })
     .from(kehProducts)
     .where(isNull(kehProducts.matchState))
@@ -52,6 +75,7 @@ export async function GET(request: NextRequest) {
 
   const counts = {
     examined: 0,
+    notALens: 0,
     unparseable: 0,
     noCandidates: 0,
     matched: 0,
@@ -63,6 +87,15 @@ export async function GET(request: NextRequest) {
 
   for (const p of pending) {
     counts.examined++;
+
+    // Settled on KEH's own classification, before any parsing or asking. A
+    // hood named after the lens it fits parses exactly like that lens.
+    if (p.productType != null && !LENS_PRODUCT_TYPES.has(p.productType)) {
+      counts.notALens++;
+      settled.push(p.kehId);
+      continue;
+    }
+
     const parsed = parseKehTitle(p.title);
     if (!parsed || parsed.aperture == null) {
       // No focal length or aperture in the title means nothing to narrow on,
