@@ -415,13 +415,20 @@ export async function recomputePriceEstimates(
       ),
     );
 
-  // A handful of sales is a worse estimate than a large sample of live
-  // prices, so sold data only takes over once there is enough of it. Below
-  // that the fallbacks run in order of how much is known about what is being
-  // priced: KEH has inspected and graded its stock, while an eBay asking
-  // sample is whatever private sellers are hoping for.
+  // A handful of sales is a worse estimate than a sample of live prices, so
+  // sold data only takes over once there is enough of it.
   if (rows.length < MIN_SOLD_SALES_FOR_ESTIMATE) {
-    if (await upsertFromKeh(entityType, entityId)) return;
+    // KEH goes first because it knows most about what it is selling: it has
+    // inspected and graded the copy, where an asking sample is whatever
+    // private sellers are hoping for.
+    //
+    // But only where nothing has sold. A lens usually matches a single KEH
+    // product, and often a single grade of it, so this is one dealer holding
+    // one copy — enough to price a lens the marketplace never trades, not
+    // enough to overrule a real sale. Letting it try at one or two sales
+    // would have retired a $7,500 sold median for an Olympus 250mm f/2 in
+    // favour of $3,429, and a Leitz Super-Angulon-R's $879 for $390.
+    if (rows.length === 0 && (await upsertFromKeh(entityType, entityId))) return;
     if (await upsertFromAsking(entityType, entityId)) return;
     // Neither fallback could be justified. Anything written from an earlier,
     // looser reading has to come down.
