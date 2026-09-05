@@ -22,7 +22,9 @@ on:
   schedule:
     # Fortnightly. Dealer prices move slowly and a sweep costs ~47 of the 300
     # monthly credits, so twice a month stays well inside the allowance while
-    # leaving room to re-run a failed one by hand.
+    # leaving room to re-run a failed one by hand. It also fits under the
+    # undocumented 100-requests-a-day cap, which is the limit that actually
+    # bites: a sweep must finish within one day or wait for the reset.
     - cron: "40 4 1,15 * *"
   workflow_dispatch:
     inputs:
