@@ -20,6 +20,11 @@ interface PriceEstimate {
    * Where the figure came from: "sold" (real completed sales), "keh" (a
    * dealer's graded stock, corrected) or "asking" (live eBay listings,
    * corrected). The last two are inferences and say so on the card.
+   *
+   * The card never names the dealer. Which shop we buy the comparison from is
+   * ours, not the reader's, and the sentence says the same true thing without
+   * it: a price someone is asking today, corrected towards what things go for
+   * privately.
    */
   priceSource: string;
   sourceUrl: string | null;
@@ -109,7 +114,7 @@ export default function PriceCard({
           : "current eBay listings"
       }, adjusted for the gap between what sellers ask and what buyers pay.`
     : fromKeh
-      ? "Estimated from KEH's graded used stock, adjusted for the premium an inspected and warrantied copy carries over a private sale."
+      ? "Estimated from current used listings, adjusted for the gap between what sellers ask and what buyers pay."
       : "Too few graded sales to separate conditions.";
 
   return (
@@ -161,7 +166,16 @@ export default function PriceCard({
 
           <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-2 border-t border-border px-3 py-2.5">
             <span className="text-xs text-muted-foreground">
-              Based on recent {shownEstimate.sourceName || "eBay"} sales
+              {/*
+                Only a sold estimate may name its source. The other two carry
+                the name of a shop we would rather not advertise, and this
+                branch is one refactor away from printing it: it is unreachable
+                for them today only because they set a single condition tier
+                and the tiers have to ascend to get here.
+              */}
+              {shownEstimate.priceSource === "sold"
+                ? `Based on recent ${shownEstimate.sourceName || "eBay"} sales`
+                : "Based on current used listings"}
               {" · "}
               {new Date(shownEstimate.extractedAt).toLocaleDateString("en-US", {
                 month: "short",

@@ -73,10 +73,14 @@ type LensNode = {
  * This one is machine-readable and gets quoted back without the page around
  * it, so the label has to be true on its own. It was hardcoded to recent eBay
  * sales, which was already wrong for a figure inferred from live listings and
- * became wronger once a dealer's graded stock could be the source.
+ * became wronger once a dealer's stock could be the source.
+ *
+ * True without naming where we shop: both fallbacks are a price being asked
+ * today rather than one someone paid, and that is the distinction a reader,
+ * or a search engine, actually needs.
  */
 function usedPriceLabel(source: string | undefined): string {
-  if (source === "keh") return "Estimated used price (dealer's graded stock)";
+  if (source === "keh") return "Estimated used price (current used listings)";
   if (source === "asking") return "Estimated used price (current eBay listings)";
   return "Typical used price (recent eBay sales)";
 }
