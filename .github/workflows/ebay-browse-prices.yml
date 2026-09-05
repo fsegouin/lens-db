@@ -18,6 +18,16 @@ on:
     # expiring window and crossed the boundary partway through, splitting its
     # spend across two days' allowances and leaving neither cleanly accounted.
     - cron: "15 7 * * *"
+    # A second slot, because GitHub delays scheduled workflows under load and
+    # has been missing whole days: one run fired nearly five hours late and the
+    # next never arrived. A missed day stalls the rotation outright.
+    #
+    # Safe to run twice because neither pass can overspend. Both routes read
+    # eBay's remaining allowance before every batch and stop at the reserve, so
+    # two runs share one day's quota rather than doubling it, and entities
+    # already swept today are skipped. On days when both fire the catalogue
+    # simply gets through more of itself.
+    - cron: "0 13 * * *"
   workflow_dispatch:
     inputs:
       asking_budget:
