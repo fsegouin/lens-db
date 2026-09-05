@@ -1,0 +1,30 @@
+-- Give cameras.slug the unique index it has always been declared to have.
+--
+-- schema.ts declares slug as .unique() on cameras exactly as it does on
+-- lenses and systems, and the drizzle snapshot has carried
+-- cameras_slug_unique in uniqueConstraints all along. The index was never
+-- created in the database. lenses_slug_unique and systems_slug_unique are
+-- both present, so cameras is the only one of the three that has been
+-- running unprotected.
+--
+-- Why this matters: camera pages are served by slug, through the
+-- /cameras/[...slug] catch-all. Two rows sharing a slug would make a page
+-- ambiguous, and the admin create form generates slugs from the name, so
+-- two bodies with the same name and year would collide silently rather
+-- than being rejected. It also means inserts cannot use ON CONFLICT (slug),
+-- which is why migration 0048 had to guard its inserts with NOT EXISTS.
+--
+-- Why this is a custom migration rather than a generated one: the drift is
+-- between the snapshot and the database, not between schema.ts and the
+-- snapshot. drizzle-kit generate diffs schema.ts against the snapshot, and
+-- the snapshot already believes this constraint exists, so it has no diff
+-- to emit and cannot produce this statement. Creating the index here moves
+-- the database towards the snapshot rather than away from it, so no further
+-- drift is introduced.
+--
+-- Verified before writing: no duplicate camera slugs exist, so the index
+-- builds without a preliminary cleanup.
+--
+-- Idempotent, and safe to rerun.
+
+CREATE UNIQUE INDEX IF NOT EXISTS cameras_slug_unique ON cameras USING btree (slug);
