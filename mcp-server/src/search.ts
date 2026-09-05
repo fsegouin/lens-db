@@ -39,6 +39,9 @@ function tokenPattern(token: string): string {
   return parts.filter(Boolean).map(escapeRegex).join("\\s*");
 }
 
+/** Guards a leading-digit token; Postgres regexes have no lookbehind. */
+const DIGIT_START_SQL = "(^|[^0-9])";
+
 /**
  * Build regex patterns from a free-text query. May return an empty array
  * when every word is stripped (non-Latin text, symbols) — callers MUST
@@ -47,7 +50,10 @@ function tokenPattern(token: string): string {
  *
  * Punctuation separates tokens rather than being deleted, so "24-70" matches
  * "24-70mm" and "helios 44-2" matches "Helios-44-2". A token starting with a
- * digit may be preceded by f/F, so a bare "1.4" matches "F/1.4".
+ * digit may be preceded by f/F, so a bare "1.4" matches "F/1.4", but not by
+ * another digit, so "35" does not match inside "135".
+ *
+ * Keep in sync with frontend/src/lib/search.ts.
  */
 export function buildSearchPatterns(query: string): string[] {
   const cleaned = query
@@ -74,7 +80,9 @@ export function buildSearchPatterns(query: string): string[] {
       body = tokenPattern(cleaned[i]);
       i++;
     }
-    patterns.push(/^\d/.test(first) ? `\\m[fF]?${body}` : body);
+    patterns.push(
+      /^\d/.test(first) ? `${DIGIT_START_SQL}[fF]?${body}` : body,
+    );
   }
 
   return patterns;

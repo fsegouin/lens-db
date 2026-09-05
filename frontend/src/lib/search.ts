@@ -53,13 +53,22 @@ function tokenPattern(token: string): string {
 }
 
 /**
- * A token starting with a digit must begin a word, so "35" does not match
- * inside "135". The optional f/F lets a bare "1.4" match "F/1.4", the way
+ * A token starting with a digit must not continue a longer number, so "35"
+ * still does not match inside "135". Letters in front of it are fine, because
+ * that is how makers write model designations: "617" has to reach the 617 in
+ * "GX617". The optional f/F lets a bare "1.4" match "F/1.4", the way
  * photographers actually type an aperture.
+ *
+ * Postgres regexes have no lookbehind, so the guard consumes the preceding
+ * character instead. buildNameMatchers swaps it for the JS lookbehind that
+ * means the same thing.
  */
+const DIGIT_START_SQL = "(^|[^0-9])";
+const DIGIT_START_JS = "(?<![0-9])";
+
 function toPattern(token: string, merged: string | null): string {
   const body = merged ?? tokenPattern(token);
-  return /^\d/.test(token) ? `\\m[fF]?${body}` : body;
+  return /^\d/.test(token) ? `${DIGIT_START_SQL}[fF]?${body}` : body;
 }
 
 function buildPatterns(query: string): string[] {
@@ -98,11 +107,12 @@ export function normalizeName(value: string): string {
 
 // In-process mirror of buildNameSearch, used by the typeahead's cached index.
 export function buildNameMatchers(query: string): RegExp[] {
-  // \m in Postgres is a word-start boundary; \b here only matches when the
-  // digit is not preceded by a word character, which is the same thing.
-  return buildPatterns(query).map(
-    (p) => new RegExp(p.replace(/^\\m/, "\\b"), "i"),
-  );
+  return buildPatterns(query).map((p) => {
+    const js = p.startsWith(DIGIT_START_SQL)
+      ? DIGIT_START_JS + p.slice(DIGIT_START_SQL.length)
+      : p;
+    return new RegExp(js, "i");
+  });
 }
 
 export function matchesNormalizedName(
