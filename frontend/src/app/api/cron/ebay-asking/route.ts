@@ -355,7 +355,10 @@ async function syncWatchList(
   if (stillListed.length > 0) {
     await db
       .update(ebayListingWatch)
-      .set({ lastSeenActiveAt: now, disappearedAt: null })
+      // poolComplete is refreshed too: an entity's pool grows and shrinks, and
+      // whether the diff can see all of it is a property of today's search
+      // rather than of the day the listing was first noticed.
+      .set({ lastSeenActiveAt: now, disappearedAt: null, poolComplete: sawWholePool })
       .where(
         and(
           eq(ebayListingWatch.entityType, entityType),
@@ -414,6 +417,7 @@ async function syncWatchList(
         condition: gradeById.get(l.legacyItemId) ?? null,
         askingPriceUsd: Math.round(l.priceUsd),
         lastSeenActiveAt: now,
+        poolComplete: sawWholePool,
       })),
     )
     // Already watching it: keep the original first_seen_at, which is what
