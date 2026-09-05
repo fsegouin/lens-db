@@ -1,0 +1,107 @@
+name: KEH Price Pipeline
+
+# A second opinion on used prices, from a dealer rather than a marketplace.
+#
+# KEH inspects, grades and warranties everything it sells, so its range spans
+# real condition rather than seller optimism. That makes it the better fallback
+# for a lens with too few recorded sales to price from, and it is preferred
+# over the eBay asking sample for exactly that reason.
+#
+# Three passes:
+#   catalogue — mirrors KEH's lens listings into keh_products. The only step
+#               that costs anything: one credit per page against a 300/month
+#               allowance, ~47 pages for a full sweep.
+#   match     — decides which of our lenses each mirrored product is. Costs
+#               nothing at KEH; every product is judged once and then left
+#               alone, so this drains rather than recirculating.
+#   recompute — turns refreshed KEH prices into published estimates. Without
+#               it a sweep changes nothing a visitor can see: it never touches
+#               price_history, so nothing downstream would otherwise notice.
+
+on:
+  schedule:
+    # Fortnightly. Dealer prices move slowly and a sweep costs ~47 of the 300
+    # monthly credits, so twice a month stays well inside the allowance while
+    # leaving room to re-run a failed one by hand.
+    - cron: "40 4 1,15 * *"
+  workflow_dispatch:
+    inputs:
+      max_pages:
+        description: "Max catalogue pages (1 credit each)"
+        default: "50"
+      start_page:
+        description: "First catalogue page to read"
+        default: "1"
+
+permissions:
+  contents: read
+
+jobs:
+  keh-pipeline:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 90
+    env:
+      API_URL: ${{ secrets.API_URL }}
+      CRON_SECRET: ${{ secrets.CRON_SECRET }}
+      MAX_PAGES: ${{ inputs.max_pages || '50' }}
+      START_PAGE: ${{ inputs.start_page || '1' }}
+    steps:
+      - name: Mirror the KEH catalogue
+        run: |
+          set -euo pipefail
+          echo "::group::catalogue"
+          # One call: the route walks the pages itself and stops on the last
+          # one, on an empty page, or on the first refusal. Looping out here
+          # would only risk paying twice for the same page.
+          RESP=$(curl -sS --fail-with-body \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "$API_URL/api/cron/keh-catalogue?startPage=$START_PAGE&maxPages=$MAX_PAGES")
+          jq -r '"  spent \(.creditsSpent) credits, \(.rowsWritten) rows, \(.mirrored) mirrored, \(.awaitingMatch) awaiting match\n  stopped: \(.stoppedBecause // "budget")"' <<<"$RESP"
+          # A sweep that bought nothing is worth shouting about: it means the
+          # month's allowance is gone or the key has stopped working, and the
+          # next two passes will silently do nothing on stale data.
+          if [ "$(jq -r '.creditsSpent' <<<"$RESP")" -eq 0 ]; then
+            echo "::warning::KEH returned nothing: $(jq -r '.stoppedBecause' <<<"$RESP")"
+          fi
+          echo "::endgroup::"
+
+      - name: Match products to our lenses
+        run: |
+          set -euo pipefail
+          echo "::group::match"
+          while true; do
+            RESP=$(curl -sS --fail-with-body \
+              -H "Authorization: Bearer $CRON_SECRET" \
+              "$API_URL/api/cron/keh-match?limit=150")
+            EXAMINED=$(jq -r '.examined // 0' <<<"$RESP")
+            MATCHED=$(jq -r '.matched // 0' <<<"$RESP")
+            REMAINING=$(jq -r '.remaining // 0' <<<"$RESP")
+            DEGRADED=$(jq -r '.degraded // false' <<<"$RESP")
+            echo "  examined $EXAMINED, matched $MATCHED, $REMAINING left"
+            # A classifier that is down settles nothing, so the queue never
+            # shrinks and this loop would spin until the job timed out.
+            if [ "$DEGRADED" = "true" ]; then
+              echo "::warning::classifier is failing most calls; leaving the rest for the next run"
+              break
+            fi
+            if [ "$EXAMINED" -eq 0 ] || [ "$REMAINING" -eq 0 ]; then break; fi
+          done
+          echo "::endgroup::"
+
+      - name: Re-derive estimates for the lenses KEH stocks
+        run: |
+          set -euo pipefail
+          echo "::group::recompute"
+          OFFSET=0
+          while true; do
+            RESP=$(curl -sS --fail-with-body \
+              -H "Authorization: Bearer $CRON_SECRET" \
+              "$API_URL/api/cron/recompute-prices?scope=keh&entityType=lens&offset=$OFFSET&limit=200")
+            COUNT=$(jq -r '.recomputed // 0' <<<"$RESP")
+            DONE=$(jq -r '.done // true' <<<"$RESP")
+            OFFSET=$((OFFSET + COUNT))
+            echo "  recomputed $COUNT (total $OFFSET)"
+            if [ "$DONE" = "true" ] || [ "$COUNT" -eq 0 ]; then break; fi
+          done
+          echo "::endgroup::"

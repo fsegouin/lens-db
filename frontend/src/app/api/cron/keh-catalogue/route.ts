@@ -62,8 +62,10 @@ export async function GET(request: NextRequest) {
       // Every failure mode here means stop: a 429 says we are over the rate
       // limit, a 401 says the key is wrong, and neither improves by retrying
       // in the same run. Carrying on would spend credits to no purpose.
-      const status = error instanceof KehApiError ? error.status : 0;
-      stoppedBecause = `api error ${status}`;
+      stoppedBecause =
+        error instanceof KehApiError
+          ? error.message
+          : `api error: ${error instanceof Error ? error.message : String(error)}`;
       console.error(`[keh-catalogue] page ${page}:`, error);
       break;
     }

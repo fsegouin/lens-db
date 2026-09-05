@@ -21,6 +21,21 @@ const ROOT =
  */
 export const KEH_MAX_PAGE_SIZE = 100;
 
+/**
+ * KEH's prices run above what the same lens fetches privately on eBay, and by
+ * a consistent enough factor to correct for.
+ *
+ * Measured across 627 lenses holding both a KEH match and eight or more
+ * recorded eBay sales: the midpoint of KEH's range divided by our sold median
+ * has a median of 1.18, with 78% inside half a turn and 96% inside a factor of
+ * two. The gap is the dealer's margin and the 180-day warranty, which is a
+ * real difference in what is being sold rather than noise.
+ *
+ * Tighter than it looks, too: before non-lens products were excluded the tenth
+ * percentile sat at 0.58, and it was lens hoods dragging it down.
+ */
+export const KEH_TO_SOLD_RATIO = 1.18;
+
 export interface KehProduct {
   kehId: string;
   title: string;
@@ -108,7 +123,14 @@ export async function searchKehProducts(
   });
 
   if (!res.ok) {
-    throw new KehApiError(res.status, `KEH search failed: ${res.status}`);
+    // The body carries the only thing worth knowing when this fails: whether
+    // a 429 means "too fast" or "out of credits for the month". Those want
+    // opposite responses and the status alone cannot tell them apart.
+    const detail = await res.text().catch(() => "");
+    throw new KehApiError(
+      res.status,
+      `KEH search failed: ${res.status}${detail ? ` ${detail.slice(0, 200)}` : ""}`,
+    );
   }
 
   const body = (await res.json()) as {
