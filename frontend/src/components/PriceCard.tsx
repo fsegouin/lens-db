@@ -109,7 +109,7 @@ export default function PriceCard({
           : "current eBay listings"
       }, adjusted for the gap between what sellers ask and what buyers pay.`
     : fromKeh
-      ? "Estimated from KEH's graded used stock, spanning their lowest grade to their highest, adjusted for the premium a dealer's inspected and warrantied copy carries over a private sale."
+      ? "Estimated from KEH's graded used stock, adjusted for the premium an inspected and warrantied copy carries over a private sale."
       : "Too few graded sales to separate conditions.";
 
   return (
