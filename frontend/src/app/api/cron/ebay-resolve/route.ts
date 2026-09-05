@@ -96,10 +96,17 @@ export async function GET(request: NextRequest) {
     .orderBy(asc(ebayListingWatch.disappearedAt))
     .limit(batchLimit);
 
-  // Entities with more live listings than the API's 200-result page never get
-  // a trustworthy disappearance signal, because a listing can fall off the
-  // page while still being active. Their rows still need a slow timer sweep,
-  // but only with whatever budget the disappeared queue left over.
+  // Entities whose pool is bigger than the sample we classify never get a
+  // trustworthy disappearance signal, because a listing can fall out of our
+  // slice while still being live. Only those rows need a timer sweep, and it
+  // gets whatever budget the disappeared queue left over.
+  //
+  // The pool_complete = false test is what keeps this cheap. Without it the
+  // timer treats every pending row alike and spends the whole daily budget
+  // re-checking listings that are still up, for the ~88% of entities whose
+  // next weekly sweep would have caught them for nothing. Rows predating the
+  // column are null, which fails this test and is the right default: the next
+  // sweep of that entity fills it in.
   const room = batchLimit - disappeared.length;
   const timed =
     room > 0
@@ -110,6 +117,7 @@ export async function GET(request: NextRequest) {
             and(
               isNull(ebayListingWatch.resolution),
               isNull(ebayListingWatch.disappearedAt),
+              eq(ebayListingWatch.poolComplete, false),
               lt(ebayListingWatch.firstSeenAt, minAge),
               or(
                 isNull(ebayListingWatch.lastCheckedAt),

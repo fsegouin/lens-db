@@ -695,6 +695,12 @@ export const ebayListingWatch = pgTable(
     // Set by the ingest pass when a search no longer returns this listing.
     // Only rows with this set are worth spending a resolve call on.
     disappearedAt: timestamp("disappeared_at", { withTimezone: true }),
+    // Whether the search that found this listing covered the entity's whole
+    // pool. When it did, the next sweep will notice the listing has gone and
+    // no timer check is needed; when it did not, absence proves nothing and
+    // the timer is the only way this row will ever resolve. Null on rows
+    // written before the distinction existed, and read as "no timer".
+    poolComplete: boolean("pool_complete"),
     lastCheckedAt: timestamp("last_checked_at", { withTimezone: true }),
     // "sold" | "expired" | "gone" (item no longer resolvable), null = pending
     resolution: text("resolution"),
@@ -707,10 +713,12 @@ export const ebayListingWatch = pgTable(
       table.entityId,
       table.legacyItemId,
     ),
-    // The resolve queue: unresolved listings, oldest first.
-    index("idx_ebay_watch_pending")
-      .on(table.firstSeenAt)
-      .where(sql`resolution IS NULL`),
+    // The timer queue: only rows the disappearance diff can never reach.
+    index("idx_ebay_watch_timer")
+      .on(table.lastCheckedAt, table.firstSeenAt)
+      .where(
+        sql`resolution IS NULL AND disappeared_at IS NULL AND pool_complete = false`,
+      ),
     // Finding the listings a given entity's latest search stopped returning.
     index("idx_ebay_watch_last_seen")
       .on(table.entityType, table.entityId, table.lastSeenActiveAt)
