@@ -684,23 +684,32 @@ export default function LensList({
           <TableHeader>
             <TableRow>
               {[
-                { key: "name", label: "Name", className: "w-[28%]" },
-                { key: "brand", label: "Brand", className: showSeries ? "w-[10%]" : "w-[11%]" },
+                // These labels are uppercase and carry a sort chevron, so they
+                // are wider than the numbers they head: "Focal Length" wants
+                // ~120px for values that never pass ~102px. The header row is
+                // whitespace-normal below, so a label that outgrows its column
+                // wraps onto a second line instead of doing what it used to,
+                // which was spill out of the cell and sit on top of "Aperture"
+                // -- th widths are honoured but nowrap text is not clipped.
+                // Wrapping costs one header row; widening every numeric column
+                // to fit its label costs the name column ~80px on every row.
+                { key: "name", label: "Name", className: showSeries ? "w-[24%]" : "w-[27%]" },
+                { key: "brand", label: "Brand", className: "w-[12%]" },
                 { key: "system", label: "System", className: showSeries ? "w-[10%]" : "w-[12%]" },
-                { key: "focalLength", label: "Focal Length", className: showSeries ? "w-[8%] text-right" : "w-[10%] text-right" },
-                { key: "aperture", label: "Aperture", className: showSeries ? "w-[8%] text-right" : "w-[9%] text-right" },
+                { key: "focalLength", label: "Focal Length", className: showSeries ? "w-[9%] text-right" : "w-[10%] text-right" },
+                { key: "aperture", label: "Aperture", className: showSeries ? "w-[8.5%] text-right" : "w-[9%] text-right" },
                 { key: "type", label: "Type", sortable: false, className: showSeries ? "w-[6%]" : "w-[8%]" },
                 ...(showSeries
                   ? [{ key: "series", label: "Series", sortable: false, className: "w-[10%]" }]
                   : []),
-                { key: "year", label: "Year", className: showSeries ? "w-[5%] text-right" : "w-[6%] text-right" },
+                { key: "year", label: "Year", className: showSeries ? "w-[5.5%] text-right" : "w-[6%] text-right" },
                 { key: "price", label: "Avg Price", className: showSeries ? "w-[8%] text-right" : "w-[9%] text-right" },
                 { key: "weight", label: "Weight", className: "w-[7%] text-right" },
               ].map((col) => (
                 <TableHead
                   key={col.key}
                   scope="col"
-                  className={`${col.sortable !== false ? "cursor-pointer select-none hover:text-foreground" : ""} ${"className" in col ? col.className : ""}`}
+                  className={`whitespace-normal ${col.sortable !== false ? "cursor-pointer select-none hover:text-foreground" : ""} ${"className" in col ? col.className : ""}`}
                   onClick={col.sortable !== false ? () => handleSort(col.key) : undefined}
                   tabIndex={col.sortable !== false ? 0 : -1}
                   aria-sort={
@@ -723,12 +732,20 @@ export default function LensList({
                       : undefined
                   }
                 >
-                  {col.label}
-                  {col.sortable !== false && (
-                    sort === col.key
-                      ? (order === "desc" ? <ChevronDown className="ml-1 inline h-3 w-3" /> : <ChevronUp className="ml-1 inline h-3 w-3" />)
-                      : <ChevronsUpDown className="ml-1 inline h-3 w-3 text-muted-foreground" />
-                  )}
+                  {/* The chevron rides with the last word of the label. A
+                      wrapping header breaks before an inline SVG just as
+                      readily as at a space, and "Focal Length" is narrow
+                      enough to do it, which left the chevron alone on the
+                      second line reading as a stray glyph. */}
+                  {col.label.includes(" ") && `${col.label.split(" ").slice(0, -1).join(" ")} `}
+                  <span className="whitespace-nowrap">
+                    {col.label.split(" ").at(-1)}
+                    {col.sortable !== false && (
+                      sort === col.key
+                        ? (order === "desc" ? <ChevronDown className="ml-1 inline h-3 w-3" /> : <ChevronUp className="ml-1 inline h-3 w-3" />)
+                        : <ChevronsUpDown className="ml-1 inline h-3 w-3 text-muted-foreground" />
+                    )}
+                  </span>
                 </TableHead>
               ))}
             </TableRow>
@@ -739,7 +756,10 @@ export default function LensList({
                 <TableCell className="max-w-[22rem] whitespace-normal">
                   <Link
                     href={`/lenses/${lens.slug}`}
-                    className="block break-words leading-snug font-medium text-foreground hover:underline line-clamp-2"
+                    // No `block` here: it and `line-clamp-2` both set `display`,
+                    // and `block` won, so the clamp silently never applied and
+                    // long names ran to three or more lines.
+                    className="break-words leading-snug font-medium text-foreground hover:underline line-clamp-2"
                   >
                     {lens.name}
                   </Link>
