@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isNotNull, sql } from "drizzle-orm";
+import { and, eq, isNotNull, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { lenses, cameras } from "@/db/schema";
+import { lenses, cameras, kehProducts } from "@/db/schema";
 import { recomputePriceEstimates } from "@/lib/price-pipeline";
 import { isCronAuthorized } from "@/lib/api-utils";
 
@@ -17,6 +17,11 @@ export const maxDuration = 300;
 // GET ?entityType=lens|camera&offset=N&limit=M until done: true.
 // Pass ids=1,2,3 instead to re-derive a specific set, which is what a change
 // to the estimator's own rules needs.
+//
+// scope=keh walks the lenses KEH stocks instead of the merge survivors. A KEH
+// sweep changes what those lenses are worth without touching price_history, so
+// nothing downstream would otherwise notice; this is the step that turns a
+// refreshed mirror into published figures.
 export async function GET(request: NextRequest) {
   if (!isCronAuthorized(request.headers.get("authorization"))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -44,6 +49,23 @@ export async function GET(request: NextRequest) {
     if (explicit.length > 0) {
       ids = explicit;
       pageSize = explicit.length;
+    } else if (searchParams.get("scope") === "keh") {
+      const rows = await db
+        .selectDistinct({ id: kehProducts.entityId })
+        .from(kehProducts)
+        .where(
+          and(
+            eq(kehProducts.matchState, "matched"),
+            eq(kehProducts.entityType, entityType),
+            isNotNull(kehProducts.entityId),
+          ),
+        )
+        .orderBy(sql`1`)
+        .offset(offset)
+        .limit(limit);
+
+      ids = rows.map((r) => r.id).filter((id): id is number => id != null);
+      pageSize = rows.length;
     } else {
       // The survivors: every id some other row was merged into.
       const rows = await db

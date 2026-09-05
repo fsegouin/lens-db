@@ -1,9 +1,15 @@
 import { revalidateTag } from "next/cache";
 import { db } from "@/db";
 import { priceTag } from "@/lib/prices";
-import { priceHistory, priceEstimates, ebayAskingSnapshots } from "@/db/schema";
+import {
+  priceHistory,
+  priceEstimates,
+  ebayAskingSnapshots,
+  kehProducts,
+} from "@/db/schema";
 import { eq, and, sql, gte, inArray, isNull, desc } from "drizzle-orm";
 import { ASKING_TO_SOLD_RATIO } from "@/lib/ebay-browse";
+import { KEH_TO_SOLD_RATIO } from "@/lib/keh";
 import type { RawListing } from "@/lib/price-classify";
 
 const GRADE_MAP: Record<string, string> = {
@@ -283,13 +289,13 @@ async function upsertFromAsking(
 }
 
 /**
- * Clear an asking-derived estimate that no longer earns its place, so a
- * figure published under a looser rule does not simply sit there once the
- * rule tightens. Sold-derived estimates are deliberately left alone: a lens
- * with no sale this year still has its history behind it, whereas an asking
- * estimate is only ever as good as today's listings.
+ * Clear a derived estimate that no longer earns its place, so a figure
+ * published under a looser rule does not simply sit there once the rule
+ * tightens. Sold-derived estimates are deliberately left alone: a lens with no
+ * sale this year still has its history behind it, whereas an estimate read off
+ * today's live prices is only ever as good as today's live prices.
  */
-async function retractAskingEstimate(
+async function retractDerivedEstimate(
   entityType: string,
   entityId: number,
 ): Promise<void> {
@@ -309,10 +315,81 @@ async function retractAskingEstimate(
       and(
         eq(priceEstimates.entityType, entityType),
         eq(priceEstimates.entityId, entityId),
-        eq(priceEstimates.priceSource, "asking"),
+        inArray(priceEstimates.priceSource, ["asking", "keh"]),
       ),
     );
   revalidateTag(priceTag(entityType, entityId), "max");
+}
+
+/**
+ * Write an estimate from KEH's graded stock, corrected for the dealer premium.
+ *
+ * KEH grades and warranties what it sells, so its range spans real inspected
+ * condition from Ugly to Like New rather than whatever private sellers happen
+ * to be hoping for. That makes it a better second opinion than the eBay asking
+ * sample, and it is preferred over it for the same reason.
+ *
+ * A lens can match more than one KEH product, usually the same optic in
+ * different mounts. The midpoints are averaged and the outer bounds kept, so
+ * the published range is the condition ladder rather than one listing.
+ *
+ * Returns false when nothing is matched or priced.
+ */
+async function upsertFromKeh(
+  entityType: string,
+  entityId: number,
+): Promise<boolean> {
+  if (entityType !== "lens") return false;
+
+  const [agg] = await db
+    .select({
+      low: sql<number | null>`min(${kehProducts.minPriceUsd})`,
+      high: sql<number | null>`max(${kehProducts.maxPriceUsd})`,
+      mid: sql<number | null>`avg((${kehProducts.minPriceUsd} + ${kehProducts.maxPriceUsd}) / 2.0)`,
+      products: sql<number>`count(*)`,
+    })
+    .from(kehProducts)
+    .where(
+      and(
+        eq(kehProducts.matchState, "matched"),
+        eq(kehProducts.entityType, entityType),
+        eq(kehProducts.entityId, entityId),
+        sql`${kehProducts.minPriceUsd} is not null`,
+      ),
+    );
+
+  if (!agg || Number(agg.products) === 0 || agg.mid == null) return false;
+
+  const correct = (v: number | null) =>
+    v == null ? null : Math.round(Number(v) / KEH_TO_SOLD_RATIO);
+
+  const median = correct(agg.mid);
+  if (median == null || median < MIN_PLAUSIBLE_SALE_USD) return false;
+
+  const now = new Date();
+  const values = {
+    sourceName: "KEH",
+    priceAverageLow: correct(agg.low),
+    priceAverageHigh: correct(agg.high),
+    priceVeryGoodLow: null,
+    priceVeryGoodHigh: null,
+    priceMintLow: null,
+    priceMintHigh: null,
+    medianPrice: median,
+    priceSource: "keh",
+    extractedAt: now,
+  };
+
+  await db
+    .insert(priceEstimates)
+    .values({ entityType, entityId, ...values })
+    .onConflictDoUpdate({
+      target: [priceEstimates.entityType, priceEstimates.entityId],
+      set: values,
+    });
+
+  revalidateTag(priceTag(entityType, entityId), "max");
+  return true;
 }
 
 export async function recomputePriceEstimates(
@@ -338,14 +415,17 @@ export async function recomputePriceEstimates(
       ),
     );
 
-  // A handful of sales is a worse estimate than a 200-listing asking sample,
-  // so sold data only takes over once there is enough of it. This is the
-  // promotion rule: every lens starts on asking and graduates to sold.
+  // A handful of sales is a worse estimate than a large sample of live
+  // prices, so sold data only takes over once there is enough of it. Below
+  // that the fallbacks run in order of how much is known about what is being
+  // priced: KEH has inspected and graded its stock, while an eBay asking
+  // sample is whatever private sellers are hoping for.
   if (rows.length < MIN_SOLD_SALES_FOR_ESTIMATE) {
+    if (await upsertFromKeh(entityType, entityId)) return;
     if (await upsertFromAsking(entityType, entityId)) return;
-    // The asking sample was too thin or too incoherent to publish. Anything
-    // written from an earlier, looser reading has to come down.
-    await retractAskingEstimate(entityType, entityId);
+    // Neither fallback could be justified. Anything written from an earlier,
+    // looser reading has to come down.
+    await retractDerivedEstimate(entityType, entityId);
   }
 
   // No sales and no asking sample: upsert a bare tracking row so the entity

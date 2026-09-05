@@ -16,7 +16,11 @@ interface PriceEstimate {
   priceVeryGoodHigh: number | null;
   priceMintLow: number | null;
   priceMintHigh: number | null;
-  /** "sold" (real completed sales) or "asking" (live listings, corrected). */
+  /**
+   * Where the figure came from: "sold" (real completed sales), "keh" (a
+   * dealer's graded stock, corrected) or "asking" (live eBay listings,
+   * corrected). The last two are inferences and say so on the card.
+   */
   priceSource: string;
   sourceUrl: string | null;
   sourceName: string | null;
@@ -84,10 +88,12 @@ export default function PriceCard({
   const spanLow = display?.low ?? null;
   const spanHigh = display?.high ?? null;
 
-  // An asking-derived figure is an inference from live listings, so it never
-  // claims to be what something sold for. Condition tiers only ever come from
-  // graded sales, so this branch is always the untiered one.
+  // A figure read off prices being asked today, whether by private sellers or
+  // by a dealer, is an inference and never claims to be what something sold
+  // for. Condition tiers only ever come from graded sales, so both of these
+  // land in the untiered branch below.
   const fromAsking = shownEstimate?.priceSource === "asking";
+  const fromKeh = shownEstimate?.priceSource === "keh";
 
   // How many live listings the figure rests on. Naming it matters most where
   // the number is smallest: an estimate from three listings and one from
@@ -95,6 +101,16 @@ export default function PriceCard({
   const askingSample = fromAsking
     ? (asking[asking.length - 1]?.sampleCount ?? null)
     : null;
+
+  const basis = fromAsking
+    ? `Estimated from ${
+        askingSample != null
+          ? `${askingSample} current eBay ${askingSample === 1 ? "listing" : "listings"}`
+          : "current eBay listings"
+      }, adjusted for the gap between what sellers ask and what buyers pay.`
+    : fromKeh
+      ? "Estimated from KEH's graded used stock, spanning their lowest grade to their highest, adjusted for the premium a dealer's inspected and warrantied copy carries over a private sale."
+      : "Too few graded sales to separate conditions.";
 
   return (
     <div className="@container space-y-4">
@@ -105,20 +121,12 @@ export default function PriceCard({
       {shownEstimate && !showTiers && (
         <div className="rounded-lg border border-border p-3">
           <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-            {fromAsking ? "Estimated used price" : "Typical used price"}
+            {fromAsking || fromKeh ? "Estimated used price" : "Typical used price"}
           </div>
           <div className="mt-1 font-mono text-base font-semibold tabular-nums">
             {formatPrice(spanLow, spanHigh)}
           </div>
-          <p className="mt-1.5 text-xs text-muted-foreground">
-            {fromAsking
-              ? `Estimated from ${
-                  askingSample != null
-                    ? `${askingSample} current eBay ${askingSample === 1 ? "listing" : "listings"}`
-                    : "current eBay listings"
-                }, adjusted for the gap between what sellers ask and what buyers pay.`
-              : "Too few graded sales to separate conditions."}
-          </p>
+          <p className="mt-1.5 text-xs text-muted-foreground">{basis}</p>
         </div>
       )}
 
