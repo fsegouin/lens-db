@@ -1,5 +1,31 @@
+import { sql, type SQL, type AnyColumn } from "drizzle-orm";
+
 function escapeRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Fold accents so an accented name is reachable from an ASCII keyboard, then
+ * treat every remaining non-alphanumeric character as a separator. The query
+ * is folded the same way in buildSearchPatterns.
+ *
+ * Keep in sync with frontend/src/lib/search.ts.
+ */
+const ACCENTED_CHARS = "ÀÁÂÃÄÅÇÈÉÊËÌÍÎÏÑÒÓÔÕÖØÙÚÛÜÝàáâãäåçèéêëìíîïñòóôõöøùúûüýÿ";
+const ASCII_CHARS = "AAAAAACEEEEIIIINOOOOOOUUUUYaaaaaaceeeeiiiinoooooouuuuyy";
+
+function foldAccents(value: string): string {
+  let out = "";
+  for (const ch of value) {
+    const i = ACCENTED_CHARS.indexOf(ch);
+    out += i === -1 ? ch : ASCII_CHARS[i];
+  }
+  return out;
+}
+
+/** The name column as the patterns expect to see it: folded and separated. */
+export function normalizedNameSql(column: AnyColumn): SQL {
+  return sql`regexp_replace(translate(${column}, ${ACCENTED_CHARS}, ${ASCII_CHARS}), '[^a-zA-Z0-9. ]', ' ', 'g')`;
 }
 
 /**
@@ -56,7 +82,7 @@ const DIGIT_START_SQL = "(^|[^0-9])";
  * Keep in sync with frontend/src/lib/search.ts.
  */
 export function buildSearchPatterns(query: string): string[] {
-  const cleaned = query
+  const cleaned = foldAccents(query)
     .trim()
     .split(/[^a-zA-Z0-9.]+/)
     .filter(Boolean)

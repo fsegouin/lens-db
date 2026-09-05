@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { eq, and, gte, lte, sql, asc, isNull } from "drizzle-orm";
 import { getDb, schema } from "../db";
-import { buildSearchPatterns, escapeLikeMetachars } from "../search";
+import { buildSearchPatterns, escapeLikeMetachars, normalizedNameSql } from "../search";
 
 const { lenses, systems, lensSystems, priceEstimates } = schema;
 
@@ -39,7 +39,7 @@ export async function searchLenses(params: SearchLensesParams) {
     }
     for (const pattern of patterns) {
       conditions.push(
-        sql`regexp_replace(${lenses.name}, '[^a-zA-Z0-9. ]', ' ', 'g') ~* ${pattern}`
+        sql`${normalizedNameSql(lenses.name)} ~* ${pattern}`
       );
     }
   }

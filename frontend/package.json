@@ -9,6 +9,7 @@
     "db:migrate": "drizzle-kit migrate",
     "build": "pnpm db:migrate && next build",
     "start": "next start",
+    "test": "node --test 'src/**/*.test.ts'",
     "lint": "eslint"
   },
   "dependencies": {

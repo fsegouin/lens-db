@@ -5,6 +5,29 @@ function escapeRegex(s: string): string {
 }
 
 /**
+ * An accented name has to be reachable from an ASCII keyboard: nobody types
+ * the accent in "Edition Hermès", and without folding the "è" becomes a
+ * separator, leaving "Herm" and "s". The query is folded too, so typing the
+ * accent still works.
+ *
+ * Postgres translate() and the loop below must fold identically or the
+ * typeahead and the list page disagree, so both read this one 1:1 map.
+ * Letters that expand to two ASCII characters (ß, æ, œ) are deliberately left
+ * out, because translate() cannot express them.
+ */
+const ACCENTED_CHARS = "ÀÁÂÃÄÅÇÈÉÊËÌÍÎÏÑÒÓÔÕÖØÙÚÛÜÝàáâãäåçèéêëìíîïñòóôõöøùúûüýÿ";
+const ASCII_CHARS = "AAAAAACEEEEIIIINOOOOOOUUUUYaaaaaaceeeeiiiinoooooouuuuyy";
+
+function foldAccents(value: string): string {
+  let out = "";
+  for (const ch of value) {
+    const i = ACCENTED_CHARS.indexOf(ch);
+    out += i === -1 ? ch : ASCII_CHARS[i];
+  }
+  return out;
+}
+
+/**
  * "EF 50" should match "EF 50mm", so a one-or-two-letter token followed by a
  * number is matched as one adjacent unit. The reverse (number then letters) is
  * deliberately not merged: it broke "24-70 gm", where the tokens are words
@@ -20,7 +43,7 @@ function shouldMergeModelFragments(a: string, b: string): boolean {
  * "helios 44-2" can match "Helios-44-2".
  */
 function tokenize(query: string): string[] {
-  return query
+  return foldAccents(query)
     .trim()
     .split(/[^a-zA-Z0-9.]+/)
     .filter(Boolean)
@@ -102,7 +125,7 @@ function buildPatterns(query: string): string[] {
 const NORMALIZE_NAME_SQL = "[^a-zA-Z0-9. ]";
 
 export function normalizeName(value: string): string {
-  return value.replace(/[^a-zA-Z0-9. ]/g, " ");
+  return foldAccents(value).replace(/[^a-zA-Z0-9. ]/g, " ");
 }
 
 // In-process mirror of buildNameSearch, used by the typeahead's cached index.
@@ -127,6 +150,6 @@ export function matchesNormalizedName(
 export function buildNameSearch(column: AnyColumn, query: string): SQL[] {
   return buildPatterns(query).map(
     (pattern) =>
-      sql`regexp_replace(${column}, ${NORMALIZE_NAME_SQL}, ' ', 'g') ~* ${pattern}`,
+      sql`regexp_replace(translate(${column}, ${ACCENTED_CHARS}, ${ASCII_CHARS}), ${NORMALIZE_NAME_SQL}, ' ', 'g') ~* ${pattern}`,
   );
 }
