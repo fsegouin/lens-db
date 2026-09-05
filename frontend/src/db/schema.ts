@@ -763,3 +763,51 @@ export const ebayAskingSnapshots = pgTable(
     index("idx_ebay_asking_observed_on").on(table.observedOn),
   ]
 );
+
+// KEH's used-lens catalogue, mirrored locally.
+//
+// KEH is a graded dealer rather than a marketplace, so a row here is a price
+// KEH is asking for stock it has inspected, not something anyone paid. That
+// makes it a different tier from eBay, useful as a second opinion and as a
+// price for lenses that never appear on eBay at all.
+//
+// Mirrored rather than queried per lens because the source charges per call:
+// the whole lens catalogue is ~4,700 products over 47 pages, so one sweep
+// costs 47 credits and every subsequent match is free and offline. Asking per
+// lens would cost ~9,300 credits a sweep against a 300/month allowance.
+export const kehProducts = pgTable(
+  "keh_products",
+  {
+    id: serial("id").primaryKey(),
+    kehId: text("keh_id").notNull(),
+    title: text("title").notNull(),
+    url: text("url"),
+    manufacturer: text("manufacturer"),
+    system: text("system"),
+    productType: text("product_type"),
+    // The ends of KEH's own grade ladder. Per-grade prices are shown on their
+    // product pages but the API exposes only these two plus the grade names,
+    // so this is a range across conditions rather than a price per condition.
+    minPriceUsd: integer("min_price_usd"),
+    maxPriceUsd: integer("max_price_usd"),
+    quantityAvailable: integer("quantity_available"),
+    grades: jsonb("grades").default([]),
+    // Filled in by the matcher, never by the enumerator. Null matchState means
+    // the product has not been examined yet; "no_match" means it was examined
+    // and belongs to no lens we hold, which is a fact worth keeping so the
+    // same product is not re-examined on every sweep.
+    entityType: text("entity_type"),
+    entityId: integer("entity_id"),
+    matchState: text("match_state"), // null | "matched" | "no_match"
+    matchedAt: timestamp("matched_at", { withTimezone: true }),
+    fetchedAt: timestamp("fetched_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    unique("uq_keh_products_keh_id").on(table.kehId),
+    index("idx_keh_products_entity").on(table.entityType, table.entityId),
+    // The matcher's queue: products not yet examined.
+    index("idx_keh_products_unmatched")
+      .on(table.id)
+      .where(sql`match_state IS NULL`),
+  ]
+);
