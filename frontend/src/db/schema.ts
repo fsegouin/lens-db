@@ -613,6 +613,20 @@ export const systemRedirects = pgTable("system_redirects", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
 
+// The same idea for collections, which the imported set needs because several
+// of them are duplicates of each other under two naming conventions. Written
+// by the merge endpoint when the losing collection's row is deleted;
+// /collections/[slug] redirects through this table. Rows are re-pointed at the
+// survivor before a merge deletes their target, so a chain of merges stays one
+// hop and nothing is lost to the cascade.
+export const collectionRedirects = pgTable("collection_redirects", {
+  oldSlug: text("old_slug").primaryKey(),
+  collectionId: integer("collection_id")
+    .notNull()
+    .references(() => collections.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+});
+
 // Seen-registry for the DPReview new-lens watcher: one row per DPReview
 // product ever processed, so candidates are never re-proposed (including
 // after rejection) and already-matched lenses are never reprocessed.

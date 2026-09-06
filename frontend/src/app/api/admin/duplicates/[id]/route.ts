@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { db } from "@/db";
-import { duplicateFlags, lenses, cameras } from "@/db/schema";
+import { collections, duplicateFlags, lensCollections, lenses, cameras } from "@/db/schema";
 import { requireAdminAPI } from "@/lib/admin-auth";
 import { eq } from "drizzle-orm";
 
@@ -69,6 +70,25 @@ export async function PUT(
       .update(duplicateFlags)
       .set({ status: "confirmed", resolvedAt: new Date() })
       .where(eq(duplicateFlags.id, flagId));
+
+    // Setting mergedIntoId changes what every list filtering on it shows, and
+    // getLensRelations caches lens relations for 30 days. Nothing here
+    // invalidated anything before.
+    revalidateTag(flag.sourceEntityType === "lens" ? "lenses" : "cameras", "max");
+
+    // The collection pages are plain ISR with no tagged cache call, so the tag
+    // above does not reach them. Revalidate the index and each collection the
+    // merged-away lens belonged to, since those are the pages whose lens list
+    // and count just changed.
+    if (flag.sourceEntityType === "lens") {
+      const affected = await db
+        .select({ slug: collections.slug })
+        .from(lensCollections)
+        .innerJoin(collections, eq(lensCollections.collectionId, collections.id))
+        .where(eq(lensCollections.lensId, mergeId));
+      if (affected.length > 0) revalidatePath("/collections");
+      for (const { slug } of affected) revalidatePath(`/collections/${slug}`);
+    }
 
     return NextResponse.json({ success: true, mergedId: mergeId, keptId: keepId });
   }
