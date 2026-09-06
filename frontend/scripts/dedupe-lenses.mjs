@@ -28,6 +28,8 @@
  *   node scripts/dedupe-lenses.mjs                 # dry run: pairs, skips, what would move
  *   node scripts/dedupe-lenses.mjs --apply         # write, with a revision on both rows
  *   node scripts/dedupe-lenses.mjs --only 123,456  # restrict to these loser ids
+ *   node scripts/dedupe-lenses.mjs --trust 123,456 # merge these ids despite a measured disagreement
+ *   node scripts/dedupe-lenses.mjs --pairs verdicts.jsonl --min-confidence 0.95   # pairs judged by judge-lens-duplicates.mjs
  */
 
 import { createSql } from "./lib/db.mjs";
@@ -53,6 +55,11 @@ const only = args.includes("--only") ? new Set(args[args.indexOf("--only") + 1].
 // Rows whose measured disagreement a person has checked and found to be one
 // copy's bad data rather than a second version.
 const trust = new Set(args.includes("--trust") ? args[args.indexOf("--trust") + 1].split(",").map(Number) : []);
+// A verdicts file from judge-lens-duplicates.mjs replaces the name rule: every
+// "duplicate" verdict at or above --min-confidence becomes a pair, its keeper
+// chosen as below unless the verdict named one.
+const pairsFile = args.includes("--pairs") ? args[args.indexOf("--pairs") + 1] : null;
+const minConfidence = parseFloat(args.includes("--min-confidence") ? args[args.indexOf("--min-confidence") + 1] : "0.95");
 
 /** Names equal under this are the same name written two ways. */
 function normName(name) {
@@ -101,7 +108,15 @@ try {
 
   const pairs = [];
   const skipped = [];
-  for (const group of groups.values()) {
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  const judged = pairsFile
+    ? readFileSync(resolve(pairsFile), "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l))
+        .filter((v) => v.relationship === "duplicate" && v.confidence >= minConfidence)
+        .map((v) => [byId.get(v.a.id), byId.get(v.b.id), v])
+        .filter(([a, b]) => a && b)
+    : null;
+  const groupsToWalk = judged ? judged.map(([a, b, v]) => Object.assign([a, b], { verdict: v })) : [...groups.values()];
+  for (const group of groupsToWalk) {
     if (group.length < 2) continue;
     if (group.length > 2) {
       skipped.push({ rows: group, why: `${group.length} rows share the name; needs a person` });
@@ -109,27 +124,36 @@ try {
     }
     const [a, b] = group;
     const reasons = [];
+    // Same name on two mounts can be one lens sold twice (Meyer Primagon for
+    // Exakta and for Altix) or two lenses (Mamiya Sekor 180mm for the RB67
+    // and for the C-series TLR); a person decides, with --trust.
+    if ((a.system_id || b.system_id) && a.system_id !== b.system_id) reasons.push(`mounts ${a.system_id ?? "none"} vs ${b.system_id ?? "none"}`);
     if (a.year_introduced && b.year_introduced && Math.abs(a.year_introduced - b.year_introduced) > 1) reasons.push(`years ${a.year_introduced} vs ${b.year_introduced}`);
     if (a.lens_elements && b.lens_elements && a.lens_elements !== b.lens_elements) reasons.push(`elements ${a.lens_elements} vs ${b.lens_elements}`);
     if (a.weight_g && b.weight_g && Math.abs(a.weight_g - b.weight_g) / Math.max(a.weight_g, b.weight_g) > 0.12) reasons.push(`weight ${a.weight_g}g vs ${b.weight_g}g`);
     if (a.min_focus_distance_m && b.min_focus_distance_m && Math.abs(a.min_focus_distance_m - b.min_focus_distance_m) / Math.max(a.min_focus_distance_m, b.min_focus_distance_m) > 0.1) reasons.push(`close focus ${a.min_focus_distance_m} vs ${b.min_focus_distance_m}`);
-    if (reasons.length && !(trust.has(a.id) || trust.has(b.id))) {
+    // A judged pair has had its disagreements read; the guards are advisory there.
+    if (reasons.length && !group.verdict && !(trust.has(a.id) || trust.has(b.id))) {
       skipped.push({ rows: group, why: reasons.join(", ") });
       continue;
     }
     const yearSlug = (l) => /-\d{4}(-\d)?$/.test(l.slug);
     let keep, drop;
-    if (yearSlug(a) !== yearSlug(b)) [keep, drop] = yearSlug(a) ? [a, b] : [b, a];
+    if (group.verdict?.keeper === "A") [keep, drop] = [a, b];
+    else if (group.verdict?.keeper === "B") [keep, drop] = [b, a];
+    else if (yearSlug(a) !== yearSlug(b)) [keep, drop] = yearSlug(a) ? [a, b] : [b, a];
     else if (richness(a) !== richness(b)) [keep, drop] = richness(a) > richness(b) ? [a, b] : [b, a];
     else [keep, drop] = a.id < b.id ? [a, b] : [b, a];
     if (only && !only.has(drop.id)) continue;
-    pairs.push({ keep, drop });
+    pairs.push({ keep, drop, verdict: group.verdict ?? null });
   }
+  const verdictOf = new Map(pairs.filter((p) => p.verdict).map((p) => [p.drop.id, `${p.verdict.confidence}: ${p.verdict.reasoning.replace(/\s+/g, " ").slice(0, 200)}`]));
 
   console.log(`${rows.length} live lenses; ${pairs.length} duplicate pairs to merge, ${skipped.length} groups left alone\n`);
   for (const { keep, drop } of pairs) {
     console.log(`  keep #${keep.id} ${keep.name} [${keep.slug}]`);
     console.log(`  drop #${drop.id} ${drop.name} [${drop.slug}]`);
+    if (verdictOf.get(drop.id)) console.log(`       ${verdictOf.get(drop.id)}`);
   }
   if (skipped.length) {
     console.log(`\nLeft alone:`);
@@ -155,6 +179,12 @@ try {
               values ('lens', ${id}, ${next}, ${JSON.stringify(snapshot)}::jsonb, ${summary}, ${JSON.stringify(changed)}::jsonb, true, now())`;
   }
 
+  const group_summary = (keep, drop) => {
+    const v = pairs.find((p) => p.drop.id === drop.id)?.verdict;
+    return v
+      ? `Merged into "${keep.name}" (#${keep.id}) as the same lens: ${v.reasoning.replace(/\s+/g, " ").slice(0, 300)}`
+      : `Merged into "${keep.name}" (#${keep.id}) as the same lens written twice`;
+  };
   for (const { keep, drop } of pairs) {
     appendFileSync(backupPath, JSON.stringify({ keep, drop }) + "\n");
 
@@ -194,7 +224,7 @@ try {
     // 3. Retire the loser.
     await sql`update lenses set merged_into_id = ${keep.id} where id = ${drop.id} and merged_into_id is null`;
 
-    await revision(drop.id, `Merged into "${keep.name}" (#${keep.id}) as the same lens written twice`, ["mergedIntoId"]);
+    await revision(drop.id, group_summary(keep, drop), ["mergedIntoId"]);
     if (changed.length) await revision(keep.id, `Took ${changed.join(", ")} from duplicate "${drop.name}" (#${drop.id}) before retiring it`, changed);
     touchedPaths.push(`/lenses/${keep.slug}`, `/lenses/${drop.slug}`);
     console.log(`  merged #${drop.id} into #${keep.id}${changed.length ? ` (took ${changed.join(", ")})` : ""}${moved.length ? ` (${moved.length} ratings moved)` : ""}`);

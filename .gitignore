@@ -30,3 +30,6 @@ scraper/kenrockwell-drafts.log
 scraper/kenrockwell-crawl.log
 scraper/kenrockwell-map.json
 scraper/kenrockwell-map.md
+scraper/lens-duplicate-verdicts.jsonl
+scraper/lens-duplicate-verdicts.md
+scraper/lens-duplicate-judge.log
