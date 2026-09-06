@@ -87,13 +87,17 @@ export async function linkLensSystems(
 /**
  * Mirror candidate images to R2 (idempotent via HEAD-check). A failed image
  * never blocks the candidate.
+ *
+ * `keyPrefix` selects the R2 folder ("lenses" / "cameras"); the candidate is
+ * typed structurally so the camera pipeline can share this verbatim.
  */
-async function uploadCandidateImages(
-  candidate: DpreviewCandidate,
+export async function uploadCandidateImages(
+  candidate: { dpreviewSlug: string; name: string; imageUrls: string[] },
+  keyPrefix: string,
 ): Promise<{ src: string; alt: string }[]> {
   const images: { src: string; alt: string }[] = [];
   for (let i = 0; i < candidate.imageUrls.length; i++) {
-    const r2Key = `lenses/${candidate.dpreviewSlug}/${i + 1}.webp`;
+    const r2Key = `${keyPrefix}/${candidate.dpreviewSlug}/${i + 1}.webp`;
     try {
       const src = (await objectExists(r2Key))
         ? publicUrlFor(r2Key)
@@ -117,7 +121,7 @@ export async function createPendingLens(candidate: DpreviewCandidate): Promise<n
   const allSystems = await db.select({ id: systems.id, name: systems.name }).from(systems);
   changes.systemId = findSystemId(mountString(candidate), allSystems);
 
-  changes.images = await uploadCandidateImages(candidate);
+  changes.images = await uploadCandidateImages(candidate, "lenses");
 
   // Drop null-valued fields so the review UI only shows what we actually know
   for (const [key, value] of Object.entries(changes)) {
@@ -201,7 +205,7 @@ export async function enrichLensFromCandidate(
   const dbImages = (lens.images ?? []) as unknown[];
   const imagesBroken = dbImages.length === 0 || JSON.stringify(dbImages).includes("lens-db.com");
   if (imagesBroken && candidate.imageUrls.length > 0) {
-    const uploaded = await uploadCandidateImages(candidate);
+    const uploaded = await uploadCandidateImages(candidate, "lenses");
     if (uploaded.length > 0) updates.images = uploaded;
   }
 
@@ -292,7 +296,7 @@ export async function createLensVersion(
   const changes = mapDpreviewSpecs(candidate);
   const allSystems = await db.select({ id: systems.id, name: systems.name }).from(systems);
   changes.systemId = findSystemId(mountString(candidate), allSystems);
-  changes.images = await uploadCandidateImages(candidate);
+  changes.images = await uploadCandidateImages(candidate, "lenses");
 
   const newName =
     opts.newLabel && !candidate.name.includes(opts.newLabel)

@@ -1,11 +1,18 @@
-name: DPReview New-Lens Watcher
+# The camera-body half of the DPReview watcher. A separate workflow from
+# dpreview-new-lenses.yml rather than a matrix job so that a camera backfill
+# cannot delay the weekly lens run, a failure in one half does not mark the
+# other failed, and each can be dispatched with its own page count.
+#
+# Scheduled an hour after the lens watcher so the two never contend for the
+# same LLM and database budget.
+name: DPReview New-Camera Watcher
 on:
   schedule:
-    - cron: "0 9 * * 1" # Mondays 09:00 UTC
+    - cron: "0 10 * * 1" # Mondays 10:00 UTC
   workflow_dispatch:
     inputs:
       pages:
-        description: "Index pages to scan (~21 lenses/page; use 9 for backfill)"
+        description: "Index pages to scan (~21 cameras/page; the full archive is ~125)"
         default: "1"
 permissions:
   contents: read
@@ -21,16 +28,16 @@ jobs:
           node-version: 24
       - name: Install script dependencies
         run: cd scraper && npm ci
-      - name: Run DPReview lens watcher
+      - name: Run DPReview camera watcher
         env:
-          ENTITY: lenses
+          ENTITY: cameras
           API_URL: ${{ secrets.API_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
           PAGES: ${{ inputs.pages || '1' }}
         run: node scraper/dpreview-watch-action.mjs
       - name: Audit extracted specs (recent candidates only)
         env:
-          ENTITY: lenses
+          ENTITY: cameras
           API_URL: ${{ secrets.API_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
           CREATE_EDITS: "1"

@@ -656,6 +656,39 @@ export const dpreviewLensCandidates = pgTable(
   (table) => [index("idx_dpreview_lens_candidates_status").on(table.status)]
 );
 
+// The camera-body half of the DPReview watcher. Deliberately a separate table
+// from dpreview_lens_candidates rather than one table with an entity_type
+// column: the two halves reference different entity tables (cameras vs
+// lenses), and a shared unique index on dpreview_slug would make a camera and
+// a lens that happen to share a DPReview slug collide for no reason.
+//
+// There is no camera equivalent of llm_verdict's "new_version": lens
+// generations are modelled with lens_version_groups, whereas a camera
+// generation (an OM-1 Mark II) is simply its own cameras row. So the verdict
+// here is binary — "duplicate" or "new_camera".
+export const dpreviewCameraCandidates = pgTable(
+  "dpreview_camera_candidates",
+  {
+    id: serial("id").primaryKey(),
+    dpreviewSlug: text("dpreview_slug").notNull().unique(),
+    dpreviewUrl: text("dpreview_url").notNull(),
+    name: text("name").notNull(),
+    status: text("status").notNull().default("pending"), // "pending" | "imported" | "rejected" | "matched" | "review"
+    cameraId: integer("camera_id").references(() => cameras.id),
+    pendingEditId: integer("pending_edit_id").references(() => pendingEdits.id),
+    // For status "review" (LLM not ≥90% sure the suspected duplicate is real):
+    // the raw scraped candidate, kept so the review CLI can resolve it without
+    // re-scraping, plus the LLM's verdict
+    candidateData: jsonb("candidate_data"),
+    llmVerdict: text("llm_verdict"), // "duplicate" | "new_camera"
+    llmConfidence: real("llm_confidence"),
+    llmReasoning: text("llm_reasoning"),
+    firstSeenAt: timestamp("first_seen_at", { withTimezone: true }).defaultNow(),
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).defaultNow(),
+  },
+  (table) => [index("idx_dpreview_camera_candidates_status").on(table.status)]
+);
+
 export const priceHistory = pgTable(
   "price_history",
   {

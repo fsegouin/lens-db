@@ -1,20 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isCronAuthorized } from "@/lib/api-utils";
 import { db } from "@/db";
-import { dpreviewLensCandidates, lenses, pendingEdits, systems } from "@/db/schema";
+import { cameras, dpreviewCameraCandidates, pendingEdits, systems } from "@/db/schema";
 import { and, eq, isNotNull } from "drizzle-orm";
+import { isAllowedDpreviewImageUrl } from "@/lib/dpreview-import";
 import {
-  findDuplicate,
-  isAllowedDpreviewImageUrl,
-  type DpreviewCandidate,
-  type ExistingLens,
-} from "@/lib/dpreview-import";
+  candidateYear,
+  findDuplicateCamera,
+  parseMegapixels,
+  type DpreviewCameraCandidate,
+  type ExistingCamera,
+} from "@/lib/dpreview-camera-import";
 import {
-  DUPLICATE_CONFIDENCE_THRESHOLD,
-  judgeDuplicate,
-  type DuplicateVerdict,
-} from "@/lib/dpreview-dedupe-llm";
-import { createPendingLens, enrichLensFromCandidate, linkLensSystems } from "@/lib/dpreview-pipeline";
+  CAMERA_DUPLICATE_CONFIDENCE_THRESHOLD,
+  judgeCameraDuplicate,
+  type CameraDuplicateVerdict,
+} from "@/lib/dpreview-camera-dedupe-llm";
+import { createPendingCamera, enrichCameraFromCandidate } from "@/lib/dpreview-camera-pipeline";
 
 export const maxDuration = 300;
 
@@ -26,54 +28,50 @@ function isAuthorized(request: NextRequest): boolean {
 
 /**
  * Sync registry rows whose pending edit has since been reviewed:
- * approved → "imported" (resolving the created lens by slug),
+ * approved → "imported" (resolving the created camera by slug),
  * rejected → "rejected".
+ *
+ * Simpler than the lens equivalent, which also has mount junction rows to
+ * write on approval; a camera's mount is the scalar cameras.system_id, set
+ * when the edit is applied.
  */
 async function syncReviewedCandidates(): Promise<void> {
   const rows = await db
     .select({
-      id: dpreviewLensCandidates.id,
+      id: dpreviewCameraCandidates.id,
       editStatus: pendingEdits.status,
       changes: pendingEdits.changes,
-      candidateData: dpreviewLensCandidates.candidateData,
     })
-    .from(dpreviewLensCandidates)
-    .innerJoin(pendingEdits, eq(dpreviewLensCandidates.pendingEditId, pendingEdits.id))
+    .from(dpreviewCameraCandidates)
+    .innerJoin(pendingEdits, eq(dpreviewCameraCandidates.pendingEditId, pendingEdits.id))
     .where(
       and(
-        eq(dpreviewLensCandidates.status, "pending"),
-        isNotNull(dpreviewLensCandidates.pendingEditId),
+        eq(dpreviewCameraCandidates.status, "pending"),
+        isNotNull(dpreviewCameraCandidates.pendingEditId),
       ),
     );
-
-  let allSystems: { id: number; name: string }[] | null = null;
 
   for (const row of rows) {
     if (row.editStatus === "rejected") {
       await db
-        .update(dpreviewLensCandidates)
+        .update(dpreviewCameraCandidates)
         .set({ status: "rejected" })
-        .where(eq(dpreviewLensCandidates.id, row.id));
+        .where(eq(dpreviewCameraCandidates.id, row.id));
     } else if (row.editStatus === "approved") {
       const slug = (row.changes as Record<string, unknown>).slug;
-      let lensId: number | null = null;
+      let cameraId: number | null = null;
       if (typeof slug === "string") {
-        const [lens] = await db
-          .select({ id: lenses.id })
-          .from(lenses)
-          .where(eq(lenses.slug, slug))
+        const [camera] = await db
+          .select({ id: cameras.id })
+          .from(cameras)
+          .where(eq(cameras.slug, slug))
           .limit(1);
-        lensId = lens?.id ?? null;
-      }
-      // Record mount availability for the freshly approved lens
-      if (lensId && row.candidateData) {
-        allSystems ??= await db.select({ id: systems.id, name: systems.name }).from(systems);
-        await linkLensSystems(lensId, row.candidateData as DpreviewCandidate, allSystems);
+        cameraId = camera?.id ?? null;
       }
       await db
-        .update(dpreviewLensCandidates)
-        .set({ status: "imported", lensId })
-        .where(eq(dpreviewLensCandidates.id, row.id));
+        .update(dpreviewCameraCandidates)
+        .set({ status: "imported", cameraId })
+        .where(eq(dpreviewCameraCandidates.id, row.id));
     }
   }
 }
@@ -91,10 +89,10 @@ export async function GET(request: NextRequest) {
 
   const rows = await db
     .select({
-      dpreviewSlug: dpreviewLensCandidates.dpreviewSlug,
-      status: dpreviewLensCandidates.status,
+      dpreviewSlug: dpreviewCameraCandidates.dpreviewSlug,
+      status: dpreviewCameraCandidates.status,
     })
-    .from(dpreviewLensCandidates);
+    .from(dpreviewCameraCandidates);
 
   const stats: Record<string, number> = { total: rows.length };
   for (const row of rows) {
@@ -104,7 +102,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({ seenSlugs: rows.map((r) => r.dpreviewSlug), stats });
 }
 
-function validateCandidate(body: unknown): DpreviewCandidate | null {
+function validateCandidate(body: unknown): DpreviewCameraCandidate | null {
   if (typeof body !== "object" || body === null) return null;
   const b = body as Record<string, unknown>;
 
@@ -136,21 +134,20 @@ function validateCandidate(body: unknown): DpreviewCandidate | null {
     name: b.name.trim(),
     specTable,
     imageUrls,
-    mounts: typeof b.mounts === "string" ? b.mounts : undefined,
     year: typeof b.year === "number" && Number.isFinite(b.year) ? b.year : undefined,
     price: typeof b.price === "string" ? b.price : undefined,
   };
 }
 
 /**
- * POST: Receives one scraped DPReview lens candidate.
+ * POST: Receives one scraped DPReview camera candidate.
  *
  * - Genuinely new → images mirrored to R2, queued in pending-edits (entityId 0).
  * - Suspected duplicate → LLM verdict. ≥90% confident duplicate → the existing
- *   lens is enriched with the scraped data. Anything less certain → parked as
- *   "review" for the manual CLI (scraper/dpreview-review-cli.mjs).
+ *   camera is enriched with the scraped data. Anything less certain → parked as
+ *   "review" for the manual CLI (ENTITY=cameras scraper/dpreview-review-cli.mjs).
  *
- * Body: { dpreviewSlug, dpreviewUrl, name, specTable, imageUrls, mounts?, year?, price? }
+ * Body: { dpreviewSlug, dpreviewUrl, name, specTable, imageUrls, year?, price? }
  */
 export async function POST(request: NextRequest) {
   if (!isAuthorized(request)) {
@@ -165,89 +162,99 @@ export async function POST(request: NextRequest) {
   try {
     // Idempotency: a slug we've processed before (any status) is never redone
     const [seen] = await db
-      .select({ id: dpreviewLensCandidates.id, status: dpreviewLensCandidates.status })
-      .from(dpreviewLensCandidates)
-      .where(eq(dpreviewLensCandidates.dpreviewSlug, candidate.dpreviewSlug))
+      .select({ id: dpreviewCameraCandidates.id, status: dpreviewCameraCandidates.status })
+      .from(dpreviewCameraCandidates)
+      .where(eq(dpreviewCameraCandidates.dpreviewSlug, candidate.dpreviewSlug))
       .limit(1);
     if (seen) {
       await db
-        .update(dpreviewLensCandidates)
+        .update(dpreviewCameraCandidates)
         .set({ lastSeenAt: new Date() })
-        .where(eq(dpreviewLensCandidates.id, seen.id));
+        .where(eq(dpreviewCameraCandidates.id, seen.id));
       return NextResponse.json({ status: "seen", candidateStatus: seen.status });
     }
 
-    const existing: ExistingLens[] = await db
+    const existing: ExistingCamera[] = await db
       .select({
-        id: lenses.id,
-        name: lenses.name,
-        slug: lenses.slug,
-        yearIntroduced: lenses.yearIntroduced,
+        id: cameras.id,
+        name: cameras.name,
+        slug: cameras.slug,
+        yearIntroduced: cameras.yearIntroduced,
+        megapixels: cameras.megapixels,
       })
-      .from(lenses);
+      .from(cameras);
 
-    const duplicate = findDuplicate(candidate.name, candidate.year ?? null, existing);
+    const duplicate = findDuplicateCamera(
+      candidate.name,
+      candidateYear(candidate),
+      parseMegapixels(candidate.specTable["Effective pixels"]),
+      existing,
+    );
 
     if (duplicate) {
-      const [dbLens] = await db
+      const [dbCamera] = await db
         .select({
-          name: lenses.name,
-          brand: lenses.brand,
-          yearIntroduced: lenses.yearIntroduced,
-          focalLengthMin: lenses.focalLengthMin,
-          focalLengthMax: lenses.focalLengthMax,
-          apertureMin: lenses.apertureMin,
-          weightG: lenses.weightG,
+          name: cameras.name,
+          yearIntroduced: cameras.yearIntroduced,
+          sensorType: cameras.sensorType,
+          sensorSize: cameras.sensorSize,
+          megapixels: cameras.megapixels,
+          bodyType: cameras.bodyType,
+          weightG: cameras.weightG,
           systemName: systems.name,
         })
-        .from(lenses)
-        .leftJoin(systems, eq(lenses.systemId, systems.id))
-        .where(eq(lenses.id, duplicate.id))
+        .from(cameras)
+        .leftJoin(systems, eq(cameras.systemId, systems.id))
+        .where(eq(cameras.id, duplicate.id))
         .limit(1);
 
-      let verdict: DuplicateVerdict | null;
+      let verdict: CameraDuplicateVerdict | null;
       try {
-        verdict = await judgeDuplicate(candidate, dbLens);
+        verdict = await judgeCameraDuplicate(candidate, dbCamera);
       } catch (error) {
         // Never auto-resolve on a failed LLM call — park for manual review
         verdict = null;
-        console.warn(`[dpreview-lenses] LLM unavailable for ${candidate.name}: ${String(error)}`);
+        console.warn(`[dpreview-cameras] LLM unavailable for ${candidate.name}: ${String(error)}`);
       }
 
-      if (verdict && verdict.verdict === "duplicate" && verdict.confidence >= DUPLICATE_CONFIDENCE_THRESHOLD) {
-        const enrichment = await enrichLensFromCandidate(duplicate.id, candidate);
+      if (
+        verdict &&
+        verdict.verdict === "duplicate" &&
+        verdict.confidence >= CAMERA_DUPLICATE_CONFIDENCE_THRESHOLD
+      ) {
+        const enrichment = await enrichCameraFromCandidate(duplicate.id, candidate);
         await db
-          .insert(dpreviewLensCandidates)
+          .insert(dpreviewCameraCandidates)
           .values({
             dpreviewSlug: candidate.dpreviewSlug,
             dpreviewUrl: candidate.dpreviewUrl,
             name: candidate.name,
             status: "matched",
-            lensId: duplicate.id,
+            cameraId: duplicate.id,
             llmVerdict: verdict.verdict,
             llmConfidence: verdict.confidence,
             llmReasoning: verdict.reasoning,
           })
           .onConflictDoNothing();
         console.log(
-          `[dpreview-lenses] ${candidate.name}: duplicate of #${duplicate.id} ` +
-          `(${Math.round(verdict.confidence * 100)}%), enriched: ${enrichment.fields.join(", ") || "nothing"}`,
+          `[dpreview-cameras] ${candidate.name}: duplicate of #${duplicate.id} ` +
+            `(${Math.round(verdict.confidence * 100)}%), enriched: ${enrichment.fields.join(", ") || "nothing"}`,
         );
         return NextResponse.json({
           status: "matched",
-          lensId: duplicate.id,
+          cameraId: duplicate.id,
           enrichedFields: enrichment.fields,
         });
       }
 
       await db
-        .insert(dpreviewLensCandidates)
+        .insert(dpreviewCameraCandidates)
         .values({
           dpreviewSlug: candidate.dpreviewSlug,
           dpreviewUrl: candidate.dpreviewUrl,
           name: candidate.name,
           status: "review",
-          lensId: duplicate.id,
+          cameraId: duplicate.id,
           candidateData: candidate,
           llmVerdict: verdict?.verdict ?? null,
           llmConfidence: verdict?.confidence ?? null,
@@ -255,31 +262,32 @@ export async function POST(request: NextRequest) {
         })
         .onConflictDoNothing();
       console.log(
-        `[dpreview-lenses] ${candidate.name}: possible ${verdict?.verdict ?? "?"} vs #${duplicate.id} ` +
-        `(${verdict ? Math.round(verdict.confidence * 100) + "%" : "no verdict"}) — parked for manual review`,
+        `[dpreview-cameras] ${candidate.name}: possible ${verdict?.verdict ?? "?"} vs #${duplicate.id} ` +
+          `(${verdict ? Math.round(verdict.confidence * 100) + "%" : "no verdict"}) — parked for manual review`,
       );
-      return NextResponse.json({ status: "review", lensId: duplicate.id });
+      return NextResponse.json({ status: "review", cameraId: duplicate.id });
     }
 
-    const pendingEditId = await createPendingLens(candidate);
+    const pendingEditId = await createPendingCamera(candidate);
 
     await db
-      .insert(dpreviewLensCandidates)
+      .insert(dpreviewCameraCandidates)
       .values({
         dpreviewSlug: candidate.dpreviewSlug,
         dpreviewUrl: candidate.dpreviewUrl,
         name: candidate.name,
         status: "pending",
         pendingEditId,
-        // Kept so mount junction rows can be added when the edit is approved
+        // The raw scrape, kept so a queued body can still be checked against
+        // what DPReview actually said after the product page has changed.
         candidateData: candidate,
       })
       .onConflictDoNothing();
 
-    console.log(`[dpreview-lenses] ${candidate.name}: queued as pending edit #${pendingEditId}`);
+    console.log(`[dpreview-cameras] ${candidate.name}: queued as pending edit #${pendingEditId}`);
     return NextResponse.json({ status: "created", pendingEditId });
   } catch (error) {
-    console.error(`[dpreview-lenses] Error processing ${candidate.name}:`, error);
+    console.error(`[dpreview-cameras] Error processing ${candidate.name}:`, error);
     return NextResponse.json(
       { error: "Processing failed", details: String(error) },
       { status: 500 },

@@ -3,18 +3,63 @@
  * LLM was not ≥90% sure the deterministic match is a real duplicate.
  *
  * For each item you decide:
- *   [d] duplicate — the matched DB lens is enriched with the scraped data
- *   [n] new lens  — the candidate is queued as a pending edit for admin approval
- *   [v] version   — same product line, different generation: both lenses join a
- *                   version group; you can label/rename them (e.g. Type IV/V)
+ *   [d] duplicate — the matched DB record is enriched with the scraped data
+ *   [n] new       — the candidate is queued as a pending edit for admin approval
+ *   [v] version   — lenses only: same product line, different generation, so
+ *                   both lenses join a version group and can be labelled or
+ *                   renamed (e.g. Type IV/V). Cameras have no version groups —
+ *                   a successor body is simply its own record, so answer [n].
  *   [s] skip      — leave it in the review queue
  *   [q] quit
  *
  * Usage: API_URL=https://thelensdb.com CRON_SECRET=... node scraper/dpreview-review-cli.mjs
+ *        (ENTITY=cameras to review camera bodies; default "lenses")
  */
 
 import readline from "node:readline/promises";
 import { stdin, stdout } from "node:process";
+
+const ENTITIES = {
+  lenses: {
+    noun: "lens",
+    nounPlural: "lenses",
+    endpoint: "/api/cron/dpreview-review",
+    sitePath: "lenses",
+    supportsVersion: true,
+    match: (item) => ({
+      id: item.matchedLensId,
+      name: item.matchedLensName,
+      slug: item.matchedLensSlug,
+      year: item.matchedLensYear,
+    }),
+    // The one-line summary of a candidate, under its name
+    summary: (c, spec) =>
+      `announced ${c.year ?? spec["Announced"] ?? "?"} | mounts: ${spec["Lens mount"] || c.mounts || "?"} | ${spec["Lens type"] || "?"}`,
+  },
+  cameras: {
+    noun: "camera",
+    nounPlural: "cameras",
+    endpoint: "/api/cron/dpreview-camera-review",
+    sitePath: "cameras",
+    supportsVersion: false,
+    match: (item) => ({
+      id: item.matchedCameraId,
+      name: item.matchedCameraName,
+      slug: item.matchedCameraSlug,
+      year: item.matchedCameraYear,
+    }),
+    summary: (c, spec) =>
+      `announced ${c.year ?? spec["Announced"] ?? "?"} | ${spec["Body type"] || "?"} | ` +
+      `${spec["Sensor size"] || "?"} ${spec["Effective pixels"] || ""} | mount: ${spec["Lens mount"] || "fixed lens"}`,
+  },
+};
+
+const ENTITY_KEY = process.env.ENTITY || "lenses";
+const ENTITY = ENTITIES[ENTITY_KEY];
+if (!ENTITY) {
+  console.error(`Unknown ENTITY "${ENTITY_KEY}" — expected one of: ${Object.keys(ENTITIES).join(", ")}`);
+  process.exit(1);
+}
 
 const API_URL = process.env.API_URL || "https://thelensdb.com";
 const CRON_SECRET = process.env.CRON_SECRET;
@@ -27,7 +72,7 @@ function authHeaders(extra = {}) {
 }
 
 async function getReviewItems() {
-  const res = await fetch(`${API_URL}/api/cron/dpreview-review`, { headers: authHeaders() });
+  const res = await fetch(`${API_URL}${ENTITY.endpoint}`, { headers: authHeaders() });
   if (!res.ok) {
     throw new Error(`Failed to fetch review queue: ${res.status} ${await res.text()}`);
   }
@@ -36,7 +81,7 @@ async function getReviewItems() {
 }
 
 async function submitDecision(dpreviewSlug, decision, extra = {}) {
-  const res = await fetch(`${API_URL}/api/cron/dpreview-review`, {
+  const res = await fetch(`${API_URL}${ENTITY.endpoint}`, {
     method: "POST",
     headers: authHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify({ dpreviewSlug, decision, ...extra }),
@@ -52,23 +97,25 @@ const VERDICT_TEXT = {
   duplicate: "a DUPLICATE of the DB match → suggests [d]",
   new_version: "a NEW VERSION of the DB match → suggests [v]",
   new_lens: "a DISTINCT NEW LENS → suggests [n]",
+  new_camera: "a DISTINCT NEW CAMERA → suggests [n]",
 };
 
 function describeCandidate(item) {
   const c = item.candidateData || {};
   const spec = c.specTable || {};
+  const match = ENTITY.match(item);
   const lines = [
     `  DPReview:  ${item.name}`,
     `             ${item.dpreviewUrl}`,
-    `             announced ${c.year ?? spec["Announced"] ?? "?"} | mounts: ${spec["Lens mount"] || c.mounts || "?"} | ${spec["Lens type"] || "?"}`,
+    `             ${ENTITY.summary(c, spec)}`,
   ];
-  if (item.matchedLensId) {
+  if (match.id) {
     lines.push(
-      `  DB match:  ${item.matchedLensName} (${item.matchedLensYear ?? "?"})`,
-      `             ${API_URL}/lenses/${item.matchedLensSlug}`,
+      `  DB match:  ${match.name} (${match.year ?? "?"})`,
+      `             ${API_URL}/${ENTITY.sitePath}/${match.slug}`,
     );
   } else {
-    lines.push("  DB match:  (missing — matched lens no longer exists)");
+    lines.push(`  DB match:  (missing — matched ${ENTITY.noun} no longer exists)`);
   }
   let verdict;
   if (item.llmConfidence == null) {
@@ -90,13 +137,18 @@ async function main() {
 
   const items = await getReviewItems();
   if (items.length === 0) {
-    console.log("Review queue is empty — nothing to do.");
+    console.log(`Review queue is empty — nothing to do (${ENTITY.nounPlural}).`);
     return;
   }
-  console.log(`${items.length} uncertain duplicate${items.length === 1 ? "" : "s"} to review\n`);
+  console.log(`${items.length} uncertain ${ENTITY.noun} duplicate${items.length === 1 ? "" : "s"} to review\n`);
 
   const rl = readline.createInterface({ input: stdin, output: stdout });
   const counts = { duplicate: 0, new: 0, version: 0, skipped: 0 };
+
+  const answers = ENTITY.supportsVersion ? ["d", "n", "v", "s", "q"] : ["d", "n", "s", "q"];
+  const promptText = ENTITY.supportsVersion
+    ? "  [d]uplicate / [n]ew lens / [v]ersion / [s]kip / [q]uit > "
+    : "  [d]uplicate / [n]ew camera / [s]kip / [q]uit > ";
 
   const ask = async (prompt) => {
     try {
@@ -108,19 +160,18 @@ async function main() {
 
   for (let i = 0; i < items.length; i++) {
     const item = items[i];
+    const match = ENTITY.match(item);
     console.log(`[${i + 1}/${items.length}] ${"─".repeat(60)}`);
     console.log(describeCandidate(item));
 
     let answer;
     for (;;) {
       try {
-        answer = (await rl.question("  [d]uplicate / [n]ew lens / [v]ersion / [s]kip / [q]uit > "))
-          .trim()
-          .toLowerCase();
+        answer = (await rl.question(promptText)).trim().toLowerCase();
       } catch {
         answer = "q"; // stdin closed (EOF) — treat as quit
       }
-      if (["d", "n", "v", "s", "q"].includes(answer)) break;
+      if (answers.includes(answer)) break;
     }
     if (answer === "q") break;
     if (answer === "s") {
@@ -129,7 +180,7 @@ async function main() {
     }
 
     if (answer === "v") {
-      const existingLabel = await ask(`  Version label for the EXISTING lens "${item.matchedLensName}" (e.g. Type IV; blank = none): `);
+      const existingLabel = await ask(`  Version label for the EXISTING lens "${match.name}" (e.g. Type IV; blank = none): `);
       const renameExistingTo = await ask("  Rename existing display name to (blank = keep, slug is preserved either way): ");
       const newLabel = await ask(`  Version label for the NEW lens "${item.name}" (e.g. Type V; blank = none): `);
       const result = await submitDecision(item.dpreviewSlug, "version", {
@@ -152,7 +203,8 @@ async function main() {
         const fields = result.enrichedFields?.length
           ? `enriched: ${result.enrichedFields.join(", ")}`
           : "nothing to enrich";
-        console.log(`  ✓ merged into lens #${result.lensId} (${fields})\n`);
+        const mergedId = result.lensId ?? result.cameraId;
+        console.log(`  ✓ merged into ${ENTITY.noun} #${mergedId} (${fields})\n`);
       } else {
         console.log(`  ✓ queued as pending edit #${result.pendingEditId} — approve at ${API_URL}/admin/pending-edits\n`);
       }
@@ -160,10 +212,12 @@ async function main() {
   }
 
   rl.close();
+  const resolved = counts.duplicate + counts.new + counts.version;
   console.log(
-    `\nDone: ${counts.duplicate} merged, ${counts.new} queued as new, ${counts.version} versioned, ` +
+    `\nDone: ${counts.duplicate} merged, ${counts.new} queued as new, ` +
+    (ENTITY.supportsVersion ? `${counts.version} versioned, ` : "") +
     `${counts.skipped} skipped, ` +
-    `${items.length - counts.duplicate - counts.new - counts.version - counts.skipped} left in queue`,
+    `${items.length - resolved - counts.skipped} left in queue`,
   );
 }
 

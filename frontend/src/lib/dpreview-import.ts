@@ -22,6 +22,27 @@ export interface DpreviewCandidate {
   price?: string;
 }
 
+/**
+ * Hosts a scraped image may be mirrored from. Shared by the lens and camera
+ * cron routes so the two copies of this check cannot drift apart.
+ */
+export function isAllowedDpreviewImageUrl(raw: string): boolean {
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    return false;
+  }
+  if (url.protocol !== "https:") return false;
+  const host = url.hostname.toLowerCase();
+  return (
+    host === "dpreview.com" ||
+    host.endsWith(".dpreview.com") ||
+    host === "img-dpreview.com" ||
+    host.endsWith(".img-dpreview.com")
+  );
+}
+
 export function generateSlug(name: string): string {
   return name
     .toLowerCase()
