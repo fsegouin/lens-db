@@ -24,6 +24,7 @@
  *   node scripts/draft-kenrockwell-descriptions.mjs <crawl> <map> --limit 5 --model google/gemini-3.1-flash-lite
  *   node scripts/draft-kenrockwell-descriptions.mjs <crawl> <map> --apply       # write the drafts in the JSONL
  *   node scripts/draft-kenrockwell-descriptions.mjs <crawl> <map> --apply --only slug-a,slug-b
+ *   node scripts/draft-kenrockwell-descriptions.mjs ../scraper/kenrockwell-cameras.json ../scraper/kenrockwell-cameras-map.json --entity cameras
  */
 
 import { generateText } from "ai";
@@ -45,7 +46,7 @@ if (existsSync(envPath)) {
 }
 
 const args = process.argv.slice(2);
-const VALUED = new Set(["--limit", "--model", "--only", "--out", "--max-chars"]);
+const VALUED = new Set(["--limit", "--model", "--only", "--out", "--max-chars", "--entity"]);
 const files = [];
 for (let i = 0; i < args.length; i++) {
   if (VALUED.has(args[i])) i += 1;
@@ -56,7 +57,10 @@ const [crawlFile, mapFile] = files;
 const LIMIT = parseInt(argVal("--limit", "1000"), 10);
 const MODEL = argVal("--model", "google/gemini-3.1-flash-lite");
 const MAX_CHARS = parseInt(argVal("--max-chars", "400"), 10);
-const OUT = argVal("--out", "../scraper/kenrockwell-drafts.jsonl");
+const ENTITY = argVal("--entity", "lenses") === "cameras" ? "cameras" : "lenses";
+const ENTITY_TYPE = ENTITY === "cameras" ? "camera" : "lens";
+const PATH_PREFIX = ENTITY === "cameras" ? "/cameras" : "/lenses";
+const OUT = argVal("--out", ENTITY === "cameras" ? "../scraper/kenrockwell-camera-drafts.jsonl" : "../scraper/kenrockwell-drafts.jsonl");
 const APPLY = args.includes("--apply");
 const ONLY = argVal("--only", null)?.split(",").map((s) => s.trim());
 if (!crawlFile || !mapFile) {
@@ -83,6 +87,8 @@ function numbersDisagree(text, known) {
   if (known.weightG && grams.length && !grams.some((g) => near(g, known.weightG, 0.06))) out.push(`weight ${grams.join("/")} g vs ${known.weightG} g`);
   const filters = [...text.matchAll(/(\d{2,3})\s*mm\s*(?:filter|thread)/gi)].map((m) => parseFloat(m[1]));
   if (known.filterMm && filters.length && !filters.includes(known.filterMm)) out.push(`filter ${filters.join("/")} mm vs ${known.filterMm} mm`);
+  const mp = [...text.matchAll(/(\d+(?:\.\d+)?)\s*(?:MP\b|megapixels?)/gi)].map((m) => parseFloat(m[1]));
+  if (known.megapixels && mp.length && !mp.some((v) => near(v, known.megapixels, 0.06))) out.push(`megapixels ${mp.join("/")} vs ${known.megapixels}`);
   const focus = [...text.matchAll(/(\d+(?:\.\d+)?)\s*(?:m|metres?)\b(?![\w])/gi)].map((m) => parseFloat(m[1])).filter((v) => v < 30);
   if (known.minFocusM && focus.length && !focus.some((f) => near(f, known.minFocusM, 0.06))) out.push(`close focus ${focus.join("/")} m vs ${known.minFocusM} m`);
   return out;
@@ -92,9 +98,11 @@ function problems(text, known = {}) {
   const out = [...numbersDisagree(text, known)];
   if (/\b(today|currently|still (in production|sold|available)|remains in production)\b/i.test(text)) out.push("claims the lens is current");
   if (/[$€£¥]\s?\d|\d\s?(dollars|euros|pounds)\b/i.test(text)) out.push("mentions a price");
-  if (/rockwell|\bken\b|reviewer|\breview(s|ed|er)?\b/i.test(text)) out.push("names the reviewer or a review");
+  // "image review" is a camera setting; "this review" is the source talking.
+  if (/rockwell|\bken\b|\breviewer\b|\b(this|his|the|a|my|our) review\b|\breviewed\b/i.test(text)) out.push("names the reviewer or a review");
   if (/—/.test(text)) out.push("em dash");
-  if (/\b(I|I've|I'd|my|mine)\b/.test(text)) out.push("first person");
+  // "AF-I" and "Mark I" are not the first person.
+  if (/(?<![-\w])(I|I've|I'd)(?=\s)|\b(my|mine)\b/.test(text.replace(/\b(Mark|Type|Mk|Series|EOS|Version) I\b/g, ""))) out.push("first person");
   const paragraphs = text.split(/\n\s*\n/).filter((p) => p.trim());
   if (paragraphs.length < 3 || paragraphs.length > 5) out.push(`${paragraphs.length} paragraphs`);
   if (text.length < 700) out.push("under 700 characters");
@@ -128,7 +136,49 @@ function facts(lens, page) {
   return lines.join("\n");
 }
 
-const SYSTEM = `You write entries for a camera lens catalogue. Each entry describes one lens for someone deciding whether to buy or use it.
+function cameraFacts(cam, page) {
+  const s = page.specs ?? {};
+  const k = page.camera ?? {};
+  const lines = [];
+  const put = (label, v) => v != null && v !== "" && lines.push(`${label}: ${v}`);
+  put("Our catalogue name", cam.name);
+  put("Alias", cam.alias);
+  put("Mount / system", cam.system_name);
+  put("Body type", cam.body_type);
+  put("Year introduced", cam.year_introduced ?? page.yearFrom);
+  put("Year discontinued", page.yearTo);
+  put("Sensor or format", cam.sensor_size ?? k.sensor);
+  put("Sensor type", cam.sensor_type);
+  put("Megapixels", cam.megapixels ?? k.megapixels);
+  put("Resolution", cam.resolution);
+  put("Shutter", cam.shutter_type ?? k.shutter);
+  put("Weight", (page.facts?.weightG ?? cam.weight_g) ? `${Math.round(page.facts?.weightG ?? cam.weight_g)} g` : null);
+  put("Size", page.facts?.diameterMm ? `${page.facts.diameterMm} × ${page.facts.lengthMm} mm` : null);
+  for (const key of ["Sensor", "Image Sensor", "Lens Mount", "Lens", "Shutter", "Flash Sync", "ISO", "Frame Rate", "Viewfinder", "Finder", "Rear LCD", "LCD", "Autofocus", "Metering", "Movies", "Video", "Memory", "Card", "Battery", "Power", "Body", "Quality", "Made in", "Weather Sealing"]) if (s[key]) put(key, s[key].slice(0, 300));
+  if (cam.description) put("Our current stub", cam.description.slice(0, 400));
+  return lines.join("\n");
+}
+
+const SYSTEM_CAMERAS = `You write entries for a camera catalogue. Each entry describes one camera body for someone deciding whether to buy or use it.
+
+Write from the material provided and nothing else. Do not invent specifications, dates or claims. Where the material carries an opinion about image quality, autofocus, handling or build, state it plainly as a property of the camera ("autofocus keeps up with running children"), never as someone's opinion, and never name any person, website or review.
+
+Rules:
+- Three to five short paragraphs, separated by one blank line. No headings, no lists, no markdown.
+- Between 800 and 2200 characters in total.
+- No prices, no currency symbols, no "cheap" or "expensive" in money terms. Relative statements about the used market are fine.
+- No em dashes. Use commas, full stops or parentheses.
+- British spelling (centre, colour, metres). Third person only.
+- Paragraph 1: what the camera is, when it was made, where it sits in its maker's line, what it replaced or was replaced by, and what is distinctive about it.
+- Paragraph 2: the pictures: sensor or film format, resolution, high-ISO behaviour, colour, dynamic range, whatever the material covers; for a film camera, the meter, the shutter and the finder.
+- Paragraph 3: using it: autofocus, viewfinder, controls and ergonomics, speed, battery, build and sealing.
+- A further paragraph only if the material describes versions, firmware or model quirks, or a buying pitfall worth knowing.
+- Never say a camera is current, still sold, still made or available "today": the material may be years old. Give production as years only.
+- Do not restate the raw specification list as a sentence of numbers; weave in only the numbers that matter (resolution, weight and frame rate are usually worth one mention each).
+
+Return only the entry text.`;
+
+const SYSTEM = ENTITY === "cameras" ? SYSTEM_CAMERAS : `You write entries for a camera lens catalogue. Each entry describes one lens for someone deciding whether to buy or use it.
 
 Write from the material provided and nothing else. Do not invent specifications, dates or claims. Where the material carries an opinion about optical or mechanical quality, state it plainly as a property of the lens ("the corners are soft until f/5.6"), never as someone's opinion, and never name any person, website or review.
 
@@ -169,30 +219,30 @@ try {
     const backup = `${process.env.HOME}/Work/lens-db-descriptions-before-${new Date().toISOString().slice(0, 10)}.jsonl`;
     const paths = [];
     for (const d of chosen) {
-      const [row] = await sql`select id, slug, name, description from lenses where id = ${d.id}`;
+      const [row] = await sql.query(`select id, slug, name, description from ${ENTITY} where id = $1`, [d.id]);
       if (!row || row.slug !== d.slug) throw new Error(`row ${d.id} is not ${d.slug} any more`);
       appendFileSync(backup, JSON.stringify({ table: "lenses", id: row.id, slug: row.slug, description: row.description }) + "\n");
-      await sql`update lenses set description = ${d.description} where id = ${d.id}`;
-      const [full] = await sql`select * from lenses where id = ${d.id}`;
+      await sql.query(`update ${ENTITY} set description = $1 where id = $2`, [d.description, d.id]);
+      const [full] = await sql.query(`select * from ${ENTITY} where id = $1`, [d.id]);
       const snapshot = {};
       for (const [k, v] of Object.entries(full)) {
         const camel = k.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
         if (!["viewCount", "averageRating", "ratingCount", "submittedByIp"].includes(camel)) snapshot[camel] = v;
       }
-      const [{ next }] = await sql`select coalesce(max(revision_number), 0) + 1 as next from revisions where entity_type = 'lens' and entity_id = ${d.id}`;
+      const [{ next }] = await sql`select coalesce(max(revision_number), 0) + 1 as next from revisions where entity_type = ${ENTITY_TYPE} and entity_id = ${d.id}`;
       const [rev] = await sql`insert into revisions (entity_type, entity_id, revision_number, data, summary, changed_fields, is_patrolled, patrolled_at)
-        values ('lens', ${d.id}, ${next}, ${JSON.stringify(snapshot)}::jsonb, ${"Wrote the description from a published review of this lens"}, '["description"]'::jsonb, true, now()) returning id`;
+        values (${ENTITY_TYPE}, ${d.id}, ${next}, ${JSON.stringify(snapshot)}::jsonb, ${`Wrote the description from a published review of this ${ENTITY_TYPE}`}, '["description"]'::jsonb, true, now()) returning id`;
       await sql`insert into field_citations (entity_type, entity_id, field, source_name, source_url, retrieved_at, revision_id, note)
-        values ('lens', ${d.id}, 'description', 'Ken Rockwell', ${d.source}, now(), ${rev.id}, 'Summarised in our own words from the review; facts cross-checked against the row.')
+        values (${ENTITY_TYPE}, ${d.id}, 'description', 'Ken Rockwell', ${d.source}, now(), ${rev.id}, 'Summarised in our own words from the review; facts cross-checked against the row.')
         on conflict (entity_type, entity_id, field) do update set source_name = excluded.source_name, source_url = excluded.source_url, retrieved_at = excluded.retrieved_at, revision_id = excluded.revision_id, note = excluded.note`;
-      paths.push(`/lenses/${d.slug}`);
+      paths.push(`${PATH_PREFIX}/${d.slug}`);
       console.log(`  wrote ${d.slug}`);
     }
     if (paths.length && process.env.CRON_SECRET) {
       const r = await fetch(`${process.env.API_URL ?? "https://thelensdb.com"}/api/cron/revalidate`, {
         method: "POST",
         headers: { authorization: `Bearer ${process.env.CRON_SECRET}`, "content-type": "application/json" },
-        body: JSON.stringify({ tags: ["lenses"], paths }),
+        body: JSON.stringify({ tags: [ENTITY], paths }),
       });
       console.log(`revalidate: HTTP ${r.status}`);
     }
@@ -204,12 +254,13 @@ try {
   const md = ["# Description drafts from Ken Rockwell reviews", "", `Model: ${MODEL}. Drafts marked FAILED did not pass the rules after a retry and are not applied.`, ""];
   let ok = 0;
   for (const { r, page } of jobs) {
-    const [lens] = await sql`select l.*, s.name as system_name from lenses l left join systems s on s.id = l.system_id where l.id = ${r.match.id}`;
+    const [lens] = await sql.query(`select l.*, s.name as system_name from ${ENTITY} l left join systems s on s.id = l.system_id where l.id = $1`, [r.match.id]);
     const material = [
-      "FACTS", facts(lens, page), "",
+      "FACTS", ENTITY === "cameras" ? cameraFacts(lens, page) : facts(lens, page), "",
       "INTRODUCTION (source text)", page.text?.intro || "(none)", "",
       "IDENTIFICATION AND VERSIONS (source text)", page.text?.identification || "(none)", "",
       "PERFORMANCE (source text)", page.text?.performance || "(none)", "",
+      ...(ENTITY === "cameras" ? ["USAGE (source text)", page.text?.usage || "(none)", "", "COMPARED (source text)", page.text?.compared || "(none)", ""] : []),
       "RECOMMENDATIONS (source text)", page.text?.recommendations || "(none)",
     ].join("\n");
 
@@ -219,13 +270,15 @@ try {
       const nudge = attempt ? `\n\nThe previous attempt was rejected for: ${issues.join("; ")}. Fix those and return only the entry.` : "";
       const { text } = await generateText({ model: MODEL, system: SYSTEM, prompt: material + nudge, temperature: 0.4 });
       draft = text.trim().replace(/\r/g, "").replace(/\n{3,}/g, "\n\n");
-      issues = problems(draft, { weightG: page.facts?.weightG ?? lens.weight_g, filterMm: page.facts?.filterMm ?? lens.filter_size_mm, minFocusM: page.facts?.minFocusM ?? lens.min_focus_distance_m });
+      issues = problems(draft, ENTITY === "cameras"
+        ? { weightG: page.facts?.weightG ?? lens.weight_g, megapixels: lens.megapixels ?? page.camera?.megapixels }
+        : { weightG: page.facts?.weightG ?? lens.weight_g, filterMm: page.facts?.filterMm ?? lens.filter_size_mm, minFocusM: page.facts?.minFocusM ?? lens.min_focus_distance_m });
       if (!issues.length) break;
     }
     const passed = issues.length === 0;
     ok += passed ? 1 : 0;
     appendFileSync(resolve(OUT), JSON.stringify({ id: lens.id, slug: lens.slug, name: lens.name, source: r.page, ok: passed, issues, description: draft }) + "\n");
-    md.push(`## ${lens.name}${passed ? "" : " (FAILED: " + issues.join(", ") + ")"}`, "", `[${lens.slug}](https://thelensdb.com/lenses/${lens.slug}) ← <${r.page}>`, "", `> current: ${(lens.description ?? "").replace(/\s+/g, " ").slice(0, 200) || "(empty)"}`, "", draft, "");
+    md.push(`## ${lens.name}${passed ? "" : " (FAILED: " + issues.join(", ") + ")"}`, "", `[${lens.slug}](https://thelensdb.com${PATH_PREFIX}/${lens.slug}) ← <${r.page}>`, "", `> current: ${(lens.description ?? "").replace(/\s+/g, " ").slice(0, 200) || "(empty)"}`, "", draft, "");
     console.log(`  ${passed ? "ok    " : "FAILED"} ${lens.slug} (${draft.length} chars${issues.length ? `: ${issues.join(", ")}` : ""})`);
   }
   writeFileSync(resolve(OUT.replace(/\.jsonl$/, ".md")), md.join("\n"));

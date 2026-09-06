@@ -33,3 +33,13 @@ scraper/kenrockwell-map.md
 scraper/lens-duplicate-verdicts.jsonl
 scraper/lens-duplicate-verdicts.md
 scraper/lens-duplicate-judge.log
+scraper/kenrockwell-cameras.json
+scraper/kenrockwell-cameras.failures.json
+scraper/kenrockwell-cameras-crawl.log
+scraper/kenrockwell-cameras-map.json
+scraper/kenrockwell-cameras-map.md
+scraper/kenrockwell-camera-drafts.jsonl
+scraper/kenrockwell-camera-drafts.md
+scraper/kenrockwell-camera-drafts.log
+scraper/lens-duplicate-tier*.jsonl
+scraper/lens-duplicate-refine.log

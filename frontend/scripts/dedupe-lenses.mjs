@@ -185,7 +185,17 @@ try {
       ? `Merged into "${keep.name}" (#${keep.id}) as the same lens: ${v.reasoning.replace(/\s+/g, " ").slice(0, 300)}`
       : `Merged into "${keep.name}" (#${keep.id}) as the same lens written twice`;
   };
+  // Three rows of one lens arrive as three pairs. Once a row is retired it
+  // takes no further part; a second run picks up what was skipped.
+  const retired = new Set();
+  let merged = 0;
   for (const { keep, drop } of pairs) {
+    if (retired.has(drop.id) || retired.has(keep.id)) {
+      console.log(`  skipped #${drop.id} → #${keep.id}: a row in this pair was retired earlier in the run`);
+      continue;
+    }
+    retired.add(drop.id);
+    merged += 1;
     appendFileSync(backupPath, JSON.stringify({ keep, drop }) + "\n");
 
     // 1. Fold what only the loser has onto the keeper.
@@ -230,6 +240,15 @@ try {
     console.log(`  merged #${drop.id} into #${keep.id}${changed.length ? ` (took ${changed.join(", ")})` : ""}${moved.length ? ` (${moved.length} ratings moved)` : ""}`);
   }
 
+  // A keeper retired in a later pair leaves a chain (A → B → C). Point every
+  // retired row at the live survivor; the page follows one hop only.
+  for (let hops = 0; hops < 5; hops++) {
+    const flattened = await sql`update lenses l set merged_into_id = k.merged_into_id
+      from lenses k where l.merged_into_id = k.id and k.merged_into_id is not null returning l.id`;
+    if (!flattened.length) break;
+    console.log(`  flattened ${flattened.length} redirect chain(s)`);
+  }
+
   if (process.env.CRON_SECRET) {
     const r = await fetch(`${process.env.API_URL ?? "https://thelensdb.com"}/api/cron/revalidate`, {
       method: "POST",
@@ -240,7 +259,7 @@ try {
   } else {
     console.log(`\nCRON_SECRET not set: call /api/cron/revalidate yourself for the "lenses" tag.`);
   }
-  console.log(`Done. ${pairs.length} merged; before-values in ${backupPath}`);
+  console.log(`Done. ${merged} merged; before-values in ${backupPath}`);
 } finally {
   await sql.end();
 }

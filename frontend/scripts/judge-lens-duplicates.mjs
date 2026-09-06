@@ -222,9 +222,54 @@ async function mapLimit(items, limit, fn) {
 }
 
 // ---------------------------------------------------------------------------
+// Second question: what kind of difference is it?
+// ---------------------------------------------------------------------------
+
+const Difference = z.object({
+  difference: z.enum(["notation", "mount", "generic", "designation", "edition"]),
+  explanation: z.string(),
+});
+
+const REFINE = `You are the editor of a camera lens catalogue. Two records have already been judged to describe the same optical lens. The catalogue keeps one record per catalogue entry of its source, which means a "Type 1" and a "Type 2", an "MC" and a non-MC, a "Rokkor" and a later non-Rokkor, a family record and a specific version, an anniversary edition and the plain lens are all SEPARATE records on purpose, even when the glass is identical. Decide what kind of difference separates these two names:
+
+- notation: the same designation written two ways. Brackets against parentheses, capitalisation, punctuation, "F1.4" against "F/1.4", a company prefix or the maker's full name ("Cosina Voigtlander" / "Voigtlander", "Nippon Kogaku" / "Nikon", "Fuji Photo Film" / "Fuji"), the engraved name spelt out ("Super EBC Fujinon ... Aspherical" / "Fujinon"), a model code present in one name only ("116", "SEL1670Z", "F017"), a line badge written differently ("| A" / "Art", "| C" / "Contemporary"), a word order ("smc Pentax-DA*" / "Pentax smc DA*"), a mount word that both rows share in their data ("VM", "LTM", "M", "for Leica R"). These are one record.
+- mount: the same lens offered in another mount, and nothing else differs. One record with both mounts.
+- generic: one name is the bare lens and the other carries a type, version or family marker ("Type 1", "[II]", "V", "[AE, MM]", "[·C]", "(I)") that the bare name does not. Two records.
+- designation: the names carry different designations that the maker used at different times or for different builds ("Rokkor" present in one, "MC" or "Multi-Coated" in one, "N", "C", "II", "-HG", "for CL", "Compact", "Multi C."). Two records.
+- edition: a quoted, anniversary, colour or limited edition against the plain lens. Two records.
+
+Answer with the single best category and one sentence of explanation.`;
+
+async function refine(a, b) {
+  const prompt = `${describe(a, "A")}\n\n${describe(b, "B")}\n\nWhat kind of difference separates the two names?`;
+  const { output } = await generateText({ model: MODEL, system: REFINE, prompt, output: Output.object({ schema: Difference }), temperature: 0, timeout: 60_000 });
+  return output;
+}
+
+// ---------------------------------------------------------------------------
 
 const sql = createSql();
 try {
+  const REFINE_FILE = argVal("--refine", null);
+  if (REFINE_FILE) {
+    const rows = await sql`select l.*, s.name as system_name from lenses l left join systems s on s.id = l.system_id where l.merged_into_id is null`;
+    const byId = new Map(rows.map((r) => [r.id, r]));
+    const input = readFileSync(resolve(REFINE_FILE), "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l));
+    const outFile = REFINE_FILE.replace(/\.jsonl$/, ".refined.jsonl");
+    const done = new Set(existsSync(resolve(outFile)) ? readFileSync(resolve(outFile), "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l).key) : []);
+    const todo = input.filter((v) => !done.has(v.key) && byId.has(v.a.id) && byId.has(v.b.id)).slice(0, LIMIT);
+    console.log(`refining ${todo.length} of ${input.length} pairs with ${MODEL} (${done.size} done, ${input.length - todo.length - done.size} no longer both live)`);
+    const tally = {};
+    let n = 0;
+    await mapLimit(todo, CONCURRENCY, async (v) => {
+      const r = await refine(byId.get(v.a.id), byId.get(v.b.id)).catch((e) => ({ difference: "error", explanation: String(e).slice(0, 200) }));
+      appendFileSync(resolve(outFile), JSON.stringify({ ...v, ...r }) + "\n");
+      tally[r.difference] = (tally[r.difference] ?? 0) + 1;
+      if (++n % 50 === 0) console.log(`  ${n}/${todo.length} ${JSON.stringify(tally)}`);
+    });
+    console.log(`done: ${JSON.stringify(tally)}; wrote ${outFile}`);
+    process.exit(0);
+  }
   const rows = await sql`
     select l.*, s.name as system_name
     from lenses l left join systems s on s.id = l.system_id
