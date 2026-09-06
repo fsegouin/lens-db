@@ -6,7 +6,7 @@ import { getClientIP, rateLimitedResponse } from "@/lib/api-utils";
 import { createRateLimit } from "@/lib/rate-limit";
 import { verifyPassword, createUserSession, userSessionCookieOptions } from "@/lib/user-auth";
 
-const loginLimiter = createRateLimit(10, "60 s");
+const loginLimiter = createRateLimit("auth-login", 10, "60 s");
 
 // Well-formed "salt:hash" value used to equalize response timing when the
 // account doesn't exist (prevents user-enumeration via timing side-channel).

@@ -9,7 +9,7 @@ import { hashPassword } from "@/lib/user-auth";
 import { sendVerificationEmail, maskEmail } from "@/lib/email";
 import { uniqueHandle } from "@/lib/kit";
 
-const registerLimiter = createRateLimit(5, "60 s");
+const registerLimiter = createRateLimit("auth-register", 5, "60 s");
 
 export async function POST(request: NextRequest) {
   try {

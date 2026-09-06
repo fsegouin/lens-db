@@ -6,7 +6,7 @@ import { createRateLimit } from "@/lib/rate-limit";
 import { eq, and, or } from "drizzle-orm";
 
 const validTypes = new Set(["lens", "camera"]);
-const flagLimiter = createRateLimit(10, "3600 s"); // 10 flags per hour
+const flagLimiter = createRateLimit("duplicates", 10, "3600 s"); // 10 flags per hour
 
 export async function POST(request: NextRequest) {
   const token = request.cookies.get("user_session")?.value;
