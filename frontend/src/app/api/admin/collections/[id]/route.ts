@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { db } from "@/db";
-import { collections, lensCollections, lenses } from "@/db/schema";
+import { collectionRedirects, collections, lensCollections, lenses } from "@/db/schema";
 import { requireAdminAPI, getAdminUserFromToken } from "@/lib/admin-auth";
 import { createRevision } from "@/lib/revisions";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 
 export async function GET(
   request: NextRequest,
@@ -82,19 +82,23 @@ export async function PUT(
   }
 
   if (lensIds !== undefined) {
-    // Delete all existing memberships and insert new ones
-    await db
-      .delete(lensCollections)
-      .where(eq(lensCollections.collectionId, numericId));
+    // Replace the membership list wholesale, but inside one transaction: this
+    // deletes every row before reinserting, so an insert that fails partway
+    // through used to leave the collection empty.
+    await db.transaction(async (tx) => {
+      await tx
+        .delete(lensCollections)
+        .where(eq(lensCollections.collectionId, numericId));
 
-    if (lensIds.length > 0) {
-      await db.insert(lensCollections).values(
-        lensIds.map((lensId: number) => ({
-          lensId,
-          collectionId: numericId,
-        }))
-      );
-    }
+      if (lensIds.length > 0) {
+        await tx.insert(lensCollections).values(
+          lensIds.map((lensId: number) => ({
+            lensId,
+            collectionId: numericId,
+          }))
+        );
+      }
+    });
   }
 
   await createRevision({
@@ -105,6 +109,11 @@ export async function PUT(
     autoPatrol: true,
   });
 
+  // The collection badge on every member lens page comes from
+  // getLensRelations, cached for 30 days under the "lenses" tag, and the index
+  // is cached for 7. Revalidating only this one path left both stale.
+  revalidateTag("lenses", "max");
+  revalidatePath("/collections");
   revalidatePath(`/collections/${updated.slug}`);
 
   return NextResponse.json(updated);
@@ -119,12 +128,56 @@ export async function DELETE(
   if (authError) return authError;
 
   const { id } = await params;
+  const numericId = parseInt(id, 10);
+
+  // Deleting a collection that still holds lenses is how you get a 404 on a
+  // sitemapped URL that every one of its member lens pages links to. If it has
+  // members, the caller has to say where its traffic should go: /merge moves
+  // them and leaves a redirect, or ?confirm=true accepts the loss deliberately.
+  //
+  // Counted over live lens rows, the same way the admin list and the public
+  // pages count. Counting membership rows instead would block deleting a
+  // collection whose members have all been merged away, which reads as empty
+  // everywhere and is exactly the sort of row worth deleting.
+  const [{ lensCount }] = await db
+    .select({ lensCount: sql<number>`count(${lenses.id})::int` })
+    .from(lensCollections)
+    .innerJoin(lenses, and(eq(lensCollections.lensId, lenses.id), isNull(lenses.mergedIntoId)))
+    .where(eq(lensCollections.collectionId, numericId));
+
+  // Redirects pointing here cascade away with the row, so deleting a
+  // collection that earlier merges pointed at silently destroys their
+  // redirects. That is worth naming before it happens.
+  const [{ redirectCount }] = await db
+    .select({ redirectCount: sql<number>`count(*)::int` })
+    .from(collectionRedirects)
+    .where(eq(collectionRedirects.collectionId, numericId));
+
+  const confirmed = new URL(request.url).searchParams.get("confirm") === "true";
+  if ((lensCount > 0 || redirectCount > 0) && !confirmed) {
+    const parts: string[] = [];
+    if (lensCount > 0) parts.push(`${lensCount} ${lensCount === 1 ? "lens" : "lenses"}`);
+    if (redirectCount > 0) {
+      parts.push(`${redirectCount} inbound ${redirectCount === 1 ? "redirect" : "redirects"} that would be destroyed`);
+    }
+    return NextResponse.json(
+      {
+        error: `This collection still has ${parts.join(" and ")}. Merge it into another collection, or pass confirm=true to delete it outright.`,
+        lensCount,
+        redirectCount,
+      },
+      { status: 409 }
+    );
+  }
+
   const [deleted] = await db
     .delete(collections)
-    .where(eq(collections.id, parseInt(id, 10)))
+    .where(eq(collections.id, numericId))
     .returning({ slug: collections.slug });
 
   if (deleted) {
+    revalidateTag("lenses", "max");
+    revalidatePath("/collections");
     revalidatePath(`/collections/${deleted.slug}`);
   }
 

@@ -1,12 +1,12 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import Breadcrumb from "@/components/Breadcrumb";
 import JsonLd from "@/components/JsonLd";
 import { entityMetadata, metaDescription } from "@/lib/seo";
 import { hubJsonLd } from "@/lib/jsonld";
 import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { collections, lensCollections, lenses, systems } from "@/db/schema";
+import { collectionRedirects, collections, lensCollections, lenses, systems } from "@/db/schema";
 import { Badge } from "@/components/ui/badge";
 import { cleanCollectionDescription } from "@/lib/collection-description";
 import {
@@ -64,7 +64,19 @@ export default async function CollectionDetailPage({
     .where(eq(collections.slug, slug))
     .limit(1);
 
-  if (!result) notFound();
+  if (!result) {
+    // Merged-away collection: follow the slug redirect so old links, the
+    // sitemap's last crawl and any lens page still cached with the old badge
+    // land somewhere. Mirrors /systems/[slug].
+    const [target] = await db
+      .select({ slug: collections.slug })
+      .from(collectionRedirects)
+      .innerJoin(collections, eq(collectionRedirects.collectionId, collections.id))
+      .where(eq(collectionRedirects.oldSlug, slug))
+      .limit(1);
+    if (target) permanentRedirect(`/collections/${target.slug}`);
+    notFound();
+  }
 
   const { collection } = result;
   const description = cleanCollectionDescription(collection.description);

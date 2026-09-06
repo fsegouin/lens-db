@@ -70,6 +70,42 @@ export default function CollectionForm({ collection }: { collection?: Collection
       const res = await fetch(`/api/admin/collections/${collection.id}`, {
         method: "DELETE",
       });
+
+      // The API refuses to delete a collection that still holds lenses, since
+      // that leaves a 404 on a URL its member lens pages link to. Say how many
+      // and make the second confirmation spell out what is lost.
+      if (res.status === 409) {
+        const body = await res.json().catch(() => ({}));
+        const lensCount = typeof body.lensCount === "number" ? body.lensCount : 0;
+        const redirectCount = typeof body.redirectCount === "number" ? body.redirectCount : 0;
+
+        const losses: string[] = [];
+        if (lensCount > 0) {
+          losses.push(`${lensCount} ${lensCount === 1 ? "lens" : "lenses"} would lose their membership`);
+        }
+        if (redirectCount > 0) {
+          losses.push(
+            `${redirectCount} ${redirectCount === 1 ? "redirect" : "redirects"} pointing here would be destroyed, so ${redirectCount === 1 ? "that older URL" : "those older URLs"} would 404`
+          );
+        }
+
+        const proceed = window.confirm(
+          `${losses.join(".\n")}.\n\n` +
+            "Merging this collection into another would move the lenses and leave a redirect behind. " +
+            "Deleting it now does not, and this URL will 404.\n\n" +
+            "Delete anyway?"
+        );
+        if (!proceed) return;
+
+        const forced = await fetch(
+          `/api/admin/collections/${collection.id}?confirm=true`,
+          { method: "DELETE" }
+        );
+        if (!forced.ok) throw new Error("Failed to delete");
+        router.push("/admin/collections");
+        return;
+      }
+
       if (!res.ok) throw new Error("Failed to delete");
       router.push("/admin/collections");
     } catch {

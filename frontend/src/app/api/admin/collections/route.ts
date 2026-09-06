@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { collections, lensCollections, lenses } from "@/db/schema";
 import { requireAdminAPI } from "@/lib/admin-auth";
@@ -85,6 +86,10 @@ export async function POST(request: NextRequest) {
       description: body.description || null,
     })
     .returning();
+
+  // The index caches for 7 days, so a new collection was invisible until it
+  // expired.
+  revalidatePath("/collections");
 
   return NextResponse.json(created, { status: 201 });
 }

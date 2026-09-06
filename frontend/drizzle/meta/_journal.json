@@ -379,6 +379,13 @@
       "when": 1788647587175,
       "tag": "0053_collection_membership_integrity",
       "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1788647588175,
+      "tag": "0054_collection_redirects",
+      "breakpoints": true
     }
   ]
 }
