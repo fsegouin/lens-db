@@ -407,6 +407,20 @@
       "when": 1788647591175,
       "tag": "0057_collection_name_unique",
       "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "7",
+      "when": 1788647592175,
+      "tag": "0058_lens_data_repairs",
+      "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1788647593175,
+      "tag": "0059_collection_membership_corrections",
+      "breakpoints": true
     }
   ]
 }
