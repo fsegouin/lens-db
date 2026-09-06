@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { revalidatePath, revalidateTag } from "next/cache";
+import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { pathPrefixes } from "@/lib/pending-edits";
+import { revalidateEntity, touchesLists } from "@/lib/revalidate-entity";
 import { lenses, cameras, systems, collections, lensSeries, pendingEdits } from "@/db/schema";
 import { requireUserAPI } from "@/lib/user-auth";
 import { createRevision, type EntityType } from "@/lib/revisions";
@@ -198,8 +199,11 @@ export async function POST(request: NextRequest) {
   // from them for days, which reads as the edit having been lost.
   const slug = typeof currentData.slug === "string" ? currentData.slug : null;
   if (slug) {
-    revalidatePath(`${pathPrefixes[type]}/${slug}`);
-    if (type === "lens") revalidateTag("lenses", "max");
+    if (type === "lens" || type === "camera") {
+      revalidateEntity(type, slug, touchesLists(type, Object.keys(updates)) ? "lists" : "row");
+    } else {
+      revalidatePath(`${pathPrefixes[type]}/${slug}`);
+    }
   }
 
   return NextResponse.json({

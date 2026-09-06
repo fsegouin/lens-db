@@ -28,7 +28,7 @@ async function appendImage(id: number, image: ImageData): Promise<ImageData[]> {
   const current = (Array.isArray(cam.images) ? cam.images : []) as ImageData[];
   const updated = [...current, image];
   await db.update(cameras).set({ images: updated }).where(eq(cameras.id, id));
-  revalidateEntity("camera", cam.slug);
+  revalidateEntity("camera", cam.slug, "row");
   return updated;
 }
 
@@ -127,7 +127,7 @@ export async function PUT(
   const bySrc = new Map(current.map((i) => [i.src, i]));
   const reordered = body.srcs.map((s: string) => bySrc.get(s)!);
   await db.update(cameras).set({ images: reordered }).where(eq(cameras.id, id));
-  revalidateEntity("camera", cam.slug);
+  revalidateEntity("camera", cam.slug, "row");
   return NextResponse.json({ images: reordered });
 }
 
@@ -159,7 +159,7 @@ export async function PATCH(
   }
   const updated = current.map((i) => (i.src === body.src ? applyProvenance(i, read.value) : i));
   await db.update(cameras).set({ images: updated }).where(eq(cameras.id, id));
-  revalidateEntity("camera", cam.slug);
+  revalidateEntity("camera", cam.slug, "row");
   return NextResponse.json({ images: updated });
 }
 
@@ -185,6 +185,6 @@ export async function DELETE(
   const current = (Array.isArray(cam.images) ? cam.images : []) as ImageData[];
   const updated = current.filter((i) => i.src !== body.src);
   await db.update(cameras).set({ images: updated }).where(eq(cameras.id, id));
-  revalidateEntity("camera", cam.slug);
+  revalidateEntity("camera", cam.slug, "row");
   return NextResponse.json({ images: updated });
 }

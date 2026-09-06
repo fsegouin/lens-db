@@ -4,9 +4,10 @@ import Breadcrumb from "@/components/Breadcrumb";
 import JsonLd from "@/components/JsonLd";
 import { entityMetadata, metaDescription } from "@/lib/seo";
 import { hubJsonLd } from "@/lib/jsonld";
-import { and, asc, eq, isNull, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import { cameras, lenses, lensSystems, systemRedirects, systems } from "@/db/schema";
+import { systemRedirects, systems } from "@/db/schema";
+import { getSystemCameras, getSystemLenses } from "@/lib/hub-lists";
 import ViewTracker from "@/components/ViewTracker";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -79,22 +80,8 @@ export default async function SystemDetailPage({
   const { system } = result;
 
   const [systemLenses, systemCameras] = await Promise.all([
-    // Every lens sold in this mount (lens_systems), not only those whose
-    // primary mount it is.
-    db
-      .select({ lens: lenses })
-      .from(lensSystems)
-      .innerJoin(lenses, eq(lensSystems.lensId, lenses.id))
-      .where(and(eq(lensSystems.systemId, system.id), isNull(lenses.mergedIntoId)))
-      .orderBy(asc(sql`regexp_replace(${lenses.name}, '\\d+(\\.\\d+)?mm.*$', '')`), asc(lenses.focalLengthMin), asc(lenses.apertureMin))
-      .limit(500)
-      .then((rows) => rows.map((r) => r.lens)),
-    db
-      .select()
-      .from(cameras)
-      .where(and(eq(cameras.systemId, system.id), isNull(cameras.mergedIntoId)))
-      .orderBy(asc(cameras.name))
-      .limit(500),
+    getSystemLenses(system.id),
+    getSystemCameras(system.id),
   ]);
 
   const crumbs = [

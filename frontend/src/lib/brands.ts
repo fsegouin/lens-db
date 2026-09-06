@@ -1,4 +1,5 @@
 import { unstable_cache } from "next/cache";
+import { cache } from "react";
 import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { lenses, lensSystems, systems } from "@/db/schema";
@@ -20,7 +21,10 @@ export function brandSlug(name: string): string {
     .replace(/^-|-$/g, "");
 }
 
-export const getBrands = unstable_cache(
+// Both fetchers are wrapped in React cache() at the bottom of the file:
+// generateMetadata and the page each ask for the brand, and on a data-cache
+// miss that used to run every query twice per render.
+const _getBrands = unstable_cache(
   async (): Promise<BrandSummary[]> => {
     const rows = await db
       .select({
@@ -64,9 +68,9 @@ export type BrandPage = {
   }[];
 };
 
-export const getBrandBySlug = unstable_cache(
+const _getBrandBySlug = unstable_cache(
   async (slug: string): Promise<BrandPage | null> => {
-    const brands = await getBrands();
+    const brands = await _getBrands();
     const brand = brands.find((b) => b.slug === slug);
     if (!brand) return null;
 
@@ -106,3 +110,6 @@ export const getBrandBySlug = unstable_cache(
   ["brand-by-slug"],
   { revalidate: 604800, tags: ["lenses"] },
 );
+
+export const getBrands = cache(_getBrands);
+export const getBrandBySlug = cache(_getBrandBySlug);

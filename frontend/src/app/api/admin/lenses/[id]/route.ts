@@ -5,6 +5,7 @@ import { lenses, systems } from "@/db/schema";
 import { requireAdminAPI, getAdminUserFromToken } from "@/lib/admin-auth";
 import { createRevision } from "@/lib/revisions";
 import { syncLensSystems } from "@/lib/lens-systems";
+import { revalidateEntity, touchesLists } from "@/lib/revalidate-entity";
 import { eq } from "drizzle-orm";
 
 export async function GET(
@@ -102,6 +103,18 @@ export async function PUT(
     if (updates[field] === "") updates[field] = null;
   }
 
+  // The form sends every field, so work out which ones actually changed
+  // before deciding how much cache the edit has to clear.
+  const [previous] = await db
+    .select()
+    .from(lenses)
+    .where(eq(lenses.id, parseInt(id, 10)))
+    .limit(1);
+  if (!previous) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+  const before = previous as Record<string, unknown>;
+
   const [updated] = await db
     .update(lenses)
     .set(updates)
@@ -112,8 +125,9 @@ export async function PUT(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
+  let mountsChanged = false;
   if (Array.isArray(body.systemIds)) {
-    await syncLensSystems(updated.id, updated.systemId, body.systemIds);
+    mountsChanged = await syncLensSystems(updated.id, updated.systemId, body.systemIds);
   }
 
   await createRevision({
@@ -124,8 +138,15 @@ export async function PUT(
     autoPatrol: true,
   });
 
-  revalidatePath(`/lenses/${updated.slug}`);
-  revalidateTag("lenses", "max");
+  const changed = Object.keys(updates).filter(
+    (k) => String(updates[k] ?? "") !== String(before[k] ?? ""),
+  );
+  revalidateEntity(
+    "lens",
+    updated.slug,
+    mountsChanged || touchesLists("lens", changed) ? "lists" : "row",
+  );
+  if (updated.slug !== previous.slug) revalidatePath(`/lenses/${previous.slug}`);
 
   return NextResponse.json(updated);
 }

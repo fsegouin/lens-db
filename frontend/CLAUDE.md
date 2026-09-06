@@ -186,7 +186,8 @@ All API routes return JSON. Error responses: 400 (validation), 401 (auth), 409 (
 ### Caching & Rendering
 - All pages are **async Server Components** (no client-side data fetching for initial render)
 - Detail pages and static lists use **ISR** with `revalidate = 604800` (7 days)
-- Entity rows are read through `unstable_cache` (30 days, tags `lenses` / `cameras` / `kit`), and that cache survives deployments. A row edited by SQL or a script stays invisible until its tag is revalidated: `POST /api/cron/revalidate` with `{"tags":["lenses"],"paths":["/lenses/<slug>"]}` and the cron bearer
+- Entity rows are read through `unstable_cache` (30 days, tags `lenses` / `cameras` / `kit` plus a per-row `lens:<slug>` / `camera:<slug>`), and that cache survives deployments. A row edited by SQL or a script stays invisible until its tag is revalidated: `POST /api/cron/revalidate` with `{"paths":["/lenses/<slug>"]}` and the cron bearer refreshes that row and page. Send `"tags":["lenses"]` only when rows were created, merged or removed, or a name, brand, year or mount changed: the broad tag hangs off every list, hub, brand page and relation, so clearing it makes the next crawl re-render the whole catalogue from Postgres (that was most of a month's Supabase egress in one week). In app code use `revalidateEntity(type, slug, scope)` with `touchesLists()` to pick the scope
+- Hub page tables (`/systems`, `/collections`, `/lenses/series`) read through `src/lib/hub-lists.ts`, which selects only the displayed columns. Never select whole `lenses` rows for a list: the description and specs JSON make each one about 2 KB
 - Filter-heavy pages (`/lenses`, `/cameras`, `/search`) are **dynamic** (per-request)
 - `unstable_cache` used for dropdown data on `/lenses` (brands + systems, 7-day TTL)
 
