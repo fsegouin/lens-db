@@ -1,6 +1,11 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { buildVocabulary, segmentRun, splitGluedRuns } from "../../scripts/lib/segment-glued.ts";
+import {
+  buildVocabulary,
+  isLikelyGerman,
+  segmentRun,
+  splitGluedRuns,
+} from "../../scripts/lib/segment-glued.ts";
 
 /**
  * The dictionary is normally counted from the whole corpus. Here it is counted
@@ -73,6 +78,26 @@ describe("segmentRun", () => {
 
   it("returns null when the run cannot be spelled from the dictionary", () => {
     assert.equal(segmentRun("zzzqqqwwwvvv", vocab), null);
+  });
+});
+
+describe("isLikelyGerman", () => {
+  it("recognises a German description", () => {
+    assert.ok(
+      isLikelyGerman(
+        "Das Objektiv ist für Kleinbildreflexkameras und wird mit einer Blende von 2,8 geliefert."
+      )
+    );
+  });
+
+  it("does not trip on English quoting a German name", () => {
+    assert.equal(
+      isLikelyGerman(
+        "Built by Carl Zeiss Jena and sold as the Biotar, this lens covers the full 35mm frame " +
+          "and remains a favourite for its rendering of out-of-focus highlights."
+      ),
+      false
+    );
   });
 });
 

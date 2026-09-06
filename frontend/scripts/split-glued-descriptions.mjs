@@ -19,7 +19,7 @@
  */
 import { appendFileSync, writeFileSync } from "node:fs";
 import { createSql } from "./lib/db.mjs";
-import { buildVocabulary, splitGluedRuns } from "./lib/segment-glued.ts";
+import { buildVocabulary, isLikelyGerman, splitGluedRuns } from "./lib/segment-glued.ts";
 
 const args = process.argv.slice(2);
 const apply = args.includes("--apply");
@@ -57,10 +57,16 @@ try {
 
   const lines = [];
   const totals = { changed: 0, splits: 0, written: 0 };
+  let skippedGerman = 0;
 
   for (const { table, entity } of TABLES) {
     let changedHere = 0;
     for (const row of byTable.get(table)) {
+      // German compounds are correctly written as one word; see segment-glued.ts.
+      if (isLikelyGerman(row.description)) {
+        skippedGerman += 1;
+        continue;
+      }
       const { text, splits } = splitGluedRuns(row.description, vocab);
       if (text === row.description) continue;
       changedHere += 1;
@@ -106,6 +112,7 @@ try {
     console.log("Lines marked * contain a one or two letter piece and are the least certain.");
   }
 
+  console.log(`\nSkipped ${skippedGerman} German-language rows, whose compounds are not damage.`);
   console.log(
     `\n${totals.changed} rows, ${totals.splits} runs. ` +
       (apply ? `Wrote ${totals.written}, previous text in ${backupPath}.` : "Nothing written; pass --apply to write.")

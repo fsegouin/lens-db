@@ -60,6 +60,24 @@ const MAX_WORD_LENGTH = 13;
  */
 const COMPOUND_RATIO = 0.5;
 
+/**
+ * German writes compounds as one word, so a German description is full of runs
+ * that only look like damage: "Kleinbildreflexkameras" is spelled correctly and
+ * splitting it into "Kleinbild reflex kameras" makes it wrong. The dictionary
+ * is counted from a corpus that is mostly English, so it happily finds English
+ * pieces inside German words. Skip those rows rather than guess at them.
+ */
+const GERMAN_MARKERS =
+  /\b(der|die|das|und|mit|für|ist|eine|einer|einem|nicht|auch|wird|sich|von|dem|den|zur|zum)\b/gi;
+
+export function isLikelyGerman(text: string): boolean {
+  const hits = text.match(GERMAN_MARKERS)?.length ?? 0;
+  const words = text.split(/\s+/).length;
+  // English descriptions quoting a German name trip one or two of these; a
+  // German paragraph trips them steadily.
+  return words > 0 && hits / words > 0.04;
+}
+
 export type Vocabulary = Map<string, number>;
 
 /** Count every properly spaced word in the corpus, lowercased. */
