@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { motion } from "motion/react";
 import { toast } from "sonner";
+import { hasPublishableAverage } from "@/lib/ratings";
 
 type RatingWidgetProps = (
   | { lensId: number; cameraId?: never }
@@ -132,12 +133,20 @@ export default function RatingWidget(props: RatingWidgetProps) {
         })}
       </div>
       <p className="text-sm text-muted-foreground">
-        {avg != null ? (
+        {/*
+          One or two anonymous votes are a tally, not a score. Until enough
+          people have rated, show how many there are and leave the verdict off.
+        */}
+        {hasPublishableAverage(avg, count) ? (
           <>
             <span className="font-medium text-zinc-700 dark:text-zinc-300">
-              {avg.toFixed(1)}/10
+              {avg!.toFixed(1)}/10
             </span>{" "}
             ({count} {count === 1 ? "rating" : "ratings"})
+          </>
+        ) : count > 0 ? (
+          <>
+            {count} {count === 1 ? "rating" : "ratings"} so far
           </>
         ) : (
           "No ratings yet"

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Star } from "lucide-react";
+import { hasPublishableAverage } from "@/lib/ratings";
 
 type Props = {
   /** From getPriceDisplay, the single source of truth for price copy. */
@@ -44,7 +45,11 @@ export default function EntitySummaryLine({
   }
 
   // The line still earns its place when it carries only the kit control.
-  if (!price && !averageRating && !trailing) return null;
+  // Below the floor there is no average to show, so the line has one less
+  // reason to exist.
+  const showAverage = hasPublishableAverage(averageRating, ratingCount);
+
+  if (!price && !showAverage && !trailing) return null;
 
   return (
     /*
@@ -63,11 +68,11 @@ export default function EntitySummaryLine({
             </span>
           </span>
         )}
-        {averageRating != null && (ratingCount ?? 0) > 0 && (
+        {showAverage && (
           <span className="flex items-center gap-1.5">
             <Star className="h-3.5 w-3.5 fill-amber-500 text-amber-500" aria-hidden="true" />
             <span className="font-semibold text-zinc-900 tabular-nums dark:text-zinc-100">
-              {averageRating.toFixed(1)}
+              {averageRating!.toFixed(1)}
             </span>
             <span className="text-muted-foreground">
               /10 from {ratingCount!.toLocaleString()}{" "}
