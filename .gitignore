@@ -43,3 +43,5 @@ scraper/kenrockwell-camera-drafts.md
 scraper/kenrockwell-camera-drafts.log
 scraper/lens-duplicate-tier*.jsonl
 scraper/lens-duplicate-refine.log
+scraper/kenrockwell-older-*
+scraper/kenrockwell-camera-drafts-*

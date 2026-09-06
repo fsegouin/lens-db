@@ -87,7 +87,7 @@ function numbersDisagree(text, known) {
   if (known.weightG && grams.length && !grams.some((g) => near(g, known.weightG, 0.06))) out.push(`weight ${grams.join("/")} g vs ${known.weightG} g`);
   const filters = [...text.matchAll(/(\d{2,3})\s*mm\s*(?:filter|thread)/gi)].map((m) => parseFloat(m[1]));
   if (known.filterMm && filters.length && !filters.includes(known.filterMm)) out.push(`filter ${filters.join("/")} mm vs ${known.filterMm} mm`);
-  const mp = [...text.matchAll(/(\d+(?:\.\d+)?)\s*(?:MP\b|megapixels?)/gi)].map((m) => parseFloat(m[1]));
+  const mp = [...text.matchAll(/(\d+(?:\.\d+)?)[\s-]*(?:MP\b|megapixels?)/gi)].map((m) => parseFloat(m[1]));
   if (known.megapixels && mp.length && !mp.some((v) => near(v, known.megapixels, 0.06))) out.push(`megapixels ${mp.join("/")} vs ${known.megapixels}`);
   const focus = [...text.matchAll(/(\d+(?:\.\d+)?)\s*(?:m|metres?)\b(?![\w])/gi)].map((m) => parseFloat(m[1])).filter((v) => v < 30);
   if (known.minFocusM && focus.length && !focus.some((f) => near(f, known.minFocusM, 0.06))) out.push(`close focus ${focus.join("/")} m vs ${known.minFocusM} m`);
