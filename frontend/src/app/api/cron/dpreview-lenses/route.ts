@@ -5,6 +5,7 @@ import { dpreviewLensCandidates, lenses, pendingEdits, systems } from "@/db/sche
 import { and, eq, isNotNull } from "drizzle-orm";
 import {
   findDuplicate,
+  isAllowedDpreviewImageUrl,
   type DpreviewCandidate,
   type ExistingLens,
 } from "@/lib/dpreview-import";
@@ -21,23 +22,6 @@ const MAX_IMAGES = 4;
 
 function isAuthorized(request: NextRequest): boolean {
   return isCronAuthorized(request.headers.get("authorization"));
-}
-
-function isAllowedImageUrl(raw: string): boolean {
-  let url: URL;
-  try {
-    url = new URL(raw);
-  } catch {
-    return false;
-  }
-  if (url.protocol !== "https:") return false;
-  const host = url.hostname.toLowerCase();
-  return (
-    host === "dpreview.com" ||
-    host.endsWith(".dpreview.com") ||
-    host === "img-dpreview.com" ||
-    host.endsWith(".img-dpreview.com")
-  );
 }
 
 /**
@@ -141,7 +125,7 @@ function validateCandidate(body: unknown): DpreviewCandidate | null {
   if (b.imageUrls !== undefined) {
     if (!Array.isArray(b.imageUrls)) return null;
     for (const url of b.imageUrls.slice(0, MAX_IMAGES)) {
-      if (typeof url !== "string" || !isAllowedImageUrl(url)) return null;
+      if (typeof url !== "string" || !isAllowedDpreviewImageUrl(url)) return null;
       imageUrls.push(url);
     }
   }

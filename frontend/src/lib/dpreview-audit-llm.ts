@@ -68,3 +68,45 @@ Rules:
 
   return output;
 }
+
+/**
+ * The camera-body counterpart of auditLensSpecs.
+ *
+ * The rules differ in one way that matters: two camera columns are stored in
+ * a deliberately normalized form rather than as the table words them, so the
+ * prompt has to say so explicitly or every single body is flagged.
+ */
+export async function auditCameraSpecs(
+  name: string,
+  rawSpecs: Record<string, unknown>,
+  columns: Record<string, unknown>,
+): Promise<SpecAudit> {
+  const prompt = `A camera database extracted structured columns from a raw specification table. Verify the extraction.
+
+Camera name: ${name}
+
+Raw specification table (source of truth, scraped as-is):
+${JSON.stringify(rawSpecs, null, 1)}
+
+Extracted columns:
+${JSON.stringify(columns, null, 1)}
+
+Rules:
+- Flag "wrong" ONLY for clear numeric/factual contradictions (e.g. the table says 700 g but weightG is 250; the table says 24 megapixels but megapixels is 45).
+- Flag "missing" ONLY when the table unambiguously contains a datum whose column is null.
+- sensorSize is INTENTIONALLY a format name ("Full frame", "APS-C", "Four Thirds", "Medium format 44x33", "1″"), converted from the physical dimensions the table gives. "35.9 × 23.9 mm" stored as "Full frame" is CORRECT, not a contradiction; "23.2 × 15.4 mm" stored as "APS-C" is CORRECT. Flag it only when the format is genuinely the wrong class for the dimensions — say a 17.3 × 13 mm sensor stored as "Full frame".
+- resolution is INTENTIONALLY reformatted: the table's "6048 × 4032 px" is stored as "6048 x 4032 - 24 MP". The ASCII "x" and the appended megapixel count are the house style, never an issue.
+- Notation differences are NEVER issues: "700 g (1.54 lb)" vs 700 is the same weight; "24 megapixels" vs 24 is the same figure.
+- A column HOLDING a value the table does not mention is NEVER an issue — yearIntroduced in particular is legitimately filled from the product index rather than this table. Do not flag it unless the table directly CONTRADICTS the value.
+- Columns not derivable from the table (viewCount, slug, ids, description, systemId) are out of scope. Fixed-lens compacts genuinely have no lens mount, so a null system is expected there.
+- Be conservative: when in doubt, it is not an issue. An empty issues list with ok=true is the expected result for most cameras.`;
+
+  const { output } = await generateText({
+    model: "google/gemini-3.1-flash-lite",
+    output: Output.object({ schema: SpecAuditSchema }),
+    prompt,
+    timeout: 60_000,
+  });
+
+  return output;
+}

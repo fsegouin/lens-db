@@ -23,12 +23,14 @@ jobs:
         run: cd scraper && npm ci
       - name: Run DPReview lens watcher
         env:
+          ENTITY: lenses
           API_URL: ${{ secrets.API_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
           PAGES: ${{ inputs.pages || '1' }}
-        run: node scraper/dpreview-lens-watch-action.mjs
+        run: node scraper/dpreview-watch-action.mjs
       - name: Audit extracted specs (recent candidates only)
         env:
+          ENTITY: lenses
           API_URL: ${{ secrets.API_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
           CREATE_EDITS: "1"

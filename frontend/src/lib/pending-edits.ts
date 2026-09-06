@@ -79,11 +79,11 @@ export async function applyPendingEditApproval(
   // Also allow "slug" for new entity creation only — never on updates
   if (isNewEntity && rawChanges.slug) changes.slug = rawChanges.slug;
 
-  // New lens creations may also carry scraped specs and R2-hosted images.
-  // Only the submissions API (whose field whitelist excludes these) and the
-  // CRON_SECRET-protected DPReview watcher write entityId=0 edits; the shape
-  // and R2-host checks below are defense in depth.
-  if (isNewEntity && entityType === "lens") {
+  // New lens and camera creations may also carry scraped specs and R2-hosted
+  // images. Only the submissions API (whose field whitelist excludes these)
+  // and the CRON_SECRET-protected DPReview watcher write entityId=0 edits;
+  // the shape and R2-host checks below are defense in depth.
+  if (isNewEntity && (entityType === "lens" || entityType === "camera")) {
     const specs = rawChanges.specs;
     if (
       specs &&

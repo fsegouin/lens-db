@@ -1,17 +1,43 @@
 /**
- * Post-hoc extraction audit runner: walks every lens the DPReview watcher
- * created or enriched, plus its pending new-lens edits, and has an LLM verify
- * the extracted columns against the raw spec table stored alongside each.
- * Read-only — prints a report and saves it as JSON, never writes data.
+ * Post-hoc extraction audit runner: walks every entity the DPReview watcher
+ * created or enriched, plus its pending new-entity edits, and has an LLM
+ * verify the extracted columns against the raw spec table stored alongside
+ * each. Read-only — prints a report and saves it as JSON, never writes data.
  *
  * Usage: API_URL=http://localhost:3000 CRON_SECRET=... node scraper/dpreview-audit-cli.mjs
  *        (optional: LIMIT=25 to audit only the first N per target, for a quick sample;
  *         CREATE_EDITS=1 to file findings into the pending-edits review queue —
- *         corrections as new pending edits for inserted lenses, warnings
- *         annotated onto existing pending edits)
+ *         corrections as new pending edits for inserted entities, warnings
+ *         annotated onto existing pending edits;
+ *         ENTITY=cameras to audit camera bodies, "lenses" (default), or "all")
  */
 
 import fs from "node:fs";
+
+// Each entity contributes two targets: the records the watcher has already
+// written, and the new-entity edits still awaiting approval.
+const ENTITY_TARGETS = {
+  lenses: [
+    { target: "lenses", heading: "Lenses (created/enriched)", resumable: true },
+    { target: "pending", heading: "Pending new-lens edits", resumable: false },
+  ],
+  cameras: [
+    { target: "cameras", heading: "Cameras (created/enriched)", resumable: true },
+    { target: "pending-cameras", heading: "Pending new-camera edits", resumable: false },
+  ],
+};
+
+const ENTITY_KEY = process.env.ENTITY || "lenses";
+const TARGETS =
+  ENTITY_KEY === "all"
+    ? [...ENTITY_TARGETS.lenses, ...ENTITY_TARGETS.cameras]
+    : ENTITY_TARGETS[ENTITY_KEY];
+if (!TARGETS) {
+  console.error(
+    `Unknown ENTITY "${ENTITY_KEY}" — expected one of: ${Object.keys(ENTITY_TARGETS).join(", ")}, all`,
+  );
+  process.exit(1);
+}
 
 const API_URL = process.env.API_URL || "https://thelensdb.com";
 const CRON_SECRET = process.env.CRON_SECRET;
@@ -50,10 +76,10 @@ async function api(method, bodyOrNull) {
   }
 }
 
-async function auditTarget(target) {
+async function auditTarget(target, resumable) {
   const results = [];
-  // AFTER_ID resumes the lenses target past already-audited ids
-  let afterId = target === "lenses" && process.env.AFTER_ID ? parseInt(process.env.AFTER_ID, 10) : 0;
+  // AFTER_ID resumes an entity target past already-audited ids
+  let afterId = resumable && process.env.AFTER_ID ? parseInt(process.env.AFTER_ID, 10) : 0;
   while (results.length < LIMIT) {
     const { items, lastId } = await api("POST", {
       target,
@@ -84,19 +110,22 @@ async function main() {
   }
 
   const counts = await api("GET");
-  console.log(`Auditing ${counts.lenses} watcher-touched lenses and ${counts.pendingEdits} pending edits\n`);
+  console.log(
+    `Watcher-touched: ${counts.lenses} lenses, ${counts.cameras ?? 0} cameras. ` +
+    `Pending edits: ${counts.pendingEdits} lens, ${counts.pendingCameras ?? 0} camera.\n`,
+  );
 
-  console.log("── Lenses (created/enriched) ──");
-  const lensResults = await auditTarget("lenses");
-  console.log("\n── Pending new-lens edits ──");
-  const pendingResults = await auditTarget("pending");
+  const report = { generatedAt: new Date().toISOString() };
+  const all = [];
+  for (const { target, heading, resumable } of TARGETS) {
+    console.log(`── ${heading} ──`);
+    const results = await auditTarget(target, resumable);
+    report[target] = results;
+    all.push(...results);
+    console.log("");
+  }
 
-  const report = {
-    generatedAt: new Date().toISOString(),
-    lenses: lensResults,
-    pendingEdits: pendingResults,
-  };
-  const flagged = [...lensResults, ...pendingResults].filter((r) => !r.ok && r.issues.length > 0);
+  const flagged = all.filter((r) => !r.ok && r.issues.length > 0);
   const flaggedIssues = flagged.flatMap((r) => r.issues);
   const wrong = flaggedIssues.filter((i) => i.problem === "wrong").length;
   const missing = flaggedIssues.filter((i) => i.problem === "missing").length;
@@ -105,7 +134,7 @@ async function main() {
   fs.writeFileSync(outPath, JSON.stringify(report, null, 1));
 
   console.log(
-    `\nDone: ${lensResults.length + pendingResults.length} audited, ` +
+    `Done: ${all.length} audited, ` +
     `${flagged.length} flagged (${wrong} wrong, ${missing} missing).\nFull report: ${outPath}`,
   );
 }

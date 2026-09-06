@@ -1,16 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isCronAuthorized } from "@/lib/api-utils";
 import { db } from "@/db";
-import { dpreviewLensCandidates, lenses, pendingEdits, users } from "@/db/schema";
+import {
+  cameras,
+  dpreviewCameraCandidates,
+  dpreviewLensCandidates,
+  lenses,
+  pendingEdits,
+  users,
+} from "@/db/schema";
 import { and, asc, eq, gt, inArray, isNotNull, sql } from "drizzle-orm";
-import { auditLensSpecs, type SpecAudit } from "@/lib/dpreview-audit-llm";
+import { auditCameraSpecs, auditLensSpecs, type SpecAudit } from "@/lib/dpreview-audit-llm";
 import { DPREVIEW_BOT_EMAIL } from "@/lib/dpreview-import";
 import { getBotUserId } from "@/lib/dpreview-pipeline";
 
 export const maxDuration = 300;
 
+type EntityKind = "lens" | "camera";
+
 // Columns the extraction pipeline derives from the raw spec table / name
-const AUDITED_COLUMNS = [
+const LENS_AUDITED_COLUMNS = [
   "lensType",
   "focalLengthMin",
   "focalLengthMax",
@@ -32,34 +41,77 @@ const AUDITED_COLUMNS = [
   "coverage",
 ] as const;
 
+const CAMERA_AUDITED_COLUMNS = [
+  "sensorType",
+  "sensorSize",
+  "megapixels",
+  "resolution",
+  "bodyType",
+  "weightG",
+  "yearIntroduced",
+] as const;
+
+/**
+ * Per-entity audit rules. The field sets drive both the coercion of an LLM
+ * suggestion into a typed column value and the noise filter, so a column
+ * appears in exactly one of numeric/boolean/text.
+ */
+const AUDIT_RULES: Record<
+  EntityKind,
+  {
+    columns: readonly string[];
+    numeric: Set<string>;
+    boolean: Set<string>;
+    text: Set<string>;
+    audit: (
+      name: string,
+      rawSpecs: Record<string, unknown>,
+      columns: Record<string, unknown>,
+    ) => Promise<SpecAudit>;
+  }
+> = {
+  lens: {
+    columns: LENS_AUDITED_COLUMNS,
+    numeric: new Set([
+      "focalLengthMin", "focalLengthMax", "apertureMin", "apertureMax",
+      "weightG", "filterSizeMm", "minFocusDistanceM", "maxMagnification",
+      "lensElements", "lensGroups", "diaphragmBlades", "yearIntroduced",
+    ]),
+    boolean: new Set(["isZoom", "isPrime", "isMacro", "hasAutofocus", "hasStabilization"]),
+    text: new Set(["lensType", "coverage"]),
+    audit: auditLensSpecs,
+  },
+  camera: {
+    columns: CAMERA_AUDITED_COLUMNS,
+    numeric: new Set(["megapixels", "weightG", "yearIntroduced"]),
+    boolean: new Set<string>(),
+    // resolution and sensorSize are stored in a normalized form the raw table
+    // does not use; the audit prompt is told so, and isNoiseIssue keeps a
+    // reformatting disagreement from ever being filed as a correction.
+    text: new Set(["sensorType", "sensorSize", "bodyType", "resolution"]),
+    audit: auditCameraSpecs,
+  },
+};
+
 function isAuthorized(request: NextRequest): boolean {
   return isCronAuthorized(request.headers.get("authorization"));
 }
 
-const NUMERIC_FIELDS = new Set([
-  "focalLengthMin", "focalLengthMax", "apertureMin", "apertureMax",
-  "weightG", "filterSizeMm", "minFocusDistanceM", "maxMagnification",
-  "lensElements", "lensGroups", "diaphragmBlades", "yearIntroduced",
-]);
-const BOOLEAN_FIELDS = new Set([
-  "isZoom", "isPrime", "isMacro", "hasAutofocus", "hasStabilization",
-]);
-const TEXT_FIELDS = new Set(["lensType", "coverage"]);
-
 /** Coerce an LLM-suggested string into a typed column value; null = unusable. */
-function coerceSuggestion(field: string, raw: string): unknown {
+function coerceSuggestion(kind: EntityKind, field: string, raw: string): unknown {
+  const rules = AUDIT_RULES[kind];
   const value = raw.trim();
   if (!value) return null;
-  if (NUMERIC_FIELDS.has(field)) {
+  if (rules.numeric.has(field)) {
     const n = parseFloat(value.replace(/[^\d.-]/g, ""));
     return Number.isFinite(n) ? n : null;
   }
-  if (BOOLEAN_FIELDS.has(field)) {
+  if (rules.boolean.has(field)) {
     if (/^(true|yes)$/i.test(value)) return true;
     if (/^(false|no)$/i.test(value)) return false;
     return null;
   }
-  if (TEXT_FIELDS.has(field)) return value;
+  if (rules.text.has(field)) return value;
   return null;
 }
 
@@ -68,15 +120,17 @@ const AUDIT_SUMMARY_PREFIX = "LLM spec audit:";
 /**
  * Deterministic noise filter over LLM flags: notation/rounding disagreements
  * and equivalent values are dropped so only substantive corrections are filed.
- * `current` is the lens row (or a pending edit's mapped columns).
+ * `current` is the entity row (or a pending edit's mapped columns).
  */
 function isNoiseIssue(
+  kind: EntityKind,
   issue: { field: string; suggestedValue: string },
   current: Record<string, unknown>,
 ): boolean {
+  const rules = AUDIT_RULES[kind];
   const field = issue.field;
   const suggested = issue.suggestedValue?.trim() ?? "";
-  if (NUMERIC_FIELDS.has(field)) {
+  if (rules.numeric.has(field)) {
     const s = parseFloat(suggested.replace(/[^\d.-]/g, ""));
     if (!Number.isFinite(s)) return true; // no usable correction
     const cur = current[field];
@@ -97,25 +151,70 @@ function isNoiseIssue(
     const b = suggested.toLowerCase();
     if (a.includes(b) || b.includes(a)) return true; // one is a refinement of the other
   }
+  if (kind === "camera") {
+    // Both columns are deliberately not the table's own wording: sensorSize is
+    // a format name derived from millimetre dimensions, resolution is
+    // reformatted with an appended megapixel count. A suggestion that merely
+    // restates the raw table is the extraction working, not a defect.
+    if (field === "sensorSize" && /\d\s*[×x]\s*\d/.test(suggested)) return true;
+    if (field === "resolution" && typeof current.resolution === "string") {
+      const digits = (v: string) => v.replace(/[^\d]/g, "");
+      if (digits(suggested) && current.resolution.replace(/[^\d]/g, "").startsWith(digits(suggested))) {
+        return true;
+      }
+    }
+  }
   return false;
 }
 
-async function watcherLensIds(recentCutoff?: Date): Promise<number[]> {
+/**
+ * Entities the watcher actually created or enriched. "review" candidates only
+ * *suspect* their entity id, so they are excluded.
+ */
+async function watcherEntityIds(kind: EntityKind, recentCutoff?: Date): Promise<number[]> {
+  if (kind === "lens") {
+    const rows = await db
+      .selectDistinct({ entityId: dpreviewLensCandidates.lensId })
+      .from(dpreviewLensCandidates)
+      .where(
+        and(
+          isNotNull(dpreviewLensCandidates.lensId),
+          inArray(dpreviewLensCandidates.status, ["matched", "imported"]),
+          ...(recentCutoff
+            ? [sql`${dpreviewLensCandidates.firstSeenAt} > ${recentCutoff}`]
+            : []),
+        ),
+      );
+    return rows.map((r) => r.entityId!).sort((a, b) => a - b);
+  }
   const rows = await db
-    .selectDistinct({ lensId: dpreviewLensCandidates.lensId })
-    .from(dpreviewLensCandidates)
+    .selectDistinct({ entityId: dpreviewCameraCandidates.cameraId })
+    .from(dpreviewCameraCandidates)
     .where(
       and(
-        isNotNull(dpreviewLensCandidates.lensId),
-        // "review" candidates only *suspect* their lensId — audit only lenses
-        // the watcher actually enriched or imported
-        inArray(dpreviewLensCandidates.status, ["matched", "imported"]),
+        isNotNull(dpreviewCameraCandidates.cameraId),
+        inArray(dpreviewCameraCandidates.status, ["matched", "imported"]),
         ...(recentCutoff
-          ? [sql`${dpreviewLensCandidates.firstSeenAt} > ${recentCutoff}`]
+          ? [sql`${dpreviewCameraCandidates.firstSeenAt} > ${recentCutoff}`]
           : []),
       ),
     );
-  return rows.map((r) => r.lensId!).sort((a, b) => a - b);
+  return rows.map((r) => r.entityId!).sort((a, b) => a - b);
+}
+
+async function pendingEditCount(botId: number, entityType: EntityKind): Promise<number> {
+  const [row] = await db
+    .select({ n: sql<number>`count(*)` })
+    .from(pendingEdits)
+    .where(
+      and(
+        eq(pendingEdits.userId, botId),
+        eq(pendingEdits.status, "pending"),
+        eq(pendingEdits.entityId, 0),
+        eq(pendingEdits.entityType, entityType),
+      ),
+    );
+  return Number(row.n);
 }
 
 /**
@@ -126,33 +225,37 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const [lensIds, [bot]] = await Promise.all([
-    watcherLensIds(),
+  const [lensIds, cameraIds, [bot]] = await Promise.all([
+    watcherEntityIds("lens"),
+    watcherEntityIds("camera"),
     db.select({ id: users.id }).from(users).where(eq(users.email, DPREVIEW_BOT_EMAIL)).limit(1),
   ]);
 
-  let pendingCount = 0;
-  if (bot) {
-    const [row] = await db
-      .select({ n: sql<number>`count(*)` })
-      .from(pendingEdits)
-      .where(
-        and(
-          eq(pendingEdits.userId, bot.id),
-          eq(pendingEdits.status, "pending"),
-          eq(pendingEdits.entityId, 0),
-        ),
-      );
-    pendingCount = Number(row.n);
-  }
+  const pendingLenses = bot ? await pendingEditCount(bot.id, "lens") : 0;
+  const pendingCameras = bot ? await pendingEditCount(bot.id, "camera") : 0;
 
-  return NextResponse.json({ lenses: lensIds.length, pendingEdits: pendingCount });
+  return NextResponse.json({
+    lenses: lensIds.length,
+    cameras: cameraIds.length,
+    // `pendingEdits` keeps its original meaning (lens edits) so the existing
+    // CLI output is unchanged; pendingCameras is additive.
+    pendingEdits: pendingLenses,
+    pendingCameras,
+  });
 }
+
+const TARGETS = {
+  lenses: { kind: "lens" as const, pending: false },
+  cameras: { kind: "camera" as const, pending: false },
+  pending: { kind: "lens" as const, pending: true },
+  "pending-cameras": { kind: "camera" as const, pending: true },
+};
 
 /**
  * POST: audit one batch. Stateless — the caller pages through.
  *
- * Body: { target: "lenses" | "pending", afterId?: number, limit?: number }
+ * Body: { target: "lenses" | "cameras" | "pending" | "pending-cameras",
+ *         afterId?: number, limit?: number }
  * Returns { items: [{ id, name, ok, issues }], lastId: number | null }
  */
 export async function POST(request: NextRequest) {
@@ -167,10 +270,19 @@ export async function POST(request: NextRequest) {
     createEdits?: unknown;
     recentHours?: unknown;
   } | null;
-  const target = body?.target === "lenses" || body?.target === "pending" ? body.target : null;
-  if (!target) {
-    return NextResponse.json({ error: "target ('lenses' | 'pending') required" }, { status: 400 });
+  const targetKey =
+    typeof body?.target === "string" && body.target in TARGETS
+      ? (body.target as keyof typeof TARGETS)
+      : null;
+  if (!targetKey) {
+    return NextResponse.json(
+      { error: "target ('lenses' | 'cameras' | 'pending' | 'pending-cameras') required" },
+      { status: 400 },
+    );
   }
+  const { kind, pending: isPendingTarget } = TARGETS[targetKey];
+  const rules = AUDIT_RULES[kind];
+
   const afterId = typeof body?.afterId === "number" ? body.afterId : 0;
   const limit = Math.min(Math.max(typeof body?.limit === "number" ? body.limit : 10, 1), 25);
   const createEdits = body?.createEdits === true;
@@ -184,29 +296,34 @@ export async function POST(request: NextRequest) {
     let lastId: number | null = null;
     let botUserId: number | null = null;
 
-    if (target === "lenses") {
-      const ids = (await watcherLensIds(recentCutoff)).filter((id) => id > afterId).slice(0, limit);
+    if (!isPendingTarget) {
+      const ids = (await watcherEntityIds(kind, recentCutoff))
+        .filter((id) => id > afterId)
+        .slice(0, limit);
       if (ids.length > 0) {
-        const rows = await db
-          .select()
-          .from(lenses)
-          .where(inArray(lenses.id, ids))
-          .orderBy(asc(lenses.id));
-        for (const lens of rows) {
-          const rawSpecs = (lens.specs ?? {}) as Record<string, unknown>;
+        const rows =
+          kind === "lens"
+            ? await db.select().from(lenses).where(inArray(lenses.id, ids)).orderBy(asc(lenses.id))
+            : await db.select().from(cameras).where(inArray(cameras.id, ids)).orderBy(asc(cameras.id));
+
+        for (const row of rows) {
+          const entity = row as unknown as Record<string, unknown>;
+          const rawSpecs = (entity.specs ?? {}) as Record<string, unknown>;
           if (Object.keys(rawSpecs).length === 0) continue; // nothing to audit against
           const columns: Record<string, unknown> = {};
-          for (const col of AUDITED_COLUMNS) columns[col] = lens[col];
-          const audit = await auditLensSpecs(lens.name, rawSpecs, columns);
-          items.push({ id: lens.id, name: lens.name, audit });
+          for (const col of rules.columns) columns[col] = entity[col];
+          const name = String(entity.name);
+          const entityId = Number(entity.id);
+          const audit = await rules.audit(name, rawSpecs, columns);
+          items.push({ id: entityId, name, audit });
 
           // File the flagged discrepancies as a correction pending edit so
           // they surface in the same admin review queue (noise pruned first)
-          const meaningfulIssues = audit.issues.filter((i) => !isNoiseIssue(i, lens));
+          const meaningfulIssues = audit.issues.filter((i) => !isNoiseIssue(kind, i, entity));
           if (createEdits && !audit.ok && meaningfulIssues.length > 0) {
             const corrections: Record<string, unknown> = {};
             for (const issue of meaningfulIssues) {
-              const coerced = coerceSuggestion(issue.field, issue.suggestedValue);
+              const coerced = coerceSuggestion(kind, issue.field, issue.suggestedValue);
               if (coerced !== null) corrections[issue.field] = coerced;
             }
             if (Object.keys(corrections).length > 0) {
@@ -215,8 +332,8 @@ export async function POST(request: NextRequest) {
                 .from(pendingEdits)
                 .where(
                   and(
-                    eq(pendingEdits.entityType, "lens"),
-                    eq(pendingEdits.entityId, lens.id),
+                    eq(pendingEdits.entityType, kind),
+                    eq(pendingEdits.entityId, entityId),
                     eq(pendingEdits.status, "pending"),
                     sql`${pendingEdits.summary} LIKE ${AUDIT_SUMMARY_PREFIX + "%"}`,
                   ),
@@ -227,8 +344,8 @@ export async function POST(request: NextRequest) {
                   .map((i) => `${i.field} (raw "${i.rawValue}" vs "${i.extractedValue}")`)
                   .join("; ");
                 await db.insert(pendingEdits).values({
-                  entityType: "lens",
-                  entityId: lens.id,
+                  entityType: kind,
+                  entityId: entityId,
                   changes: { ...corrections, _audit: meaningfulIssues },
                   summary: `${AUDIT_SUMMARY_PREFIX} ${issueText}`.slice(0, 500),
                   userId: (botUserId ??= await getBotUserId()),
@@ -254,6 +371,9 @@ export async function POST(request: NextRequest) {
               eq(pendingEdits.userId, bot.id),
               eq(pendingEdits.status, "pending"),
               eq(pendingEdits.entityId, 0),
+              // Without this the lens auditor would also read the camera
+              // watcher's new-body edits, and file lens corrections onto them.
+              eq(pendingEdits.entityType, kind),
               gt(pendingEdits.id, afterId),
               ...(recentCutoff ? [sql`${pendingEdits.createdAt} > ${recentCutoff}`] : []),
             ),
@@ -265,9 +385,9 @@ export async function POST(request: NextRequest) {
           const rawSpecs = (changes.specs ?? {}) as Record<string, unknown>;
           if (Object.keys(rawSpecs).length === 0) continue;
           const columns: Record<string, unknown> = {};
-          for (const col of AUDITED_COLUMNS) columns[col] = changes[col] ?? null;
+          for (const col of rules.columns) columns[col] = changes[col] ?? null;
           const name = String(changes.name ?? `pending edit #${row.id}`);
-          const audit = await auditLensSpecs(name, rawSpecs, columns);
+          const audit = await rules.audit(name, rawSpecs, columns);
           items.push({ id: row.id, name, audit });
 
           // Annotate the pending edit itself so the reviewer sees the warning;

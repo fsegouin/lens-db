@@ -42,7 +42,7 @@ src/
 │   │   ├── cameras/route.ts    # GET: search/paginate cameras
 │   │   ├── chat/route.ts       # POST: AI chat (streamed, DB tools)
 │   │   ├── comparisons/route.ts # GET: top comparisons, POST: record comparison
-│   │   ├── cron/               # Cron routes: ebay-prices, ebay-lens-prices, dpreview-lenses, dpreview-review, dpreview-audit, flush-view-counts, warm-prices
+│   │   ├── cron/               # Cron routes: ebay-prices, ebay-lens-prices, dpreview-lenses, dpreview-review, dpreview-cameras, dpreview-camera-review, dpreview-audit, flush-view-counts, warm-prices
 │   │   ├── duplicates/route.ts # POST: flag duplicate entities
 │   │   ├── edits/route.ts      # User-submitted edits
 │   │   ├── lenses/route.ts     # GET: search/filter/paginate lenses
@@ -108,7 +108,7 @@ Engagement: `lensRatings`, `cameraRatings`, `lensComparisons`, `cameraComparison
 Community edits: `revisions`, `pendingEdits`, `duplicateFlags`, `issueReports`, `blockedIps`
 Accounts: `users`, `emailVerificationTokens`
 Prices: `priceEstimates`, `priceHistory` (eBay sold-listing pipeline)
-DPReview watcher: `lensVersionGroups` (lens generations via `lenses.versionGroupId`), `dpreviewLensCandidates` (seen-registry, status pending/imported/rejected/matched/review)
+DPReview watcher: `lensVersionGroups` (lens generations via `lenses.versionGroupId`), `dpreviewLensCandidates` and `dpreviewCameraCandidates` (seen-registries, status pending/imported/rejected/matched/review). Cameras have no version-group equivalent: a successor body is its own `cameras` row, so the camera LLM verdict is binary (duplicate / new_camera) where the lens one has three values.
 
 Key relationships:
 - `systems` 1→N `lenses`, `systems` 1→N `cameras`
