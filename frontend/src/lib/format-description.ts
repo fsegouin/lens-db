@@ -1,3 +1,5 @@
+import { repairDescription } from "./description-whitespace";
+
 /**
  * Cleans up messy lens/camera descriptions (often raw press release dumps)
  * and splits them into readable paragraphs.
@@ -8,14 +10,13 @@ export function formatDescription(raw: string): string[] {
   // Remove footnote markers like *1, *2 etc.
   text = text.replace(/\*\d+/g, "");
 
-  // Add space after period/colon/semicolon followed by a letter with no space
-  text = text.replace(/([.;:])([A-Za-z])/g, "$1 $2");
-
-  // Fix camelCase-like word joins (lowercase followed by uppercase with no space)
-  // e.g. "includingdistortionandspherical" won't be caught by this,
-  // but "aberration.In" → already handled above
-  // "flaregenerated" style joins: lowercase letter followed by a common word start
-  text = text.replace(/([a-z])([A-Z])/g, "$1 $2");
+  // Restore the spaces the lens-db.com import deleted at every inline-tag
+  // boundary. This used to be two bare regexes here, `([.;:])([A-Za-z])` and
+  // `([a-z])([A-Z])`, which split every internal capital they met and so
+  // rendered "GmbH" as "Gmb H", "eBAND" as "e BAND", "SteadyShot" as
+  // "Steady Shot" and the glass code "LaK9" as "La K9". repairDescription
+  // knows which joins are names and leaves those alone.
+  text = repairDescription(text);
 
   // Split into paragraphs on common press release patterns:
   // - "Primary features:" or "Key features:" style headers

@@ -148,7 +148,17 @@ def _extract_mount_info(soup: BeautifulSoup) -> dict | None:
 # ---------------------------------------------------------------------------
 
 def _extract_description(soup: BeautifulSoup) -> str | None:
-    """Extract editorial description text from the page."""
+    """Extract editorial description text from the page.
+
+    Every get_text call here passes " " as the separator. Without it,
+    get_text(strip=True) strips each text node and joins them with nothing, so
+    the space on either side of an inline tag is deleted: "Like the <a>85mm
+    f1.4</a> it is" came out as "Like the85mm f1.4it is", and a sentence with a
+    bolded term in it as "minimizeghostingandflarewhile". That damage reached
+    over 3,000 rows before it was noticed. Only the description extractors take
+    the separator: the spec-table cells below rely on tight joining so that
+    markup like "50<sup>mm</sup>" stays "50mm".
+    """
     # Try "Description" tab/section via heading
     for h in soup.find_all(["h2", "h3", "h4"]):
         if "description" in h.get_text(strip=True).lower():
@@ -157,7 +167,7 @@ def _extract_description(soup: BeautifulSoup) -> str | None:
             for sib in h.find_next_siblings():
                 if sib.name in ("h2", "h3", "h4"):
                     break
-                text = sib.get_text(strip=True)
+                text = sib.get_text(" ", strip=True)
                 if text and len(text) > 20:
                     parts.append(text)
             if parts:
@@ -165,7 +175,7 @@ def _extract_description(soup: BeautifulSoup) -> str | None:
 
     # Try div.formatted-text (used in tabbed lens-db.com pages)
     for div in soup.find_all("div", class_="formatted-text"):
-        raw = div.get_text(strip=True)
+        raw = div.get_text(" ", strip=True)
         if not raw or len(raw) < 30:
             continue
         # Strip leading label like "Manufacturer description" or "From the editor"
@@ -178,7 +188,7 @@ def _extract_description(soup: BeautifulSoup) -> str | None:
 
     # Try div.field-item or tab-pane content
     for div in soup.find_all("div", class_=["field-item", "tab-pane"]):
-        text = div.get_text(strip=True)
+        text = div.get_text(" ", strip=True)
         if text and len(text) > 50:
             return text
 
