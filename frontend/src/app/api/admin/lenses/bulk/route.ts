@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { lenses, lensTags, tags, lensSeriesMemberships, lensSeries } from "@/db/schema";
 import { requireAdminAPI } from "@/lib/admin-auth";
+import { revalidateEntity } from "@/lib/revalidate-entity";
 import { and, eq, inArray } from "drizzle-orm";
 
 const MAX_IDS = 200;
@@ -40,6 +41,7 @@ export async function POST(request: NextRequest) {
       // Insert tag associations (ignore conflicts)
       const rows = ids.flatMap((lensId) => tagIds.map((tagId) => ({ lensId, tagId })));
       await db.insert(lensTags).values(rows).onConflictDoNothing();
+      revalidateEntity("lens");
       return NextResponse.json({ success: true, affected: ids.length });
     }
 
@@ -51,6 +53,7 @@ export async function POST(request: NextRequest) {
       await db.delete(lensTags).where(
         and(inArray(lensTags.lensId, ids), inArray(lensTags.tagId, tagIds))
       );
+      revalidateEntity("lens");
       return NextResponse.json({ success: true, affected: ids.length });
     }
 
@@ -65,6 +68,7 @@ export async function POST(request: NextRequest) {
       }
       const rows = ids.map((lensId) => ({ lensId, seriesId }));
       await db.insert(lensSeriesMemberships).values(rows).onConflictDoNothing();
+      revalidateEntity("lens");
       return NextResponse.json({ success: true, affected: ids.length });
     }
 
@@ -75,6 +79,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: `Field "${field}" is not allowed for bulk edit` }, { status: 400 });
       }
       await db.update(lenses).set({ [field]: fieldValue || null }).where(inArray(lenses.id, ids));
+      revalidateEntity("lens");
       return NextResponse.json({ success: true, affected: ids.length });
     }
 

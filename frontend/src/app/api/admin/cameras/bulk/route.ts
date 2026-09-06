@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { cameras } from "@/db/schema";
 import { requireAdminAPI } from "@/lib/admin-auth";
+import { revalidateEntity } from "@/lib/revalidate-entity";
 import { inArray } from "drizzle-orm";
 
 const MAX_IDS = 200;
@@ -33,6 +34,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: `Field "${field}" is not allowed for bulk edit` }, { status: 400 });
       }
       await db.update(cameras).set({ [field]: fieldValue || null }).where(inArray(cameras.id, ids));
+      revalidateEntity("camera");
       return NextResponse.json({ success: true, affected: ids.length });
     }
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { lenses, systems, lensTags, tags, lensSeriesMemberships, lensSeries } from "@/db/schema";
 import { requireAdminAPI } from "@/lib/admin-auth";
+import { revalidateEntity } from "@/lib/revalidate-entity";
 import { and, sql, eq, inArray, isNull } from "drizzle-orm";
 import { buildNameSearch } from "@/lib/search";
 import { buildOrderBy } from "@/lib/admin-sort";
@@ -163,5 +164,6 @@ export async function POST(request: NextRequest) {
     await syncLensSystems(created.id, created.systemId, body.systemIds);
   }
 
+  revalidateEntity("lens", created.slug);
   return NextResponse.json(created, { status: 201 });
 }
