@@ -1,4 +1,7 @@
-node_modules/
+# No trailing slash: that form matches directories only, so a node_modules
+# symlink (the usual way to borrow deps into a worktree) slipped past it and
+# got committed, which broke the Vercel build on `pnpm install`.
+node_modules
 .claude/
 .DS_Store
 scraper/pages/
