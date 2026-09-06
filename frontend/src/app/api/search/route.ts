@@ -3,8 +3,6 @@ import { unstable_cache } from "next/cache";
 import { isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { lenses, cameras, systems, collections, lensSeries } from "@/db/schema";
-import { getClientIP, rateLimitedResponse } from "@/lib/api-utils";
-import { rateLimiters } from "@/lib/rate-limit";
 import { buildNameMatchers, matchesNormalizedName } from "@/lib/search";
 
 type ResultRow = {
@@ -69,10 +67,6 @@ function pick<T extends { id: number; name: string; slug: string }>(
 }
 
 export async function GET(request: NextRequest) {
-  const ip = getClientIP(request);
-  const { success } = await rateLimiters.search.limit(ip);
-  if (!success) return rateLimitedResponse();
-
   const q = new URL(request.url).searchParams.get("q")?.trim().slice(0, 200);
   if (!q || q.length < 2) {
     return NextResponse.json({ lenses: [], cameras: [], systems: [], collections: [], series: [] });

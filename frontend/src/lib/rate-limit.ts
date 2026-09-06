@@ -10,13 +10,12 @@ const noopLimiter = {
  * Create a rate limiter backed by Upstash Redis.
  * Disabled in development (always allows requests).
  *
- * `name` has to be unique across the limiters below, because it is what keeps
- * their counters apart. Upstash builds the key from the prefix, the identifier
- * and the window index alone and leaves the allowance out of it, so limiters
- * sharing a prefix and a window length share one counter per visitor. Every
- * limiter here uses a 60 second window, so a single hardcoded prefix collapsed
- * all of them into one: loading a page spent the allowance a vote needed, and
- * whichever limiter had the tightest number silently governed the lot.
+ * `name` has to be unique across every limiter in the codebase, because it is
+ * what keeps their counters apart. Upstash builds the key from the prefix, the
+ * identifier and the window index alone and leaves the allowance out of it, so
+ * limiters sharing a prefix and a window length share one counter per visitor.
+ * A single hardcoded prefix once collapsed all of them into one, and whichever
+ * limiter had the tightest number silently governed the lot.
  */
 export function createRateLimit(
   name: string,
@@ -32,29 +31,23 @@ export function createRateLimit(
   });
 }
 
-// Pre-configured limiters for each route group
-// Kept tight for free-tier DB and Redis plans
+/**
+ * Per-IP limits on the public read endpoints now live in the Vercel firewall,
+ * which rejects at the edge before the function or the database is touched.
+ * See the table in CLAUDE.md for what each route is allowed.
+ *
+ * What stays here is what the firewall cannot express:
+ *
+ * - Anything keyed by account rather than by IP. The edge can read a cookie but
+ *   cannot verify the session HMAC, so it cannot key on a trusted user id, and
+ *   keying these by IP would throttle an office behind one address as if it
+ *   were one person.
+ * - Anything on a window longer than ten minutes. A firewall rule's window is
+ *   capped at 600 seconds, and the submission and edit limits are hourly.
+ */
 export const rateLimiters = {
-  // Reading your own rating happens once per lens or camera page view, so it
-  // has to be generous enough to browse on. It used to share one 10-a-minute
-  // allowance with the writes below, which meant opening ten pages left you
-  // unable to vote at all — the read spent the budget the vote needed.
-  ratingsRead: createRateLimit("ratings-read", 60, "60 s"),
-  // Casting or withdrawing a rating. Both write and then recompute the
-  // entity's average, so they share one tight allowance; a rating is unique
-  // per (entity, IP) anyway, so this caps DB churn rather than ballot-stuffing.
-  ratingsWrite: createRateLimit("ratings-write", 20, "60 s"),
-  views: createRateLimit("views", 20, "60 s"),
-  comparisons: createRateLimit("comparisons", 10, "60 s"),
-  search: createRateLimit("search", 20, "60 s"),
-  chat: createRateLimit("chat", 10, "60 s"),
-  // One call per entity page view; kept off the "search" bucket so browsing
-  // detail pages doesn't eat a visitor's list/typeahead allowance.
-  ebay: createRateLimit("ebay", 30, "60 s"),
   // Cataloguing a shelf is bursty: someone who just found the site adds twenty
-  // bodies and lenses in a couple of minutes, which the ratings allowance this
-  // used to share would cut off after ten. Only signed-in requests ever reach
-  // this limiter, and it is keyed by account rather than by IP, so a household
-  // or an office behind one address no longer shares a single allowance.
+  // bodies and lenses in a couple of minutes. Only signed-in requests reach
+  // this limiter, and it is keyed by account rather than by IP.
   kit: createRateLimit("kit", 60, "60 s"),
 };
