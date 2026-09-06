@@ -28,9 +28,14 @@ do something on the site; they just never become members.
 
 ## Where the Reddit evidence is
 
+Every link below is a citation of the OLD site, lens-db.com, not of
+thelensdb.com. On 2026-09-06 the Pullpush archive returned zero comments
+and zero posts mentioning thelensdb.com, and its newest lens-db.com hit is
+from early 2025, so it lags by months; the real referrer list is Vercel
+Analytics, and Search Console once it exists.
+
 The market research (`docs/redesign/research/report-market.md`, section 2)
-was built from the Pullpush archive of Reddit comments citing lens-db.com in
-its last year. The three jobs people used it for were version disambiguation,
+was built from that archive's comments citing lens-db.com in its last year. The three jobs people used it for were version disambiguation,
 per-system lens lists, and spec verification. Direct links in that report:
 
 - r/VintageLenses, "Canon FD 100-300 5.6 which version":
