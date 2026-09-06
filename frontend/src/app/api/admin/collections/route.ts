@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { collections, lensCollections } from "@/db/schema";
+import { collections, lensCollections, lenses } from "@/db/schema";
 import { requireAdminAPI } from "@/lib/admin-auth";
-import { and, asc, desc, sql, eq } from "drizzle-orm";
+import { and, asc, desc, isNull, sql, eq } from "drizzle-orm";
 import { buildNameSearch } from "@/lib/search";
 
 const PAGE_SIZE = 50;
@@ -22,7 +22,11 @@ export async function GET(request: NextRequest) {
   const where = conditions.length > 0 ? and(...conditions) : undefined;
 
   const direction = orderParam === "desc" ? desc : asc;
-  const lensCountExpr = sql<number>`count(${lensCollections.lensId})`;
+  // Counted over joined lens rows so admin agrees with the public index and
+  // detail pages. Counting membership rows instead would include lenses that
+  // have been merged away, which the public pages no longer show, and this is
+  // also the expression the Lenses column sorts by.
+  const lensCountExpr = sql<number>`count(${lenses.id})`;
   const orderByMap: Record<string, ReturnType<typeof asc>> = {
     name: direction(collections.name),
     lensCount: direction(lensCountExpr),
@@ -40,6 +44,7 @@ export async function GET(request: NextRequest) {
       })
       .from(collections)
       .leftJoin(lensCollections, eq(collections.id, lensCollections.collectionId))
+      .leftJoin(lenses, and(eq(lensCollections.lensId, lenses.id), isNull(lenses.mergedIntoId)))
       .where(where)
       .groupBy(collections.id)
       .orderBy(orderBy)

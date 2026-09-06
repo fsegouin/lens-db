@@ -20,14 +20,20 @@ const columns = [
     render: (value: unknown) => {
       const text = typeof value === "string" ? value : "";
       if (!text) return "";
+      const truncated = text.length > DESCRIPTION_PREVIEW_CHARS;
       const preview = text.slice(0, DESCRIPTION_PREVIEW_CHARS);
       return (
         <span
-          title={`${text.length} characters`}
+          // The cell shows roughly 65 characters before the CSS ellipsis, so
+          // hover is the only way to read further. It carries the preview and
+          // the length rather than the whole string, because the longest of
+          // these would be a 13,000 character tooltip. Nothing to reveal on a
+          // description that already fits, so no tooltip there.
+          title={truncated ? `${preview}…\n\n(${text.length} characters)` : undefined}
           className="block max-w-md truncate text-zinc-600 dark:text-zinc-400"
         >
           {preview}
-          {text.length > DESCRIPTION_PREVIEW_CHARS ? "…" : ""}
+          {truncated ? "…" : ""}
         </span>
       );
     },
