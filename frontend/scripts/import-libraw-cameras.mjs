@@ -141,7 +141,9 @@ function slugify(name) {
 
 const sql = createSql();
 
-const existing = await sql.unsafe("select id, name from cameras where merged_into_id is null");
+const existing = await sql.unsafe(
+  "select id, name, year_introduced, megapixels, sensor_size, system_id from cameras where merged_into_id is null",
+);
 const index = buildIndex(existing);
 const takenSlugs = new Set((await sql.unsafe("select slug from cameras")).map((r) => r.slug));
 
@@ -149,12 +151,24 @@ const systems = await sql.unsafe("select id, name from systems");
 const systemsByName = new Map(systems.map((s) => [s.name.toLowerCase(), s]));
 
 const toInsert = [];
+const toUpdate = [];
 const skipped = [];
 const badMounts = [];
 
 for (const camera of CAMERAS) {
-  if (lookup(index, camera.name)) {
+  // A camera already in the catalogue still wants these figures. The Kodak DCS
+  // 200 came in from camera-wiki with nothing but a body type, while the table
+  // above has its year, resolution, sensor size and mount — and the first
+  // version of this script skipped it for existing, so the page stayed empty.
+  // Filling the gaps in a row is not the same as overwriting it: every write
+  // below is conditional on the column being null.
+  const existingRow = lookup(index, camera.name)?.[0];
+  if (existingRow) {
     skipped.push(camera.name);
+    const gaps = ["year_introduced", "megapixels", "sensor_size", "system_id"].filter(
+      (c) => existingRow[c] === null,
+    );
+    if (gaps.length) toUpdate.push({ camera, row: existingRow, gaps });
     continue;
   }
   // A mount that names no system is a mistake in the table above, not a reason
@@ -187,6 +201,7 @@ if (badMounts.length) {
 
 console.log(`In the table:         ${CAMERAS.length}`);
 console.log(`Already in catalogue: ${skipped.length}`);
+console.log(`  of those, fillable: ${toUpdate.length}`);
 console.log(`To insert:            ${toInsert.length}`);
 console.log(`  with a year:        ${toInsert.filter((c) => c.year).length}`);
 console.log(`  with megapixels:    ${toInsert.filter((c) => c.mp).length}`);
@@ -196,8 +211,15 @@ for (const c of toInsert.slice(0, 12)) {
   console.log(`  ${c.name.padEnd(32)}${String(c.year ?? "—").padEnd(6)}${String(c.mp ?? "—").padEnd(7)}${c.mount ?? "—"}`);
 }
 
+if (toUpdate.length) {
+  console.log("\nExisting rows with gaps these figures would fill:");
+  for (const u of toUpdate.slice(0, 12)) {
+    console.log(`  ${u.row.name.padEnd(32)}${u.gaps.join(", ")}`);
+  }
+}
+
 if (!apply) {
-  console.log(`\nDry run. Nothing written. Pass --apply to insert ${toInsert.length} cameras.`);
+  console.log(`\nDry run. Nothing written. Pass --apply to insert ${toInsert.length} and fill ${toUpdate.length} cameras.`);
   await sql.end();
   process.exit(badMounts.length ? 1 : 0);
 }
@@ -235,5 +257,40 @@ for (const c of toInsert) {
   }
 }
 
-console.log(`\nInserted ${inserted} cameras.`);
+let filled = 0;
+for (const { camera, row, gaps } of toUpdate) {
+  const systemId = camera.mount ? (systemsByName.get(camera.mount.toLowerCase())?.id ?? null) : null;
+  const values = {
+    year_introduced: camera.year,
+    megapixels: camera.mp,
+    sensor_size: camera.sensorSize,
+    system_id: systemId,
+  };
+  const written = gaps.filter((c) => values[c] !== null && values[c] !== undefined);
+  if (!written.length) continue;
+
+  // COALESCE keeps this to filling nulls even if the row changed since the read.
+  const params = written.map((c) => values[c]);
+  const sets = written.map((c, i) => `${c} = COALESCE(${c}, $${i + 1})`);
+  params.push(row.id);
+  await sql.query(`UPDATE cameras SET ${sets.join(", ")} WHERE id = $${params.length}`, params);
+  filled++;
+
+  if (!camera.source) continue;
+  const citedAs = {
+    year_introduced: "yearIntroduced",
+    megapixels: "megapixels",
+    sensor_size: "sensorSize",
+    system_id: "systemId",
+  };
+  for (const column of written) {
+    await sql`
+      INSERT INTO field_citations (entity_type, entity_id, field, source_name, source_url, note)
+      VALUES ('camera', ${row.id}, ${citedAs[column]}, ${new URL(camera.source).hostname.replace(/^www\./, "")}, ${camera.source}, ${camera.note ?? null})
+      ON CONFLICT (entity_type, entity_id, field) DO NOTHING
+    `;
+  }
+}
+
+console.log(`\nInserted ${inserted} cameras, filled gaps on ${filled}.`);
 await sql.end();

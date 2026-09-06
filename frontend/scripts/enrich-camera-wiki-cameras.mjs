@@ -2,24 +2,30 @@
  * Fill in the camera-wiki stubs from the articles they came from.
  *
  * The import wrote what camera-wiki's categories state — a year, a body type, a
- * mount — because categories are the only part of that site that is structured.
- * The articles themselves hold much more: the lens, the shutter, the focusing
- * method, the film format. Most of them write it as a labelled list, in one of
- * three house styles that have accumulated over the years:
+ * mount — because categories are the only structured part of that site. That
+ * left pages saying little more than "Kodak DCS 200 is an SLR", against a
+ * catalogue where the cameras inherited from lens-db.com carry a year, a mount,
+ * a sensor and a description almost without exception.
  *
- *     * '''Lens:''' Agfa Apotar or Solinar, 105mm f/4.5
- *     * Introduced: 1940
- *     '''Dates:''' 1960
+ * This closes that gap from two places in the same article:
  *
- * so the fields can be read off directly. No model is asked to infer anything:
- * a value here is the source's own words with the wiki markup taken out, which
- * is what makes it citable. Prose is deliberately not imported — the free text
- * is CC BY-SA and copying it into descriptions would put the whole site under
- * share-alike, where quoting a specification does not.
+ *   - the labelled specification lists a minority of articles use
+ *     ("* '''Lens:''' Agfa Apotar, 105mm f/4.5"), and
+ *   - the prose the rest of them are written in, which carries the same facts
+ *     in sentences ("released by Kodak, in 1992 ... a 1524 x 1012 pixel (1.5
+ *     megapixel) sensor ... dimensions of 14x9.3 mm").
  *
- * Specs land in the `specs` jsonb, and a year fills `year_introduced` only when
- * the row has none. Nothing already in the database is overwritten: a figure an
- * editor has touched outranks a scrape, and re-running must not undo their work.
+ * Facts are taken, not sentences. Figures are not copyrightable where the
+ * writing around them is, so nothing here reproduces camera-wiki's prose; the
+ * description is composed from the extracted facts in this file's own words.
+ * Every article still gets a citation, which is the CC BY-SA attribution.
+ *
+ * Where a fact belongs in a column it goes in the column — year, weight,
+ * megapixels, sensor size, resolution, shutter type, mount — because that is
+ * what the camera page renders. The rest lands in `specs`.
+ *
+ * Nothing already in the database is overwritten. A figure an editor has
+ * touched outranks a scrape, and re-running must never undo their work.
  *
  * Usage (from frontend/):
  *   node scripts/enrich-camera-wiki-cameras.mjs                 # dry run
@@ -28,6 +34,21 @@
  */
 
 import { createSql } from "./lib/db.mjs";
+import {
+  extractCountry,
+  extractFilm,
+  extractFormat,
+  extractShutterType,
+  extractLens,
+  extractMount,
+  extractSensor,
+  extractShutter,
+  extractWeight,
+  extractYears,
+  leadSection,
+  toPlainText,
+  composeDescription,
+} from "./lib/camera-wiki-facts.mjs";
 
 const API = "https://camera-wiki.org/api.php";
 const USER_AGENT = "thelensdb-catalogue-scan/1.0 (+https://thelensdb.com; florent@segouin.me)";
@@ -35,119 +56,72 @@ const USER_AGENT = "thelensdb-catalogue-scan/1.0 (+https://thelensdb.com; floren
 const BATCH = 50;
 
 /**
- * Labels worth keeping, mapped to the spec key they are stored under. Anything
- * not named here is dropped: camera-wiki articles carry a long tail of one-off
- * labels ("Rangefinder base", "Cable release socket") that would turn the specs
- * panel into a junk drawer.
+ * Labelled fields worth keeping, mapped to the spec key they are stored under.
+ * Anything not named here is dropped: articles carry a long tail of one-off
+ * labels ("Cable release socket") that would turn the specs panel into a junk
+ * drawer.
  */
 const FIELDS = new Map([
-  ["lens", "Lens"],
-  ["lens/shutters", "Lens"],
-  ["lenses", "Lens"],
-  ["shutter", "Shutter"],
-  ["shutter speeds", "Shutter speeds"],
-  ["speeds", "Shutter speeds"],
-  ["diaphragm", "Diaphragm"],
-  ["aperture", "Diaphragm"],
-  ["focusing", "Focusing"],
-  ["focus", "Focusing"],
-  ["viewfinder", "Viewfinder"],
-  ["finder", "Viewfinder"],
-  ["metering", "Metering"],
-  ["meter", "Metering"],
-  ["exposure meter", "Metering"],
-  ["film", "Film"],
-  ["film type", "Film"],
-  ["film size", "Film"],
-  ["format", "Format"],
-  ["frame size", "Format"],
-  ["picture size", "Format"],
-  ["type", "Type"],
-  ["camera type", "Type"],
-  ["body", "Body"],
-  ["weight", "Weight"],
-  ["size", "Dimensions"],
-  ["dimensions", "Dimensions"],
-  ["flash", "Flash"],
-  ["advance", "Film advance"],
-  ["film advance", "Film advance"],
-  ["manufacturer", "Manufacturer"],
-  ["maker", "Manufacturer"],
-  ["origin", "Origin"],
-  ["country", "Origin"],
+  ["lens", "Lens"], ["lens/shutters", "Lens"], ["lenses", "Lens"],
+  ["shutter", "Shutter"], ["shutter speeds", "Shutter speeds"], ["speeds", "Shutter speeds"],
+  ["diaphragm", "Diaphragm"], ["aperture", "Diaphragm"],
+  ["focusing", "Focusing"], ["focus", "Focusing"],
+  ["viewfinder", "Viewfinder"], ["finder", "Viewfinder"],
+  ["metering", "Metering"], ["meter", "Metering"], ["exposure meter", "Metering"],
+  ["film", "Film"], ["film type", "Film"], ["film size", "Film"],
+  ["format", "Format"], ["frame size", "Format"], ["picture size", "Format"],
+  ["type", "Type"], ["camera type", "Type"],
+  ["body", "Body"], ["weight", "Weight"],
+  ["size", "Dimensions"], ["dimensions", "Dimensions"],
+  ["flash", "Flash"], ["advance", "Film advance"], ["film advance", "Film advance"],
+  ["manufacturer", "Manufacturer"], ["maker", "Manufacturer"],
+  ["origin", "Origin"], ["country", "Origin"],
 ]);
 
-/**
- * Labels that carry a date rather than a specification. `cameras` has a
- * year_introduced column but no discontinued one — that lives on `lenses` — so
- * the withdrawal year is kept as a spec rather than invented as a column.
- */
 const YEAR_LABELS = new Set(["introduced", "dates", "date", "launched", "produced", "production", "years"]);
 const END_LABELS = new Set(["withdrawn", "discontinued"]);
 
 function parseArgs(argv) {
-  const args = { apply: false, limit: 0 };
+  const args = { apply: false, limit: 0, redoDescriptions: false };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === "--apply") args.apply = true;
     else if (argv[i] === "--limit") args.limit = Number(argv[++i]);
+    // Only this script writes descriptions on camera-wiki rows, so rewriting
+    // them is safe and is how a wording fix reaches the rows already done.
+    else if (argv[i] === "--redo-descriptions") args.redoDescriptions = true;
   }
   return args;
 }
 
-/**
- * Wiki markup to plain text: links keep their display text, bold and italics
- * go, templates and refs go, external links keep their label.
- */
-function stripMarkup(value) {
-  return value
-    .replace(/\[\[[^\]|]*\|([^\]]*)\]\]/g, "$1")
-    .replace(/\[\[([^\]]*)\]\]/g, "$1")
-    .replace(/\[(?:https?:)\/\/\S+\s+([^\]]*)\]/g, "$1")
-    .replace(/\[(?:https?:)\/\/\S+\]/g, "")
-    .replace(/\{\{[^}]*\}\}/g, "")
-    .replace(/<ref[^>]*>.*?<\/ref>/gi, "")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/'{2,}/g, "")
-    .replace(/&nbsp;/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .replace(/[.,;:]$/, "");
-}
-
-/**
- * One labelled line, in any of the three house styles. The colon may sit inside
- * the bold markup or outside it, and the line may or may not be a list item.
- */
+/** One labelled line, in any of the three house styles the articles use. */
 function parseLine(rawLine) {
   const line = rawLine.replace(/^[*:#]+\s*/, "").trim();
   if (!line) return null;
-
   const patterns = [
-    /^'''([^']{2,30}?)\s*:\s*'''\s*(.+)$/, //  '''Lens:''' value
-    /^'''([^']{2,30}?)'''\s*:\s*(.+)$/, //     '''Lens''': value
-    /^([A-Za-z][\w /&-]{1,28}?)\s*:\s*(.+)$/, // Lens: value
+    /^'''([^']{2,30}?)\s*:\s*'''\s*(.+)$/,
+    /^'''([^']{2,30}?)'''\s*:\s*(.+)$/,
+    /^([A-Za-z][\w /&-]{1,28}?)\s*:\s*(.+)$/,
   ];
   for (const pattern of patterns) {
     const m = line.match(pattern);
     if (!m) continue;
-    const label = stripMarkup(m[1]).toLowerCase();
-    const value = stripMarkup(m[2]);
+    const label = toPlainText(m[1]).toLowerCase();
+    const value = toPlainText(m[2]);
     if (!label || !value || value.length > 300) continue;
     return { label, value };
   }
   return null;
 }
 
-/** The first plausible camera year in a string. */
 function yearIn(value) {
   const m = value.match(/\b(1[89]\d{2}|20[0-2]\d)\b/);
   return m ? Number(m[1]) : null;
 }
 
-function parseArticle(wikitext) {
+/** The labelled lists, where an article has them. */
+function parseLabelled(wikitext) {
   const specs = {};
   let year = null;
-  let yearEnd = null;
 
   for (const line of wikitext.split("\n")) {
     const parsed = parseLine(line);
@@ -159,16 +133,14 @@ function parseArticle(wikitext) {
       continue;
     }
     if (END_LABELS.has(label)) {
-      yearEnd ??= yearIn(value);
-      if (yearEnd && !specs.Discontinued) specs.Discontinued = String(yearEnd);
+      const end = yearIn(value);
+      if (end && !specs.Discontinued) specs.Discontinued = String(end);
       continue;
     }
     const key = FIELDS.get(label);
-    // First value wins: articles that describe several variants repeat a label,
-    // and the first is the camera the page is about.
     if (key && !specs[key]) specs[key] = value;
   }
-  return { specs, year, yearEnd };
+  return { specs, year };
 }
 
 function titleFromUrl(url) {
@@ -179,9 +151,10 @@ function titleFromUrl(url) {
 async function fetchArticles(titles) {
   const url = new URL(API);
   url.searchParams.set("action", "query");
-  url.searchParams.set("prop", "revisions");
+  url.searchParams.set("prop", "revisions|categories");
   url.searchParams.set("rvprop", "content");
   url.searchParams.set("rvslots", "main");
+  url.searchParams.set("cllimit", "max");
   url.searchParams.set("titles", titles.join("|"));
   url.searchParams.set("format", "json");
 
@@ -190,14 +163,13 @@ async function fetchArticles(titles) {
   const data = await res.json();
 
   const out = new Map();
-  // Titles the wiki has normalised or redirected have to be mapped back, or the
-  // article is fetched and then thrown away for not matching the row.
   const alias = new Map();
   for (const n of data.query?.normalized ?? []) alias.set(n.to, n.from);
   for (const page of Object.values(data.query?.pages ?? {})) {
     const content = page.revisions?.[0]?.slots?.main?.["*"];
     if (!content) continue;
-    out.set(alias.get(page.title) ?? page.title, content);
+    const categories = (page.categories ?? []).map((c) => c.title.replace(/^Category:/, ""));
+    out.set(alias.get(page.title) ?? page.title, { content, categories });
   }
   return out;
 }
@@ -205,8 +177,15 @@ async function fetchArticles(titles) {
 const args = parseArgs(process.argv.slice(2));
 const sql = createSql();
 
+const systems = await sql.unsafe("select id, name from systems");
+// Longest first, so "Nikon F" cannot claim a mention of "Nikon F mount" that a
+// longer system name would have matched more precisely.
+const systemNames = systems.map((s) => s.name).sort((a, b) => b.length - a.length);
+const systemsByName = new Map(systems.map((s) => [s.name.toLowerCase(), s]));
+
 const rows = await sql.unsafe(`
-  select id, name, url, year_introduced, specs
+  select id, name, url, description, year_introduced, body_type, system_id,
+         weight_g, shutter_type, sensor_size, megapixels, resolution, specs
   from cameras
   where url like 'https://camera-wiki.org/wiki/%' and merged_into_id is null
   order by id
@@ -231,56 +210,127 @@ for (let i = 0; i < rows.length; i += BATCH) {
   try {
     articles = await fetchArticles([...byTitle.keys()]);
   } catch (err) {
-    console.error(`  batch at ${i} failed: ${err.message}`);
+    console.error(`\n  batch at ${i} failed: ${err.message}`);
     continue;
   }
 
   for (const [title, row] of byTitle) {
-    const wikitext = articles.get(title);
-    if (!wikitext) {
+    const article = articles.get(title);
+    if (!article) {
       noArticle++;
       continue;
     }
-    // The withdrawal year rides along inside specs; `cameras` has no column for
-    // it, so parseArticle's yearEnd is not needed here.
-    const { specs, year } = parseArticle(wikitext);
 
-    // Never overwrite what is already there; only add what is missing.
+    const { content, categories } = article;
+    const lead = leadSection(content);
+    const full = toPlainText(content);
+    const labelled = parseLabelled(content);
+
+    // Prose facts come from the lead, which is about this camera. The body of
+    // an article wanders into variants and rivals.
+    const years = extractYears(lead);
+    const lens = extractLens(labelled.specs.Lens ?? lead);
+    const sensor = extractSensor(lead);
+    const shutter = extractShutter(labelled.specs.Shutter ?? labelled.specs["Shutter speeds"] ?? lead);
+    const shutterType = extractShutterType(labelled.specs.Shutter ?? full);
+    const format = extractFormat(categories);
+    const weight = extractWeight(labelled.specs.Weight ?? "") ?? extractWeight(full);
+    const mount = extractMount(full, systemNames);
+    const film = extractFilm(categories);
+    const country = extractCountry(categories);
+    const maker = labelled.specs.Manufacturer ?? null;
+
+    const specs = { ...labelled.specs };
+    if (film && !specs.Film) specs.Film = film;
+    if (country && !specs.Origin) specs.Origin = country;
+    if (lens && !specs.Lens) specs.Lens = `${lens.focal}mm f/${lens.aperture}`;
+    if (shutter && !specs.Shutter) specs.Shutter = `${shutter} sec`;
+    // The catalogue's own key for the speed range, and the one the camera page
+    // reads when the column is empty.
+    if (shutter && !specs.Speeds) specs.Speeds = `${shutter} sec`;
+    if (format && !specs["Maximum format"]) specs["Maximum format"] = format;
+
     const existingSpecs = row.specs && typeof row.specs === "object" ? row.specs : {};
     const newSpecs = {};
     for (const [k, v] of Object.entries(specs)) {
       if (existingSpecs[k] === undefined) newSpecs[k] = v;
     }
-    const setYear = row.year_introduced === null && year !== null ? year : null;
 
-    if (!Object.keys(newSpecs).length && setYear === null) {
+    const set = {};
+    if (row.year_introduced === null) {
+      const year = labelled.year ?? years.start;
+      if (year !== null) set.year_introduced = year;
+    }
+    if (row.weight_g === null && weight !== null) set.weight_g = weight;
+    // shutter_type holds the mechanism ("Focal-plane"), which is what the
+    // existing rows carry. An earlier pass put the speed range here; where that
+    // happened the value is replaced, since a range was never the right answer.
+    const shutterTypeIsSpeeds = row.shutter_type !== null && /^\s*1\//.test(row.shutter_type);
+    if ((row.shutter_type === null || shutterTypeIsSpeeds) && shutterType !== null) {
+      set.shutter_type = shutterType;
+    } else if (shutterTypeIsSpeeds && shutterType === null) {
+      set.shutter_type = null;
+    }
+    if (row.sensor_size === null && format !== null) set.sensor_size = format;
+    if (row.megapixels === null && sensor?.megapixels) set.megapixels = sensor.megapixels;
+    // A digital body's measured sensor beats the film-format label.
+    if (sensor?.sensorSize && (row.sensor_size === null || set.sensor_size)) {
+      set.sensor_size = sensor.sensorSize;
+    }
+    if (row.resolution === null && sensor?.resolution) set.resolution = sensor.resolution;
+    if (row.system_id === null && mount) {
+      const system = systemsByName.get(mount.toLowerCase());
+      if (system) set.system_id = system.id;
+    }
+
+    if (row.description === null || args.redoDescriptions) {
+      const description = composeDescription({
+        name: row.name,
+        maker,
+        bodyType: row.body_type,
+        film,
+        country,
+        years: { start: set.year_introduced ?? row.year_introduced, end: years.end },
+        lens,
+        sensor,
+        shutter,
+        weight: set.weight_g ?? row.weight_g,
+      });
+      if (description) set.description = description;
+    }
+
+    if (!Object.keys(newSpecs).length && !Object.keys(set).length) {
       nothingFound++;
       continue;
     }
-    updates.push({ id: row.id, name: row.name, url: row.url, newSpecs, setYear });
+    updates.push({ id: row.id, name: row.name, url: row.url, newSpecs, set });
   }
 
   process.stdout.write(`\r  fetched ${Math.min(i + BATCH, rows.length)}/${rows.length}`);
 }
 process.stdout.write("\n");
 
-const specKeyCounts = new Map();
+const columnCounts = new Map();
+const specCounts = new Map();
 for (const u of updates) {
-  for (const k of Object.keys(u.newSpecs)) specKeyCounts.set(k, (specKeyCounts.get(k) ?? 0) + 1);
+  for (const k of Object.keys(u.set)) columnCounts.set(k, (columnCounts.get(k) ?? 0) + 1);
+  for (const k of Object.keys(u.newSpecs)) specCounts.set(k, (specCounts.get(k) ?? 0) + 1);
 }
 
-console.log(`\nArticles missing:        ${noArticle}`);
-console.log(`Nothing new to add:      ${nothingFound}`);
-console.log(`Rows to update:          ${updates.length}`);
-console.log(`  gaining a year:        ${updates.filter((u) => u.setYear !== null).length}`);
-console.log("\nSpec fields to be added:");
-for (const [k, n] of [...specKeyCounts].sort((a, b) => b[1] - a[1])) {
+console.log(`\nArticles missing:   ${noArticle}`);
+console.log(`Nothing new to add: ${nothingFound}`);
+console.log(`Rows to update:     ${updates.length}`);
+console.log("\nColumns to be filled:");
+for (const [k, n] of [...columnCounts].sort((a, b) => b[1] - a[1])) {
   console.log(`  ${String(n).padStart(5)}  ${k}`);
 }
-console.log("\nFirst 6 updates:");
-for (const u of updates.slice(0, 6)) {
-  console.log(`  ${u.name}${u.setYear ? ` [year ${u.setYear}]` : ""}`);
-  for (const [k, v] of Object.entries(u.newSpecs)) console.log(`      ${k}: ${v.slice(0, 90)}`);
+console.log("\nSpec fields to be added:");
+for (const [k, n] of [...specCounts].sort((a, b) => b[1] - a[1])) {
+  console.log(`  ${String(n).padStart(5)}  ${k}`);
+}
+console.log("\nSample descriptions:");
+for (const u of updates.filter((x) => x.set.description).slice(0, 6)) {
+  console.log(`  ${u.set.description}`);
 }
 
 if (!args.apply) {
@@ -289,23 +339,55 @@ if (!args.apply) {
   process.exit(0);
 }
 
+const COLUMNS = {
+  description: "description",
+  year_introduced: "year_introduced",
+  weight_g: "weight_g",
+  shutter_type: "shutter_type",
+  megapixels: "megapixels",
+  sensor_size: "sensor_size",
+  resolution: "resolution",
+  system_id: "system_id",
+};
+/** Column name to the schema field a citation is recorded against. */
+const CITED_AS = {
+  description: "description",
+  year_introduced: "yearIntroduced",
+  weight_g: "weightG",
+  shutter_type: "shutterType",
+  megapixels: "megapixels",
+  sensor_size: "sensorSize",
+  resolution: "resolution",
+  system_id: "systemId",
+};
+
 let written = 0;
 for (const u of updates) {
-  await sql`
-    UPDATE cameras
-    SET specs = COALESCE(specs, '{}'::jsonb) || ${JSON.stringify(u.newSpecs)}::jsonb,
-        year_introduced = COALESCE(year_introduced, ${u.setYear})
-    WHERE id = ${u.id}
-  `;
+  const sets = [];
+  const values = [];
+  for (const [key, value] of Object.entries(u.set)) {
+    if (!COLUMNS[key]) continue;
+    values.push(value);
+    // COALESCE so a value written between the read and the write is not lost.
+    sets.push(`${COLUMNS[key]} = COALESCE(${COLUMNS[key]}, $${values.length})`);
+  }
+  if (Object.keys(u.newSpecs).length) {
+    values.push(JSON.stringify(u.newSpecs));
+    sets.push(`specs = COALESCE(specs, '{}'::jsonb) || $${values.length}::jsonb`);
+  }
+  values.push(u.id);
+  await sql.query(`UPDATE cameras SET ${sets.join(", ")} WHERE id = $${values.length}`, values);
   written++;
 
-  const fields = Object.keys(u.newSpecs).map((k) => `specs.${k}`);
-  if (u.setYear !== null) fields.push("yearIntroduced");
+  const fields = [
+    ...Object.keys(u.set).map((k) => CITED_AS[k]).filter(Boolean),
+    ...Object.keys(u.newSpecs).map((k) => `specs.${k}`),
+  ];
   for (const field of fields) {
     await sql`
       INSERT INTO field_citations (entity_type, entity_id, field, source_name, source_url, note)
       VALUES ('camera', ${u.id}, ${field}, 'camera-wiki', ${u.url},
-              'Read from the article''s own specification list. CC BY-SA.')
+              'Read from the camera-wiki article. CC BY-SA.')
       ON CONFLICT (entity_type, entity_id, field) DO NOTHING
     `;
   }
