@@ -113,7 +113,7 @@ export default async function Home() {
       <div className="rounded-2xl bg-gradient-to-b from-muted/50 to-transparent -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 pt-8 pb-12">
         <section className="space-y-5 text-center">
           <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
-            Every lens. Every mount. One reference.
+            A reference for lenses, cameras and mounts.
           </h1>
           <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
             Specifications for {counts.lenses.toLocaleString()} lenses and{" "}
