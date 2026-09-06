@@ -36,6 +36,15 @@
  *   node kenrockwell-scrape.mjs --limit 20         # short run while iterating
  *   node kenrockwell-scrape.mjs --delay 1500       # ms between archive requests
  *   node kenrockwell-scrape.mjs --reparse          # rebuild the JSON from cache, no fetching
+ *   node kenrockwell-scrape.mjs --kind cameras     # his camera reviews, to kenrockwell-cameras.json
+ *
+ * Camera reviews have no focal length in their file name, so --kind cameras
+ * takes every other page under the brand directories that is not an obvious
+ * article or sub-page, fetches it, and lets the specification labels say
+ * what it is: sensor, shutter and viewfinder make a camera; optics,
+ * diaphragm and close focus make a lens (his older lens reviews are named
+ * "80200.htm" and turn up here too); neither makes an article. The `kind`
+ * field carries that verdict.
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -53,7 +62,8 @@ const args = process.argv.slice(2);
 const argVal = (flag, dflt) => (args.includes(flag) ? args[args.indexOf(flag) + 1] : dflt);
 const LIMIT = parseInt(argVal("--limit", "100000"), 10);
 const DELAY_MS = parseInt(argVal("--delay", "1500"), 10);
-const OUT = argVal("--out", "kenrockwell.json");
+const KIND = argVal("--kind", "lenses");
+const OUT = argVal("--out", KIND === "cameras" ? "kenrockwell-cameras.json" : "kenrockwell.json");
 const ONLY_DIRS = argVal("--dirs", null)?.split(",").map((d) => d.trim()).filter(Boolean);
 const REPARSE = args.includes("--reparse");
 const DEBUG = args.includes("--debug");
@@ -95,6 +105,10 @@ function cachePath(...parts) {
 const NOT_A_REVIEW =
   /compar|versus|-vs-|history|falloff|sharpness|bokeh|coma|sunstar|flare|distortion|sample|\/images\/|users?-guide|\/gallery|lenses\.html?$|index\.html?$/i;
 
+// Articles, films, accessories and per-topic sub-pages of a camera review.
+const NOT_A_CAMERA =
+  /how-to|settings|menu|firmware|recommended|autofocus|\/iso|noise|dynamic|battery|flash|accessor|hood|filter|strap|\/case|\/bag|tripod|grip|adapter|manual|news|\/vs|velvia|provia|astia|fortia|acros|film|serial|names|cult|dollar|conversion|meter|tube|date-code|-man\.|index-new|end\.htm|skydive|color\.htm|simulation/i;
+
 /**
  * Every page under a brand directory, with the timestamp of its newest good
  * capture. Since mid-2025 the archive's crawler has been hitting the
@@ -125,11 +139,14 @@ async function inventory(dir) {
     const path = original
       .split(/[?#]/)[0]
       .replace(/^https?:\/\/(www\.)?kenrockwell\.com(:80)?\//i, "")
+      .replace(/\/{2,}/g, "/")
+      .replace(/^\//, "")
       .toLowerCase();
     if (!/\.html?$/.test(path)) continue;
     // A lens review's file name carries its focal length ("50mm-f14.htm",
     // "18-55mm-vr.htm"); camera and article pages do not.
-    if (!/\d+(\.\d+)?mm|\d+-\d+/.test(path)) continue;
+    const lensName = /\d+(\.\d+)?mm|\d+-\d+/.test(path);
+    if (KIND === "cameras" ? lensName || NOT_A_CAMERA.test(path) || path.split("/").length > 4 : !lensName) continue;
     if (NOT_A_REVIEW.test(path)) continue;
     if (!newest.has(path) || newest.get(path) < timestamp) newest.set(path, timestamp);
   }
@@ -191,7 +208,17 @@ const SPEC_LABELS = [
   "Made in", "Price", "Price, USA", "Coverage", "Mount", "Introduced", "Announced", "Weather Sealing",
   "Included", "Packaging", "Box", "Coatings", "Teleconverters", "Tripod Collar", "Rated Weight",
 ];
-const LABEL_SET = new Set(SPEC_LABELS.map((l) => l.toLowerCase()));
+const CAMERA_LABELS = [
+  "Sensor", "Image Sensor", "Resolution", "Pixels", "Megapixels", "Lens Mount", "Lens", "Lenses", "Shutter", "Shutter Speeds",
+  "Flash Sync", "Sync", "Flash", "ISO", "Sensitivity", "Frame Rate", "Frame Rates", "Viewfinder", "Finder", "Rear LCD", "LCD",
+  "Screen", "Display", "Metering", "Meter", "Exposure", "Exposure Modes", "Movies", "Video", "Memory", "Card", "Cards",
+  "Storage", "Battery", "Batteries", "Power", "Data", "Connections", "Ports", "Image Stabilizer", "Format", "Film",
+  "Body", "Finish", "Construction", "Accessories", "Self Timer", "Drive", "Bracketing", "White Balance", "Audio",
+  "Wireless", "Bluetooth", "GPS", "Dimensions", "Environmental", "Weather Sealing",
+];
+const LABEL_SET = new Set([...SPEC_LABELS, ...CAMERA_LABELS].map((l) => l.toLowerCase()));
+const CAMERA_LABEL_SET = new Set(CAMERA_LABELS.map((l) => l.toLowerCase()));
+const LENS_LABEL_SET = new Set(["optics", "diaphragm", "close focus", "closest focus", "filters", "filter thread", "focal length", "maximum reproduction ratio", "angle of view", "aperture ring"]);
 
 const SECTION_HEADINGS = /^(Introduction|Intro|Sample Images?|Identification|Format|Compatibility|Specifications|Specs|Performance|Compared|Comparisons?|User'?s Guide|Usage|Recommendations|Deployment|More|Help Me Help You|Accessories|Versions|History|Missing|New|Good|Bad)$/i;
 
@@ -322,7 +349,7 @@ function parsePage(path, html) {
   // Years live in the header strip: "(2012-)", "(1980-1982 Japan)", "(1977-1995)".
   const head = lines.slice(0, 25).join(" ");
   const years = head.match(/\((\d{4})\s*[-–~]\s*(\d{4})?\s*([A-Za-z ]*)\)/);
-  const summaryLine = lines.slice(0, 40).find((l) => /\((?:[^()]*)(filters|oz\.|close focus)/i.test(l));
+  const summaryLine = lines.slice(0, 40).find((l) => /\((?:[^()]*)(filters|oz\.|close focus|MP\b|megapixel)/i.test(l));
   const summary = summaryLine ? parseSummary(summaryLine) : null;
 
   // "November 2019 Nikon Reviews Nikon Lenses All Reviews": the review date.
@@ -349,9 +376,26 @@ function parsePage(path, html) {
     prices.push({ usd: parseFloat(m[1].replace(/,/g, "")), note: m[2].trim().slice(0, 60), when: m[3].trim() });
   }
 
+  const labels = Object.keys(specs).map((k) => k.toLowerCase());
+  const cameraScore = labels.filter((k) => CAMERA_LABEL_SET.has(k)).length;
+  const lensScore = labels.filter((k) => LENS_LABEL_SET.has(k)).length;
+  const kind = cameraScore >= 3 && cameraScore > lensScore ? "camera" : lensScore >= 2 && lensScore >= cameraScore ? "lens" : "other";
+  const sensorText = `${specs.Sensor ?? specs["Image Sensor"] ?? ""} ${specs.Resolution ?? specs.Pixels ?? specs.Megapixels ?? ""}`;
+  const megapixels = sensorText.match(/(\d+(?:\.\d+)?)\s*(?:MP\b|megapixels?|million)/i);
+  const sensorSize = sensorText.match(/full[- ]frame|aps-c|aps-h|micro four thirds|four thirds|medium format|1\/2\.3|1\/1\.7|1"|1-inch|(\d+(?:\.\d+)?\s*[×x]\s*\d+(?:\.\d+)?\s*mm)/i);
+
   return {
     url: `https://www.kenrockwell.com/${path}`,
     brandDir: path.split("/")[0],
+    kind,
+    camera: kind === "camera" ? {
+      megapixels: megapixels ? parseFloat(megapixels[1]) : null,
+      sensor: sensorSize ? sensorSize[0] : null,
+      sensorText: sensorText.replace(/\s+/g, " ").trim().slice(0, 200) || null,
+      mount: (specs["Lens Mount"] ?? specs.Mount ?? "").slice(0, 120) || null,
+      shutter: (specs.Shutter ?? specs["Shutter Speeds"] ?? "").slice(0, 200) || null,
+      viewfinder: (specs.Viewfinder ?? specs.Finder ?? "").slice(0, 200) || null,
+    } : undefined,
     title,
     heading: h1,
     yearFrom: years ? parseInt(years[1], 10) : null,
@@ -376,6 +420,8 @@ function parsePage(path, html) {
     // Kept for writing our own text later; never published.
     text: {
       intro: prose(sectionLines(lines, "Introduction").length ? sectionLines(lines, "Introduction") : sectionLines(lines, "Intro")).slice(0, 8000),
+      usage: KIND === "cameras" ? prose(sectionLines(lines, "Usage").length ? sectionLines(lines, "Usage") : sectionLines(lines, "User's Guide")).slice(0, 6000) : undefined,
+      compared: KIND === "cameras" ? prose(sectionLines(lines, "Compared")).slice(0, 4000) : undefined,
       identification: prose(sectionLines(lines, "Identification")).slice(0, 4000),
       performance: prose(sectionLines(lines, "Performance")).slice(0, 12000),
       recommendations: prose(sectionLines(lines, "Recommendations")).slice(0, 4000),
@@ -432,6 +478,11 @@ async function main() {
   }
 
   const reviews = pages.filter((p) => p.hasSpecs);
+  if (KIND === "cameras") {
+    const kinds = {};
+    for (const p of pages) kinds[p.kind] = (kinds[p.kind] ?? 0) + 1;
+    console.log(`\nkinds: ${JSON.stringify(kinds)}`);
+  }
   writeFileSync(OUT, JSON.stringify({ crawledAt: new Date().toISOString(), pages }, null, 1));
   console.log(`\n${pages.length} pages parsed, ${reviews.length} with a specifications section, ${failures.length} failed`);
   console.log(`  with elements/groups: ${reviews.filter((p) => p.facts.elements).length}`);
