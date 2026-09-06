@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { unstable_cache } from "next/cache";
 import { isNull } from "drizzle-orm";
 import { db } from "@/db";
-import { lenses, cameras, systems, collections } from "@/db/schema";
+import { lenses, cameras, systems, collections, lensSeries } from "@/db/schema";
 import { getClientIP, rateLimitedResponse } from "@/lib/api-utils";
 import { rateLimiters } from "@/lib/rate-limit";
 import { buildNameMatchers, matchesNormalizedName } from "@/lib/search";
@@ -11,7 +11,7 @@ type ResultRow = {
   id: number;
   name: string;
   slug: string;
-  type: "lens" | "camera" | "system" | "collection";
+  type: "lens" | "camera" | "system" | "collection" | "series";
 };
 
 const MAX_PER_TYPE = 5;
@@ -21,7 +21,7 @@ const MAX_PER_TYPE = 5;
 // per hour.
 const getSearchIndex = unstable_cache(
   async () => {
-    const [lensRows, cameraRows, systemRows, collectionRows] = await Promise.all([
+    const [lensRows, cameraRows, systemRows, collectionRows, seriesRows] = await Promise.all([
       db
         .select({ id: lenses.id, name: lenses.name, slug: lenses.slug })
         .from(lenses)
@@ -36,12 +36,18 @@ const getSearchIndex = unstable_cache(
       db
         .select({ id: collections.id, name: collections.name, slug: collections.slug })
         .from(collections),
+      // Series are the home of manufacturer product lines, so a search for
+      // "Canon L" has to reach them the way it used to reach the collection.
+      db
+        .select({ id: lensSeries.id, name: lensSeries.name, slug: lensSeries.slug })
+        .from(lensSeries),
     ]);
     return {
       lenses: lensRows,
       cameras: cameraRows,
       systems: systemRows,
       collections: collectionRows,
+      series: seriesRows,
     };
   },
   ["search-index"],
@@ -69,12 +75,12 @@ export async function GET(request: NextRequest) {
 
   const q = new URL(request.url).searchParams.get("q")?.trim().slice(0, 200);
   if (!q || q.length < 2) {
-    return NextResponse.json({ lenses: [], cameras: [], systems: [], collections: [] });
+    return NextResponse.json({ lenses: [], cameras: [], systems: [], collections: [], series: [] });
   }
 
   const matchers = buildNameMatchers(q);
   if (matchers.length === 0) {
-    return NextResponse.json({ lenses: [], cameras: [], systems: [], collections: [] });
+    return NextResponse.json({ lenses: [], cameras: [], systems: [], collections: [], series: [] });
   }
 
   const index = await getSearchIndex();
@@ -92,6 +98,9 @@ export async function GET(request: NextRequest) {
       matchesNormalizedName(r.manufacturer, matchers)
     ),
     collections: pick(index.collections, "collection", (r) =>
+      matchesNormalizedName(r.name, matchers)
+    ),
+    series: pick(index.series, "series", (r) =>
       matchesNormalizedName(r.name, matchers)
     ),
   });
