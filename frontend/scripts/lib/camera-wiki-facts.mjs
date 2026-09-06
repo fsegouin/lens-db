@@ -75,7 +75,7 @@ export function extractYears(text) {
 
   if (start === null) {
     const single = text.match(
-      new RegExp(String.raw`\b(?:introduced|launched|released|announced|appeared|produced|made|marketed|sold|presented|came out)\b[^.]{0,40}?\b(?:in|from|during|around|circa|by)\s+${YEAR}`, "i"),
+      new RegExp(String.raw`\b(?:introduced|launched|released|announced|appeared|produced|manufactured|made|marketed|sold|presented|came out)\b[^.]{0,40}?\b(?:in|from|since|during|around|about|circa|by|starting)\s+${YEAR}`, "i"),
     );
     if (single) start = Number(single[1]);
   }
@@ -88,7 +88,18 @@ export function extractYears(text) {
   }
 
   if (start !== null && end !== null && end < start) end = null;
-  return { start, end };
+
+  // A decade is all many articles commit to ("made by Balda in the 1950s").
+  // It is reported separately and never written into year_introduced, because
+  // that column is an integer and would turn "some time in the fifties" into a
+  // claim that the camera appeared in 1950.
+  let decade = null;
+  if (start === null) {
+    const d = text.match(/\b(?:in|during|from|of)\s+the\s+(1[89]\d0)s\b/i);
+    if (d) decade = `${d[1]}s`;
+  }
+
+  return { start, end, decade };
 }
 
 /**

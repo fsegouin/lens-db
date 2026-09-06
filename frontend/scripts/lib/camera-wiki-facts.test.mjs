@@ -31,19 +31,20 @@ describe("years", () => {
   it("reads a launch stated after a comma", () => {
     // Kodak DCS 200.
     const t = "The Kodak DCS 200 was the second digital SLR released by Kodak, in 1992.";
-    assert.deepEqual(extractYears(t), { start: 1992, end: null });
+    assert.deepEqual(extractYears(t), { start: 1992, end: null, decade: null });
   });
 
   it("reads a production range", () => {
     // Smena 6.
     const t = "The Smena 6 is a 35mm viewfinder camera made by GOMZ and LOMO in the USSR, from 1961 to 1969.";
-    assert.deepEqual(extractYears(t), { start: 1961, end: 1969 });
+    assert.deepEqual(extractYears(t), { start: 1961, end: 1969, decade: null });
   });
 
   it("reads an introduction", () => {
     assert.deepEqual(extractYears("The Nikon F was introduced in 1959 with a range of lenses."), {
       start: 1959,
       end: null,
+      decade: null,
     });
   });
 
@@ -52,11 +53,26 @@ describe("years", () => {
     assert.deepEqual(extractYears("Wirgin was founded in 1920 by three brothers."), {
       start: null,
       end: null,
+      decade: null,
     });
     assert.deepEqual(extractYears("It competed with the Leica II, which had appeared earlier."), {
       start: null,
       end: null,
+      decade: null,
     });
+  });
+
+  it("reads \"manufactured since\"", () => {
+    // Ferrania Condor: the phrasing that left 400-odd rows without a year.
+    const t = "This camera was manufactured since 1947 in Florence, then in Milan.";
+    assert.equal(extractYears(t).start, 1947);
+  });
+
+  it("reports a decade separately, and never as a year", () => {
+    // Baldalux. An integer column would turn "the 1950s" into a claim of 1950.
+    const y = extractYears("The Baldalux folding camera was made by Balda in the 1950s.");
+    assert.equal(y.start, null);
+    assert.equal(y.decade, "1950s");
   });
 
   it("drops a range that ends before it starts", () => {
