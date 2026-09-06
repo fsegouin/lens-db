@@ -150,6 +150,43 @@ async function fetchCategoryPages(brand) {
  */
 const OVERVIEW_TITLE = /\b(series|cameras|models|range|lineup|list)$/i;
 
+/**
+ * The facts camera-wiki files a camera under, pulled out of its categories.
+ *
+ * The articles themselves are free prose with no infobox, so the categories are
+ * the only structured data on the site — but they carry more than the body type
+ * the classifier needs. A bare four-digit category is the year of introduction,
+ * a category ending in "mount" names the lens mount, and the compound type
+ * category ("Japanese 35mm SLR") holds the nationality and film format. That is
+ * enough to hand over a reviewable record rather than a bare name.
+ */
+function extractFacts(categories) {
+  const facts = { year: null, mount: null, format: null, type: null };
+  for (const category of categories) {
+    const year = category.match(/^(1[89]\d{2}|20[0-2]\d)$/);
+    if (year) {
+      // A camera can carry more than one year category; the earliest is the
+      // introduction, the later ones are revisions.
+      const value = Number(year[1]);
+      if (facts.year === null || value < facts.year) facts.year = value;
+      continue;
+    }
+    const mount = category.match(/^(.*?) mount$/i);
+    if (mount) {
+      facts.mount = mount[1].trim();
+      continue;
+    }
+    if (CAMERA_SIGNAL.test(category) || FORMAT_SIGNAL.test(category)) {
+      // Keep the most specific type category: "Japanese 35mm SLR" says more
+      // than "35mm", and the longer string is reliably the more specific one.
+      if (!facts.type || category.length > facts.type.length) facts.type = category;
+      const format = category.match(/\b(\d{3} film|35mm|\d+(?:\.\d+)?x\d+(?:\.\d+)?(?:in)?)\b/i);
+      if (format && !facts.format) facts.format = format[1];
+    }
+  }
+  return facts;
+}
+
 function classify(categories) {
   const list = [...categories];
   // A body-type or format category is strong positive evidence and wins: a
@@ -168,7 +205,7 @@ function classify(categories) {
 function candidateNames(title, brand, otherBrands) {
   const names = [title];
   const lower = title.toLowerCase();
-  if (lower.startsWith(brand.toLowerCase())) return names;
+  if (lower.includes(brand.toLowerCase())) return names;
   // camera-wiki cross-files a body under every maker involved, so the Kodak DCS
   // bodies built on Nikon chassis sit in Category:Nikon. Prefixing the category
   // brand onto a title that already names a different maker would ask the
@@ -188,6 +225,13 @@ const cameras = await sql.unsafe(
 );
 const index = buildIndex(cameras);
 
+// camera-wiki writes a mount as "Nikon F mount"; our systems table calls the
+// same thing "Nikon F". Matching them means an imported body can arrive already
+// attached to the system its lenses hang off, which is the whole point of
+// having it on this site.
+const systems = await sql.unsafe("select id, name from systems");
+const systemsByName = new Map(systems.map((s) => [s.name.toLowerCase(), s]));
+
 const missing = [];
 const unclassified = [];
 let cameraPages = 0;
@@ -197,6 +241,8 @@ let overviews = 0;
 const emptyCategories = [];
 const dropped = new Map();
 const notable = [];
+let withYear = 0;
+let withSystem = 0;
 
 console.log(`Scanning ${args.brands.length} brand categories on camera-wiki.org\n`);
 console.log("brand                 wiki  have  missing");
@@ -222,6 +268,8 @@ for (const brand of args.brands) {
   let brandMissing = 0;
 
   for (const [title, categories] of pages) {
+    // The category contains the maker's own article; it is not a camera.
+    if (title.toLowerCase() === brand.toLowerCase()) continue;
     if (OVERVIEW_TITLE.test(title)) {
       overviews++;
       continue;
@@ -251,10 +299,20 @@ for (const brand of args.brands) {
         continue;
       }
       if (bodyClass === "notable-compact") notable.push(`${brand}: ${title}`);
+      const facts = extractFacts(categories);
+      const system = facts.mount ? systemsByName.get(facts.mount.toLowerCase()) : undefined;
+      if (facts.year) withYear++;
+      if (system) withSystem++;
       missing.push({
         brand,
         title,
         class: bodyClass,
+        year: facts.year,
+        type: facts.type,
+        format: facts.format,
+        mount: facts.mount,
+        system_id: system?.id ?? null,
+        system: system?.name ?? null,
         url: `https://camera-wiki.org/wiki/${encodeURIComponent(title.replace(/ /g, "_"))}`,
       });
       brandMissing++;
@@ -266,9 +324,34 @@ for (const brand of args.brands) {
   );
 }
 
+/**
+ * One article, one camera.
+ *
+ * camera-wiki files a body under every maker involved in it, so the Kodak DCS
+ * bodies appear in both Category:Kodak and Category:Nikon, and the Agfa-Ansco
+ * cameras in both of theirs — 62 articles reached here twice. Left alone that
+ * imports each of them as two cameras with near-identical slugs. Where a title
+ * names one of its makers, that maker's copy is the one kept, so the Kodak DCS
+ * 100 is filed under Kodak rather than under Nikon.
+ */
+const deduped = new Map();
+for (const candidate of missing) {
+  const existing = deduped.get(candidate.title);
+  if (!existing) {
+    deduped.set(candidate.title, candidate);
+    continue;
+  }
+  const names = (c) => c.title.toLowerCase().includes(c.brand.toLowerCase());
+  if (!names(existing) && names(candidate)) deduped.set(candidate.title, candidate);
+}
+const duplicatePages = missing.length - deduped.size;
+missing.length = 0;
+missing.push(...deduped.values());
+
 console.log(`\nCamera pages classified:  ${cameraPages}`);
 console.log(`Already in our catalogue: ${present}`);
 console.log(`Missing cameras:          ${missing.length}`);
+console.log(`Cross-filed duplicates:   ${duplicatePages}`);
 console.log(`Non-camera pages skipped: ${excluded}`);
 console.log(`Overview pages skipped:   ${overviews}`);
 console.log(`Unclassified (review):    ${unclassified.length}`);
@@ -281,6 +364,7 @@ console.log("\nKept by class:");
 for (const [k, n] of [...byClass].sort((a, b) => b[1] - a[1])) {
   console.log(`  ${String(n).padStart(5)}  ${k}`);
 }
+console.log(`\nOf the ${missing.length} kept: ${withYear} carry a year, ${withSystem} match a system we already have.`);
 if (notable.length) {
   console.log(`\nPremium 80s/90s film compacts kept (${notable.length}):`);
   console.log(`  ${notable.join(", ")}`);
