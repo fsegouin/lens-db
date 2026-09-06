@@ -115,6 +115,8 @@ async function api(params) {
  */
 async function fetchCategoryPages(brand) {
   const pages = new Map();
+  /** Titles seen to be redirects, so a later batch cannot re-add them. */
+  const redirects = new Set();
   let cont = {};
 
   for (let guard = 0; guard < 50; guard++) {
@@ -124,12 +126,23 @@ async function fetchCategoryPages(brand) {
       gcmtitle: `Category:${brand}`,
       gcmlimit: 500,
       gcmtype: "page",
-      prop: "categories",
+      prop: "categories|info",
       cllimit: "max",
       ...cont,
     });
 
     for (const page of Object.values(data?.query?.pages ?? {})) {
+      // camera-wiki keeps a page for every name a camera was sold under and
+      // redirects the alternates at the real article — "Ikomat A" at the Ikonta
+      // 520, "Instax Mini 50s" at the Mini 50. They carry the target's
+      // categories, so they look like cameras, and importing them produces a
+      // second row for a camera already in the catalogue under its own name.
+      if (page.redirect !== undefined) {
+        pages.delete(page.title);
+        redirects.add(page.title);
+        continue;
+      }
+      if (redirects.has(page.title)) continue;
       const existing = pages.get(page.title) ?? new Set();
       for (const c of page.categories ?? []) existing.add(c.title.replace(/^Category:/, ""));
       pages.set(page.title, existing);
