@@ -1,6 +1,10 @@
 import { redirect } from "next/navigation";
+import { eq } from "drizzle-orm";
 import Breadcrumb from "@/components/Breadcrumb";
+import DigestToggle from "@/components/DigestToggle";
 import KitManager from "@/components/KitManager";
+import { db } from "@/db";
+import { users } from "@/db/schema";
 import { getKitItems, kitValue } from "@/lib/kit";
 import { getCurrentUser } from "@/lib/user-auth";
 
@@ -18,7 +22,14 @@ export default async function KitPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login?next=/kit");
 
-  const items = await getKitItems(user.id);
+  const [items, [prefs]] = await Promise.all([
+    getKitItems(user.id),
+    db
+      .select({ digestOptIn: users.digestOptIn })
+      .from(users)
+      .where(eq(users.id, user.id))
+      .limit(1),
+  ]);
 
   return (
     <div className="w-full max-w-6xl">
@@ -33,6 +44,13 @@ export default async function KitPage() {
         initialCurrency={user.kitCurrency}
         handle={user.handle}
       />
+
+      <section className="mt-12 max-w-xl">
+        <h2 className="mb-3 text-sm font-semibold tracking-wider text-muted-foreground uppercase">
+          Email
+        </h2>
+        <DigestToggle initialOptIn={prefs?.digestOptIn ?? false} />
+      </section>
     </div>
   );
 }
