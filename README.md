@@ -83,7 +83,32 @@ node scripts/scan-camera-wiki-gaps.mjs --json camera-wiki-gaps.json
 | `scan-libraw-gaps.mjs` | [LibRaw](https://github.com/LibRaw/LibRaw)'s `cameralist.cpp` — one plain-text file, no key, no rate limit | Every camera that writes a raw file, so the digital era |
 | `scan-camera-wiki-gaps.mjs` | [camera-wiki.org](https://camera-wiki.org) via its MediaWiki `api.php`, by brand category | ~10,000 articles weighted to film-era Western and consumer cameras |
 
-Both share `scripts/lib/catalogue-match.mjs`, which decides when two names are the same camera — LibRaw reports the EXIF model code (`ILCE-7M3`) where we store the marketing name (`Sony a7 III`), and camera-wiki uses the collectors' title. `scripts/lib/catalogue-match.test.mjs` pins that behaviour in both directions: names that must match, and near-identical bodies (`EOS 5D` vs `EOS 5DS`, `D3` vs `D300`) that must not, since a false match hides a genuinely missing camera. Run it with `pnpm test`.
+Both share two libraries, each with its own test suite (`pnpm test`):
+
+- **`scripts/lib/catalogue-match.mjs`** decides when two names are the same camera. LibRaw reports the EXIF model code (`ILCE-7M3`) where we store the marketing name (`Sony a7 III`), and camera-wiki uses the collectors' title. Its tests pin both directions: names that must match, and near-identical bodies (`EOS 5D` vs `EOS 5DS`, `D3` vs `D300`) that must not, since a false match hides a genuinely missing camera.
+- **`scripts/lib/body-class.mjs`** decides whether we want the camera at all.
+
+### What counts as in scope
+
+A body earns a place by taking interchangeable lenses. Fixed-lens cameras are out, with these exceptions:
+
+| Class | In scope | Why |
+|---|---|---|
+| Interchangeable-lens | yes | the catalogue's reason to exist |
+| Premium 80s/90s film point & shoots | yes | Contax T2, Yashica T4, mju II, TC-1, Minilux, GR1 — collected for the lens on the front |
+| Folding | yes | Ikonta, Billy Record, Bessa — fixed-lens, but a Tessar or Skopar is the point |
+| Instant | yes | Polaroid, which the catalogue currently lacks entirely |
+| Viewfinder | yes | simple scale-focus film cameras; the premium compacts live in this class too |
+| Box | no | a meniscus lens and one shutter speed |
+| Digital compact | no | including the X100, RX100, GR and Q — good cameras, out of scope |
+| Bridge superzoom | no | fixed lens, no mount |
+| Cartridge snapshot (110/126/disc/APS) | no | formats built so nobody had to focus, unless the body is a real SLR |
+
+Two rules keep the filter honest. It **defaults to keeping**, so only an explicit pattern drops a candidate and an unrecognised body stays visible in the report — the costs are asymmetric, since an unwanted compact wastes a moment's review while a dropped SLR is a camera silently missing from the site. And it **reports every drop by class**, so an over-eager rule shows up as a surprising count rather than a shorter list. Pass `--all` to see everything it would drop.
+
+Model patterns are scoped to the maker, because designations are only unique within a brand: `S1` is a Fujifilm bridge and Panasonic's full-frame flagship, and a bare `T3` is both a Yashica point & shoot and Fujifilm's X-T3.
+
+The notable-compact list is a judgement call and is meant to be edited — adding a line to `MAKER_RULES` is how you disagree with it. Note that every name on it was later reused for a zoom version (the mju II ZOOM, the Minilux Zoom) that shares only the badge; those are classed as ordinary compacts.
 
 The scanners deliberately report rather than import. Neither list is clean enough to load unattended: camera-wiki mixes accessories into brand categories (pages it cannot classify are listed separately for review), and LibRaw includes phones, drones and digital backs. camera-wiki is CC BY-SA, so anything taken from it needs attribution.
 

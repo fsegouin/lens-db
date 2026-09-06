@@ -31,6 +31,7 @@
 import fs from "node:fs";
 import { createSql } from "./lib/db.mjs";
 import { buildIndex, lookup } from "./lib/catalogue-match.mjs";
+import { classifyWikiBody, DROPPED_BY_DEFAULT } from "./lib/body-class.mjs";
 
 const API = "https://camera-wiki.org/api.php";
 const USER_AGENT = "thelensdb-catalogue-scan/1.0 (+https://thelensdb.com; florent@segouin.me)";
@@ -80,11 +81,12 @@ const NOT_A_CAMERA =
   /\b(makers?|manufacturers?|distributors?|lenses|meters?|flash(es)?|accessor\w*|tripods?|enlargers?|projectors?|filters?|shutters?|films?|paper|chemical\w*|books?|magazines?|people|photographers?|museums?|shops?)\b/i;
 
 function parseArgs(argv) {
-  const args = { brands: [], json: null, limit: 0 };
+  const args = { brands: [], json: null, limit: 0, all: false };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === "--brand") args.brands.push(argv[++i]);
     else if (argv[i] === "--json") args.json = argv[++i] ?? "camera-wiki-gaps.json";
     else if (argv[i] === "--limit") args.limit = Number(argv[++i]);
+    else if (argv[i] === "--all") args.all = true;
   }
   if (!args.brands.length) args.brands = DEFAULT_BRANDS;
   if (args.limit > 0) args.brands = args.brands.slice(0, args.limit);
@@ -193,6 +195,8 @@ let present = 0;
 let excluded = 0;
 let overviews = 0;
 const emptyCategories = [];
+const dropped = new Map();
+const notable = [];
 
 console.log(`Scanning ${args.brands.length} brand categories on camera-wiki.org\n`);
 console.log("brand                 wiki  have  missing");
@@ -239,9 +243,18 @@ for (const brand of args.brands) {
       present++;
       brandPresent++;
     } else {
+      // Only what we are missing gets judged on whether we want it; a body
+      // already catalogued stays regardless of class.
+      const bodyClass = classifyWikiBody(title, categories);
+      if (!args.all && DROPPED_BY_DEFAULT.has(bodyClass)) {
+        dropped.set(bodyClass, (dropped.get(bodyClass) ?? 0) + 1);
+        continue;
+      }
+      if (bodyClass === "notable-compact") notable.push(`${brand}: ${title}`);
       missing.push({
         brand,
         title,
+        class: bodyClass,
         url: `https://camera-wiki.org/wiki/${encodeURIComponent(title.replace(/ /g, "_"))}`,
       });
       brandMissing++;
@@ -259,6 +272,19 @@ console.log(`Missing cameras:          ${missing.length}`);
 console.log(`Non-camera pages skipped: ${excluded}`);
 console.log(`Overview pages skipped:   ${overviews}`);
 console.log(`Unclassified (review):    ${unclassified.length}`);
+for (const [bodyClass, n] of [...dropped].sort((a, b) => b[1] - a[1])) {
+  console.log(`  dropped as ${bodyClass}:`.padEnd(28) + String(n).padStart(5));
+}
+const byClass = new Map();
+for (const m of missing) byClass.set(m.class, (byClass.get(m.class) ?? 0) + 1);
+console.log("\nKept by class:");
+for (const [k, n] of [...byClass].sort((a, b) => b[1] - a[1])) {
+  console.log(`  ${String(n).padStart(5)}  ${k}`);
+}
+if (notable.length) {
+  console.log(`\nPremium 80s/90s film compacts kept (${notable.length}):`);
+  console.log(`  ${notable.join(", ")}`);
+}
 if (emptyCategories.length) {
   console.log(`\nNo such category on camera-wiki: ${emptyCategories.join(", ")}`);
 }
@@ -278,6 +304,7 @@ if (args.json) {
           excluded,
           overviews,
           unclassified: unclassified.length,
+          dropped: Object.fromEntries(dropped),
         },
         missing,
         unclassified,
