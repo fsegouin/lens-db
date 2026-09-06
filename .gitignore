@@ -21,3 +21,6 @@ __pycache__/
 
 # Seeded design-canvas output (2.4 MB editor payload); rebuild from the .dc.html sources
 docs/redesign/mockups/lens-db-field-notes.html
+scraper/kenrockwell-cache/
+scraper/kenrockwell.json
+scraper/kenrockwell.failures.json
