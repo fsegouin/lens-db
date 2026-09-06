@@ -24,3 +24,9 @@ docs/redesign/mockups/lens-db-field-notes.html
 scraper/kenrockwell-cache/
 scraper/kenrockwell.json
 scraper/kenrockwell.failures.json
+scraper/kenrockwell-drafts.jsonl
+scraper/kenrockwell-drafts.md
+scraper/kenrockwell-drafts.log
+scraper/kenrockwell-crawl.log
+scraper/kenrockwell-map.json
+scraper/kenrockwell-map.md
