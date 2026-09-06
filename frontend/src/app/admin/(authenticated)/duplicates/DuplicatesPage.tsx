@@ -37,7 +37,6 @@ export default function DuplicatesPage() {
   const [total, setTotal] = useState(0);
   const [statusFilter, setStatusFilter] = useState("pending");
   const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState<number | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -56,20 +55,6 @@ export default function DuplicatesPage() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
-
-  async function handleAction(flagId: number, action: "confirm" | "dismiss", keepEntityId?: number) {
-    setActionLoading(flagId);
-    try {
-      await fetch(`/api/admin/duplicates/${flagId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action, keepEntityId }),
-      });
-      fetchData();
-    } finally {
-      setActionLoading(null);
-    }
-  }
 
   return (
     <div className="space-y-4 p-6">
@@ -112,7 +97,7 @@ export default function DuplicatesPage() {
                     </span>
                     <span className="text-muted-foreground">flagged by</span>
                     <span>{flag.flaggedByName || "Unknown"}</span>
-                    <span className="text-muted-foreground">— {formatDate(flag.createdAt)}</span>
+                    <span className="text-muted-foreground">· {formatDate(flag.createdAt)}</span>
                   </div>
 
                   <div className="flex items-center gap-2">
@@ -138,36 +123,16 @@ export default function DuplicatesPage() {
                   )}
                 </div>
 
-                {flag.status === "pending" && (
-                  <div className="flex shrink-0 flex-col gap-1">
-                    <Button
-                      variant="outline"
-                      size="xs"
-                      onClick={() => handleAction(flag.id, "confirm", flag.targetEntityId)}
-                      disabled={actionLoading === flag.id}
-                      title={`Merge into ${flag.targetName}`}
-                    >
-                      Keep &ldquo;{flag.targetName.slice(0, 20)}&rdquo;
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="xs"
-                      onClick={() => handleAction(flag.id, "confirm", flag.sourceEntityId)}
-                      disabled={actionLoading === flag.id}
-                      title={`Merge into ${flag.sourceName}`}
-                    >
-                      Keep &ldquo;{flag.sourceName.slice(0, 20)}&rdquo;
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="xs"
-                      onClick={() => handleAction(flag.id, "dismiss")}
-                      disabled={actionLoading === flag.id}
-                    >
-                      Dismiss
-                    </Button>
-                  </div>
-                )}
+                <div className="flex shrink-0 flex-col gap-1">
+                  <Button
+                    variant="outline"
+                    size="xs"
+                    nativeButton={false}
+                    render={<Link href={`/admin/duplicates/${flag.id}`} />}
+                  >
+                    {flag.status === "pending" ? "Review & merge" : "View"}
+                  </Button>
+                </div>
               </div>
             </div>
           ))}
