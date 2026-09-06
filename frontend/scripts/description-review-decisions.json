@@ -1,6 +1,10 @@
 {
   "keep": [
     "a chromatic",
-    "a spherical"
-  ]
+    "a spherical",
+    "coIor",
+    "fIlter",
+    "fIlters"
+  ],
+  "replace": {}
 }
