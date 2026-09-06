@@ -1,3 +1,4 @@
+import { revalidateTag } from "next/cache";
 import { db } from "@/db";
 import {
   revisions,
@@ -164,6 +165,15 @@ export async function createRevision({
       .update(users)
       .set({ editCount: sql`${users.editCount} + 1` })
       .where(eq(users.id, userId));
+  }
+
+  // Every revision-derived cache (the provenance line, recent changes, the
+  // profile contribution lists) hangs off this one tag, and this is the one
+  // place every revision is written.
+  try {
+    revalidateTag("revisions", "max");
+  } catch {
+    // Outside a request scope there is nothing to revalidate.
   }
 
   return revision;

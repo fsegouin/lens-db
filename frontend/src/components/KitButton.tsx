@@ -1,8 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { useUser } from "@/components/user-context";
+import { trackEvent } from "@/lib/analytics";
+
+/** Where a visitor goes to sign in and come straight back to this page. */
+export function kitSignInHref(pathname: string): string {
+  return `/login?next=${encodeURIComponent(pathname)}&reason=kit`;
+}
 
 /**
  * Adds one lens or camera to the signed-in person's kit.
@@ -12,8 +21,9 @@ import { Button } from "@/components/ui/button";
  * reading the session cookie during their render would make them dynamic
  * again, which is what made every lens page a fresh database hit before.
  *
- * Until the answer arrives the button is not shown at all, since an "I own
- * this" that flips to "In your kit" a moment later reads as a bug.
+ * A visitor who is not signed in sees the same button. It is the one thing on
+ * the page that gives them a reason to have an account, and hiding it from
+ * exactly the people it is meant to recruit is why nobody had one.
  */
 export default function KitButton({
   entityType,
@@ -22,12 +32,19 @@ export default function KitButton({
   entityType: "lens" | "camera";
   entityId: number;
 }) {
+  const { user, loading: userLoading } = useUser();
+  const pathname = usePathname();
   const [state, setState] = useState<"loading" | "anonymous" | "in" | "out">(
     "loading",
   );
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
+    if (userLoading) return;
+    if (!user) {
+      setState("anonymous");
+      return;
+    }
     let cancelled = false;
     fetch(`/api/kit?entityType=${entityType}&entityId=${entityId}`)
       .then((r) => (r.status === 401 ? null : r.json()))
@@ -41,10 +58,29 @@ export default function KitButton({
     return () => {
       cancelled = true;
     };
-  }, [entityType, entityId]);
+  }, [entityType, entityId, user, userLoading]);
 
-  // Signed out, or still unknown: the rest of the page carries on without it.
-  if (state === "loading" || state === "anonymous") return null;
+  if (state === "loading") {
+    return (
+      <Button variant="outline" size="sm" disabled>
+        I own this
+      </Button>
+    );
+  }
+
+  if (state === "anonymous") {
+    return (
+      <Link
+        href={kitSignInHref(pathname)}
+        className={buttonVariants({ variant: "outline", size: "sm" })}
+        onClick={() =>
+          trackEvent("signup_prompt_click", { source: "kit_button", entityType })
+        }
+      >
+        I own this
+      </Link>
+    );
+  }
 
   const inKit = state === "in";
 
@@ -70,6 +106,7 @@ export default function KitButton({
       }
       if (!res.ok) throw new Error(String(res.status));
       setState(next ? "in" : "out");
+      trackEvent(next ? "kit_add" : "kit_remove", { entityType });
       toast.success(next ? "Added to your kit" : "Removed from your kit");
     } catch {
       toast.error("That did not save. Try again.");

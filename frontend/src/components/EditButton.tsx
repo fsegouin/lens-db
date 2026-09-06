@@ -15,6 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import Link from "next/link";
+import { trackEvent } from "@/lib/analytics";
 
 type FieldConfig = {
   name: string;
@@ -148,11 +149,15 @@ export default function EditButton({
         return;
       }
 
+      trackEvent("edit_submitted", {
+        entityType,
+        tier: data.pending ? "review" : "direct",
+      });
       setSuccess(true);
       setSuccessMessage(
         data.pending
-          ? "Your edit has been submitted for review. An admin will approve it shortly."
-          : "Your changes have been saved. Thank you for contributing!"
+          ? "Sent for review. You will get an email when it is approved, and it will be credited to you on this page."
+          : "Saved and credited to you."
       );
       clearTimeout(successTimerRef.current);
       successTimerRef.current = setTimeout(() => {

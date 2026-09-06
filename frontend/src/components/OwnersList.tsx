@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { formatMoney, type Owner } from "@/lib/kit";
+import KitNudgeLink from "@/components/KitNudgeLink";
 
 /**
  * Who here owns this, and what they paid for it.
@@ -7,8 +8,35 @@ import { formatMoney, type Owner } from "@/lib/kit";
  * The paid figures are the point: they are first-hand, they carry a date, and
  * unlike the used-price estimates they are nobody else's data.
  */
-export default function OwnersList({ owners }: { owners: Owner[] }) {
-  if (owners.length === 0) return null;
+export default function OwnersList({
+  owners,
+  entityType,
+  entityId,
+}: {
+  owners: Owner[];
+  entityType: "lens" | "camera";
+  entityId: number;
+}) {
+  // An empty list is still a question worth asking. The rail button is the
+  // control; this is the sentence that tells a reader the list is theirs to
+  // start.
+  if (owners.length === 0) {
+    return (
+      <div>
+        <h2 className="mb-2 text-sm font-semibold tracking-wider text-muted-foreground uppercase">
+          Owners here
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          Nobody here has recorded owning this yet.{" "}
+          <KitNudgeLink
+            entityType={entityType}
+            entityId={entityId}
+            source="owners_empty"
+          />
+        </p>
+      </div>
+    );
+  }
 
   const total = owners.reduce((n, o) => n + o.quantity, 0);
 

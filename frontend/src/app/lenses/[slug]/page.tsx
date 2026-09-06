@@ -368,6 +368,7 @@ export default async function LensDetailPage({
             entityId={lens.id}
             revisionCount={provenance.revisionCount}
             lastEditedAt={provenance.lastEditedAt}
+            lastEditor={provenance.lastEditor}
             saleCount={priceHistoryRows.length}
           />
         </div>
@@ -510,7 +511,7 @@ export default async function LensDetailPage({
         </div>
       )}
 
-      <OwnersList owners={owners} />
+      <OwnersList owners={owners} entityType="lens" entityId={lens.id} />
 
       {rivals.length > 0 && (
         <div>
