@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { cameras, systems } from "@/db/schema";
 import { requireAdminAPI } from "@/lib/admin-auth";
+import { revalidateEntity } from "@/lib/revalidate-entity";
 import { and, or, sql, eq, isNull } from "drizzle-orm";
 import { buildNameSearch } from "@/lib/search";
 import { buildOrderBy } from "@/lib/admin-sort";
@@ -123,5 +124,6 @@ export async function POST(request: NextRequest) {
     })
     .returning();
 
+  revalidateEntity("camera", created.slug);
   return NextResponse.json(created, { status: 201 });
 }

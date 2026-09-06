@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { lenses } from "@/db/schema";
 import { requireAdminAPI } from "@/lib/admin-auth";
 import { processAndUpload, fetchAndUpload } from "@/lib/r2-upload";
+import { revalidateEntity } from "@/lib/revalidate-entity";
 
 type ImageData = { src: string; alt: string };
 
@@ -27,6 +28,7 @@ async function appendImage(id: number, image: ImageData): Promise<ImageData[]> {
   const current = (Array.isArray(lens.images) ? lens.images : []) as ImageData[];
   const updated = [...current, image];
   await db.update(lenses).set({ images: updated }).where(eq(lenses.id, id));
+  revalidateEntity("lens", lens.slug);
   return updated;
 }
 
@@ -110,6 +112,7 @@ export async function PUT(
   const bySrc = new Map(current.map((i) => [i.src, i]));
   const reordered = body.srcs.map((s: string) => bySrc.get(s)!);
   await db.update(lenses).set({ images: reordered }).where(eq(lenses.id, id));
+  revalidateEntity("lens", lens.slug);
   return NextResponse.json({ images: reordered });
 }
 
@@ -135,5 +138,6 @@ export async function DELETE(
   const current = (Array.isArray(lens.images) ? lens.images : []) as ImageData[];
   const updated = current.filter((i) => i.src !== body.src);
   await db.update(lenses).set({ images: updated }).where(eq(lenses.id, id));
+  revalidateEntity("lens", lens.slug);
   return NextResponse.json({ images: updated });
 }
