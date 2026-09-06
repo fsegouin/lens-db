@@ -8,7 +8,7 @@ import { getUserTier } from "@/lib/edit-validation";
 import { getClientIP, hashIP } from "@/lib/api-utils";
 import { createRateLimit } from "@/lib/rate-limit";
 
-const submitLimiter = createRateLimit(10, "3600 s"); // 10 submissions per hour
+const submitLimiter = createRateLimit("submissions", 10, "3600 s"); // 10 submissions per hour
 
 function generateSlug(name: string): string {
   return name

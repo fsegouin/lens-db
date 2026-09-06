@@ -137,7 +137,8 @@ Rules:
 | `/api/lenses` | GET | 20/60s | Search + filter + paginate (13+ params) |
 | `/api/cameras` | GET | 20/60s | Search + paginate |
 | `/api/search` | GET | 20/60s | Global search |
-| `/api/ratings` | GET/POST/DELETE | 10/60s | Per-lens ratings (IP-based identity) |
+| `/api/ratings` | GET | 60/60s | Read your own rating (fires on every entity page view) |
+| `/api/ratings` | POST/DELETE | 20/60s | Cast or withdraw a rating (IP-based identity) |
 | `/api/views` | POST | 20/60s | Increment view count (lens/camera/system) |
 | `/api/comparisons` | GET/POST | 10/60s | Top comparisons + record new |
 | `/api/chat` | POST | 10/60s | AI chat (streamed) |

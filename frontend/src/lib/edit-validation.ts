@@ -2,7 +2,7 @@ import { createRateLimit } from "@/lib/rate-limit";
 import type { SessionUser } from "@/lib/user-auth";
 import type { EntityType } from "@/lib/revisions";
 
-const editLimiter = createRateLimit(30, "3600 s"); // 30 edits per hour
+const editLimiter = createRateLimit("edits", 30, "3600 s"); // 30 edits per hour
 
 export type ProtectionLevel = "none" | "autoconfirmed" | "trusted" | "admin";
 

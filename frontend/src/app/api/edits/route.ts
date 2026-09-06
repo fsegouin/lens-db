@@ -8,7 +8,7 @@ import { getClientIP, hashIP } from "@/lib/api-utils";
 import { createRateLimit } from "@/lib/rate-limit";
 import { eq } from "drizzle-orm";
 
-const editLimiter = createRateLimit(30, "3600 s"); // 30 edits per hour
+const editLimiter = createRateLimit("edits", 30, "3600 s"); // 30 edits per hour
 
 const entityTables = {
   lens: lenses,
