@@ -616,6 +616,29 @@ export default async function LensDetailPage({
         </div>
       )}
 
+      {relations.opticalTwins.length > 0 && (
+        <div>
+          <h2 className="mb-2 text-sm font-semibold tracking-wider text-muted-foreground uppercase">
+            Also sold as
+          </h2>
+          <p className="mb-2 text-sm text-muted-foreground">
+            The same optical unit, sold under {relations.opticalTwins.length > 1 ? "these names" : "another name"}.
+          </p>
+          <ul className="space-y-1">
+            {relations.opticalTwins.map((t) => (
+              <li key={`twin-${t.id}`}>
+                <Link
+                  href={`/lenses/${t.slug}`}
+                  className="text-sm font-medium text-zinc-900 hover:underline dark:text-zinc-100"
+                >
+                  {t.name}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {(relations.series.length > 0 || relations.collections.length > 0) && (
         <div>
           <h2 className="mb-2 text-sm font-semibold tracking-wider text-muted-foreground uppercase">

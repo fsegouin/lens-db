@@ -79,6 +79,11 @@ const nextConfig: NextConfig = {
       { source: "/collections/tamron-adaptall-2", destination: "/systems/tamron-adaptall-2", permanent: true },
       { source: "/collections/tamron-adaptall", destination: "/systems/tamron-adaptall", permanent: true },
       { source: "/collections/tamron-adapt-a-matic", destination: "/systems/tamron-adapt-a-matic", permanent: true },
+      // same-optical-design became a lens-to-lens relation rather than a set,
+      // because it was always a claim about pairs and a collection cannot say
+      // which two. Each of its lenses now names its own twin on its own page,
+      // so there is no single page to land on; the index is the honest target.
+      { source: "/collections/same-optical-design", destination: "/collections", permanent: true },
     ];
   },
   async headers() {
