@@ -449,6 +449,13 @@
       "when": 1788647597175,
       "tag": "0063_password_reset_and_digest",
       "breakpoints": true
+    },
+    {
+      "idx": 64,
+      "version": "7",
+      "when": 1788647598175,
+      "tag": "0064_kit_shows_paid",
+      "breakpoints": true
     }
   ]
 }

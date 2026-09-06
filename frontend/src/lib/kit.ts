@@ -188,6 +188,7 @@ export const getProfile = unstable_cache(
         displayName: users.displayName,
         handle: users.handle,
         kitIsPublic: users.kitIsPublic,
+        kitShowsPaid: users.kitShowsPaid,
         kitCurrency: users.kitCurrency,
         editCount: users.editCount,
         createdAt: users.createdAt,
@@ -218,6 +219,9 @@ export type Owner = {
  * nobody browses; a lens page is where the question is actually asked, and
  * "four people here own this, one paid 170 in 2024" answers it with something
  * no retailer has: what it went for, from the person who bought it.
+ *
+ * The paid figure is the owner's own data, so it is only carried through when
+ * they chose to share it; everyone else appears with the price left out.
  */
 export const getOwnersOf = unstable_cache(
   async (entityType: KitEntityType, entityId: number): Promise<Owner[]> => {
@@ -226,6 +230,7 @@ export const getOwnersOf = unstable_cache(
         handle: users.handle,
         displayName: users.displayName,
         currency: users.kitCurrency,
+        showsPaid: users.kitShowsPaid,
         quantity: kitItems.quantity,
         condition: kitItems.condition,
         acquiredYear: kitItems.acquiredYear,
@@ -251,7 +256,7 @@ export const getOwnersOf = unstable_cache(
         quantity: r.quantity,
         condition: r.condition,
         acquiredYear: r.acquiredYear,
-        acquiredPrice: r.acquiredPrice,
+        acquiredPrice: r.showsPaid ? r.acquiredPrice : null,
         currency: r.currency,
       }));
   },

@@ -25,7 +25,7 @@ export default async function KitPage() {
   const [items, [prefs]] = await Promise.all([
     getKitItems(user.id),
     db
-      .select({ digestOptIn: users.digestOptIn })
+      .select({ digestOptIn: users.digestOptIn, kitShowsPaid: users.kitShowsPaid })
       .from(users)
       .where(eq(users.id, user.id))
       .limit(1),
@@ -41,6 +41,7 @@ export default async function KitPage() {
         initialItems={items}
         initialValue={kitValue(items)}
         initialIsPublic={user.kitIsPublic}
+        initialShowsPaid={prefs?.kitShowsPaid ?? false}
         initialCurrency={user.kitCurrency}
         handle={user.handle}
       />

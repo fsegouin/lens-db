@@ -31,6 +31,7 @@ export type EventName =
   | "kit_add"
   | "kit_remove"
   | "kit_published"
+  | "kit_paid_shared"
   | "rating_submit"
   | "rating_kit_nudge_click"
   | "edit_submitted"

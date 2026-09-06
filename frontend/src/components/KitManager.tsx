@@ -188,18 +188,21 @@ export default function KitManager({
   initialItems,
   initialValue,
   initialIsPublic,
+  initialShowsPaid,
   initialCurrency,
   handle,
 }: {
   initialItems: KitItem[];
   initialValue: KitValue;
   initialIsPublic: boolean;
+  initialShowsPaid: boolean;
   initialCurrency: string;
   handle: string | null;
 }) {
   const [items, setItems] = useState(initialItems);
   const [value, setValue] = useState(initialValue);
   const [isPublic, setIsPublic] = useState(initialIsPublic);
+  const [showsPaid, setShowsPaid] = useState(initialShowsPaid);
   const [currency, setCurrency] = useState(initialCurrency);
   const [savingId, setSavingId] = useState<number | null>(null);
 
@@ -257,8 +260,24 @@ export default function KitManager({
     try {
       await savePrefs({ kitIsPublic: next });
       setIsPublic(next);
+      // The server clears this on unpublish; keep the checkbox honest.
+      if (!next) setShowsPaid(false);
       trackEvent("kit_published", { public: next });
       toast.success(next ? "Your kit is now public" : "Your kit is private again");
+    } catch {
+      toast.error("That did not save.");
+    }
+  }
+
+  async function toggleShowsPaid() {
+    const next = !showsPaid;
+    try {
+      await savePrefs({ kitShowsPaid: next });
+      setShowsPaid(next);
+      trackEvent("kit_paid_shared", { shared: next });
+      toast.success(
+        next ? "What you paid is now public" : "What you paid is private again",
+      );
     } catch {
       toast.error("That did not save.");
     }
@@ -360,6 +379,20 @@ export default function KitManager({
             </Link>
           )}
         </label>
+
+        {/* A second choice that only exists on top of the first. The
+            estimate is the site's number; what someone paid is theirs. */}
+        {isPublic && (
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={showsPaid}
+              onChange={toggleShowsPaid}
+              className="h-4 w-4 rounded border-border"
+            />
+            <span>Include what I paid, here and beside my name on each lens</span>
+          </label>
+        )}
 
         <label className="flex items-center gap-2">
           <span className="text-muted-foreground">Paid in</span>

@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import Breadcrumb from "@/components/Breadcrumb";
 import ChangeList from "@/components/ChangeList";
-import { formatMoney, getKitItems, getProfile } from "@/lib/kit";
+import { formatMoney, getKitItems, getProfile, kitValue } from "@/lib/kit";
+import type { KitEntityType, KitItem } from "@/lib/kit-shared";
 import { getRecentChangesByUser } from "@/lib/recent-changes";
 import { entityMetadata } from "@/lib/seo";
 
@@ -44,6 +45,11 @@ function monthYear(
   return new Intl.DateTimeFormat(undefined, { month, year: "numeric" }).format(date);
 }
 
+/** Counted like the total, so two of one lens is two items in both places. */
+function countOf(items: KitItem[], type: KitEntityType): number {
+  return items.filter((i) => i.entityType === type).reduce((n, i) => n + i.quantity, 0);
+}
+
 export default async function ProfilePage({
   params,
 }: {
@@ -59,6 +65,11 @@ export default async function ProfilePage({
     getRecentChangesByUser(profile.id, 10).catch(() => []),
   ]);
   const editCount = profile.editCount ?? 0;
+
+  // Public means what they own; what they paid is a second, separate choice.
+  const showsPaid = profile.kitIsPublic && profile.kitShowsPaid;
+  const value = kitValue(items);
+  const unpriced = value.totalItems - value.pricedItems;
 
   const since = monthYear(profile.createdAt);
 
@@ -87,6 +98,52 @@ export default async function ProfilePage({
         <p className="mt-3 text-muted-foreground">Nothing listed yet.</p>
       ) : (
         <>
+          {/* The same figures the owner sees on their own kit page, with the
+              same coverage attached: a total that quietly skipped the unpriced
+              third of a kit would read as authoritative and be wrong. */}
+          <div className="mt-3 grid gap-4 sm:grid-cols-3">
+            <div className="rounded-lg border border-border p-4">
+              <p className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+                Estimated value
+              </p>
+              <p className="mt-1 font-mono text-2xl tabular-nums">
+                {value.pricedItems > 0
+                  ? formatMoney(value.estimatedUsd, "USD")
+                  : "Not priced yet"}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {value.pricedItems === 0
+                  ? "No recorded sales for these"
+                  : unpriced === 0
+                    ? "All items priced"
+                    : `${value.pricedItems} of ${value.totalItems} items priced`}
+              </p>
+            </div>
+            {showsPaid && value.paidItems > 0 && (
+              <div className="rounded-lg border border-border p-4">
+                <p className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+                  What they paid
+                </p>
+                <p className="mt-1 font-mono text-2xl tabular-nums">
+                  {formatMoney(value.paid, profile.kitCurrency)}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {`${value.paidItems} of ${value.totalItems} items filled in`}
+                </p>
+              </div>
+            )}
+            <div className="rounded-lg border border-border p-4">
+              <p className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+                Items
+              </p>
+              <p className="mt-1 font-mono text-2xl tabular-nums">{value.totalItems}</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {countOf(items, "lens")} {countOf(items, "lens") === 1 ? "lens" : "lenses"},{" "}
+                {countOf(items, "camera")} {countOf(items, "camera") === 1 ? "body" : "bodies"}
+              </p>
+            </div>
+          </div>
+
           {(
             [
               ["lens", "Lenses they own"],
@@ -128,7 +185,7 @@ export default async function ProfilePage({
                           {item.estimatedUsd != null
                             ? formatMoney(item.estimatedUsd, "USD")
                             : ""}
-                          {item.acquiredPrice != null && (
+                          {showsPaid && item.acquiredPrice != null && (
                             <span className="block text-xs">
                               paid {formatMoney(item.acquiredPrice, profile.kitCurrency)}
                             </span>

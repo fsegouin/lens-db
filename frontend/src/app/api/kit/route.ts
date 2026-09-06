@@ -218,7 +218,13 @@ export async function DELETE(request: NextRequest) {
   }
 }
 
-/** Publishing or unpublishing the kit. */
+/**
+ * Publishing or unpublishing the kit, and the choices that ride on it.
+ *
+ * kitShowsPaid only means anything on top of a public kit, and it is cleared
+ * whenever the kit goes private, so sharing what you paid is always a fresh
+ * decision made while the kit is public.
+ */
 export async function PUT(request: NextRequest) {
   const auth = await requireUserAPI(request.cookies.get(SESSION_COOKIE)?.value);
   if (auth instanceof NextResponse) return auth;
@@ -237,6 +243,16 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "kitIsPublic must be a boolean" }, { status: 400 });
     }
     updates.kitIsPublic = body.kitIsPublic;
+    // Taking the kit private withdraws the second choice too, so publishing
+    // again never brings prices back without being asked.
+    if (body.kitIsPublic === false) updates.kitShowsPaid = false;
+  }
+
+  if (body.kitShowsPaid !== undefined) {
+    if (typeof body.kitShowsPaid !== "boolean") {
+      return NextResponse.json({ error: "kitShowsPaid must be a boolean" }, { status: 400 });
+    }
+    updates.kitShowsPaid = body.kitShowsPaid;
   }
 
   if (body.kitCurrency !== undefined) {
