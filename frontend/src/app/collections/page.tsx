@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { asc, eq, gt, sql } from "drizzle-orm";
+import { and, asc, eq, gt, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { collections, lensCollections } from "@/db/schema";
+import { collections, lensCollections, lenses } from "@/db/schema";
 import { Badge } from "@/components/ui/badge";
 import { cleanCollectionDescription } from "@/lib/collection-description";
 
@@ -28,12 +28,16 @@ export default async function CollectionsPage() {
         name: collections.name,
         slug: collections.slug,
         description: collections.description,
-        lensCount: sql<number>`count(${lensCollections.lensId})::integer`,
+        // Counted over joined lens rows, not raw membership rows, so this
+        // agrees with the detail page. Membership rows pointing at a deleted
+        // or merged-away lens drop out of both.
+        lensCount: sql<number>`count(${lenses.id})::integer`,
       })
       .from(collections)
       .leftJoin(lensCollections, eq(collections.id, lensCollections.collectionId))
+      .leftJoin(lenses, and(eq(lensCollections.lensId, lenses.id), isNull(lenses.mergedIntoId)))
       .groupBy(collections.id)
-      .having(gt(sql`count(${lensCollections.lensId})`, 0))
+      .having(gt(sql`count(${lenses.id})`, 0))
       .orderBy(asc(collections.name));
     allCollections = rows;
   } catch {

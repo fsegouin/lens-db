@@ -372,6 +372,13 @@
       "when": 1788647586175,
       "tag": "0052_autocord_built_in_lens",
       "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1788647587175,
+      "tag": "0053_collection_membership_integrity",
+      "breakpoints": true
     }
   ]
 }
