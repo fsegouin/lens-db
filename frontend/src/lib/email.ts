@@ -121,7 +121,7 @@ export async function sendWelcomeEmail(email: string, displayName: string): Prom
           `${link(`${base}/new`, "See what is new")} in the catalogue. Weekly by email if you opt in on your kit page.`,
         ) +
         paragraph("If something is wrong or missing, reply to this email. I read every one.") +
-        paragraph("Florent, who runs The Lens DB"),
+        paragraph(`Florent<br>${link(base, "https://thelensdb.com")}`),
     ),
   });
 }
