@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { db } from "@/db";
+import { pathPrefixes } from "@/lib/pending-edits";
 import { lenses, cameras, systems, collections, lensSeries, pendingEdits } from "@/db/schema";
 import { requireUserAPI } from "@/lib/user-auth";
 import { createRevision, type EntityType } from "@/lib/revisions";
@@ -190,6 +192,15 @@ export async function POST(request: NextRequest) {
     ipHash,
     autoPatrol: isAdmin || isTrusted,
   });
+
+  // The page is ISR with a week's revalidate. Approval busts it; a direct
+  // apply did not, so a trusted editor's own correction could stay hidden
+  // from them for days, which reads as the edit having been lost.
+  const slug = typeof currentData.slug === "string" ? currentData.slug : null;
+  if (slug) {
+    revalidatePath(`${pathPrefixes[type]}/${slug}`);
+    if (type === "lens") revalidateTag("lenses", "max");
+  }
 
   return NextResponse.json({
     success: true,

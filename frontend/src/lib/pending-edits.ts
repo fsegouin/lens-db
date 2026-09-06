@@ -9,6 +9,8 @@ import {
   lensSeries,
 } from "@/db/schema";
 import { createRevision, type EntityType } from "@/lib/revisions";
+import { sendEditApprovedEmail, sendEditRejectedEmail } from "@/lib/email";
+import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
 const entityTables = {
@@ -18,6 +20,78 @@ const entityTables = {
   collection: collections,
   series: lensSeries,
 } as const;
+
+export const pathPrefixes: Record<string, string> = {
+  lens: "/lenses",
+  camera: "/cameras",
+  system: "/systems",
+  collection: "/collections",
+  series: "/lenses/series",
+};
+
+/**
+ * Tell the author what happened to their edit.
+ *
+ * Before this, a first edit vanished into a queue the author could not see
+ * and nothing ever came back. Failure here is logged and swallowed: a review
+ * that succeeded must not be reported as failed because an email bounced.
+ * The reviewer reviewing their own edit gets nothing.
+ */
+export async function notifyEditReviewed(
+  edit: typeof pendingEdits.$inferSelect,
+  outcome: { status: "approved"; entityId: number } | { status: "rejected"; reason: string | null },
+  reviewerId: number,
+): Promise<void> {
+  if (edit.userId === reviewerId) return;
+  try {
+    const [author] = await db
+      .select({ email: users.email, displayName: users.displayName, isBanned: users.isBanned })
+      .from(users)
+      .where(eq(users.id, edit.userId))
+      .limit(1);
+    if (!author || author.isBanned) return;
+
+    const entityType = edit.entityType as EntityType;
+    const table = entityTables[entityType];
+    const entityId = outcome.status === "approved" ? outcome.entityId : edit.entityId;
+    let entityName = "a record";
+    let entityPath = pathPrefixes[entityType] ?? "/";
+    if (table && entityId > 0) {
+      const [entity] = await db
+        .select({ name: table.name, slug: table.slug })
+        .from(table)
+        .where(eq(table.id, entityId))
+        .limit(1);
+      if (entity) {
+        entityName = entity.name;
+        entityPath = `${pathPrefixes[entityType]}/${entity.slug}`;
+      }
+    } else if (entityId === 0) {
+      const proposed = (edit.changes as Record<string, unknown>).name;
+      if (typeof proposed === "string" && proposed) entityName = proposed;
+    }
+
+    const base = {
+      to: author.email,
+      displayName: author.displayName,
+      entityName,
+      entityPath,
+      entityType,
+      entityId,
+      summary: edit.summary,
+    };
+    if (outcome.status === "approved") {
+      await sendEditApprovedEmail(base);
+    } else {
+      await sendEditRejectedEmail({ ...base, reason: outcome.reason });
+    }
+  } catch (err) {
+    console.error(
+      `[pending-edits] Failed to notify author of edit ${edit.id} (${outcome.status}):`,
+      err instanceof Error ? err.message : err,
+    );
+  }
+}
 
 export type ApprovalResult =
   | { ok: true; entityId: number }
@@ -215,13 +289,6 @@ export async function applyPendingEditApproval(
     .limit(1);
 
   if (entity) {
-    const pathPrefixes: Record<string, string> = {
-      lens: "/lenses",
-      camera: "/cameras",
-      system: "/systems",
-      collection: "/collections",
-      series: "/lenses/series",
-    };
     revalidatePath(`${pathPrefixes[entityType]}/${entity.slug}`);
     if (entityType === "lens") {
       revalidateTag("lenses", "max");

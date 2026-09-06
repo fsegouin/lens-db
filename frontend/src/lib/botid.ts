@@ -11,4 +11,12 @@ export const botIdProtectedRoutes = [
     path: "/api/auth/register",
     method: "POST" as const,
   },
+  {
+    path: "/api/auth/resend-verification",
+    method: "POST" as const,
+  },
+  {
+    path: "/api/auth/forgot-password",
+    method: "POST" as const,
+  },
 ];

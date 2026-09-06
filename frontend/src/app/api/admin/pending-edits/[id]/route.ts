@@ -3,7 +3,7 @@ import { db } from "@/db";
 import { pendingEdits } from "@/db/schema";
 import { requireAdminAPI } from "@/lib/admin-auth";
 import { getCurrentUser } from "@/lib/user-auth";
-import { applyPendingEditApproval } from "@/lib/pending-edits";
+import { applyPendingEditApproval, notifyEditReviewed } from "@/lib/pending-edits";
 import { eq } from "drizzle-orm";
 
 export async function POST(
@@ -61,6 +61,8 @@ export async function POST(
       })
       .where(eq(pendingEdits.id, editId));
 
+    await notifyEditReviewed(edit, { status: "rejected", reason: body.reason || null }, admin.id);
+
     return NextResponse.json({ success: true, action: "rejected" });
   }
 
@@ -79,6 +81,8 @@ export async function POST(
     }
     return NextResponse.json({ error: "No valid changes in this edit" }, { status: 400 });
   }
+
+  await notifyEditReviewed(edit, { status: "approved", entityId: result.entityId }, admin.id);
 
   return NextResponse.json({ success: true, action: "approved" });
 }

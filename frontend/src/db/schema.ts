@@ -323,6 +323,12 @@ export const users = pgTable(
     kitCurrency: text("kit_currency").notNull().default("USD"),
     role: text("role").notNull().default("user"), // "user" | "trusted" | "admin"
     editCount: integer("edit_count").default(0),
+    /**
+     * Whether the weekly "new glass" digest goes to this address. Off by
+     * default: nobody asked for email when they created an account, and the
+     * one message they did agree to was the verification link.
+     */
+    digestOptIn: boolean("digest_opt_in").notNull().default(false),
     emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
     isBanned: boolean("is_banned").default(false),
     banReason: text("ban_reason"),
@@ -382,6 +388,21 @@ export const kitItems = pgTable(
 );
 
 export const emailVerificationTokens = pgTable("email_verification_tokens", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  token: text("token").notNull().unique(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+});
+
+/**
+ * One-shot tokens for "forgot my password". Same shape as the verification
+ * tokens and consumed the same way: a row is deleted the moment it is used,
+ * and an expired one is as good as absent.
+ */
+export const passwordResetTokens = pgTable("password_reset_tokens", {
   id: serial("id").primaryKey(),
   userId: integer("user_id")
     .notNull()

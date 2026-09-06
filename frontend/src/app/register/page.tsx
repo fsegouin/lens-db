@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { trackEvent } from "@/lib/analytics";
 
 export default function RegisterPage() {
   const [email, setEmail] = useState("");
@@ -16,6 +17,7 @@ export default function RegisterPage() {
     e.preventDefault();
     setError("");
     setLoading(true);
+    trackEvent("register_started", { source: "register_page" });
     try {
       const res = await fetch("/api/auth/register", {
         method: "POST",
@@ -24,6 +26,7 @@ export default function RegisterPage() {
       });
       const data = await res.json();
       if (res.ok) {
+        trackEvent("registered", { source: "register_page" });
         router.push("/verify-email");
       } else {
         setError(data.error || "Registration failed");
@@ -41,9 +44,11 @@ export default function RegisterPage() {
         <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
           Create an account
         </h1>
-        <p className="text-sm text-muted-foreground">
-          Join The Lens DB to contribute edits, ratings, and more.
-        </p>
+        <ul className="space-y-1 text-sm text-muted-foreground">
+          <li>Keep a record of what you own and what you paid for it.</li>
+          <li>Get credit by name on every page you correct.</li>
+          <li>Get a weekly note of new glass, only if you ask for one.</li>
+        </ul>
         {error && <p className="text-sm text-red-600">{error}</p>}
         <div className="space-y-2">
           <label htmlFor="displayName" className="text-sm font-medium text-zinc-700 dark:text-zinc-300">

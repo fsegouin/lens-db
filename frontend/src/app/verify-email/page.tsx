@@ -3,6 +3,7 @@
 import { Suspense, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { trackEvent } from "@/lib/analytics";
 
 function VerifyEmailContent() {
   const searchParams = useSearchParams();
@@ -10,6 +11,9 @@ function VerifyEmailContent() {
   const token = searchParams.get("token");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [email, setEmail] = useState("");
+  const [resending, setResending] = useState(false);
+  const [resent, setResent] = useState(false);
 
   async function handleVerify() {
     setLoading(true);
@@ -21,6 +25,7 @@ function VerifyEmailContent() {
         body: JSON.stringify({ token }),
       });
       if (res.ok) {
+        trackEvent("email_verified", { source: "verify_page" });
         router.push("/login?verified=true");
       } else {
         const data = await res.json();
@@ -63,6 +68,34 @@ function VerifyEmailContent() {
     );
   }
 
+  async function handleResend(e: React.FormEvent) {
+    e.preventDefault();
+    if (resending || !email) return;
+    setResending(true);
+    setError("");
+    try {
+      const res = await fetch("/api/auth/resend-verification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      if (res.ok) {
+        trackEvent("verification_resent", { source: "verify_page" });
+        setResent(true);
+      } else {
+        setError(
+          res.status === 429
+            ? "Too many requests. Wait a few minutes and try again."
+            : "Could not send a new link",
+        );
+      }
+    } catch {
+      setError("Network error");
+    } finally {
+      setResending(false);
+    }
+  }
+
   // No token: post-registration "check your email" message
   return (
     <div className="flex min-h-[60vh] items-center justify-center">
@@ -84,6 +117,40 @@ function VerifyEmailContent() {
         >
           Go to sign in
         </Link>
+        <div className="border-t border-zinc-200 pt-4 dark:border-zinc-800">
+          <p className="text-sm text-muted-foreground">Nothing arrived? Send a new link.</p>
+          {resent ? (
+            <p className="mt-2 text-sm text-green-700 dark:text-green-400">
+              A new link is on its way.
+            </p>
+          ) : (
+            <form onSubmit={handleResend} className="mt-2 flex gap-2">
+              <label htmlFor="resend-email" className="sr-only">
+                Email
+              </label>
+              <input
+                id="resend-email"
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                required
+                className="min-w-0 flex-1 rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+              />
+              <button
+                type="submit"
+                disabled={resending}
+                className="shrink-0 rounded-lg border border-zinc-300 px-3 py-2 text-sm transition-colors hover:border-zinc-400 disabled:opacity-50 dark:border-zinc-700 dark:hover:border-zinc-600"
+              >
+                {resending ? "Sending..." : "Resend"}
+              </button>
+            </form>
+          )}
+          {error && !token && (
+            <p className="mt-2 text-sm text-red-600">{error}</p>
+          )}
+        </div>
       </div>
     </div>
   );
