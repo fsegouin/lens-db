@@ -74,7 +74,15 @@ if (testTo) {
     console.error("Set OUTREACH_REPLY_TO first, so the test shows the real headers.");
     process.exit(1);
   }
-  const sample = members[0] ?? { display_name: "Test", joined: "2026-03-30", edit_count: 0 };
+  // Address the test to whoever receives it, any role, so it reads as their
+  // own copy rather than the first member's.
+  const sql2 = createSql();
+  const [me] = await sql2`
+    SELECT display_name, to_char(created_at, 'YYYY-MM-DD') AS joined, edit_count
+    FROM users WHERE email = ${testTo.toLowerCase().trim()} LIMIT 1
+  `;
+  await sql2.end();
+  const sample = me ?? { display_name: "there", joined: new Date().toISOString().slice(0, 10), edit_count: 0 };
   const { subject, text } = draft(sample);
   const resend = new Resend(process.env.RESEND_API_KEY);
   const { error } = await resend.emails.send({ from: FROM, to: testTo, replyTo: REPLY_TO, subject, text });
