@@ -49,7 +49,11 @@ export default function RatingWidget(props: RatingWidgetProps) {
         });
 
         if (!res.ok) {
-          toast.error("Something went wrong");
+          toast.error(
+            res.status === 429
+              ? "You are rating too quickly. Try again in a minute."
+              : "Something went wrong"
+          );
           return;
         }
 
@@ -78,7 +82,11 @@ export default function RatingWidget(props: RatingWidgetProps) {
       });
 
       if (!res.ok) {
-        toast.error("Something went wrong");
+        toast.error(
+          res.status === 429
+            ? "You are rating too quickly. Try again in a minute."
+            : "Something went wrong"
+        );
         return;
       }
 
