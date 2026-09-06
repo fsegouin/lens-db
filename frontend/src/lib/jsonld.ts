@@ -4,6 +4,7 @@ import {
   formatFocalLength,
   opticalConstruction,
 } from "@/lib/seo";
+import { hasPublishableAverage } from "@/lib/ratings";
 
 type Json = Record<string, unknown>;
 
@@ -147,11 +148,14 @@ export function lensJsonLd(
       property("Production status", lens.productionStatus),
       property(usedPriceLabel(priceRange?.source), usedPriceValue(priceRange)),
     ].filter(Boolean),
+    // A mean drawn from one or two anonymous votes is not an aggregate, and
+    // publishing it as one tells a search engine the site is more certain than
+    // it is. Withheld until enough people have voted to mean something.
     aggregateRating:
-      lens.averageRating && (lens.ratingCount ?? 0) > 0
+      hasPublishableAverage(lens.averageRating, lens.ratingCount)
         ? {
             "@type": "AggregateRating",
-            ratingValue: Number(lens.averageRating.toFixed(2)),
+            ratingValue: Number(lens.averageRating!.toFixed(2)),
             bestRating: 10,
             worstRating: 1,
             ratingCount: lens.ratingCount,
@@ -223,11 +227,14 @@ export function cameraJsonLd(
       property("Effective resolution", camera.megapixels, { unitText: "MP" }),
       property("Body type", camera.bodyType),
     ].filter(Boolean),
+    // A mean drawn from one or two anonymous votes is not an aggregate, and
+    // publishing it as one tells a search engine the site is more certain than
+    // it is. Withheld until enough people have voted to mean something.
     aggregateRating:
-      camera.averageRating && (camera.ratingCount ?? 0) > 0
+      hasPublishableAverage(camera.averageRating, camera.ratingCount)
         ? {
             "@type": "AggregateRating",
-            ratingValue: Number(camera.averageRating.toFixed(2)),
+            ratingValue: Number(camera.averageRating!.toFixed(2)),
             bestRating: 10,
             worstRating: 1,
             ratingCount: camera.ratingCount,

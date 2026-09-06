@@ -1,8 +1,9 @@
 import { unstable_cache } from "next/cache";
 import { db } from "@/db";
 import { lenses, systems, lensSeries, lensSeriesMemberships, lensSystems, priceEstimates } from "@/db/schema";
-import { asc, desc, eq, and, gte, lte, sql, inArray, isNull, type AnyColumn } from "drizzle-orm";
+import { asc, desc, eq, and, gte, lte, sql, inArray, isNull, type AnyColumn, type SQL } from "drizzle-orm";
 import { buildNameSearch } from "@/lib/search";
+import { MIN_RATINGS_FOR_AVERAGE } from "@/lib/ratings";
 import {
   normalizeCoverage,
   normalizeEra,
@@ -156,7 +157,7 @@ export const listLenses = unstable_cache(
 
     const where = conditions.length > 0 ? and(...conditions) : undefined;
 
-    const sortColumns: Record<string, AnyColumn> = {
+    const sortColumns: Record<string, AnyColumn | SQL> = {
       name: lenses.name,
       brand: lenses.brand,
       system: systems.name,
@@ -164,7 +165,9 @@ export const listLenses = unstable_cache(
       aperture: lenses.apertureMin,
       year: lenses.yearIntroduced,
       weight: lenses.weightG,
-      rating: lenses.averageRating,
+      // Same floor the pages use: a lens carried by one anonymous vote must
+      // not outrank a lens with a real average, so its mean sorts as unknown.
+      rating: sql`CASE WHEN ${lenses.ratingCount} >= ${MIN_RATINGS_FOR_AVERAGE} THEN ${lenses.averageRating} END`,
       price: avgPrice,
     };
     // Default: newest first, unknown years last, then alphabetical. Year sorts
@@ -186,6 +189,8 @@ export const listLenses = unstable_cache(
       ? [sql`${avgPrice} IS NULL`, orderFn(sortCol), ...nameTieBreak]
       : sortKey === "year"
       ? [sql`${lenses.yearIntroduced} IS NULL`, orderFn(sortCol), ...nameTieBreak]
+      : sortKey === "rating"
+      ? [sql`${sortCol} IS NULL`, orderFn(sortCol), ...nameTieBreak]
       : [orderFn(sortCol), ...nameTieBreak];
 
     const itemsPromise = db
