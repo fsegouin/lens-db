@@ -49,7 +49,7 @@ function parseEntityId(body: Record<string, unknown>): number {
 export async function GET(request: NextRequest) {
   try {
     const ip = getClientIP(request);
-    const { success } = await rateLimiters.ratings.limit(ip);
+    const { success } = await rateLimiters.ratingsRead.limit(ip);
     if (!success) return rateLimitedResponse();
 
     const { searchParams } = request.nextUrl;
@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const ip = getClientIP(request);
-    const { success } = await rateLimiters.ratings.limit(ip);
+    const { success } = await rateLimiters.ratingsWrite.limit(ip);
     if (!success) return rateLimitedResponse();
 
     const body = await request.json();
@@ -149,7 +149,7 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const ip = getClientIP(request);
-    const { success } = await rateLimiters.ratings.limit(ip);
+    const { success } = await rateLimiters.ratingsWrite.limit(ip);
     if (!success) return rateLimitedResponse();
 
     const body = await request.json();
