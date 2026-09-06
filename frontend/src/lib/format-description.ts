@@ -1,4 +1,5 @@
-import { repairDescription } from "./description-whitespace";
+// The .ts extension lets `node --test` load this file without a bundler.
+import { repairDescription } from "./description-whitespace.ts";
 
 /**
  * Cleans up messy lens/camera descriptions (often raw press release dumps)
@@ -29,28 +30,42 @@ export function formatDescription(raw: string): string[] {
     /(?=(?:Primary features|Key features|Main features|Features|Specifications|Primary specifications):|(?:TOKYO|NEW YORK|VALHALLA|MELVILLE)\s*[-–—]\s*)/i
   );
 
-  for (const section of sections) {
-    const trimmed = section.trim();
-    if (!trimmed) continue;
+  // A blank line is an author's paragraph break, and text that has any is
+  // shown with the paragraphs its author chose. A single newline is not a
+  // break: imported text wraps mid-sentence at the width of the page it was
+  // scraped from. A block nobody would write as one paragraph (a few scraped
+  // rows carry a blank line and then thousands of characters) is still split.
+  const authored = /\n[ \t]*\n/.test(text);
+  const splitAbove = authored ? 1500 : 500;
 
-    // Within each section, split very long blocks (>500 chars) on sentence boundaries
-    // to create readable paragraphs
-    if (trimmed.length > 500) {
-      const sentences = trimmed.match(/[^.!?]+[.!?]+\s*/g) || [trimmed];
-      let current = "";
-      for (const sentence of sentences) {
-        current += sentence;
-        // Create a paragraph break roughly every 400-600 chars at a sentence boundary
-        if (current.length > 400) {
-          paragraphs.push(current.trim());
-          current = "";
+  for (const section of sections) {
+    for (const block of section.split(/\n[ \t]*\n/)) {
+      const trimmed = block.trim();
+      if (!trimmed) continue;
+
+      // Split very long runs on sentence boundaries to create readable
+      // paragraphs.
+      if (trimmed.length > splitAbove) {
+        // A sentence ends at a full stop, exclamation or question mark that is
+        // followed by whitespace. The dot in "0.45m", "f/5.6" or "1:6.6" is not
+        // one, and a break there printed "0." at the end of a paragraph and
+        // "45m" at the start of the next.
+        const sentences = trimmed.split(/(?<=[.!?])\s+(?=\S)/);
+        let current = "";
+        for (const sentence of sentences) {
+          current += (current ? " " : "") + sentence;
+          // Create a paragraph break roughly every 400-600 chars at a sentence boundary
+          if (current.length > 400) {
+            paragraphs.push(current.trim());
+            current = "";
+          }
         }
+        if (current.trim()) {
+          paragraphs.push(current.trim());
+        }
+      } else {
+        paragraphs.push(trimmed);
       }
-      if (current.trim()) {
-        paragraphs.push(current.trim());
-      }
-    } else {
-      paragraphs.push(trimmed);
     }
   }
 
