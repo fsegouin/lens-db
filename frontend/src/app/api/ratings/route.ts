@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { lenses, lensRatings, cameras, cameraRatings } from "@/db/schema";
 import { eq, and, sql } from "drizzle-orm";
-import { getClientIP, hashIP, rateLimitedResponse } from "@/lib/api-utils";
-import { rateLimiters } from "@/lib/rate-limit";
+import { getClientIP, hashIP } from "@/lib/api-utils";
 
 type EntityType = "lens" | "camera";
 
@@ -49,9 +48,6 @@ function parseEntityId(body: Record<string, unknown>): number {
 export async function GET(request: NextRequest) {
   try {
     const ip = getClientIP(request);
-    const { success } = await rateLimiters.ratingsRead.limit(ip);
-    if (!success) return rateLimitedResponse();
-
     const { searchParams } = request.nextUrl;
     const type = parseType(searchParams.get("type"));
     const entityId = parseInt(searchParams.get("entityId") || searchParams.get("lensId") || searchParams.get("cameraId") || "", 10);
@@ -83,9 +79,6 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const ip = getClientIP(request);
-    const { success } = await rateLimiters.ratingsWrite.limit(ip);
-    if (!success) return rateLimitedResponse();
-
     const body = await request.json();
     const type = parseType(body.type);
     const entityId = parseEntityId(body);
@@ -149,9 +142,6 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const ip = getClientIP(request);
-    const { success } = await rateLimiters.ratingsWrite.limit(ip);
-    if (!success) return rateLimitedResponse();
-
     const body = await request.json();
     const type = parseType(body.type);
     const entityId = parseEntityId(body);

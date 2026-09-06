@@ -1,16 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getClientIP, rateLimitedResponse } from "@/lib/api-utils";
-import { rateLimiters } from "@/lib/rate-limit";
 import { bumpViewCount, type ViewType } from "@/lib/view-counts";
 
 const VALID_TYPES = ["lens", "camera", "system"] as const;
 
 export async function POST(request: NextRequest) {
   try {
-    const ip = getClientIP(request);
-    const { success } = await rateLimiters.views.limit(ip);
-    if (!success) return rateLimitedResponse();
-
     const body = await request.json();
     const type = body.type as string;
     const id = typeof body.id === "number" ? body.id : NaN;

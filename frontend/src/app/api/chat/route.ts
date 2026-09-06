@@ -2,8 +2,6 @@ import { streamText, convertToModelMessages, stepCountIs, type UIMessage } from 
 import { gateway } from "@ai-sdk/gateway";
 import { checkBotId } from "botid/server";
 import { NextRequest } from "next/server";
-import { getClientIP, rateLimitedResponse } from "@/lib/api-utils";
-import { rateLimiters } from "@/lib/rate-limit";
 import { mcpTools } from "lens-db-mcp-server/ai-tools";
 
 const SYSTEM_PROMPT = `You are a friendly, knowledgeable assistant for The Lens DB, a database of camera lenses, cameras, and mount systems.
@@ -33,10 +31,6 @@ export async function POST(request: NextRequest) {
   if (verification.isBot) {
     return Response.json({ error: "Access denied" }, { status: 403 });
   }
-
-  const ip = getClientIP(request);
-  const { success } = await rateLimiters.chat.limit(ip);
-  if (!success) return rateLimitedResponse();
 
   let body;
   try {

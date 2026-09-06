@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getClientIP, rateLimitedResponse } from "@/lib/api-utils";
-import { rateLimiters } from "@/lib/rate-limit";
 import {
   affiliateUrl,
   getEbayListings,
@@ -11,10 +9,6 @@ import {
 // geo lookup (and the eBay round-trip) out of the page render is what lets
 // /lenses/[slug] and /cameras/[...slug] be served from the CDN cache.
 export async function GET(request: NextRequest) {
-  const ip = getClientIP(request);
-  const { success } = await rateLimiters.ebay.limit(ip);
-  if (!success) return rateLimitedResponse();
-
   const params = new URL(request.url).searchParams;
   const query = params.get("q")?.trim().slice(0, 200);
   const entityType = params.get("type") === "lens" ? "lens" : "camera";

@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { lensComparisons, cameraComparisons } from "@/db/schema";
 import { sql } from "drizzle-orm";
-import { getClientIP, rateLimitedResponse } from "@/lib/api-utils";
-import { rateLimiters } from "@/lib/rate-limit";
 
 const MAX_TOP = 50;
 
@@ -15,10 +13,6 @@ function isValidType(value: unknown): value is ComparisonType {
 
 export async function POST(request: NextRequest) {
   try {
-    const ip = getClientIP(request);
-    const { success } = await rateLimiters.comparisons.limit(ip);
-    if (!success) return rateLimitedResponse();
-
     const body = await request.json();
     const type: ComparisonType = isValidType(body.type) ? body.type : "lens";
     let id1 = typeof body.id1 === "number" ? body.id1 : NaN;
@@ -73,10 +67,6 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const ip = getClientIP(request);
-    const { success } = await rateLimiters.comparisons.limit(ip);
-    if (!success) return rateLimitedResponse();
-
     const { searchParams } = request.nextUrl;
     const rawLimit = parseInt(searchParams.get("top") || "10", 10);
     const limit = Math.min(Math.max(Number.isFinite(rawLimit) ? rawLimit : 10, 1), MAX_TOP);

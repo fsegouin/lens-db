@@ -1,15 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getClientIP, rateLimitedResponse } from "@/lib/api-utils";
-import { rateLimiters } from "@/lib/rate-limit";
 import { listLenses } from "@/lib/lens-list";
 
 const MAX_OFFSET = 10_000;
 
 export async function GET(request: NextRequest) {
-  const ip = getClientIP(request);
-  const { success } = await rateLimiters.search.limit(ip);
-  if (!success) return rateLimitedResponse();
-
   const { searchParams } = request.nextUrl;
   const rawCursor = parseInt(searchParams.get("cursor") || "0");
   const cursor = Math.min(

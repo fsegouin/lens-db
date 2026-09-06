@@ -87,7 +87,7 @@ src/
     ├── admin-auth.ts           # Admin helpers on top of user sessions (role checks)
     ├── user-auth.ts            # User accounts: PBKDF2 password hashing, HMAC-signed sessions
     ├── api-utils.ts            # getClientIP, hashIP (SHA-256), rateLimitedResponse
-    ├── rate-limit.ts           # Upstash rate limiters (ratings/views/comparisons/search/chat)
+    ├── rate-limit.ts           # Upstash limiters the firewall can't express (per-account, hourly)
     ├── ebay-auth.ts / ebay-search-query.ts / ebay-types.ts  # eBay API integration
     ├── price-classify.ts / price-classify-lens.ts  # LLM listing classification (Gemini)
     ├── price-pipeline.ts / prices.ts  # Price history + estimates
@@ -132,23 +132,42 @@ Rules:
 
 ## API Routes & Rate Limits
 
-| Endpoint | Methods | Rate Limit | Purpose |
-|----------|---------|------------|---------|
-| `/api/lenses` | GET | 20/60s | Search + filter + paginate (13+ params) |
-| `/api/cameras` | GET | 20/60s | Search + paginate |
-| `/api/search` | GET | 20/60s | Global search |
-| `/api/ratings` | GET | 60/60s | Read your own rating (fires on every entity page view) |
-| `/api/ratings` | POST/DELETE | 20/60s | Cast or withdraw a rating (IP-based identity) |
-| `/api/views` | POST | 20/60s | Increment view count (lens/camera/system) |
-| `/api/comparisons` | GET/POST | 10/60s | Top comparisons + record new |
-| `/api/chat` | POST | 10/60s | AI chat (streamed) |
-| `/api/auth/login` | POST | 10/60s | User login |
-| `/api/auth/register` | POST | 5/60s | User registration |
-| `/api/edits` | POST | 30/3600s (per user) | User-submitted edits |
-| `/api/submissions` | POST | 10/3600s | New entity submissions |
-| `/api/duplicates` | POST | 10/3600s | Flag duplicates |
+Per-IP limits on the public endpoints are **Vercel firewall rules**, not application
+code. They reject at the edge, so a throttled request never starts a function or
+touches the database. Manage them with `vercel firewall rules ls`, `vercel firewall
+diff` and `vercel firewall publish`, or in the dashboard; changes need no redeploy.
+Because they live in Vercel rather than in this repo, this table is a copy — trust
+`vercel firewall rules ls` if the two ever disagree.
 
-`/api/cron/*` routes are protected by `CRON_SECRET` instead of rate limiting (fail-closed: requests are rejected when `CRON_SECRET` is unset).
+| Endpoint | Methods | Rate Limit | Enforced by | Purpose |
+|----------|---------|------------|-------------|---------|
+| `/api/lenses` | GET | 20/60s | firewall | Search + filter + paginate (13+ params) |
+| `/api/cameras` | GET | 20/60s | firewall | Search + paginate |
+| `/api/search` | GET | 20/60s | firewall | Global search |
+| `/api/ratings` | GET | 60/60s | firewall | Read your own rating (fires on every entity page view) |
+| `/api/ratings` | POST/DELETE | 20/60s | firewall | Cast or withdraw a rating |
+| `/api/views` | POST | 20/60s | firewall | Increment view count (lens/camera/system) |
+| `/api/ebay` | GET | 30/60s | firewall | eBay listings for an entity page |
+| `/api/comparisons` | GET/POST | 10/60s | firewall | Top comparisons + record new |
+| `/api/chat` | POST | 10/60s | firewall | AI chat (streamed) |
+| `/api/auth/login` | POST | 10/60s | app | User login |
+| `/api/auth/register` | POST | 5/60s | app | User registration |
+| `/api/kit` | POST/DELETE | 60/60s (per user) | app | Add or remove kit items |
+| `/api/edits` | POST | 30/3600s (per user) | app | User-submitted edits |
+| `/api/submissions` | POST | 10/3600s | app | New entity submissions |
+| `/api/duplicates` | POST | 10/3600s | app | Flag duplicates |
+
+The `app` rows are the ones a firewall rule cannot express: `kit` and `edits` are
+keyed by account rather than by IP (the edge can read a cookie but cannot verify
+the session HMAC, and keying them by IP would throttle a whole office as one
+person), and the hourly limits exceed the 600-second ceiling on a rule's window.
+Login and register stay in the app as well, so an IP limit at the edge is not the
+only thing standing in front of authentication.
+
+One rating per lens per IP is **not** rate limiting — it is the unique index on
+`lensRatings (lensId, ipHash)`, and it stays in the database regardless.
+
+`/api/cron/*` routes are protected by `CRON_SECRET` instead of rate limiting (fail-closed: requests are rejected when `CRON_SECRET` is unset). The "Bypass bot protection fron cron jobs" firewall rule keeps cron traffic clear of the rate limits above.
 
 All API routes return JSON. Error responses: 400 (validation), 401 (auth), 409 (conflict), 429 (rate limit), 500 (server).
 
