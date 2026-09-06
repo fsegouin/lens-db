@@ -1,4 +1,5 @@
-import { revalidatePath, revalidateTag } from "next/cache";
+import { revalidatePath } from "next/cache";
+import { revalidateEntity, touchesLists } from "@/lib/revalidate-entity";
 import { db } from "@/db";
 import {
   pendingEdits,
@@ -289,9 +290,12 @@ export async function applyPendingEditApproval(
     .limit(1);
 
   if (entity) {
-    revalidatePath(`${pathPrefixes[entityType]}/${entity.slug}`);
-    if (entityType === "lens") {
-      revalidateTag("lenses", "max");
+    if (entityType === "lens" || entityType === "camera") {
+      // A new row shows up in every list; an edit only where its fields do.
+      const scope = isNewEntity || touchesLists(entityType, Object.keys(changes)) ? "lists" : "row";
+      revalidateEntity(entityType, entity.slug, scope);
+    } else {
+      revalidatePath(`${pathPrefixes[entityType]}/${entity.slug}`);
     }
   }
 

@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { cameras } from "@/db/schema";
 import { requireAdminAPI, getAdminUserFromToken } from "@/lib/admin-auth";
 import { createRevision } from "@/lib/revisions";
+import { revalidateEntity, touchesLists } from "@/lib/revalidate-entity";
 import { eq } from "drizzle-orm";
 
 export async function GET(
@@ -62,6 +63,18 @@ export async function PUT(
   if (specs !== undefined) updates.specs = specs;
   if (images !== undefined) updates.images = images;
 
+  // The form sends every field, so work out which ones actually changed
+  // before deciding how much cache the edit has to clear.
+  const [previous] = await db
+    .select()
+    .from(cameras)
+    .where(eq(cameras.id, parseInt(id)))
+    .limit(1);
+  if (!previous) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+  const before = previous as Record<string, unknown>;
+
   const [updated] = await db
     .update(cameras)
     .set(updates)
@@ -80,8 +93,11 @@ export async function PUT(
     autoPatrol: true,
   });
 
-  revalidatePath(`/cameras/${updated.slug}`);
-  revalidateTag("cameras", "max");
+  const changed = Object.keys(updates).filter(
+    (k) => String(updates[k] ?? "") !== String(before[k] ?? ""),
+  );
+  revalidateEntity("camera", updated.slug, touchesLists("camera", changed) ? "lists" : "row");
+  if (updated.slug !== previous.slug) revalidatePath(`/cameras/${previous.slug}`);
 
   return NextResponse.json(updated);
 }

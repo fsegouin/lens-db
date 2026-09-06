@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { isCronAuthorized } from "@/lib/api-utils";
+import { entityTag } from "@/lib/revalidate-entity";
 
 /**
  * Bust caches after a change made outside the app.
@@ -12,8 +13,14 @@ import { isCronAuthorized } from "@/lib/api-utils";
  *
  *   curl -X POST -H "Authorization: Bearer $CRON_SECRET" \
  *        -H "Content-Type: application/json" \
- *        -d '{"tags":["lenses"],"paths":["/lenses/some-slug"]}' \
+ *        -d '{"paths":["/lenses/some-slug"]}' \
  *        https://thelensdb.com/api/cron/revalidate
+ *
+ * Name the pages you touched in `paths`: each entity page's row has a tag of
+ * its own and is refreshed with it. Send `tags` only when rows were created,
+ * merged or removed, or a name, brand, year or mount changed, because the
+ * broad tag empties every cached list on the site and the next crawl
+ * re-renders the whole catalogue from Postgres.
  */
 
 const KNOWN_TAGS = new Set(["lenses", "cameras", "kit"]);
@@ -45,6 +52,13 @@ export async function POST(request: NextRequest) {
   }
 
   for (const tag of tags) revalidateTag(tag, "max");
-  for (const path of paths) revalidatePath(path);
+  for (const path of paths) {
+    revalidatePath(path);
+    // The row behind an entity page has a tag of its own, so a script that
+    // edited descriptions can name the pages it touched and leave the broad
+    // tag, and with it every cached list on the site, alone.
+    const entity = path.match(/^\/(lenses|cameras)\/([^/?#]+)$/);
+    if (entity) revalidateTag(entityTag(entity[1] === "lenses" ? "lens" : "camera", entity[2]), "max");
+  }
   return NextResponse.json({ revalidated: { tags, paths } });
 }

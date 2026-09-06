@@ -4,9 +4,10 @@ import Breadcrumb from "@/components/Breadcrumb";
 import JsonLd from "@/components/JsonLd";
 import { entityMetadata, metaDescription } from "@/lib/seo";
 import { hubJsonLd } from "@/lib/jsonld";
-import { asc, eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import { lensSeries, lensSeriesMemberships, lenses, systems } from "@/db/schema";
+import { lensSeries } from "@/db/schema";
+import { getSeriesLenses } from "@/lib/hub-lists";
 import { cleanScrapedDescription } from "@/lib/scraped-description";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -69,13 +70,7 @@ export default async function SeriesDetailPage({
   const { series } = result;
   const description = cleanScrapedDescription(series.description);
 
-  const seriesLenses = await db
-    .select({ lens: lenses, system: systems })
-    .from(lensSeriesMemberships)
-    .innerJoin(lenses, eq(lensSeriesMemberships.lensId, lenses.id))
-    .leftJoin(systems, eq(lenses.systemId, systems.id))
-    .where(eq(lensSeriesMemberships.seriesId, series.id))
-    .orderBy(asc(sql`regexp_replace(${lenses.name}, '\\d+(\\.\\d+)?mm.*$', '')`), asc(lenses.focalLengthMin), asc(lenses.apertureMin));
+  const seriesLenses = await getSeriesLenses(series.id);
 
   const crumbs = [
     { name: "Series", path: "/lenses/series" },

@@ -11,9 +11,16 @@ export async function syncLensSystems(
   lensId: number,
   primarySystemId: number | null | undefined,
   systemIds: number[],
-): Promise<void> {
+): Promise<boolean> {
   const ids = new Set(systemIds.filter((n) => Number.isInteger(n)));
   if (primarySystemId) ids.add(primarySystemId);
+  // Report whether the mounts actually changed, so an edit that only touched
+  // the description does not have to clear every mount page's cache.
+  const current = await db
+    .select({ systemId: lensSystems.systemId })
+    .from(lensSystems)
+    .where(eq(lensSystems.lensId, lensId));
+  if (current.length === ids.size && current.every((r) => ids.has(r.systemId))) return false;
   await db.transaction(async (tx) => {
     await tx.delete(lensSystems).where(eq(lensSystems.lensId, lensId));
     if (ids.size > 0) {
@@ -23,4 +30,5 @@ export async function syncLensSystems(
         .onConflictDoNothing();
     }
   });
+  return true;
 }

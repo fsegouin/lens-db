@@ -4,9 +4,10 @@ import Breadcrumb from "@/components/Breadcrumb";
 import JsonLd from "@/components/JsonLd";
 import { entityMetadata, metaDescription } from "@/lib/seo";
 import { hubJsonLd } from "@/lib/jsonld";
-import { and, asc, eq, isNull, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import { collectionRedirects, collections, lensCollections, lenses, systems } from "@/db/schema";
+import { collectionRedirects, collections } from "@/db/schema";
+import { getCollectionLenses } from "@/lib/hub-lists";
 import { Badge } from "@/components/ui/badge";
 import { cleanScrapedDescription } from "@/lib/scraped-description";
 import {
@@ -81,16 +82,7 @@ export default async function CollectionDetailPage({
   const { collection } = result;
   const description = cleanScrapedDescription(collection.description);
 
-  const collectionLenses = await db
-    .select({ lens: lenses, system: systems })
-    .from(lensCollections)
-    .innerJoin(lenses, eq(lensCollections.lensId, lenses.id))
-    .leftJoin(systems, eq(lenses.systemId, systems.id))
-    // Merged-away lenses keep their membership rows, so without this the page
-    // lists the same lens twice and the loser's slug no longer resolves. Every
-    // other lens list in the app applies the same filter.
-    .where(and(eq(lensCollections.collectionId, collection.id), isNull(lenses.mergedIntoId)))
-    .orderBy(asc(sql`regexp_replace(${lenses.name}, '\\d+(\\.\\d+)?mm.*$', '')`), asc(lenses.focalLengthMin), asc(lenses.apertureMin));
+  const collectionLenses = await getCollectionLenses(collection.id);
 
   const crumbs = [
     { name: "Collections", path: "/collections" },
