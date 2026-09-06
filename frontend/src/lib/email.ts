@@ -107,20 +107,26 @@ export async function sendWelcomeEmail(email: string, displayName: string): Prom
   const base = appUrl();
   await sendEmail({
     to: email,
-    subject: "You are in, The Lens DB",
+    subject: "Welcome to The Lens DB",
     html: layout(
-      `Hello ${displayName}`,
-      paragraph("Your email is verified and your account works. Three things you can do now:") +
+      `Hello ${displayName}, you are in.`,
+      paragraph(
+        "The Lens DB is a home for people who love glass: the old, the odd, the brand new, and the one you found in a box at a flea market and cannot stop shooting with. We are building the reference the web forgot to make, together, and you just joined the people doing it.",
+      ) +
+        paragraph("Here is where to start:") +
         paragraph(
-          `${link(`${base}/kit`, "Record what you own")}. Publish it if you like, and it shows on every lens page you own, with what you paid if you choose to say.`,
+          `<strong>Show us your kit.</strong> ${link(`${base}/kit`, "Record what you own")} and what you paid for it. Publish it and your name appears on every lens page you own, with the price you actually got, which no shop can tell anyone.`,
         ) +
         paragraph(
-          `${link(`${base}/lenses`, "Fix a spec")}. Every approved edit is credited to you on the page and on your profile.`,
+          `<strong>Leave your mark.</strong> Spot a wrong weight, a missing filter size, a lens that is not here yet? ${link(`${base}/lenses`, "Fix it")} and the page carries your name from then on.`,
         ) +
         paragraph(
-          `${link(`${base}/new`, "See what is new")} in the catalogue. Weekly by email if you opt in on your kit page.`,
+          `<strong>Keep up with new glass.</strong> ${link(`${base}/new`, "See what is new")} this week, and tick the box on your kit page if you want it in your inbox every Monday.`,
         ) +
-        paragraph("If something is wrong or missing, reply to this email. I read every one.") +
+        paragraph(
+          "Anything wrong, missing, or just something you want to tell me? Reply to this email. I read every one, and the good ideas usually come from here.",
+        ) +
+        paragraph("Happy shooting,") +
         paragraph(`Florent<br>${link(base, "https://thelensdb.com")}`),
     ),
   });

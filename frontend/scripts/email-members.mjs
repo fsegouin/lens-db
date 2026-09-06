@@ -41,25 +41,26 @@ await sql.end();
 
 function draft(m) {
   const first = m.display_name.split(/[\s_-]/)[0];
-  const did =
+  const joined = new Date(`${m.joined}T12:00:00Z`).toLocaleDateString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" });
+  const edited =
     m.edit_count > 0
-      ? `You made ${m.edit_count} ${m.edit_count === 1 ? "edit" : "edits"}, which puts you among the very few people who have.`
-      : "You created an account and, as far as I can tell, never found anything worth doing with it. That is on me, not you.";
+      ? " You are also one of only four people who have ever fixed something on the site. Thank you for that."
+      : "";
   const text = `Hi ${first},
 
-I run The Lens DB. You signed up in ${new Date(`${m.joined}T12:00:00Z`).toLocaleDateString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" })}. ${did}
+I run The Lens DB. You joined back in ${joined}, and I have been meaning to write ever since.
 
-I am writing to the ${members.length} people who have accounts, one by one, with a single question: what did you come to the site for, and what did you want to do once you were there?
+I am building something I wish had existed when I started collecting lenses: one open place that knows every lens and every mount ever made, what fits what, and what people really paid for them. Not a shop, not a review farm, a reference built by the people who actually use the gear. And I want it to be a community, not just a database.
 
-A reply of one line is plenty. "I wanted to check which version of a lens I had", "I wanted to list what I own", "I was looking for a price", "I forgot". All of it helps me decide what to build next.
+You are one of the first ${members.length} people who signed up, so I have one question for you: what brought you here, and what did you hope to do? One line is plenty. "Check which version of my Takumar this is", "list what I own", "see what a lens is worth", "honestly, I forgot". Every answer shapes what I build next.${edited}
 
-Since you joined, a few things have changed. You can now record what you own and what you paid for it, and publish it if you like, at https://thelensdb.com/kit. Every edit you make is credited to you by name on the page. And there is a weekly note of what is new in the catalogue if you want one, from the same kit page.
+Since you joined, a lot has changed. You can now record your kit and what you paid at https://thelensdb.com/kit, and publish it if you like. Every edit you make carries your name on the page. And there is a weekly note of new glass, if you want one.
 
-Thanks for reading this far.
+Thanks for being here early. It matters more than you would think.
 
 Florent
 https://thelensdb.com`;
-  return { subject: "One question about The Lens DB", text };
+  return { subject: "What brought you to The Lens DB?", text };
 }
 
 console.log(`${members.length} member${members.length === 1 ? "" : "s"} ${SEND ? "to email" : "would be emailed"}:`);
