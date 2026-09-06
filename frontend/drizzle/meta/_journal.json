@@ -421,6 +421,20 @@
       "when": 1788647593175,
       "tag": "0059_collection_membership_corrections",
       "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1788647594175,
+      "tag": "0060_consolidate_editions",
+      "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "7",
+      "when": 1788647595175,
+      "tag": "0061_lens_optical_twins",
+      "breakpoints": true
     }
   ]
 }

@@ -587,6 +587,33 @@ export const lensVersionGroups = pgTable("lens_version_groups", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
 
+// Lenses that are the same optical unit under different brands. This is a
+// relation, not a set, which is why it is a table and not a collection: the
+// point is that THIS lens is the same glass as THAT one, and a collection can
+// only ever say that a group of lenses have something in common without saying
+// what pairs with what. Stored in both directions so a lens page needs one
+// lookup. `kind` separates a straight rebadge (Pentax/Tokina) from an OEM unit
+// sold under a customer's name (a Tamron design sold as a Nikon) from a shared
+// formula across mounts (the Zeiss 85/1.4 in Rollei, Contarex and C/Y).
+export const lensOpticalTwins = pgTable(
+  "lens_optical_twins",
+  {
+    lensId: integer("lens_id")
+      .notNull()
+      .references(() => lenses.id, { onDelete: "cascade" }),
+    twinId: integer("twin_id")
+      .notNull()
+      .references(() => lenses.id, { onDelete: "cascade" }),
+    kind: text("kind").notNull().default("rebadge"), // "rebadge" | "oem" | "same_formula"
+    note: text("note"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.lensId, table.twinId] }),
+    index("idx_lens_optical_twins_twin").on(table.twinId),
+  ]
+);
+
 // Mount availability (M:N): every system a lens is sold for. lenses.systemId
 // stays the primary/reference mount used by existing filters and pages.
 export const lensSystems = pgTable(

@@ -6,6 +6,7 @@ import {
   collections,
   lenses,
   lensCollections,
+  lensOpticalTwins,
   lensSeries,
   lensSeriesMemberships,
   lensSystems,
@@ -26,6 +27,11 @@ export type LensRelations = {
    * without this the lens page is a dead end back to its own camera.
    */
   builtInto: { name: string; slug: string; yearIntroduced: number | null }[];
+  /**
+   * Lenses that are the same optical unit under another brand. A relation
+   * rather than a group, so each row names its own partner.
+   */
+  opticalTwins: { id: number; name: string; slug: string; brand: string | null; kind: string; note: string | null }[];
   /** Other lenses in the same version group. */
   versions: {
     id: number;
@@ -70,6 +76,7 @@ export const getLensRelations = unstable_cache(
       cameraCountRows,
       versionRows,
       builtIntoRows,
+      opticalTwinRows,
     ] = await Promise.all([
         db
           .select({ name: lensSeries.name, slug: lensSeries.slug })
@@ -140,6 +147,20 @@ export const getLensRelations = unstable_cache(
             and(eq(cameras.builtInLensId, lensId), isNull(cameras.mergedIntoId)),
           )
           .orderBy(cameras.name),
+        // Stored in both directions, so one lookup on lens_id is enough.
+        db
+          .select({
+            id: lenses.id,
+            name: lenses.name,
+            slug: lenses.slug,
+            brand: lenses.brand,
+            kind: lensOpticalTwins.kind,
+            note: lensOpticalTwins.note,
+          })
+          .from(lensOpticalTwins)
+          .innerJoin(lenses, eq(lensOpticalTwins.twinId, lenses.id))
+          .where(and(eq(lensOpticalTwins.lensId, lensId), isNull(lenses.mergedIntoId)))
+          .orderBy(lenses.name),
       ]);
 
     return {
@@ -150,6 +171,7 @@ export const getLensRelations = unstable_cache(
       cameraCount: cameraCountRows[0]?.count ?? 0,
       builtInto: builtIntoRows,
       versions: versionRows,
+      opticalTwins: opticalTwinRows,
     };
   },
   ["lens-relations"],
