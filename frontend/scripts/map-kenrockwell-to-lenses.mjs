@@ -80,7 +80,7 @@ const num = (m) => (m ? parseFloat(m[1]) : null);
  * what our aperture_min holds.
  */
 function parseTitle(text) {
-  const t = (text ?? "").replace(/\s+Review$/i, "").replace(/[~–—]/g, "-");
+  const t = (text ?? "").replace(/\s+Review\b.*$/i, "").replace(/[~–—‑‐]/g, "-");
   const range = t.match(/(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)\s*mm/i);
   const single = t.match(/(\d+(?:\.\d+)?)\s*mm/i);
   // "f/1.8", "F5.6-8", "1:2.8"; not the F of "RF 100mm" or "EF 50mm".
@@ -117,6 +117,58 @@ function tokens(text) {
 }
 
 // ---------------------------------------------------------------------------
+// Mount, from his directory and from our name
+// ---------------------------------------------------------------------------
+
+/** The mount a lens name declares, or null when the name does not say. */
+function mountOf(name) {
+  const n = ` ${name} `;
+  if (/\bRF-S\b/i.test(n)) return "rf-s";
+  if (/\bRF\b/i.test(n)) return "rf";
+  if (/\bEF-M\b/i.test(n)) return "ef-m";
+  if (/\bEF-S\b/i.test(n)) return "ef-s";
+  if (/\bEF\b/i.test(n)) return "ef";
+  if (/\bFDn?\b|\bFL\b/i.test(n)) return "fd";
+  if (/\bNikkor Z\b|\bZ \d/i.test(n)) return "z";
+  if (/\b1 Nikkor\b/i.test(n)) return "nikon1";
+  if (/\bFE\b|\bSEL\d/i.test(n)) return "fe";
+  if (/\bE \d|\bE PZ\b/i.test(n)) return "e";
+  if (/\bDT\b|\bSAL\d/i.test(n)) return "a";
+  if (/\bXF\b|\bXC\b/i.test(n)) return "x";
+  if (/\bGF\b/i.test(n)) return "g";
+  if (/\b645\b/i.test(n)) return "645";
+  if (/\b67\b|6[×x]7/i.test(n)) return "67";
+  return null;
+}
+
+/**
+ * The mounts a review's directory can be about. A row on one of these is
+ * favoured; a row that declares a different mount is not that lens. A null
+ * entry means "a name that declares no mount", which is how our Nikon F rows
+ * are written.
+ */
+const MOUNT_HINTS = [
+  [/\/canon\/eos-m\//, ["ef-m"]],
+  [/\/canon\/eos-r\//, ["rf", "rf-s"]],
+  [/\/canon\/fd\//, ["fd"]],
+  [/\/canon\//, ["ef", "ef-s"]],
+  [/\/nikon\/(z|mirrorless)\//, ["z"]],
+  [/\/nikon\/1\//, ["nikon1"]],
+  [/\/nikon\//, [null]],
+  [/\/sony\/lenses\//, ["fe", "e"]],
+  [/\/sony\//, ["a"]],
+  [/\/fuji\/gfx\//, ["g"]],
+  [/\/fuji\//, ["x"]],
+  [/\/pentax\/645\//, ["645"]],
+  [/\/pentax\/67\//, ["67"]],
+];
+
+function mountHint(url) {
+  for (const [re, mounts] of MOUNT_HINTS) if (re.test(url)) return mounts;
+  return null;
+}
+
+// ---------------------------------------------------------------------------
 // Match
 // ---------------------------------------------------------------------------
 
@@ -148,7 +200,8 @@ try {
         parseTitle(page.summary?.name).aperture ??
         parseTitle(page.specs?.Name).aperture ??
         parseTitle(page.specs?.["Maximum Aperture"]).aperture ??
-        apertureFromPath(page.url);
+        apertureFromPath(page.url) ??
+        parseTitle((page.text?.intro ?? "").slice(0, 600)).aperture;
     }
     if (!want.focal) Object.assign(want, parseTitle(page.summary?.name));
     const base = { page: page.url, title: page.heading || page.title, want, years: [page.yearFrom, page.yearTo], facts: page.facts };
@@ -179,8 +232,14 @@ try {
         for (const t of pageTokens) if (lensTokens.has(t)) { score += 2; hits.push(t); }
         // A version token on our name that his title lacks counts against
         // that row ("II" when he reviews the original).
-        for (const t of ["ii", "iii", "iv", "vr", "is", "g", "d", "ais", "ai", "asph", "apo", "macro", "micro"]) {
+        for (const t of ["ii", "iii", "iv", "vr", "is", "g", "d", "ais", "ai", "asph", "apo", "macro", "micro", "se", "graphite", "titanium", "safari", "edition"]) {
           if (lensTokens.has(t) && !pageTokens.has(t)) score -= 1;
+        }
+        const hint = mountHint(page.url);
+        if (hint) {
+          const mount = mountOf(l.name);
+          if (hint.includes(mount)) score += 3;
+          else if (mount !== null) score -= 3;
         }
         if (page.yearFrom && l.year_introduced) {
           const gap = Math.abs(l.year_introduced - page.yearFrom);
