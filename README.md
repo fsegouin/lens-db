@@ -91,7 +91,7 @@ The scanners deliberately report rather than import. Neither list is clean enoug
 
 Supabase Free has no automated backups, so [`.github/workflows/db-backup.yml`](.github/workflows/db-backup.yml) runs [`scraper/db-backup.sh`](scraper/db-backup.sh) every Sunday at 03:00 UTC: `pg_dump` (custom format, compressed), a `pg_restore --list` sanity check, upload to a **private** R2 bucket, and pruning to the newest 12 weekly and 12 monthly copies (a dump made in the first week of a month is also kept under `monthly/`).
 
-Repository secrets it needs (Settings → Secrets → Actions, environment `production`):
+Secrets it needs, set on the `Production` environment (Settings → Environments → Production → Add environment secret), not as plain repository secrets:
 
 | Secret | Value |
 |---|---|
