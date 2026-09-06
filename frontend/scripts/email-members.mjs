@@ -14,6 +14,7 @@ import { createSql } from "./lib/db.mjs";
 const args = new Set(process.argv.slice(2));
 const SEND = args.has("--send");
 const only = [...args].find((a) => a.startsWith("--only="))?.slice(7) ?? null;
+const testTo = [...args].find((a) => a.startsWith("--test="))?.slice(7) ?? null;
 
 const FROM = process.env.RESEND_FROM_EMAIL || "The Lens DB <noreply@thelensdb.com>";
 // Replies must reach a real inbox. There is no default on purpose: sending 34
@@ -66,6 +67,23 @@ https://thelensdb.com`;
 console.log(`${members.length} member${members.length === 1 ? "" : "s"} ${SEND ? "to email" : "would be emailed"}:`);
 for (const m of members) {
   console.log(`  ${m.display_name} <${m.email.replace(/^(.).*?(@.*)$/, "$1***$2")}> joined ${m.joined} edits=${m.edit_count} kit=${m.kit}`);
+}
+
+if (testTo) {
+  if (!REPLY_TO) {
+    console.error("Set OUTREACH_REPLY_TO first, so the test shows the real headers.");
+    process.exit(1);
+  }
+  const sample = members[0] ?? { display_name: "Test", joined: "2026-03-30", edit_count: 0 };
+  const { subject, text } = draft(sample);
+  const resend = new Resend(process.env.RESEND_API_KEY);
+  const { error } = await resend.emails.send({ from: FROM, to: testTo, replyTo: REPLY_TO, subject, text });
+  if (error) {
+    console.error(`test send failed: ${error.message}`);
+    process.exit(1);
+  }
+  console.log(`Test copy sent to ${testTo.replace(/^(.).*?(@.*)$/, "$1***$2")}. No member was emailed.`);
+  process.exit(0);
 }
 
 if (!SEND) {
