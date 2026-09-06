@@ -109,11 +109,8 @@ function KitRow({
           value={acquiredYear}
           aria-label={`Year you got the ${item.name}`}
           className="h-8 w-20"
-          // Most things were bought recently, so an empty box fills with this
-          // year on focus and is typed over when it was not.
-          onFocus={() => {
-            if (acquiredYear === "") setAcquiredYear(String(new Date().getFullYear()));
-          }}
+          // No prefill on focus: an empty box must stay empty, or tabbing
+          // through the row would silently record this year as the purchase.
           onChange={(e) => setAcquiredYear(e.target.value)}
           onBlur={() => {
             const raw = acquiredYear.trim();
