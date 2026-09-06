@@ -341,7 +341,8 @@ function parsePage(path, html) {
   const ratio = (specs["Maximum Reproduction Ratio"] ?? "").match(/1\s*:\s*(\d+(?:\.\d+)?)/);
   // Threads are whole millimetres from 19 to 127; "0.75mm" is a pitch.
   const filter = (specs.Filters ?? specs["Filter Thread"] ?? "").match(/(?<![\d.])(\d{2,3})\s*mm/i);
-  const weight = (specs.Weight ?? "").match(/(\d+(?:\.\d+)?)\s*g\b/i);
+  // "2,400 g": drop the thousands separator or the match reads 400.
+  const weight = (specs.Weight ?? "").replace(/(\d),(\d{3})(?!\d)/g, "$1$2").match(/(\d+(?:\.\d+)?)\s*g\b/i);
   const sizeMm = (specs.Size ?? "").match(/(\d+(?:\.\d+)?)\s*mm\s*(?:maximum\s*)?diameter\s*[×x]\s*(\d+(?:\.\d+)?)\s*mm/i);
   const prices = [];
   for (const m of (specs.Price ?? specs["Price, USA"] ?? "").matchAll(/\$\s?(\d[\d,]*)\s*([^.$]*?)(?:,\s*)?((?:January|February|March|April|May|June|July|August|September|October|November|December)?\s*\d{4})/g)) {
