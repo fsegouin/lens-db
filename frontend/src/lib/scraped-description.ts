@@ -1,3 +1,5 @@
+import { repairDescription } from "./description-whitespace";
+
 /**
  * Collection and series blurbs arrived from a scrape that flattened the source
  * page's furniture into the description text, and they were shown raw: on the
@@ -77,20 +79,13 @@ export function cleanScrapedDescription(
     if (at !== -1) text = text.slice(0, at);
   }
 
-  // The scrape also dropped the space after sentence punctuation, giving
-  // "barrel distortion.Fisheye lenses are". Requiring a lowercase letter
-  // before the stop leaves initialisms like "U.S.A." intact.
-  text = text.replace(/([a-z][.;:!?])([A-Z])/g, "$1 $2");
-
-  // The same loss before a lowercase word, which the rule above cannot see:
-  // "two types of fisheye lenses:a circular fisheye". Requiring a letter after
-  // the colon leaves figures like "1:4 f=17mm" and "1:2.8" alone.
-  text = text.replace(/([:;])([a-zA-Z])/g, "$1 $2");
-
-  // Links stripped from the source left words fused to their neighbour:
-  // "the previousAdaptall system". formatDescription already does this for
-  // lens and camera text; the same join shows up here for the same reason.
-  text = text.replace(/([a-z])([A-Z])/g, "$1 $2").trim();
+  // The scrape dropped the space after sentence punctuation ("barrel
+  // distortion.Fisheye lenses are"), after a colon ("two types of fisheye
+  // lenses:a circular fisheye") and wherever a stripped link fused two words
+  // ("the previousAdaptall system"). All three are the same damage, and
+  // repairDescription restores them without splitting names such as "GmbH"
+  // or "LaK9", which the bare `([a-z])([A-Z])` rule here used to break.
+  text = repairDescription(text);
 
   // Only a stop followed by whitespace or the end of the text closes a
   // sentence. Matching the stop itself cannot span "43.27mm" or "f/1.4": the
