@@ -149,7 +149,10 @@ export const cameras = pgTable(
 
 export const collections = pgTable("collections", {
   id: serial("id").primaryKey(),
-  name: text("name").notNull(),
+  // Unique, like lensSeries.name. Its absence is why the import was able to
+  // land six collections under three display names, which rendered as
+  // identical adjacent cards on the index.
+  name: text("name").notNull().unique(),
   slug: text("slug").notNull().unique(),
   description: text("description"),
   protectionLevel: text("protection_level").default("none"), // "none" | "autoconfirmed" | "trusted" | "admin"

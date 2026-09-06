@@ -1,0 +1,72 @@
+DRY RUN — 9 merges, 3 deletions
+collections before: 50
+
+→ #8 fisheye-lenses  (98 lenses)
+    ← #9 fisheyes  (76 lenses, 32 not already in the target)
+    Identical display names. 8 carries the only description that survives sanitising; 9's slug does not slugify its own name.
+    result: 130 lenses, 34 membership rows written, 0 pending edit(s) rejected
+    /collections/fisheyes now redirects to /collections/fisheye-lenses
+
+→ #18 macro-1-1  (109 lenses)
+    ← #21 macro  (97 lenses, 18 not already in the target)
+    Identical display names. Neither description survives, so the slug decides: 'macro' is meaningless for a collection named Macro 1:1.
+    result: 127 lenses, 25 membership rows written, 0 pending edit(s) rejected
+    /collections/macro now redirects to /collections/macro-1-1
+
+→ #19 macro-1-2  (94 lenses)
+    ← #22 macro2  (95 lenses, 34 not already in the target)
+    Identical display names. 'macro2' is the only slug in the table disambiguated with a bare digit.
+    result: 128 lenses, 34 membership rows written, 0 pending edit(s) rejected
+    /collections/macro2 now redirects to /collections/macro-1-2
+
+→ #15 leica-m-special-limited-editions  (80 lenses)
+    ← #14 leica-m-limited-special-editions  (79 lenses, 8 not already in the target)
+    Word-order variant. Nine other collections use 'special limited editions'; only these two Leica ones invert it.
+    result: 88 lenses, 8 membership rows written, 0 pending edit(s) rejected
+    /collections/leica-m-limited-special-editions now redirects to /collections/leica-m-special-limited-editions
+
+→ #17 leica-r-special-limited-editions  (5 lenses)
+    ← #16 leica-r-limited-special-editions  (5 lenses, 2 not already in the target)
+    Same word-order variant as the Leica M pair.
+    result: 7 lenses, 2 membership rows written, 0 pending edit(s) rejected
+    /collections/leica-r-limited-special-editions now redirects to /collections/leica-r-special-limited-editions
+
+→ #45 tamron-adaptall-2-lenses  (52 lenses)
+    ← #46 tamron-adaptall-2  (47 lenses, 2 not already in the target)
+    45 has surviving prose, 46 has none.
+    result: 54 lenses, 4 membership rows written, 0 pending edit(s) rejected
+    /collections/tamron-adaptall-2 now redirects to /collections/tamron-adaptall-2-lenses
+
+→ #47 tamron-adaptall-lenses  (21 lenses)
+    ← #48 tamron-adaptall  (22 lenses, 2 not already in the target)
+    48 is the larger side (22 against 21) but has no description; 47 has the only usable one. The two extra lenses migrate.
+    result: 23 lenses, 2 membership rows written, 0 pending edit(s) rejected
+    /collections/tamron-adaptall now redirects to /collections/tamron-adaptall-lenses
+
+→ #43 tamron-adapt-a-matic-lenses  (11 lenses)
+    ← #44 tamron-adapt-a-matic  (11 lenses, 1 not already in the target)
+    Equal size; 43 has the surviving description.
+    result: 12 lenses, 1 membership rows written, 0 pending edit(s) rejected
+    /collections/tamron-adapt-a-matic now redirects to /collections/tamron-adapt-a-matic-lenses
+
+→ #25 nifty-forties  (49 lenses)
+    ← #26 nifty-fourties  (39 lenses, 16 not already in the target)
+    'Fourties' is a misspelling.
+    result: 65 lenses, 16 membership rows written, 0 pending edit(s) rejected
+    /collections/nifty-fourties now redirects to /collections/nifty-forties
+
+✕ #33 retro-styled-lenses  (0 lenses)
+    Empty, and no description to salvage.
+
+✕ #27 nikon-large-format-lenses  (0 lenses)
+    Empty, and no description to salvage.
+
+✕ #34 ricoh-rikenon-lenses  (0 lenses)
+    Empty. Its description promises 'a full list' and lists nothing; the 214 characters that survive sanitising are worth carrying to a Ricoh series row when product lines move there.
+
+collections after: 38 (was 50, removed 12)
+memberships migrated: 115
+collection_redirects rows: 9
+collections still sharing a name: 0  (the unique constraint can now be added)
+
+DRY RUN — rolled back, nothing changed. Re-run with --apply to write.
