@@ -20,6 +20,7 @@
 import fs from "node:fs";
 import { createSql } from "./lib/db.mjs";
 import { buildIndex, lookup } from "./lib/catalogue-match.mjs";
+import { classifyDigitalBody, DROPPED_BY_DEFAULT } from "./lib/body-class.mjs";
 
 const SOURCE_URL =
   "https://raw.githubusercontent.com/LibRaw/LibRaw/master/src/tables/cameralist.cpp";
@@ -110,6 +111,8 @@ const present = [];
 const missing = [];
 const backs = [];
 const skipped = [];
+/** Candidates we do not have but do not want, kept for the tally. */
+const dropped = new Map();
 
 for (const model of models) {
   const makerKey = makerKeyOf(model);
@@ -122,11 +125,23 @@ for (const model of models) {
   const hit = lookup(index, model);
   if (hit) {
     present.push({ ...entry, matched: hit[0].name });
-  } else if (DIGITAL_BACK_MAKERS.has(makerKey)) {
-    backs.push(entry);
-  } else {
-    missing.push(entry);
+    continue;
   }
+  if (DIGITAL_BACK_MAKERS.has(makerKey)) {
+    backs.push(entry);
+    continue;
+  }
+
+  // Classify only what we are missing: a body already in the catalogue stays
+  // there regardless of what class it falls into. This is a scanner, not a
+  // culling tool.
+  const bodyClass = classifyDigitalBody(model);
+  if (!args.all && DROPPED_BY_DEFAULT.has(bodyClass)) {
+    if (!dropped.has(bodyClass)) dropped.set(bodyClass, []);
+    dropped.get(bodyClass).push(entry);
+    continue;
+  }
+  missing.push({ ...entry, class: bodyClass });
 }
 
 const byMaker = new Map();
@@ -140,6 +155,14 @@ console.log(`Already in our catalogue: ${present.length}`);
 console.log(`Out of scope (phones etc): ${skipped.length}`);
 console.log(`Digital backs (review):   ${backs.length}`);
 console.log(`Missing cameras:          ${missing.length}`);
+for (const [bodyClass, entries] of [...dropped].sort((a, b) => b[1].length - a[1].length)) {
+  console.log(`  dropped as ${bodyClass}:`.padEnd(26) + String(entries.length).padStart(4));
+}
+const notable = missing.filter((m) => m.class === "notable-compact");
+if (notable.length) {
+  console.log(`\nNotable fixed-lens compacts kept (${notable.length}):`);
+  console.log(`  ${notable.map((m) => m.model).join(", ")}`);
+}
 console.log("\nMissing by maker:");
 for (const [maker, count] of ranked) {
   console.log(`  ${String(count).padStart(4)}  ${maker}`);
@@ -155,10 +178,11 @@ if (args.json) {
       missing: missing.length,
       digital_backs: backs.length,
       out_of_scope: skipped.length,
+      dropped: Object.fromEntries([...dropped].map(([k, v]) => [k, v.length])),
     },
     missing,
     digital_backs: backs,
-    ...(args.all ? { out_of_scope: skipped } : {}),
+    ...(args.all ? { out_of_scope: skipped, dropped: Object.fromEntries(dropped) } : {}),
   };
   fs.writeFileSync(args.json, JSON.stringify(payload, null, 2));
   console.log(`\nWrote ${args.json}`);
