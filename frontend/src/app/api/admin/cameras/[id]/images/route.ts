@@ -6,8 +6,8 @@ import { cameras } from "@/db/schema";
 import { requireAdminAPI } from "@/lib/admin-auth";
 import { processAndUpload, fetchAndUpload } from "@/lib/r2-upload";
 import { revalidateEntity } from "@/lib/revalidate-entity";
-
-type ImageData = { src: string; alt: string };
+import type { ImageData } from "@/lib/image-types";
+import { readProvenance, applyProvenance, PROVENANCE_MAX_LEN, type ImageProvenance } from "@/lib/image-provenance";
 
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const MAX_RAW_BYTES = 10 * 1024 * 1024;
@@ -50,6 +50,7 @@ export async function POST(
   const contentType = request.headers.get("content-type") || "";
   const r2Key = r2KeyFor(cam.slug);
   let publicUrl: string;
+  let provenance: ImageProvenance = {};
 
   try {
     if (contentType.startsWith("multipart/form-data")) {
@@ -62,6 +63,12 @@ export async function POST(
       if (file.size > MAX_RAW_BYTES) {
         return NextResponse.json({ error: "File too large" }, { status: 413 });
       }
+      const fields = Object.fromEntries(
+        [...form.entries()].filter(([, v]) => typeof v === "string"),
+      );
+      const read = readProvenance(fields);
+      if (!read.ok) return NextResponse.json({ error: read.error }, { status: 400 });
+      provenance = read.value;
       const buffer = Buffer.from(await file.arrayBuffer());
       publicUrl = await processAndUpload(buffer, r2Key);
     } else if (contentType.startsWith("application/json")) {
@@ -72,6 +79,14 @@ export async function POST(
       try { new URL(body.url); } catch {
         return NextResponse.json({ error: "Invalid url" }, { status: 400 });
       }
+      const read = readProvenance(body);
+      if (!read.ok) return NextResponse.json({ error: read.error }, { status: 400 });
+      // The address it was fetched from is the one piece of provenance we
+      // always have, so it is kept unless the admin named a better page. A
+      // signed CDN address is left out: it expires, and it would be the link
+      // behind the credit once one is added.
+      const fallback = body.url.length <= PROVENANCE_MAX_LEN && !new URL(body.url).search ? body.url : "";
+      provenance = { ...read.value, sourceUrl: read.value.sourceUrl || fallback };
       publicUrl = await fetchAndUpload(body.url, r2Key);
     } else {
       return NextResponse.json({ error: "Unsupported Content-Type" }, { status: 415 });
@@ -80,7 +95,7 @@ export async function POST(
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
 
-  const updated = await appendImage(id, { src: publicUrl, alt: cam.name });
+  const updated = await appendImage(id, applyProvenance({ src: publicUrl, alt: cam.name }, provenance));
   return NextResponse.json({ images: updated });
 }
 
@@ -114,6 +129,38 @@ export async function PUT(
   await db.update(cameras).set({ images: reordered }).where(eq(cameras.id, id));
   revalidateEntity("camera", cam.slug);
   return NextResponse.json({ images: reordered });
+}
+
+/** Set the source and licence of one image, matched by `src`. */
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const token = request.cookies.get("user_session")?.value;
+  const authError = await requireAdminAPI(token);
+  if (authError) return authError;
+
+  const { id: idStr } = await params;
+  const id = parseInt(idStr, 10);
+  if (Number.isNaN(id)) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
+
+  const body = await request.json();
+  if (typeof body.src !== "string") {
+    return NextResponse.json({ error: "Body must include src" }, { status: 400 });
+  }
+  const read = readProvenance(body);
+  if (!read.ok) return NextResponse.json({ error: read.error }, { status: 400 });
+
+  const cam = await loadCamera(id);
+  if (!cam) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const current = (Array.isArray(cam.images) ? cam.images : []) as ImageData[];
+  if (!current.some((i) => i.src === body.src)) {
+    return NextResponse.json({ error: "No such image" }, { status: 404 });
+  }
+  const updated = current.map((i) => (i.src === body.src ? applyProvenance(i, read.value) : i));
+  await db.update(cameras).set({ images: updated }).where(eq(cameras.id, id));
+  revalidateEntity("camera", cam.slug);
+  return NextResponse.json({ images: updated });
 }
 
 export async function DELETE(

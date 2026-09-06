@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import ImageUploader from "@/components/admin/ImageUploader";
+import type { ImageData } from "@/lib/image-types";
 import { generateSlug } from "./generate-slug";
 
 interface CameraData {
@@ -59,7 +60,7 @@ export default function CameraForm({ camera, systems }: CameraFormProps) {
       ([k, v]) => [k, String(v ?? "")]
     );
   });
-  const initialImages = (Array.isArray(camera?.images) ? camera.images : []) as { src: string; alt: string }[];
+  const initialImages = (Array.isArray(camera?.images) ? camera.images : []) as ImageData[];
 
   const isEdit = !!camera;
 

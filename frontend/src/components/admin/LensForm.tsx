@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import ComboboxInput from "./ComboboxInput";
 import ImageUploader from "@/components/admin/ImageUploader";
+import type { ImageData } from "@/lib/image-types";
 import { generateSlug } from "./generate-slug";
 
 interface LensData {
@@ -131,7 +132,7 @@ export default function LensForm({ lens, systems, tags }: LensFormProps) {
       ([k, v]) => [k, String(v ?? "")]
     );
   });
-  const initialImages = (Array.isArray(lens?.images) ? lens.images : []) as { src: string; alt: string }[];
+  const initialImages = (Array.isArray(lens?.images) ? lens.images : []) as ImageData[];
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
