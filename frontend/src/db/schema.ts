@@ -316,6 +316,13 @@ export const users = pgTable(
      */
     kitIsPublic: boolean("kit_is_public").notNull().default(false),
     /**
+     * Whether a published kit also shows what the owner paid for each item.
+     * The site's estimates are its own numbers; a purchase price is the
+     * owner's, so it stays private unless they choose to share it, and only
+     * ever alongside a kit that is public.
+     */
+    kitShowsPaid: boolean("kit_shows_paid").notNull().default(false),
+    /**
      * The currency the owner records what they paid in. Nothing is converted:
      * the site's own estimates are in USD and stay labelled that way, since
      * converting would need an exchange rate this database does not have.

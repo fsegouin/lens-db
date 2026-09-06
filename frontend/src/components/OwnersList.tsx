@@ -6,7 +6,9 @@ import KitNudgeLink from "@/components/KitNudgeLink";
  * Who here owns this, and what they paid for it.
  *
  * The paid figures are the point: they are first-hand, they carry a date, and
- * unlike the used-price estimates they are nobody else's data.
+ * unlike the used-price estimates they are nobody else's data. That is also
+ * why they only appear for owners who chose to share them; the query already
+ * blanks the price for everyone else, so this list shows what it is given.
  */
 export default function OwnersList({
   owners,
