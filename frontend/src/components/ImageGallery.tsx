@@ -52,11 +52,12 @@ function Attribution({
   className?: string;
 }) {
   if (!image.credit && !image.license) return null;
-  // The lightbox scrim is bg-black/10, which is *light* over a light page, so
-  // the credit follows the theme there too. It only carries more weight than
-  // the inline version to hold up against the image behind it.
+  // The lightbox scrim is bg-black/10, which is *light* over a light page and
+  // on a phone sits right over the inline gallery's pale plate, so bare text
+  // there was unreadable in the dark theme. It gets the same pill as the
+  // image counter below it, which gives it its own ground in both themes.
   const tone = onOverlay
-    ? "text-zinc-700 dark:text-zinc-200 [&_a:hover]:text-zinc-900 dark:[&_a:hover]:text-white"
+    ? "mx-auto w-fit rounded-full bg-secondary px-3 py-1 text-secondary-foreground [&_a:hover]:text-foreground"
     : "text-zinc-600 dark:text-zinc-400 [&_a:hover]:text-zinc-800 dark:[&_a:hover]:text-zinc-200";
   const credit = image.credit
     ? image.sourceUrl
@@ -155,7 +156,7 @@ export default function ImageGallery({ images }: { images: ImageData[] }) {
               <Attribution
                 image={safeImages[lightboxIdx]}
                 onOverlay
-                className={safeImages.length > 1 ? "mb-14" : ""}
+                className={safeImages.length > 1 ? "mb-16" : ""}
               />
             </motion.div>
           )}
