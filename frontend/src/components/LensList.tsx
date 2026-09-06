@@ -684,16 +684,16 @@ export default function LensList({
           <TableHeader>
             <TableRow>
               {[
-                { key: "name", label: "Name", className: "w-[28%]" },
-                { key: "brand", label: "Brand", className: showSeries ? "w-[10%]" : "w-[11%]" },
-                { key: "system", label: "System", className: showSeries ? "w-[10%]" : "w-[12%]" },
-                { key: "focalLength", label: "Focal Length", className: showSeries ? "w-[8%] text-right" : "w-[10%] text-right" },
+                { key: "name", label: "Name", className: "w-[25.5%]" },
+                { key: "brand", label: "Brand", className: showSeries ? "w-[9.5%]" : "w-[11%]" },
+                { key: "system", label: "System", className: showSeries ? "w-[10%]" : "w-[14%]" },
+                { key: "focalLength", label: "Focal Length", className: "w-[10.5%] text-right" },
                 { key: "aperture", label: "Aperture", className: showSeries ? "w-[8%] text-right" : "w-[9%] text-right" },
                 { key: "type", label: "Type", sortable: false, className: showSeries ? "w-[6%]" : "w-[8%]" },
                 ...(showSeries
                   ? [{ key: "series", label: "Series", sortable: false, className: "w-[10%]" }]
                   : []),
-                { key: "year", label: "Year", className: showSeries ? "w-[5%] text-right" : "w-[6%] text-right" },
+                { key: "year", label: "Year", className: showSeries ? "w-[5.5%] text-right" : "w-[6%] text-right" },
                 { key: "price", label: "Avg Price", className: showSeries ? "w-[8%] text-right" : "w-[9%] text-right" },
                 { key: "weight", label: "Weight", className: "w-[7%] text-right" },
               ].map((col) => (
