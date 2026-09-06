@@ -4,7 +4,7 @@ import Breadcrumb from "@/components/Breadcrumb";
 import JsonLd from "@/components/JsonLd";
 import { entityMetadata, metaDescription } from "@/lib/seo";
 import { hubJsonLd } from "@/lib/jsonld";
-import { asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { collections, lensCollections, lenses, systems } from "@/db/schema";
 import { Badge } from "@/components/ui/badge";
@@ -74,7 +74,10 @@ export default async function CollectionDetailPage({
     .from(lensCollections)
     .innerJoin(lenses, eq(lensCollections.lensId, lenses.id))
     .leftJoin(systems, eq(lenses.systemId, systems.id))
-    .where(eq(lensCollections.collectionId, collection.id))
+    // Merged-away lenses keep their membership rows, so without this the page
+    // lists the same lens twice and the loser's slug no longer resolves. Every
+    // other lens list in the app applies the same filter.
+    .where(and(eq(lensCollections.collectionId, collection.id), isNull(lenses.mergedIntoId)))
     .orderBy(asc(sql`regexp_replace(${lenses.name}, '\\d+(\\.\\d+)?mm.*$', '')`), asc(lenses.focalLengthMin), asc(lenses.apertureMin));
 
   const crumbs = [

@@ -1,12 +1,12 @@
 import type { MetadataRoute } from "next";
 import { unstable_cache } from "next/cache";
 import { db } from "@/db";
-import { lenses, cameras, systems, collections, lensSeries } from "@/db/schema";
+import { lenses, cameras, systems, collections, lensCollections, lensSeries } from "@/db/schema";
 import { getAdapterMatrix } from "@/lib/adapters";
 import { getComparableLensPairs } from "@/lib/compare";
 import { getPublicKits } from "@/lib/kit";
 import { getBrands } from "@/lib/brands";
-import { isNull } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 
 const getSitemapSlugs = unstable_cache(
   async () => {
@@ -21,7 +21,15 @@ const getSitemapSlugs = unstable_cache(
           .from(cameras)
           .where(isNull(cameras.mergedIntoId)),
         db.select({ slug: systems.slug }).from(systems),
-        db.select({ slug: collections.slug }).from(collections),
+        // Only collections that actually show a lens. The index page hides
+        // empty ones, so advertising them here produced indexable pages that
+        // nothing on the site links to.
+        db
+          .select({ slug: collections.slug })
+          .from(collections)
+          .innerJoin(lensCollections, eq(collections.id, lensCollections.collectionId))
+          .innerJoin(lenses, and(eq(lensCollections.lensId, lenses.id), isNull(lenses.mergedIntoId)))
+          .groupBy(collections.slug),
         db.select({ slug: lensSeries.slug }).from(lensSeries),
       ]);
     return { lensRows, cameraRows, systemRows, collectionRows, seriesRows };
