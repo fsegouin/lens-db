@@ -241,7 +241,7 @@ Role-protected admin at `/admin/*` for CRUD management of all entities. Admins a
 | `/admin/compatibility` | Lens-camera compatibility (composite key, custom table) |
 | `/admin/users` | User management (`[id]` detail page) |
 | `/admin/pending-edits` | Review queue for user-submitted edits |
-| `/admin/duplicates` | Flagged duplicate entities |
+| `/admin/duplicates` | Flagged duplicate entities; `[id]` is the two-column merge review (keeper on the right, tick what to bring across; rules in `lib/entity-merge.ts`) |
 | `/admin/recent-changes` | Recent revision activity |
 
 ### Admin API Routes
