@@ -435,6 +435,13 @@
       "when": 1788647595175,
       "tag": "0061_lens_optical_twins",
       "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "7",
+      "when": 1788647596175,
+      "tag": "0062_new_collections",
+      "breakpoints": true
     }
   ]
 }
