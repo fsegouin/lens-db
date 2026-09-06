@@ -38,7 +38,9 @@ function plateFor(image: ImageData): { className: string; style?: CSSProperties 
 
 /**
  * CC BY and CC BY-SA oblige us to name the author and the licence next to the
- * image, so this renders whenever the ingest captured them.
+ * image, so this renders whenever either was captured: by the ingest, or by
+ * an admin on the edit form. A source URL alone is provenance for us rather
+ * than a credit for the reader, so it prints nothing on its own.
  */
 function Attribution({
   image,
@@ -49,31 +51,28 @@ function Attribution({
   onOverlay?: boolean;
   className?: string;
 }) {
-  if (!image.credit || !image.license) return null;
+  if (!image.credit && !image.license) return null;
   // The lightbox scrim is bg-black/10, which is *light* over a light page, so
   // the credit follows the theme there too. It only carries more weight than
   // the inline version to hold up against the image behind it.
   const tone = onOverlay
     ? "text-zinc-700 dark:text-zinc-200 [&_a:hover]:text-zinc-900 dark:[&_a:hover]:text-white"
     : "text-zinc-600 dark:text-zinc-400 [&_a:hover]:text-zinc-800 dark:[&_a:hover]:text-zinc-200";
+  const credit = image.credit
+    ? image.sourceUrl
+      ? <a href={image.sourceUrl} target="_blank" rel="noopener noreferrer nofollow" className="underline">{image.credit}</a>
+      : image.credit
+    : null;
+  const licence = image.license
+    ? image.licenseUrl
+      ? <a href={image.licenseUrl} target="_blank" rel="noopener noreferrer nofollow" className="underline">{image.license}</a>
+      : image.license
+    : null;
   return (
     <p className={`mt-1.5 text-center text-xs ${tone} ${className}`}>
-      Photo:{" "}
-      {image.sourceUrl ? (
-        <a href={image.sourceUrl} target="_blank" rel="noopener noreferrer nofollow" className="underline">
-          {image.credit}
-        </a>
-      ) : (
-        image.credit
-      )}{" "}
-      ·{" "}
-      {image.licenseUrl ? (
-        <a href={image.licenseUrl} target="_blank" rel="noopener noreferrer nofollow" className="underline">
-          {image.license}
-        </a>
-      ) : (
-        image.license
-      )}
+      Photo: {credit}
+      {credit && licence ? " · " : null}
+      {licence}
     </p>
   );
 }
