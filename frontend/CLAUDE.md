@@ -176,6 +176,7 @@ All API routes return JSON. Error responses: 400 (validation), 401 (auth), 409 (
 ### Caching & Rendering
 - All pages are **async Server Components** (no client-side data fetching for initial render)
 - Detail pages and static lists use **ISR** with `revalidate = 604800` (7 days)
+- Entity rows are read through `unstable_cache` (30 days, tags `lenses` / `cameras` / `kit`), and that cache survives deployments. A row edited by SQL or a script stays invisible until its tag is revalidated: `POST /api/cron/revalidate` with `{"tags":["lenses"],"paths":["/lenses/<slug>"]}` and the cron bearer
 - Filter-heavy pages (`/lenses`, `/cameras`, `/search`) are **dynamic** (per-request)
 - `unstable_cache` used for dropdown data on `/lenses` (brands + systems, 7-day TTL)
 
