@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { users, emailVerificationTokens } from "@/db/schema";
 import { eq, and, gt } from "drizzle-orm";
+import { sendWelcomeEmail, maskEmail } from "@/lib/email";
 
 // GET: validate token exists and redirect to confirmation page (no side effects)
 export async function GET(request: NextRequest) {
@@ -63,15 +64,26 @@ export async function POST(request: NextRequest) {
     }
 
     // Mark user as verified
-    await db
+    const [verified] = await db
       .update(users)
       .set({ emailVerifiedAt: new Date() })
-      .where(eq(users.id, record.userId));
+      .where(eq(users.id, record.userId))
+      .returning({ email: users.email, displayName: users.displayName });
 
     // Delete used token
     await db
       .delete(emailVerificationTokens)
       .where(eq(emailVerificationTokens.id, record.id));
+
+    // The welcome note is the first thing that says what an account is for.
+    // It must never make verification fail, so it is awaited only for logging.
+    if (verified) {
+      try {
+        await sendWelcomeEmail(verified.email, verified.displayName);
+      } catch (err) {
+        console.error(`[verify-email] Failed to send welcome email to ${maskEmail(verified.email)}:`, err);
+      }
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

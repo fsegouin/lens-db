@@ -11,7 +11,7 @@ import {
 } from "@/db/schema";
 import { requireAdminAPI } from "@/lib/admin-auth";
 import { getCurrentUser } from "@/lib/user-auth";
-import { applyPendingEditApproval } from "@/lib/pending-edits";
+import { applyPendingEditApproval, notifyEditReviewed } from "@/lib/pending-edits";
 import { eq, desc, asc, inArray, sql } from "drizzle-orm";
 
 const entityTables = {
@@ -132,8 +132,12 @@ export async function POST(request: NextRequest) {
   for (const edit of batch) {
     try {
       const result = await applyPendingEditApproval(edit, admin.id);
-      if (result.ok) approved++;
-      else failed.push({ id: edit.id, reason: result.reason });
+      if (result.ok) {
+        approved++;
+        await notifyEditReviewed(edit, { status: "approved", entityId: result.entityId }, admin.id);
+      } else {
+        failed.push({ id: edit.id, reason: result.reason });
+      }
     } catch (error) {
       failed.push({ id: edit.id, reason: String(error) });
     }
