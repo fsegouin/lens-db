@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { resizeImageBlob } from "@/lib/client-image-resize";
 import { DndContext, closestCenter, type DragEndEvent } from "@dnd-kit/core";
@@ -217,6 +217,15 @@ export default function ImageUploader({
   const [draft, setDraft] = useState<Required<ImageProvenance>>(EMPTY_PROVENANCE);
   const [saving, setSaving] = useState(false);
   const editButtons = useRef(new Map<string, HTMLButtonElement>());
+  // Open on a wide screen, where the three fields are one short row; folded
+  // on a phone, where they stack to a form an admin fixing one caption would
+  // otherwise scroll past. Rendered folded on the server either way: opening
+  // after mount moves the page by one row on a desktop, where folding it
+  // after mount would move it by the whole stacked form on a phone.
+  const [uploadOpen, setUploadOpen] = useState(false);
+  useEffect(() => {
+    if (window.matchMedia("(min-width: 640px)").matches) setUploadOpen(true);
+  }, []);
 
   const updateImages = useCallback(
     (next: ImageData[]) => {
@@ -459,10 +468,24 @@ export default function ImageUploader({
 
   return (
     <div className="space-y-3">
-      <fieldset className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-700">
-        <legend className="px-1 text-xs text-zinc-500 dark:text-zinc-400">Source for the next uploads</legend>
-        <ProvenanceFields idPrefix="upload" value={uploadProvenance} onChange={setUploadProvenance} />
-      </fieldset>
+      <details
+        open={uploadOpen}
+        onToggle={(e) => setUploadOpen(e.currentTarget.open)}
+        className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-700"
+      >
+        <summary className="cursor-pointer text-xs text-zinc-500 dark:text-zinc-400">
+          Source for the next uploads
+          {!uploadOpen && (uploadProvenance.credit || uploadProvenance.license) && (
+            <span className="inline-block max-w-[80%] truncate align-bottom text-zinc-700 dark:text-zinc-200">
+              {": "}
+              {[uploadProvenance.credit, uploadProvenance.license].filter(Boolean).join(" · ")}
+            </span>
+          )}
+        </summary>
+        <div className="mt-2">
+          <ProvenanceFields idPrefix="upload" value={uploadProvenance} onChange={setUploadProvenance} />
+        </div>
+      </details>
 
       <div
         onDragOver={(e) => e.preventDefault()}
