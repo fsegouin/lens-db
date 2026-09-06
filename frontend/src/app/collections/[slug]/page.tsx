@@ -8,7 +8,7 @@ import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { collectionRedirects, collections, lensCollections, lenses, systems } from "@/db/schema";
 import { Badge } from "@/components/ui/badge";
-import { cleanCollectionDescription } from "@/lib/collection-description";
+import { cleanScrapedDescription } from "@/lib/scraped-description";
 import {
   Table,
   TableBody,
@@ -41,7 +41,7 @@ export async function generateMetadata({
   if (!result) return { title: "Collection Not Found" };
 
   const { collection } = result;
-  const blurb = cleanCollectionDescription(collection.description);
+  const blurb = cleanScrapedDescription(collection.description);
   return entityMetadata({
     title: `${collection.name}`,
     description:
@@ -79,7 +79,7 @@ export default async function CollectionDetailPage({
   }
 
   const { collection } = result;
-  const description = cleanCollectionDescription(collection.description);
+  const description = cleanScrapedDescription(collection.description);
 
   const collectionLenses = await db
     .select({ lens: lenses, system: systems })

@@ -3,6 +3,7 @@ import { asc, eq, gt, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { lensSeries, lensSeriesMemberships } from "@/db/schema";
 import { Badge } from "@/components/ui/badge";
+import { cleanScrapedDescription } from "@/lib/scraped-description";
 
 export const revalidate = 604800;
 
@@ -52,18 +53,25 @@ export default async function LensSeriesPage() {
 
       {allSeries.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {allSeries.map((series) => (
+          {allSeries.map((series) => {
+            const description = cleanScrapedDescription(series.description);
+            return (
             <Link
               key={series.id}
               href={`/lenses/series/${series.slug}`}
-              className="rounded-lg border border-zinc-200 p-4 transition-all duration-200 hover:border-zinc-400 hover:shadow-md dark:border-zinc-800 dark:hover:border-zinc-600"
+              /*
+               * min-w-0 for the same reason the collections index needs it: a
+               * grid item defaults to min-width:auto, so one card whose
+               * scraped text cannot wrap sizes the column for every card.
+               */
+              className="min-w-0 rounded-lg border border-zinc-200 p-4 transition-all duration-200 hover:border-zinc-400 hover:shadow-md dark:border-zinc-800 dark:hover:border-zinc-600"
             >
               <h2 className="font-semibold text-zinc-900 dark:text-zinc-100">
                 {series.name}
               </h2>
-              {series.description && (
+              {description && (
                 <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">
-                  {series.description}
+                  {description}
                 </p>
               )}
               <div className="mt-3">
@@ -72,7 +80,8 @@ export default async function LensSeriesPage() {
                 </Badge>
               </div>
             </Link>
-          ))}
+            );
+          })}
         </div>
       ) : (
         <div className="rounded-xl border border-dashed border-zinc-300 p-12 text-center dark:border-zinc-700">

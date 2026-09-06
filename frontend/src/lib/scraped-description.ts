@@ -1,8 +1,9 @@
 /**
- * Collection blurbs arrived from a scrape that flattened the source page's
- * furniture into the description text, and they are shown raw today: on the
- * index cards, on the collection page as one paragraph, and in the page's
- * meta description.
+ * Collection and series blurbs arrived from a scrape that flattened the source
+ * page's furniture into the description text, and they were shown raw: on the
+ * index cards, on the hub page as one paragraph, and in the page's meta
+ * description. Both tables were filled by the same import and carry the same
+ * damage, so both read through this.
  *
  * The damage is not one shape. A "QUICK JUMP TO:" index of mount systems.
  * An HTML table run together without its columns ("YearOrder No.Model
@@ -65,7 +66,7 @@ function looksLikeProse(sentence: string): boolean {
   return true;
 }
 
-export function cleanCollectionDescription(
+export function cleanScrapedDescription(
   raw: string | null | undefined,
 ): string | null {
   if (!raw) return null;

@@ -7,6 +7,7 @@ import { hubJsonLd } from "@/lib/jsonld";
 import { asc, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { lensSeries, lensSeriesMemberships, lenses, systems } from "@/db/schema";
+import { cleanScrapedDescription } from "@/lib/scraped-description";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -40,10 +41,11 @@ export async function generateMetadata({
   if (!result) return { title: "Series Not Found" };
 
   const { series } = result;
+  const blurb = cleanScrapedDescription(series.description);
   return entityMetadata({
     title: `${series.name} lenses`,
     description:
-      series.description ? metaDescription(series.description) :
+      blurb ? metaDescription(blurb) :
       `${series.name}: Every lens in this product line, with specifications, release years and used prices.`,
     path: `/lenses/series/${series.slug}`,
   });
@@ -65,6 +67,7 @@ export default async function SeriesDetailPage({
   if (!result) notFound();
 
   const { series } = result;
+  const description = cleanScrapedDescription(series.description);
 
   const seriesLenses = await db
     .select({ lens: lenses, system: systems })
@@ -85,7 +88,7 @@ export default async function SeriesDetailPage({
         data={hubJsonLd({
           path: `/lenses/series/${series.slug}`,
           name: series.name,
-          description: series.description,
+          description,
           items: seriesLenses.map(({ lens }) => ({
             name: lens.name,
             path: `/lenses/${lens.slug}`,
@@ -100,8 +103,8 @@ export default async function SeriesDetailPage({
         <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100">
           {series.name}
         </h1>
-        {series.description && (
-          <p className="mt-2 text-muted-foreground">{series.description}</p>
+        {description && (
+          <p className="mt-2 text-muted-foreground">{description}</p>
         )}
         <div className="mt-2">
           <Badge variant="secondary">

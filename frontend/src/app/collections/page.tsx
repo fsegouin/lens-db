@@ -3,7 +3,7 @@ import { and, asc, eq, gt, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { collections, lensCollections, lenses } from "@/db/schema";
 import { Badge } from "@/components/ui/badge";
-import { cleanCollectionDescription } from "@/lib/collection-description";
+import { cleanScrapedDescription } from "@/lib/scraped-description";
 
 export const revalidate = 604800;
 
@@ -59,7 +59,7 @@ export default async function CollectionsPage() {
       {allCollections.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {allCollections.map((collection) => {
-            const description = cleanCollectionDescription(collection.description);
+            const description = cleanScrapedDescription(collection.description);
             return (
               <Link
                 key={collection.id}

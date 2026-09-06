@@ -22,6 +22,7 @@ interface SearchResults {
   cameras: SearchResult[];
   systems: SearchResult[];
   collections: SearchResult[];
+  series: SearchResult[];
 }
 
 const SECTIONS: {
@@ -33,13 +34,15 @@ const SECTIONS: {
   { key: "cameras", label: "Cameras", href: (s) => `/cameras/${s}` },
   { key: "systems", label: "Systems", href: (s) => `/systems/${s}` },
   { key: "collections", label: "Collections", href: (s) => `/collections/${s}` },
+  { key: "series", label: "Series", href: (s) => `/lenses/series/${s}` },
 ];
 
-const SECTION_RESULT_TYPE: Record<keyof SearchResults, "lens" | "camera" | "system" | "collection"> = {
+const SECTION_RESULT_TYPE: Record<keyof SearchResults, "lens" | "camera" | "system" | "collection" | "series"> = {
   lenses: "lens",
   cameras: "camera",
   systems: "system",
   collections: "collection",
+  series: "series",
 };
 
 function useSearchLogic() {
@@ -112,7 +115,8 @@ function useSearchLogic() {
     (results.lenses.length > 0 ||
       results.cameras.length > 0 ||
       results.systems.length > 0 ||
-      results.collections.length > 0);
+      results.collections.length > 0 ||
+      results.series.length > 0);
   const shouldShowDropdown = query.trim().length >= 2 && (loading || results !== null);
 
   return {
