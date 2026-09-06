@@ -68,6 +68,25 @@ python import_to_db.py --input data.json
 
 See [`scraper/README.md`](scraper/README.md) for the full scraper workflow.
 
+## Catalogue Gap Scanning
+
+Two read-only scanners compare our `cameras` table against an outside catalogue and report the bodies we do not have. Both are safe to run repeatedly: they only read, and print (or write with `--json`) a candidate list for a human to work through.
+
+```bash
+cd frontend
+node scripts/scan-libraw-gaps.mjs --json libraw-gaps.json
+node scripts/scan-camera-wiki-gaps.mjs --json camera-wiki-gaps.json
+```
+
+| Scanner | Source | Covers |
+|---|---|---|
+| `scan-libraw-gaps.mjs` | [LibRaw](https://github.com/LibRaw/LibRaw)'s `cameralist.cpp` — one plain-text file, no key, no rate limit | Every camera that writes a raw file, so the digital era |
+| `scan-camera-wiki-gaps.mjs` | [camera-wiki.org](https://camera-wiki.org) via its MediaWiki `api.php`, by brand category | ~10,000 articles weighted to film-era Western and consumer cameras |
+
+Both share `scripts/lib/catalogue-match.mjs`, which decides when two names are the same camera — LibRaw reports the EXIF model code (`ILCE-7M3`) where we store the marketing name (`Sony a7 III`), and camera-wiki uses the collectors' title. `scripts/lib/catalogue-match.test.mjs` pins that behaviour in both directions: names that must match, and near-identical bodies (`EOS 5D` vs `EOS 5DS`, `D3` vs `D300`) that must not, since a false match hides a genuinely missing camera. Run it with `pnpm test`.
+
+The scanners deliberately report rather than import. Neither list is clean enough to load unattended: camera-wiki mixes accessories into brand categories (pages it cannot classify are listed separately for review), and LibRaw includes phones, drones and digital backs. camera-wiki is CC BY-SA, so anything taken from it needs attribution.
+
 ## Database Backups
 
 Supabase Free has no automated backups, so [`.github/workflows/db-backup.yml`](.github/workflows/db-backup.yml) runs [`scraper/db-backup.sh`](scraper/db-backup.sh) every Sunday at 03:00 UTC: `pg_dump` (custom format, compressed), a `pg_restore --list` sanity check, upload to a **private** R2 bucket, and pruning to the newest 12 weekly and 12 monthly copies (a dump made in the first week of a month is also kept under `monthly/`).
