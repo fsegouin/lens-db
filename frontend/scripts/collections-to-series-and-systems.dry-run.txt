@@ -1,0 +1,52 @@
+DRY RUN — 10 moves
+collections before: 38
+
+→ canon-l-series-lenses
+    102 members, 0 newly attached; series now holds 116
+    redirect: /collections/canon-l-series-lenses -> /lenses/series/canon-l
+
+→ pentax-star-lenses
+    26 members, 0 newly attached; series now holds 48
+    redirect: /collections/pentax-star-lenses -> /lenses/series/pentax-star
+
+→ sigma-ys-lenses
+    13 members, 1 newly attached; series now holds 48
+    redirect: /collections/sigma-ys-lenses -> /lenses/series/sigma-xq-ys
+
+→ tamron-f-system-lenses
+    5 members, 0 newly attached; series now holds 7
+    redirect: /collections/tamron-f-system-lenses -> /lenses/series/tamron-f
+
+→ sigma-global-vision
+    created series "Sigma Global Vision" (sigma-global-vision)
+    42 members, 42 newly attached; series now holds 42
+    redirect: /collections/sigma-global-vision -> /lenses/series/sigma-global-vision
+
+→ t-mount-lenses
+    38 members, 0 newly attached; system now holds 171
+    redirect: /collections/t-mount-lenses -> /systems/t-mount-t2
+
+→ tamron-adaptall-2-lenses
+    54 members, 1 newly attached; system now holds 95
+    redirect: /collections/tamron-adaptall-2-lenses -> /systems/tamron-adaptall-2
+    redirect: /collections/tamron-adaptall-2 -> /systems/tamron-adaptall-2   (was a collection redirect)
+
+→ tamron-adaptall-lenses
+    23 members, 0 newly attached; system now holds 27
+    redirect: /collections/tamron-adaptall-lenses -> /systems/tamron-adaptall
+    redirect: /collections/tamron-adaptall -> /systems/tamron-adaptall   (was a collection redirect)
+
+→ tamron-adapt-a-matic-lenses
+    12 members, 0 newly attached; system now holds 25
+    redirect: /collections/tamron-adapt-a-matic-lenses -> /systems/tamron-adapt-a-matic
+    redirect: /collections/tamron-adapt-a-matic -> /systems/tamron-adapt-a-matic   (was a collection redirect)
+
+→ komura-unidapter
+    created system "Komura Unidapter" (komura-unidapter)
+    20 members, 20 newly attached; system now holds 20
+    redirect: /collections/komura-unidapter -> /systems/komura-unidapter
+
+collections after: 28 (was 38, removed 10, created 2 destination rows)
+memberships attached to destinations: 64
+
+DRY RUN — rolled back, nothing changed. Re-run with --apply to write.

@@ -58,6 +58,27 @@ const nextConfig: NextConfig = {
       { source: "/systems/pentax-k-aps-c", destination: "/systems/pentax-k", permanent: true },
       { source: "/systems/sigma-sa-aps-c", destination: "/systems/sigma-sa", permanent: true },
       { source: "/systems/leica-l-aps-c", destination: "/systems/leica-l", permanent: true },
+      // Collections that were really product lines or mounts, moved into
+      // lens_series and systems by scripts/collections-to-series-and-systems.mjs.
+      // These cannot live in collection_redirects: that table points at a
+      // collection, and none of these destinations is one.
+      { source: "/collections/canon-l-series-lenses", destination: "/lenses/series/canon-l", permanent: true },
+      { source: "/collections/pentax-star-lenses", destination: "/lenses/series/pentax-star", permanent: true },
+      { source: "/collections/sigma-ys-lenses", destination: "/lenses/series/sigma-xq-ys", permanent: true },
+      { source: "/collections/tamron-f-system-lenses", destination: "/lenses/series/tamron-f", permanent: true },
+      { source: "/collections/sigma-global-vision", destination: "/lenses/series/sigma-global-vision", permanent: true },
+      { source: "/collections/t-mount-lenses", destination: "/systems/t-mount-t2", permanent: true },
+      { source: "/collections/komura-unidapter", destination: "/systems/komura-unidapter", permanent: true },
+      { source: "/collections/tamron-adaptall-2-lenses", destination: "/systems/tamron-adaptall-2", permanent: true },
+      { source: "/collections/tamron-adaptall-lenses", destination: "/systems/tamron-adaptall", permanent: true },
+      { source: "/collections/tamron-adapt-a-matic-lenses", destination: "/systems/tamron-adapt-a-matic", permanent: true },
+      // The three Tamron slugs above were themselves merge targets, so these
+      // older slugs redirected to them through collection_redirects. That row
+      // cascaded away with the collection, so they are re-homed here rather
+      // than left to 404.
+      { source: "/collections/tamron-adaptall-2", destination: "/systems/tamron-adaptall-2", permanent: true },
+      { source: "/collections/tamron-adaptall", destination: "/systems/tamron-adaptall", permanent: true },
+      { source: "/collections/tamron-adapt-a-matic", destination: "/systems/tamron-adapt-a-matic", permanent: true },
     ];
   },
   async headers() {
