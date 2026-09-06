@@ -56,7 +56,7 @@ I run The Lens DB. You joined back in ${joined}, and I have been meaning to writ
 
 I am building something I wish had existed when I started collecting lenses: one open place that knows every lens and every mount ever made, what fits what, and what people really paid for them. Not a shop, not a review farm, a reference built by the people who actually use the gear. And I want it to be a community, not just a database.
 
-You are one of the earliest people to sign up, so I have one question for you: what brought you here, and what did you hope to do? One line is plenty. "Check which version of my Takumar this is", "list what I own", "see what a lens is worth", "honestly, I forgot". Every answer shapes what I build next.${edited}
+You were among the first to sign up, so I have one question for you: what brought you here, and what did you hope to do? One line is plenty. "Check which version of my Takumar this is", "list what I own", "see what a lens is worth", "honestly, I forgot". Every answer shapes what I build next.${edited}
 
 Since you joined, a lot has changed. You can now record your kit and what you paid at https://thelensdb.com/kit, and publish it if you like. Every edit you make carries your name on the page. And there is a weekly note of new glass, if you want one.
 
