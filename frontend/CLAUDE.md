@@ -22,9 +22,9 @@ pnpm test             # node:test suites (src/**/*.test.ts), no database needed
 - **Database**: Supabase PostgreSQL via Drizzle ORM (node-postgres driver, through the Supabase transaction pooler)
 - **Rate Limiting**: Upstash Redis (sliding window)
 - **AI**: Vercel AI SDK via AI Gateway — chat (`/chat`, tools from the `lens-db-mcp-server` workspace package), eBay listing classification, and DPReview import dedupe/audit checks (all `google/gemini-3.1-flash-lite`)
-- **Email**: Resend (account verification emails)
+- **Email**: Resend (verification, welcome, password reset, edit reviewed, weekly digest)
 - **Image Storage**: Cloudflare R2 (admin uploads, served from R2 public URL)
-- **Analytics**: Vercel Analytics + Speed Insights
+- **Analytics**: Vercel Analytics + Speed Insights; custom events in `src/lib/analytics.ts` cover search, filters and the whole membership funnel (signup_prompt_click, register_started, registered, email_verified, signed_in, kit_add, rating_submit, edit_submitted, digest_opt_in)
 - **Package Manager**: pnpm (enforced, no npm/yarn)
 
 ## Architecture
@@ -38,11 +38,12 @@ src/
 │   ├── layout.tsx              # Root layout (nav, footer, theme, analytics)
 │   ├── page.tsx                # Home (popular lenses, top comparisons)
 │   ├── api/
-│   │   ├── auth/               # login, logout, register, me, verify-email
+│   │   ├── auth/               # login, logout, register, me, verify-email, resend-verification, forgot-password, reset-password
+│   │   ├── account/digest      # PATCH: weekly digest opt-in
 │   │   ├── cameras/route.ts    # GET: search/paginate cameras
 │   │   ├── chat/route.ts       # POST: AI chat (streamed, DB tools)
 │   │   ├── comparisons/route.ts # GET: top comparisons, POST: record comparison
-│   │   ├── cron/               # Cron routes: ebay-prices, ebay-lens-prices, dpreview-lenses, dpreview-review, dpreview-cameras, dpreview-camera-review, dpreview-audit, flush-view-counts, warm-prices
+│   │   ├── cron/               # Cron routes: ebay-prices, ebay-lens-prices, dpreview-lenses, dpreview-review, dpreview-cameras, dpreview-camera-review, dpreview-audit, flush-view-counts, warm-prices, weekly-digest
 │   │   ├── duplicates/route.ts # POST: flag duplicate entities
 │   │   ├── edits/route.ts      # User-submitted edits
 │   │   ├── lenses/route.ts     # GET: search/filter/paginate lenses
@@ -62,8 +63,11 @@ src/
 │   ├── search/                 # Global search across lenses, cameras, systems
 │   ├── compare/                # Comparison page
 │   ├── history/                # Revision history per entity ([entityType]/[entityId])
+│   ├── changes/                # Public recent changes, grouped by day, editors credited
+│   ├── new/ feed.xml/          # New lenses and cameras (last 90 days) and its RSS feed
+│   ├── community/              # Public kits, most active editors, [handle] profiles with contributions
 │   ├── submit/                 # Public submission form
-│   ├── login/ register/ verify-email/  # User account pages
+│   ├── login/ register/ verify-email/ forgot-password/ reset-password/  # User account pages
 │   ├── robots.ts sitemap.ts    # SEO
 │   └── opengraph-image.tsx twitter-image.tsx  # Social cards
 ├── components/
@@ -92,7 +96,10 @@ src/
     ├── price-classify.ts / price-classify-lens.ts  # LLM listing classification (Gemini)
     ├── price-pipeline.ts / prices.ts  # Price history + estimates
     ├── revisions.ts / apply-correction.ts / edit-validation.ts  # Community edits
-    ├── email.ts                # Resend verification emails
+    ├── email.ts                # Resend: sendEmail + layout, verification/welcome/reset/edit-reviewed templates
+    ├── email-digest.ts         # Weekly "new in the catalogue" digest (own Resend client)
+    ├── new-entities.ts         # Recently added lenses and cameras (page, feed, digest)
+    ├── recent-changes.ts       # Revisions joined to entity names, per user and site-wide
     ├── r2-upload.ts            # Cloudflare R2 image uploads (sharp resize)
     ├── images.ts               # getImages: local filesystem → DB fallback
     ├── format-description.ts   # Clean up raw press release descriptions into paragraphs
@@ -106,7 +113,7 @@ Junction tables: `lensCollections` (M:N), `lensSeriesMemberships` (M:N), `lensTa
 Systems: one row per physical mount, not per camera family or per-lens variant (a lens's original mount string survives in `lenses.specs.Mount`). `systemRedirects` maps slugs of merged-away systems to their survivor; `/systems/[slug]` follows it on a miss. Merges are done with `scripts/consolidate-systems.mjs` (dry run by default).
 Engagement: `lensRatings`, `cameraRatings`, `lensComparisons`, `cameraComparisons`
 Community edits: `revisions`, `pendingEdits`, `duplicateFlags`, `issueReports`, `blockedIps`
-Accounts: `users`, `emailVerificationTokens`
+Accounts: `users` (with `digestOptIn`), `emailVerificationTokens`, `passwordResetTokens`, `kitItems`
 Prices: `priceEstimates`, `priceHistory` (eBay sold-listing pipeline)
 DPReview watcher: `lensVersionGroups` (lens generations via `lenses.versionGroupId`), `dpreviewLensCandidates` and `dpreviewCameraCandidates` (seen-registries, status pending/imported/rejected/matched/review). Cameras have no version-group equivalent: a successor body is its own `cameras` row, so the camera LLM verdict is binary (duplicate / new_camera) where the lens one has three values.
 
@@ -152,6 +159,9 @@ Because they live in Vercel rather than in this repo, this table is a copy — t
 | `/api/chat` | POST | 10/60s | firewall | AI chat (streamed) |
 | `/api/auth/login` | POST | 10/60s | app | User login |
 | `/api/auth/register` | POST | 5/60s | app | User registration |
+| `/api/auth/resend-verification` | POST | 3/600s (per IP and per email) | app | Fresh verification link |
+| `/api/auth/forgot-password` | POST | 3/600s (per IP and per email) | app | Password reset link |
+| `/api/auth/reset-password` | POST | 10/600s | app | Consume a reset token |
 | `/api/kit` | POST/DELETE | 60/60s (per user) | app | Add or remove kit items |
 | `/api/edits` | POST | 30/3600s (per user) | app | User-submitted edits |
 | `/api/submissions` | POST | 10/3600s | app | New entity submissions |
@@ -259,6 +269,7 @@ RATE_HASH_SALT=        # SHA-256 salt for IP hashing (required for ratings)
 KV_REST_API_URL=       # Upstash Redis URL (required for rate limiting)
 KV_REST_API_TOKEN=     # Upstash Redis token (required for rate limiting)
 RESEND_API_KEY=        # Resend API key (verification emails)
+RESEND_REPLY_TO=       # Optional: inbox that replies to transactional mail should reach
 RESEND_FROM_EMAIL=     # From address for emails
 APP_URL=               # Base URL for email links
 AI_GATEWAY_API_KEY=    # Vercel AI Gateway key (/chat, price classification, DPReview dedupe/audit)
