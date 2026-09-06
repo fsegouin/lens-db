@@ -228,7 +228,15 @@ for (let i = 0; i < rows.length; i += BATCH) {
 
     // Prose facts come from the lead, which is about this camera. The body of
     // an article wanders into variants and rivals.
-    const years = extractYears(lead);
+    // The lead is about this camera, so it is tried first. Articles that open
+    // with a photo table or a paragraph of company history state the date
+    // further down, so the whole text is a fallback rather than the default.
+    let years = extractYears(lead);
+    if (years.start === null) {
+      const wider = extractYears(full);
+      if (wider.start !== null) years = wider;
+      else if (years.decade === null && wider.decade !== null) years = wider;
+    }
     const lens = extractLens(labelled.specs.Lens ?? lead);
     const sensor = extractSensor(lead);
     const shutter = extractShutter(labelled.specs.Shutter ?? labelled.specs["Shutter speeds"] ?? lead);
@@ -249,6 +257,8 @@ for (let i = 0; i < rows.length; i += BATCH) {
     // reads when the column is empty.
     if (shutter && !specs.Speeds) specs.Speeds = `${shutter} sec`;
     if (format && !specs["Maximum format"]) specs["Maximum format"] = format;
+    // A decade cannot go in the integer column, but it is worth stating.
+    if (years.decade && !specs.Introduced) specs.Introduced = years.decade;
 
     const existingSpecs = row.specs && typeof row.specs === "object" ? row.specs : {};
     const newSpecs = {};
