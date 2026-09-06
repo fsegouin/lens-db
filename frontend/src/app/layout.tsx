@@ -75,6 +75,14 @@ const footerSections = [
       { href: "/login", label: "Sign in" },
     ],
   },
+  {
+    title: "What's new",
+    links: [
+      { href: "/new", label: "New in the catalogue" },
+      { href: "/changes", label: "Recent changes" },
+      { href: "/feed.xml", label: "RSS" },
+    ],
+  },
 ];
 
 export default function RootLayout({

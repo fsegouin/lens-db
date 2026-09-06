@@ -51,6 +51,12 @@ export default function EntitySummaryLine({
 
   if (!price && !showAverage && !trailing) return null;
 
+  // With nothing to report, a ruled band holding one small button reads as
+  // a broken row. The control alone sits in the flow without the rules.
+  if (!price && !showAverage) {
+    return <div className="flex text-sm">{trailing}</div>;
+  }
+
   return (
     /*
      * The facts and the control are two flex children rather than one flat

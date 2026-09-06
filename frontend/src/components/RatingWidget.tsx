@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { motion } from "motion/react";
 import { toast } from "sonner";
 import { hasPublishableAverage } from "@/lib/ratings";
+import { trackEvent } from "@/lib/analytics";
+import KitNudgeLink from "@/components/KitNudgeLink";
 
 type RatingWidgetProps = (
   | { lensId: number; cameraId?: never }
@@ -22,6 +24,9 @@ export default function RatingWidget(props: RatingWidgetProps) {
   const [userRating, setUserRating] = useState<number | null>(null);
   const [hovering, setHovering] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  // Someone who has just rated a lens has told us they have used one. That is
+  // the moment to ask whether they own it, and not before.
+  const [showKitNudge, setShowKitNudge] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -62,6 +67,8 @@ export default function RatingWidget(props: RatingWidgetProps) {
         setAvg(data.averageRating);
         setCount(data.ratingCount);
         setUserRating(rating);
+        trackEvent("rating_submit", { type });
+        setShowKitNudge(true);
         toast.success("Rating submitted");
       } catch {
         toast.error("Something went wrong");
@@ -168,6 +175,18 @@ export default function RatingWidget(props: RatingWidgetProps) {
           </>
         )}
       </p>
+      {showKitNudge && (
+        <p className="text-sm text-muted-foreground">
+          Own this one?{" "}
+          <KitNudgeLink
+            entityType={type}
+            entityId={entityId}
+            source="rating"
+            event="rating_kit_nudge_click"
+            label="Add it to your kit."
+          />
+        </p>
+      )}
     </div>
   );
 }

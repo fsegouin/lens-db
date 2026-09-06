@@ -267,6 +267,7 @@ export default async function CameraDetailPage({
             entityId={camera.id}
             revisionCount={provenance.revisionCount}
             lastEditedAt={provenance.lastEditedAt}
+            lastEditor={provenance.lastEditor}
             saleCount={priceHistoryRows.length}
           />
         </div>
@@ -341,7 +342,7 @@ export default async function CameraDetailPage({
         </div>
       </div>
 
-      <OwnersList owners={owners} />
+      <OwnersList owners={owners} entityType="camera" entityId={camera.id} />
 
       {builtInLens && (
         <div>

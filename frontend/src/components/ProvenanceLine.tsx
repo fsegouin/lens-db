@@ -5,6 +5,7 @@ type Props = {
   entityId: number;
   revisionCount: number;
   lastEditedAt: Date | string | null;
+  lastEditor?: { displayName: string; handle: string; editedAt?: Date | string | null } | null;
   saleCount: number;
 };
 
@@ -28,12 +29,50 @@ export default function ProvenanceLine({
   entityId,
   revisionCount,
   lastEditedAt,
+  lastEditor,
   saleCount,
 }: Props) {
   const edited = lastEditedAt ? formatDate(lastEditedAt) : null;
 
   const parts: React.ReactNode[] = [];
-  if (edited) parts.push(<span key="edited">Last edited {edited}</span>);
+  // Credit by name is the cheapest reward the site can pay an editor, and
+  // the title line is where every reader sees it.
+  // The most recent revision may be the import bot's, in which case the
+  // person's edit has its own, earlier date and must not borrow the newer one.
+  const editorDate = lastEditor?.editedAt ? formatDate(lastEditor.editedAt) : null;
+  const sameDate = !editorDate || editorDate === edited;
+  if (edited) {
+    parts.push(
+      <span key="edited">
+        Last edited {edited}
+        {lastEditor && sameDate && (
+          <>
+            {" by "}
+            <Link
+              href={`/community/${lastEditor.handle}`}
+              className="underline underline-offset-2 hover:text-foreground"
+            >
+              {lastEditor.displayName}
+            </Link>
+          </>
+        )}
+      </span>,
+    );
+  }
+  if (lastEditor && !sameDate) {
+    parts.push(
+      <span key="editor">
+        <Link
+          href={`/community/${lastEditor.handle}`}
+          className="underline underline-offset-2 hover:text-foreground"
+        >
+          {lastEditor.displayName}
+        </Link>
+        {" edited "}
+        {editorDate}
+      </span>,
+    );
+  }
   if (revisionCount > 0) {
     parts.push(
       <Link

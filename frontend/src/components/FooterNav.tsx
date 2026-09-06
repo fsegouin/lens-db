@@ -19,7 +19,7 @@ export default function FooterNav({ sections }: { sections: Section[] }) {
   const { user } = useUser();
 
   return (
-    <div className="grid gap-8 sm:grid-cols-3">
+    <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
       {sections.map((section) => {
         const links = section.links.filter(
           (link) => !(user && SIGNED_OUT_ONLY.has(link.href)),

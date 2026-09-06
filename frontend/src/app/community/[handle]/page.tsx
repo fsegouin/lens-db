@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import Breadcrumb from "@/components/Breadcrumb";
+import ChangeList from "@/components/ChangeList";
 import { formatMoney, getKitItems, getProfile } from "@/lib/kit";
+import { getRecentChangesByUser } from "@/lib/recent-changes";
 import { entityMetadata } from "@/lib/seo";
 
 export const revalidate = 300;
@@ -52,7 +54,11 @@ export default async function ProfilePage({
   if (!profile) notFound();
 
   // Everyone has a profile; the kit on it is shown only if its owner said so.
-  const items = profile.kitIsPublic ? await getKitItems(profile.id) : [];
+  const [items, changes] = await Promise.all([
+    profile.kitIsPublic ? getKitItems(profile.id) : Promise.resolve([]),
+    getRecentChangesByUser(profile.id, 10).catch(() => []),
+  ]);
+  const editCount = profile.editCount ?? 0;
 
   const since = monthYear(profile.createdAt);
 
@@ -72,7 +78,7 @@ export default async function ProfilePage({
       </div>
 
       <h2 className="mt-8 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-        Their kit
+        Kit
       </h2>
 
       {!profile.kitIsPublic ? (
@@ -83,8 +89,8 @@ export default async function ProfilePage({
         <>
           {(
             [
-              ["lens", "Lenses"],
-              ["camera", "Cameras"],
+              ["lens", "Lenses they own"],
+              ["camera", "Cameras they own"],
             ] as const
           ).map(([type, label]) => {
             const section = items.filter((i) => i.entityType === type);
@@ -141,6 +147,22 @@ export default async function ProfilePage({
           </p>
         </>
       )}
+
+      {/* Edits are public by nature: they are already on the record's history
+          page under this name. Gathering them here is the credit. */}
+      <section className="mt-10">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          <h2 className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+            Contributions
+          </h2>
+          <p className="font-mono text-sm tabular-nums text-muted-foreground">
+            {editCount.toLocaleString()} {editCount === 1 ? "approved edit" : "approved edits"}
+          </p>
+        </div>
+        <div className="mt-3">
+          <ChangeList changes={changes} showEditor={false} />
+        </div>
+      </section>
     </div>
   );
 }

@@ -26,12 +26,22 @@ export function UserMenu() {
 
   if (!user) {
     return (
-      <Link
-        href="/login"
-        className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-      >
-        Sign in
-      </Link>
+      <>
+        <Link
+          href="/login"
+          className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+        >
+          Sign in
+        </Link>
+        {/* The mobile menu already offers both; the desktop header offered
+            only the one that assumes you have an account. */}
+        <Link
+          href="/register"
+          className="hidden rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground lg:inline-block"
+        >
+          Create account
+        </Link>
+      </>
     );
   }
 

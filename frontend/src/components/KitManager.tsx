@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { trackEvent } from "@/lib/analytics";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -259,6 +260,7 @@ export default function KitManager({
     try {
       await savePrefs({ kitIsPublic: next });
       setIsPublic(next);
+      trackEvent("kit_published", { public: next });
       toast.success(next ? "Your kit is now public" : "Your kit is private again");
     } catch {
       toast.error("That did not save.");

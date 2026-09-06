@@ -5,6 +5,7 @@ import { cameras, collections, lenses, lensSystems, systems } from "@/db/schema"
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { Aperture, Camera, Layers, BookOpen, Search } from "lucide-react";
 import JsonLd from "@/components/JsonLd";
+import StartKitLink from "@/components/StartKitLink";
 import { siteJsonLd } from "@/lib/jsonld";
 
 export const revalidate = 604800;
@@ -220,6 +221,26 @@ export default async function Home() {
           </div>
         </section>
       )}
+
+      {/* The one thing on this page that asks for an account. It is placed
+          after the catalogue has made its case and before the feed. */}
+      <section className="rounded-lg border border-zinc-200 p-6 dark:border-zinc-800">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="max-w-2xl">
+            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
+              Keep track of what you own
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Record your lenses and bodies, see what they are worth, and
+              publish the list if you like. Every lens and camera page shows
+              who here owns one and what they paid for it.
+            </p>
+          </div>
+          <div className="shrink-0">
+            <StartKitLink source="home" />
+          </div>
+        </div>
+      </section>
 
       {recentLenses.length > 0 && (
         <section className="space-y-4">
