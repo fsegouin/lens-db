@@ -45,6 +45,8 @@ const CAMERA_FIELDS = {
   shutterType: cameras.shutterType,
   weightG: cameras.weightG,
   yearIntroduced: cameras.yearIntroduced,
+  yearDiscontinued: cameras.yearDiscontinued,
+  productionStatus: cameras.productionStatus,
   systemId: cameras.systemId,
 };
 

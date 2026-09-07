@@ -124,6 +124,10 @@ export const cameras = pgTable(
     megapixels: real("megapixels"),
     resolution: text("resolution"),
     yearIntroduced: integer("year_introduced"),
+    // Whether the body is still made, in the PRODUCTION_STATUS vocabulary
+    // shared with lenses, and the year it stopped.
+    productionStatus: text("production_status"),
+    yearDiscontinued: integer("year_discontinued"),
     bodyType: text("body_type"),
     // The shutter mechanism ("Focal-plane", "In-lens leaf shutter"). 476
     // cameras had it recorded in body_type, where the page showed it as though

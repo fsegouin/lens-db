@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
   const {
     name, slug, url, systemId, description, alias,
     sensorType, sensorSize, megapixels, resolution,
-    yearIntroduced, bodyType, weightG, specs, images,
+    yearIntroduced, yearDiscontinued, productionStatus, bodyType, weightG, specs, images,
   } = body;
 
   if (!name) {
@@ -117,6 +117,8 @@ export async function POST(request: NextRequest) {
       megapixels: megapixels != null ? Number(megapixels) : null,
       resolution: resolution || null,
       yearIntroduced: yearIntroduced != null ? Number(yearIntroduced) : null,
+      yearDiscontinued: yearDiscontinued != null ? Number(yearDiscontinued) : null,
+      productionStatus: productionStatus || null,
       bodyType: bodyType || null,
       weightG: weightG != null ? Number(weightG) : null,
       specs: specs || {},

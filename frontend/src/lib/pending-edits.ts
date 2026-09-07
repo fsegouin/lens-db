@@ -133,7 +133,7 @@ export async function applyPendingEditApproval(
       "name", "url", "description", "alias",
       "systemId",
       "sensorType", "sensorSize", "megapixels", "resolution",
-      "yearIntroduced", "bodyType", "weightG",
+      "yearIntroduced", "yearDiscontinued", "productionStatus", "bodyType", "weightG",
     ],
     system: ["name", "manufacturer", "mountType", "description"],
     collection: ["name", "description"],
