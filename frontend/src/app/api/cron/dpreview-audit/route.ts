@@ -11,8 +11,9 @@ import {
 } from "@/db/schema";
 import { and, asc, eq, gt, inArray, isNotNull, sql } from "drizzle-orm";
 import { auditCameraSpecs, auditLensSpecs, type SpecAudit } from "@/lib/dpreview-audit-llm";
-import { DPREVIEW_BOT_EMAIL } from "@/lib/dpreview-import";
+import { DPREVIEW_BOT_EMAIL, parseApertureLongEnd } from "@/lib/dpreview-import";
 import { getBotUserId } from "@/lib/dpreview-pipeline";
+import { normalizeCoverage } from "@/lib/vocabularies";
 
 export const maxDuration = 300;
 
@@ -111,6 +112,11 @@ function coerceSuggestion(kind: EntityKind, field: string, raw: string): unknown
     if (/^(false|no)$/i.test(value)) return false;
     return null;
   }
+  // A controlled vocabulary is filtered with exact equality, so a suggestion
+  // has to come back as a slug or not at all. The model reads the table's own
+  // wording ("Four Thirds"), which is a legitimate way to say
+  // "micro-four-thirds" and no correction at all once normalised.
+  if (field === "coverage") return normalizeCoverage(value);
   if (rules.text.has(field)) return value;
   return null;
 }
@@ -126,6 +132,8 @@ function isNoiseIssue(
   kind: EntityKind,
   issue: { field: string; suggestedValue: string },
   current: Record<string, unknown>,
+  rawSpecs: Record<string, unknown> = {},
+  name = "",
 ): boolean {
   const rules = AUDIT_RULES[kind];
   const field = issue.field;
@@ -139,10 +147,24 @@ function isNoiseIssue(
       const rel = Math.abs(s - cur) / Math.max(Math.abs(cur), 1e-9);
       if (rel < 0.05) return true; // rounding disagreement
     }
-    // Suggested apertureMax equal to the brightest aperture = the classic
-    // notation confusion, never a real minimum-aperture datum
-    if (field === "apertureMax" && typeof current.apertureMin === "number" && s === current.apertureMin) {
-      return true;
+    // Both aperture columns describe the lens wide open. A suggestion that
+    // simply restates the table's "Minimum aperture" row (F22, F32) is the
+    // stopped-down limit, which belongs in no column of ours: filing it would
+    // re-open the defect migration 0058 repaired on 527 rows.
+    if (field === "apertureMax") {
+      // DPReview labels this row both ways across its templates.
+      const stoppedDown = parseFloat(
+        String(rawSpecs["Minimum aperture"] ?? rawSpecs["Min aperture"] ?? "").replace(
+          /[^\d.-]/g,
+          "",
+        ),
+      );
+      if (Number.isFinite(stoppedDown) && s === stoppedDown) return true;
+      // Migration 0058 took this column from the name, which states the long
+      // end wide open ("F3.5-6.3" is 6.3). A suggestion the name contradicts is
+      // the stopped-down value arriving by another route.
+      const fromName = parseApertureLongEnd(name);
+      if (fromName !== null && Math.abs(s - fromName) > 0.05) return true;
     }
     return false;
   }
@@ -317,40 +339,45 @@ export async function POST(request: NextRequest) {
           const audit = await rules.audit(name, rawSpecs, columns);
           items.push({ id: entityId, name, audit });
 
-          // File the flagged discrepancies as a correction pending edit so
-          // they surface in the same admin review queue (noise pruned first)
-          const meaningfulIssues = audit.issues.filter((i) => !isNoiseIssue(kind, i, entity));
+          // File the flagged discrepancies as a correction pending edit so they
+          // surface in the same admin review queue. An issue earns its place
+          // only if it survives the noise filter AND yields a usable value that
+          // differs from what is stored: coercion can normalise a suggestion
+          // onto the value already there ("Four Thirds" onto
+          // "micro-four-thirds"), and an edit proposing the current value is a
+          // false alarm for a reviewer to work through.
+          const corrections: Record<string, unknown> = {};
+          const meaningfulIssues = audit.issues.filter((issue) => {
+            if (isNoiseIssue(kind, issue, entity, rawSpecs, name)) return false;
+            const coerced = coerceSuggestion(kind, issue.field, issue.suggestedValue);
+            if (coerced === null || coerced === entity[issue.field]) return false;
+            corrections[issue.field] = coerced;
+            return true;
+          });
           if (createEdits && !audit.ok && meaningfulIssues.length > 0) {
-            const corrections: Record<string, unknown> = {};
-            for (const issue of meaningfulIssues) {
-              const coerced = coerceSuggestion(kind, issue.field, issue.suggestedValue);
-              if (coerced !== null) corrections[issue.field] = coerced;
-            }
-            if (Object.keys(corrections).length > 0) {
-              const [existingEdit] = await db
-                .select({ id: pendingEdits.id })
-                .from(pendingEdits)
-                .where(
-                  and(
-                    eq(pendingEdits.entityType, kind),
-                    eq(pendingEdits.entityId, entityId),
-                    eq(pendingEdits.status, "pending"),
-                    sql`${pendingEdits.summary} LIKE ${AUDIT_SUMMARY_PREFIX + "%"}`,
-                  ),
-                )
-                .limit(1);
-              if (!existingEdit) {
-                const issueText = meaningfulIssues
-                  .map((i) => `${i.field} (raw "${i.rawValue}" vs "${i.extractedValue}")`)
-                  .join("; ");
-                await db.insert(pendingEdits).values({
-                  entityType: kind,
-                  entityId: entityId,
-                  changes: { ...corrections, _audit: meaningfulIssues },
-                  summary: `${AUDIT_SUMMARY_PREFIX} ${issueText}`.slice(0, 500),
-                  userId: (botUserId ??= await getBotUserId()),
-                });
-              }
+            const [existingEdit] = await db
+              .select({ id: pendingEdits.id })
+              .from(pendingEdits)
+              .where(
+                and(
+                  eq(pendingEdits.entityType, kind),
+                  eq(pendingEdits.entityId, entityId),
+                  eq(pendingEdits.status, "pending"),
+                  sql`${pendingEdits.summary} LIKE ${AUDIT_SUMMARY_PREFIX + "%"}`,
+                ),
+              )
+              .limit(1);
+            if (!existingEdit) {
+              const issueText = meaningfulIssues
+                .map((i) => `${i.field} (raw "${i.rawValue}" vs "${i.extractedValue}")`)
+                .join("; ");
+              await db.insert(pendingEdits).values({
+                entityType: kind,
+                entityId: entityId,
+                changes: { ...corrections, _audit: meaningfulIssues },
+                summary: `${AUDIT_SUMMARY_PREFIX} ${issueText}`.slice(0, 500),
+                userId: (botUserId ??= await getBotUserId()),
+              });
             }
           }
         }
@@ -393,9 +420,15 @@ export async function POST(request: NextRequest) {
           // Annotate the pending edit itself so the reviewer sees the warning;
           // "_audit" is display-only and stripped by the approval allowlist
           if (createEdits) {
+            // Same noise filter as the entity branch: a reviewer should not be
+            // shown a red banner over a notation difference or a value the
+            // controlled vocabulary already agrees with.
+            const flagged = audit.issues.filter(
+              (issue) => !isNoiseIssue(kind, issue, columns, rawSpecs, name),
+            );
             const nextChanges =
-              !audit.ok && audit.issues.length > 0
-                ? { ...changes, _audit: audit.issues }
+              !audit.ok && flagged.length > 0
+                ? { ...changes, _audit: flagged }
                 : (() => {
                     const { _audit: _drop, ...rest } = changes;
                     return rest;

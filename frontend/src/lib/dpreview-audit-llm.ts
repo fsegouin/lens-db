@@ -55,7 +55,7 @@ Rules:
 - Flag "missing" ONLY when the table unambiguously contains a datum whose column is null.
 - A column HOLDING a value that the table does not mention is NEVER an issue — several columns (yearIntroduced, coverage, lensType, isMacro, and others) are legitimately filled from sources outside this table (catalog dates, the lens name, prior database records). Do not flag them unless the table or name directly CONTRADICTS the value.
 - Notation differences are NEVER issues: "F/2" vs 2 vs "F2" are the same aperture; "654 g / 1.4 lb" vs 654 is the same weight; "0.17×" vs 0.17 is the same magnification. Compare numbers, not formatting.
-- apertureMin holds the BRIGHTEST (maximum) aperture, apertureMax the dimmest (minimum aperture, like F22) — that naming is intentional. For variable-aperture zooms ("F5.6-8"), apertureMin correctly holds the first number; a null apertureMax is only "missing" if the table lists an explicit "Minimum aperture" row.
+- Both aperture columns describe the lens WIDE OPEN, never the stopped-down end. apertureMin is the brightest aperture, at the short end of a zoom; apertureMax is the brightest aperture at the LONG end. For "F3.5-6.3" that is apertureMin 3.5 and apertureMax 6.3, and for a prime or a constant-aperture zoom the two are equal. The "Minimum aperture" row of the table (F22, F32) is the stopped-down limit and belongs in NEITHER column: never flag apertureMax for disagreeing with it.
 - Columns not derivable from the table (viewCount, slug, ids, description) are out of scope.
 - Be conservative: when in doubt, it is not an issue. An empty issues list with ok=true is the expected result for most lenses.`;
 
