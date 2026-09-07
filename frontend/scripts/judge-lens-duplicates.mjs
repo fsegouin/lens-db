@@ -67,6 +67,8 @@ const BRAND = argVal("--brand", null);
 const MODEL = argVal("--model", "google/gemini-3.1-flash-lite");
 const OUT = argVal("--out", "../scraper/lens-duplicate-verdicts.jsonl");
 const CONCURRENCY = parseInt(argVal("--concurrency", "4"), 10);
+// Judge only the id pairs listed in this JSON file ([{ a, b }, ...]); everything else is skipped.
+const ONLY = argVal("--only", null);
 
 // ---------------------------------------------------------------------------
 // Candidate pairs
@@ -117,10 +119,58 @@ function overlap(a, b) {
   return subset ? 1 : jaccard;
 }
 
+/**
+ * Focal length and maximum aperture read out of the name.
+ *
+ * The blocking key below groups by these two numbers, so a row whose columns
+ * are null could only ever pair with other null rows: 445 live lenses were
+ * invisible to this judge, including every DPReview import and the second
+ * lens-db.com batch. The name almost always carries the numbers the columns
+ * lack ("Sigma 70-200 F2.8 DG OS HSM | S"), so parse them as a fallback.
+ */
+function specsFromName(name) {
+  const s = (name ?? "").replace(/[\u2013\u2014\u2011]/g, "-").replace(/\s+/g, " ");
+  let focalMin = null;
+  let focalMax = null;
+  let m = s.match(/(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)\s*mm/i);
+  if (m) {
+    focalMin = Number(m[1]);
+    focalMax = Number(m[2]);
+  } else if ((m = s.match(/(\d+(?:\.\d+)?)\s*mm/i))) {
+    focalMin = Number(m[1]);
+    focalMax = Number(m[1]);
+  } else if ((m = s.match(/\b(\d{1,4}(?:\.\d+)?)\s*-\s*(\d{1,4}(?:\.\d+)?)\b/)) && Number(m[2]) > Number(m[1])) {
+    // "Canon RF 70-200 F4L IS USM": a range with the unit left off.
+    focalMin = Number(m[1]);
+    focalMax = Number(m[2]);
+  }
+  const ap = s.match(/\bf\/?\s*(\d+(?:\.\d+)?)/i);
+  return { focalMin, focalMax, aperture: ap ? Number(ap[1]) : null };
+}
+
+/** The row's own numbers, falling back to the name where a column is null. */
+function effectiveSpecs(l) {
+  let focalMin = l.focal_length_min != null ? Number(l.focal_length_min) : null;
+  let focalMax = l.focal_length_max != null ? Number(l.focal_length_max) : focalMin;
+  let aperture = l.aperture_min != null ? Number(l.aperture_min) : null;
+  if (focalMin === null || aperture === null) {
+    const parsed = specsFromName(l.name);
+    if (focalMin === null && parsed.focalMin !== null) {
+      focalMin = parsed.focalMin;
+      focalMax = parsed.focalMax;
+    }
+    if (aperture === null && parsed.aperture !== null) aperture = parsed.aperture;
+  }
+  return { focalMin, focalMax, aperture };
+}
+
 function candidatePairs(rows) {
   const groups = new Map();
   for (const l of rows) {
-    const key = [family(l.brand), Number(l.focal_length_min), Number(l.focal_length_max ?? l.focal_length_min), Math.round(Number(l.aperture_min) * 10)].join("|");
+    const { focalMin, focalMax, aperture } = effectiveSpecs(l);
+    // "?" rather than 0: rows whose numbers are unknowable must not all collide
+    // into one bucket and pair with each other on name overlap alone.
+    const key = [family(l.brand), focalMin ?? "?", focalMax ?? "?", aperture != null ? Math.round(aperture * 10) : "?"].join("|");
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(l);
   }
@@ -305,7 +355,11 @@ try {
     process.exit(0);
   }
 
-  const pairs = candidatePairs(rows);
+  let pairs = candidatePairs(rows);
+  if (ONLY) {
+    const wanted = new Set(JSON.parse(readFileSync(resolve(ONLY), "utf8")).map((p) => [p.a, p.b].sort((x, y) => x - y).join("-")));
+    pairs = pairs.filter(([a, b]) => wanted.has([a.id, b.id].sort((x, y) => x - y).join("-")));
+  }
   console.log(`${rows.length} live lenses, ${pairs.length} candidate pairs${BRAND ? ` in ${BRAND}` : ""}`);
   if (COUNT) {
     const byFam = new Map();
