@@ -4,8 +4,11 @@
  * empty. Dry run by default; --apply writes.
  *
  * What is written, and what is only reported:
- *   - An answer with a note (n) or an unknown product (s = "u") is never
- *     written; it is listed for review. The note is the model's own doubt.
+ *   - An unknown product (s = "u") is never written.
+ *   - An answer with a note (n) is the model's own doubt about which product
+ *     the name means. Its status fills an empty status only (an old
+ *     Rolleiflex lens is discontinued whichever generation it is), and its
+ *     years are held: they belong to whichever product the model guessed.
  *   - "Discontinued" is written over an empty status or "In production".
  *   - "In production" is written over an empty status only. A stored
  *     "Discontinued" is never flipped back on the model's word: the model's
@@ -94,12 +97,16 @@ function decide(row, a) {
   const flag = (kind, text = kind) => out.review.push({ kind, text });
   if (!a) return flag("no answer"), out;
   if (a.s === "u") return flag("unknown to the model"), out;
-  if (a.n) return flag("noted", `note: ${a.n}`), out;
   if (a.s === "c" && a.d != null) return flag("current with a discontinued year"), out;
   if (a.name !== row.name) return flag("renamed since the judge ran"), out;
 
   const cur = row.production_status;
   const proposed = STATUS_LABEL[a.s];
+  if (a.n) {
+    if (cur == null) out.set.production_status = proposed;
+    flag("noted: status only", `note: ${a.n}`);
+    return out;
+  }
   if (cur == null) out.set.production_status = proposed;
   else if (cur === "In production" && proposed === "Discontinued") out.set.production_status = proposed;
   else if (cur === "Discontinued" && proposed === "In production") flag("stored Discontinued, model says current");
