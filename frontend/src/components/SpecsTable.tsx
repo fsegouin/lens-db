@@ -17,7 +17,15 @@ function parseListItems(value: string) {
   return parts.length > 1 ? parts : null;
 }
 
+/**
+ * Tidies scraped spec values ("screw-type round" reads as a sentence), but a
+ * value whose first letter is notation rather than prose must be left alone.
+ * An f-number is written with a lowercase f everywhere a maker or a reviewer
+ * writes it, and the infobox and comparison table beside this one print it
+ * that way, so "F/3.5-4.5" here made the same lens disagree with itself.
+ */
 function capitalizeFirstLetter(value: string) {
+  if (/^f\/\d/i.test(value)) return value;
   return value.replace(/^([a-z])/, (match) => match.toUpperCase());
 }
 

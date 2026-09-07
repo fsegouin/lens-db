@@ -13,6 +13,7 @@ import { requireAdminAPI } from "@/lib/admin-auth";
 import { getCurrentUser } from "@/lib/user-auth";
 import { applyPendingEditApproval, notifyEditReviewed } from "@/lib/pending-edits";
 import { eq, desc, asc, inArray, sql } from "drizzle-orm";
+import { PgColumn } from "drizzle-orm/pg-core";
 
 const entityTables = {
   lens: lenses,
@@ -58,33 +59,78 @@ export async function GET(request: NextRequest) {
       .where(where),
   ]);
 
-  // Fetch entity names (one query per entity type instead of one per entity)
+  // Fetch each entity's name, slug and the values the edit would overwrite, so
+  // the reviewer sees a before and after rather than a bare proposed value.
+  // One query per entity type rather than one per entity, and only the columns
+  // this page actually needs: a whole lens row carries its description and
+  // specs blob, which is about 2 KB nobody here would read.
   const entityNames: Record<string, string> = {};
+  const entitySlugs: Record<string, string> = {};
+  const currentValues: Record<string, Record<string, unknown>> = {};
   const idsByType = new Map<keyof typeof entityTables, Set<number>>();
+  const fieldsByType = new Map<keyof typeof entityTables, Set<string>>();
   for (const item of items) {
     const type = item.entityType as keyof typeof entityTables;
     if (!entityTables[type]) continue;
+    // entityId 0 is a submission of a brand new entity: there is no row to
+    // link to and nothing it could be overwriting.
+    if (!item.entityId) continue;
     if (!idsByType.has(type)) idsByType.set(type, new Set());
     idsByType.get(type)!.add(item.entityId);
+    if (!fieldsByType.has(type)) fieldsByType.set(type, new Set());
+    for (const field of Object.keys((item.changes ?? {}) as Record<string, unknown>)) {
+      if (field !== "_audit") fieldsByType.get(type)!.add(field);
+    }
   }
   await Promise.all(
     [...idsByType].map(async ([type, ids]) => {
       const table = entityTables[type];
-      const rows = await db
-        .select({ id: table.id, name: table.name })
+      // The selection is built at runtime from whichever fields this page's
+      // edits touch, so it cannot be expressed in Drizzle's generic types; the
+      // rows come back as plain records and are read by key below.
+      const byName = table as unknown as Record<string, PgColumn | undefined>;
+      const columns: Record<string, PgColumn> = {
+        id: table.id,
+        name: table.name,
+        slug: table.slug,
+      };
+      for (const field of fieldsByType.get(type) ?? []) {
+        // A proposed key that is not a column of this table (a spec blob key,
+        // or a field belonging to another entity) simply has no before value.
+        const column = byName[field];
+        if (column instanceof PgColumn && !(field in columns)) columns[field] = column;
+      }
+      const rows = (await db
+        .select(columns)
         .from(table)
-        .where(inArray(table.id, [...ids]));
-      const found = new Map<number, string>(rows.map((r) => [r.id, r.name]));
+        .where(inArray(table.id, [...ids]))) as Record<string, unknown>[];
+      const found = new Map<number, Record<string, unknown>>(
+        rows.map((r) => [Number(r.id), r]),
+      );
       for (const id of ids) {
-        entityNames[`${type}:${id}`] = found.get(id) || `Unknown ${type}`;
+        const row = found.get(id);
+        entityNames[`${type}:${id}`] = (row?.name as string) || `Unknown ${type}`;
+        if (row?.slug) entitySlugs[`${type}:${id}`] = row.slug as string;
+        if (row) currentValues[`${type}:${id}`] = row;
       }
     })
   );
 
-  const enriched = items.map((item) => ({
-    ...item,
-    entityName: entityNames[`${item.entityType}:${item.entityId}`] || "Unknown",
-  }));
+  const enriched = items.map((item) => {
+    const key = `${item.entityType}:${item.entityId}`;
+    const row = currentValues[key] ?? {};
+    const current: Record<string, unknown> = {};
+    for (const field of Object.keys((item.changes ?? {}) as Record<string, unknown>)) {
+      if (field === "_audit") continue;
+      if (field in row) current[field] = row[field];
+    }
+    return {
+      ...item,
+      entityName: entityNames[key] || "Unknown",
+      entitySlug: entitySlugs[key] ?? null,
+      current,
+    };
+  });
 
   return NextResponse.json({
     pendingEdits: enriched,
