@@ -178,8 +178,11 @@ try {
       const id = c.r.id;
       const fields = [];
       if (c.to) {
-        await sql`update lenses set production_status = ${c.to} where id = ${id} and name = ${c.r.name}`;
+        // A lens that is still made has no discontinued year; the unaided
+        // pass may have filled one alongside the status being undone here.
+        await sql`update lenses set production_status = ${c.to}, year_discontinued = null where id = ${id} and name = ${c.r.name}`;
         fields.push("productionStatus");
+        if (c.r.year_discontinued != null) fields.push("yearDiscontinued");
       } else {
         await sql`update lenses set year_discontinued = ${c.year} where id = ${id} and name = ${c.r.name}`;
         fields.push("yearDiscontinued");
@@ -192,7 +195,7 @@ try {
       }
       const [{ next }] = await sql`select coalesce(max(revision_number), 0) + 1 as next from revisions where entity_type = 'lens' and entity_id = ${id}`;
       const summary = c.to
-        ? `Production status ${c.r.production_status} → ${c.to} (${MODEL} with web search, ${today}: ${c.v.why} ${c.v.url ?? ""})`
+        ? `Production status ${c.r.production_status} → ${c.to}${c.r.year_discontinued != null ? `, year discontinued ${c.r.year_discontinued} cleared` : ""} (${MODEL} with web search, ${today}: ${c.v.why} ${c.v.url ?? ""})`
         : `Year discontinued ${c.year} (${MODEL} with web search, ${today}: ${c.v.why} ${c.v.url ?? ""})`;
       await sql`insert into revisions (entity_type, entity_id, revision_number, data, summary, changed_fields, is_patrolled, patrolled_at)
                 values ('lens', ${id}, ${next}, ${JSON.stringify(snapshot)}::jsonb, ${summary.slice(0, 500)}, ${JSON.stringify(fields)}::jsonb, true, now())`;
