@@ -307,7 +307,7 @@ export default function LensList({
   type LensFilters = Parameters<typeof applyFilters>[0];
 
   /** Everything the panel hides, since the chips report the rest. */
-  const hiddenFilterCount = [type, lensType, coverage, series, year].filter(
+  const hiddenFilterCount = [type, lensType, coverage, series, year, productionStatus].filter(
     Boolean,
   ).length;
 
@@ -514,7 +514,7 @@ export default function LensList({
 
         <div
           id="lens-more-filters"
-          className={`${filtersOpen ? "grid" : "hidden"} grid-cols-1 gap-4 border-t border-border pt-4 sm:grid-cols-2 lg:grid-cols-4`}
+          className={`${filtersOpen ? "grid" : "hidden"} grid-cols-1 gap-4 border-t border-border pt-4 sm:grid-cols-2 lg:grid-cols-5`}
         >
           <div className="space-y-1.5">
             <label htmlFor="lens-type" className="block text-xs font-medium text-muted-foreground">Lens type</label>
@@ -584,11 +584,25 @@ export default function LensList({
               className="h-10 w-full"
             />
           </div>
+
+          <div className="space-y-1.5">
+            <label htmlFor="lens-status" className="block text-xs font-medium text-muted-foreground">Status</label>
+            <select
+              id="lens-status"
+              value={productionStatus}
+              onChange={(e) => { trackEvent("lens_filter_apply", { filter: "productionStatus", value: e.target.value }); applyFilters({ productionStatus: e.target.value }); }}
+              className="filter-select h-10 w-full rounded-lg border border-input bg-transparent px-3 text-base text-foreground transition-colors outline-none md:text-sm focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
+            >
+              <option value="">All statuses</option>
+              <option value="In production">In production</option>
+              <option value="Discontinued">Discontinued</option>
+            </select>
+          </div>
         </div>
 
-        {/* Includes lensType, era and productionStatus, which arrive from badge
-            links on entity pages and have no control anywhere on this page.
-            Without these chips a visitor could not see or undo them. */}
+        {/* Includes lensType and era, which arrive from badge links on entity
+            pages and have no control anywhere on this page. Without these
+            chips a visitor could not see or undo them. */}
         {chips.length > 0 && (
           <div className="flex flex-wrap items-center gap-2">
             {chips.map((chip) => (

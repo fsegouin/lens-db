@@ -23,6 +23,7 @@ export async function GET(request: NextRequest) {
       sensorType: searchParams.get("sensorType") || undefined,
       cropFactor: searchParams.get("cropFactor") || undefined,
       year: searchParams.get("year") || undefined,
+      productionStatus: searchParams.get("productionStatus") || undefined,
       priceMin: searchParams.get("priceMin") || undefined,
       priceMax: searchParams.get("priceMax") || undefined,
       sort: searchParams.get("sort") || undefined,

@@ -75,6 +75,7 @@ type SearchParams = Promise<{
   sensorType?: string;
   cropFactor?: string;
   year?: string;
+  productionStatus?: string;
   priceMin?: string;
   priceMax?: string;
   sort?: string;
@@ -119,6 +120,7 @@ export default async function CamerasPage({
       sensorType: params.sensorType,
       cropFactor: params.cropFactor,
       year: params.year,
+      productionStatus: params.productionStatus,
       priceMin: params.priceMin,
       priceMax: params.priceMax,
       sort: params.sort,
