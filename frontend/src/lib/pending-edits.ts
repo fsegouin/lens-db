@@ -8,6 +8,8 @@ import {
   systems,
   collections,
   lensSeries,
+  dpreviewLensCandidates,
+  dpreviewCameraCandidates,
 } from "@/db/schema";
 import { createRevision, type EntityType } from "@/lib/revisions";
 import {
@@ -115,6 +117,47 @@ export type ApprovalResult =
  * On "entity_missing" the edit is auto-rejected before returning.
  * Shared by the single-edit route and the bulk approve-all endpoint.
  */
+/**
+ * Tell the DPReview watcher's seen-registry how a reviewer answered.
+ *
+ * The registry is how the watcher decides what is new: a product it has
+ * already imported or rejected must never be proposed again. The cron routes
+ * that import a candidate themselves keep it up to date, but the admin queue
+ * did not, so approving a watcher submission created the entity and left its
+ * candidate at "pending" with a null entity id. The next weekly run then read
+ * that as an unseen product and proposed it all over again — 14 cameras were
+ * sitting in exactly that state, already imported and queued to come back.
+ *
+ * Matched on `pendingEditId`, which the watcher sets when it files the edit,
+ * so this is a no-op for any edit the watcher did not author.
+ */
+export async function syncWatcherCandidate(
+  edit: typeof pendingEdits.$inferSelect,
+  outcome: { status: "approved"; entityId: number } | { status: "rejected" },
+): Promise<void> {
+  if (edit.entityType === "lens") {
+    await db
+      .update(dpreviewLensCandidates)
+      .set(
+        outcome.status === "approved"
+          ? { status: "imported", lensId: outcome.entityId }
+          : { status: "rejected" },
+      )
+      .where(eq(dpreviewLensCandidates.pendingEditId, edit.id));
+    return;
+  }
+  if (edit.entityType === "camera") {
+    await db
+      .update(dpreviewCameraCandidates)
+      .set(
+        outcome.status === "approved"
+          ? { status: "imported", cameraId: outcome.entityId }
+          : { status: "rejected" },
+      )
+      .where(eq(dpreviewCameraCandidates.pendingEditId, edit.id));
+  }
+}
+
 /**
  * Puts a proposed value into its controlled vocabulary, or refuses it.
  *
@@ -328,6 +371,9 @@ export async function applyPendingEditApproval(
       reviewedAt: new Date(),
     })
     .where(eq(pendingEdits.id, edit.id));
+
+  // The watcher must not propose this product again next week.
+  await syncWatcherCandidate(edit, { status: "approved", entityId: targetEntityId });
 
   // Revalidate the public page for this entity
   const [entity] = await db
