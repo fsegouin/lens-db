@@ -166,6 +166,13 @@ function isNoiseIssue(
       const fromName = parseApertureLongEnd(name);
       if (fromName !== null && Math.abs(s - fromName) > 0.05) return true;
     }
+    // A reproduction ratio above life-size on a lens that is not a macro is
+    // 1:X read upside down — "1:4.6" on a 17-50mm zoom becoming 4.6. Migration
+    // 0058 repaired four such rows, and an approved audit edit put two of them
+    // back, so the ratio is refused here rather than merely reported.
+    if (field === "maxMagnification" && s > 1 && current.isMacro !== true) {
+      return true;
+    }
     return false;
   }
   if (field === "lensType" && typeof current.lensType === "string" && suggested) {
