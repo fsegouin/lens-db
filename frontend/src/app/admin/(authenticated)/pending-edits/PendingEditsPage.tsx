@@ -11,7 +11,10 @@ type PendingEdit = {
   entityType: string;
   entityId: number;
   entityName: string;
+  entitySlug: string | null;
   changes: Record<string, unknown>;
+  /** The entity's values for the fields this edit would overwrite. */
+  current: Record<string, unknown>;
   summary: string;
   userId: number;
   displayName: string | null;
@@ -32,6 +35,24 @@ function formatFieldName(field: string): string {
     .replace(/([A-Z])/g, " $1")
     .replace(/^./, (s) => s.toUpperCase())
     .trim();
+}
+
+/** Where an entity of this type lives on the public site. */
+function entityPath(type: string, slug: string): string | null {
+  switch (type) {
+    case "lens":
+      return `/lenses/${slug}`;
+    case "camera":
+      return `/cameras/${slug}`;
+    case "system":
+      return `/systems/${slug}`;
+    case "collection":
+      return `/collections/${slug}`;
+    case "series":
+      return `/lenses/series/${slug}`;
+    default:
+      return null;
+  }
 }
 
 function formatValue(value: unknown): string {
@@ -172,9 +193,36 @@ export default function PendingEditsPage() {
                         New
                       </span>
                     )}
-                    <span className="font-medium text-zinc-900 dark:text-zinc-100">
-                      {edit.entityId === 0 ? (edit.changes.name as string) || "Untitled" : edit.entityName}
-                    </span>
+                    {(() => {
+                      // A new-entity submission has no page to open yet.
+                      if (edit.entityId === 0) {
+                        return (
+                          <span className="font-medium text-zinc-900 dark:text-zinc-100">
+                            {(edit.changes.name as string) || "Untitled"}
+                          </span>
+                        );
+                      }
+                      const href = edit.entitySlug
+                        ? entityPath(edit.entityType, edit.entitySlug)
+                        : null;
+                      if (!href) {
+                        return (
+                          <span className="font-medium text-zinc-900 dark:text-zinc-100">
+                            {edit.entityName}
+                          </span>
+                        );
+                      }
+                      return (
+                        <a
+                          href={href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-medium text-blue-600 hover:underline dark:text-blue-400"
+                        >
+                          {edit.entityName}
+                        </a>
+                      );
+                    })()}
                   </div>
                   <p className="mt-0.5 text-sm text-zinc-600 dark:text-zinc-400">
                     {edit.summary}
@@ -229,24 +277,64 @@ export default function PendingEditsPage() {
                       ))}
                     </div>
                   )}
+                  {/*
+                    Same reading as the merge review: the proposed value sits in
+                    a tinted box, amber when it would overwrite something and
+                    emerald when it only fills a gap, with the value it replaces
+                    struck through underneath. That distinction is the whole
+                    question a reviewer is answering here.
+                  */}
                   <table className="w-full text-sm" aria-label="Proposed changes">
                     <thead>
                       <tr className="text-left text-xs text-muted-foreground">
                         <th scope="col" className="pb-1 pr-3 font-medium">Field</th>
-                        <th scope="col" className="pb-1 font-medium">New Value</th>
+                        <th scope="col" className="pb-1 font-medium">Change</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {Object.entries(edit.changes).filter(([field]) => field !== "_audit").map(([field, value]) => (
-                        <tr key={field} className="border-t border-zinc-200 dark:border-zinc-700">
-                          <td className="py-1 pr-3 font-medium text-zinc-600 dark:text-zinc-400">
-                            {formatFieldName(field)}
-                          </td>
-                          <td className="py-1 text-zinc-900 dark:text-zinc-100">
-                            {formatValue(value)}
-                          </td>
-                        </tr>
-                      ))}
+                      {Object.entries(edit.changes).filter(([field]) => field !== "_audit").map(([field, value]) => {
+                        // A new entity overwrites nothing, and a key that is not
+                        // a column of the table has no before value to show.
+                        const hasCurrent = edit.entityId !== 0 && field in (edit.current ?? {});
+                        const before = hasCurrent ? edit.current[field] : undefined;
+                        const beforeText = hasCurrent ? formatValue(before) : null;
+                        const afterText = formatValue(value);
+                        const unchanged = beforeText !== null && beforeText === afterText;
+                        // "(empty)" is what formatValue calls a null, so a gap
+                        // being filled is not an overwrite.
+                        const replacing =
+                          beforeText !== null && !unchanged && beforeText !== "(empty)";
+                        return (
+                          <tr key={field} className="border-t border-zinc-200 align-top dark:border-zinc-700">
+                            <td className="w-40 py-1 pr-3 font-medium text-zinc-600 dark:text-zinc-400">
+                              {formatFieldName(field)}
+                            </td>
+                            <td className="py-1">
+                              <div
+                                className={`rounded border-l-2 px-1.5 py-0.5 ${
+                                  unchanged
+                                    ? "border-zinc-300 bg-zinc-50 text-zinc-500 dark:border-zinc-600 dark:bg-zinc-800/50 dark:text-zinc-400"
+                                    : replacing
+                                      ? "border-amber-500 bg-amber-50 ring-1 ring-amber-200 dark:border-amber-400 dark:bg-amber-900/30 dark:ring-amber-700"
+                                      : "border-emerald-500 bg-emerald-50 ring-1 ring-emerald-200 dark:border-emerald-400 dark:bg-emerald-900/40 dark:ring-emerald-600"
+                                }`}
+                              >
+                                {afterText}
+                                {unchanged && (
+                                  <span className="ml-1 text-xs text-muted-foreground">
+                                    (no change)
+                                  </span>
+                                )}
+                              </div>
+                              {replacing && (
+                                <div className="mt-0.5 text-xs text-zinc-400 line-through dark:text-zinc-500">
+                                  {beforeText}
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
