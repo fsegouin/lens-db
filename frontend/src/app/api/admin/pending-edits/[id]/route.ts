@@ -3,7 +3,11 @@ import { db } from "@/db";
 import { pendingEdits } from "@/db/schema";
 import { requireAdminAPI } from "@/lib/admin-auth";
 import { getCurrentUser } from "@/lib/user-auth";
-import { applyPendingEditApproval, notifyEditReviewed } from "@/lib/pending-edits";
+import {
+  applyPendingEditApproval,
+  notifyEditReviewed,
+  syncWatcherCandidate,
+} from "@/lib/pending-edits";
 import { eq } from "drizzle-orm";
 
 export async function POST(
@@ -60,6 +64,9 @@ export async function POST(
         rejectReason: body.reason || null,
       })
       .where(eq(pendingEdits.id, editId));
+
+    // A rejected watcher submission must not be proposed again either.
+    await syncWatcherCandidate(edit, { status: "rejected" });
 
     await notifyEditReviewed(edit, { status: "rejected", reason: body.reason || null }, admin.id);
 
