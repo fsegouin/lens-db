@@ -50,6 +50,7 @@ type FilterOverrides = {
   sensorType?: string;
   cropFactor?: string;
   year?: string;
+  productionStatus?: string;
   priceMin?: string;
   priceMax?: string;
   sort?: string;
@@ -89,6 +90,7 @@ export default function CameraList({
   const sensorType = searchParams.get("sensorType") || "";
   const cropFactor = searchParams.get("cropFactor") || "";
   const year = searchParams.get("year") || "";
+  const productionStatus = searchParams.get("productionStatus") || "";
   const priceMin = searchParams.get("priceMin") || "";
   const priceMax = searchParams.get("priceMax") || "";
   // The server defaults to year descending (newest first) when no sort is
@@ -126,7 +128,7 @@ export default function CameraList({
     setFormYear(year);
     setFormPriceMin(priceMin);
     setFormPriceMax(priceMax);
-  }, [q, system, sensorSize, type, model, filmType, sensorType, cropFactor, year, priceMin, priceMax]);
+  }, [q, system, sensorSize, type, model, filmType, sensorType, cropFactor, year, productionStatus, priceMin, priceMax]);
 
   // Reset list when initial data changes (filters applied via server component)
   useEffect(() => {
@@ -147,6 +149,7 @@ export default function CameraList({
       if (sensorType) params.set("sensorType", sensorType);
       if (cropFactor) params.set("cropFactor", cropFactor);
       if (year) params.set("year", year);
+      if (productionStatus) params.set("productionStatus", productionStatus);
       if (priceMin) params.set("priceMin", priceMin);
       if (priceMax) params.set("priceMax", priceMax);
       if (!isDefaultSort(sort, order)) {
@@ -156,7 +159,7 @@ export default function CameraList({
       params.set("cursor", String(cursor));
       return `/api/cameras?${params.toString()}`;
     },
-    [q, system, sensorSize, type, model, filmType, sensorType, cropFactor, year, priceMin, priceMax, sort, order]
+    [q, system, sensorSize, type, model, filmType, sensorType, cropFactor, year, productionStatus, priceMin, priceMax, sort, order]
   );
 
   const loadMore = useCallback(async () => {
@@ -211,6 +214,7 @@ export default function CameraList({
     const sensorTypeVal = overrides.sensorType ?? formSensorType;
     const cropFactorVal = overrides.cropFactor ?? formCropFactor;
     const yearVal = overrides.year ?? formYear;
+    const productionStatusVal = overrides.productionStatus ?? productionStatus;
     const priceMinVal = overrides.priceMin ?? formPriceMin;
     const priceMaxVal = overrides.priceMax ?? formPriceMax;
     const sortVal = overrides.sort ?? sort;
@@ -224,6 +228,7 @@ export default function CameraList({
     if (sensorTypeVal) params.set("sensorType", sensorTypeVal);
     if (cropFactorVal) params.set("cropFactor", cropFactorVal);
     if (yearVal) params.set("year", yearVal);
+    if (productionStatusVal) params.set("productionStatus", productionStatusVal);
     if (priceMinVal) params.set("priceMin", priceMinVal);
     if (priceMaxVal) params.set("priceMax", priceMaxVal);
     if (!isDefaultSort(sortVal, orderVal)) {
@@ -251,7 +256,7 @@ export default function CameraList({
     debouncedApply({ q: value });
   }
 
-  const clearAll: FilterOverrides = { q: "", system: "", sensorSize: "", type: "", model: "", filmType: "", sensorType: "", cropFactor: "", year: "", priceMin: "", priceMax: "" };
+  const clearAll: FilterOverrides = { q: "", system: "", sensorSize: "", type: "", model: "", filmType: "", sensorType: "", cropFactor: "", year: "", productionStatus: "", priceMin: "", priceMax: "" };
 
   const [filtersOpen, setFiltersOpen] = useState(false);
 
@@ -259,7 +264,7 @@ export default function CameraList({
    * Only what the closed panel is hiding. The chips below already report the
    * visible filters, so counting those here would say everything twice.
    */
-  const hiddenFilterCount = [model, sensorType, cropFactor, year].filter(
+  const hiddenFilterCount = [model, sensorType, cropFactor, year, productionStatus].filter(
     Boolean,
   ).length;
 
@@ -302,6 +307,7 @@ export default function CameraList({
   if (sensorType) chips.push({ key: "sensorType", label: "Sensor type", value: sensorType, clear: { sensorType: "" } });
   if (cropFactor) chips.push({ key: "cropFactor", label: "Crop", value: cropFactor, clear: { cropFactor: "" } });
   if (year) chips.push({ key: "year", label: "Year", value: year, clear: { year: "" } });
+  if (productionStatus) chips.push({ key: "productionStatus", label: "Status", value: productionStatus, clear: { productionStatus: "" } });
 
   return (
     <>
@@ -420,7 +426,7 @@ export default function CameraList({
 
       <div
         id="camera-more-filters"
-        className={`${filtersOpen ? "grid" : "hidden"} grid-cols-1 gap-4 border-t border-border pt-4 sm:grid-cols-2 lg:grid-cols-4`}
+        className={`${filtersOpen ? "grid" : "hidden"} grid-cols-1 gap-4 border-t border-border pt-4 sm:grid-cols-2 lg:grid-cols-5`}
       >
         <div className="space-y-1.5">
           <label htmlFor="camera-model" className="block text-xs font-medium text-muted-foreground">
@@ -483,8 +489,23 @@ export default function CameraList({
             className="h-10 w-full"
           />
         </div>
+        <div className="space-y-1.5">
+          <label htmlFor="camera-status" className="block text-xs font-medium text-muted-foreground">
+            Status
+          </label>
+          <select
+            id="camera-status"
+            value={productionStatus}
+            onChange={(e) => { trackEvent("camera_filter_apply", { filter: "productionStatus", value: e.target.value }); applyFilters({ productionStatus: e.target.value }); }}
+            className="filter-select h-10 w-full rounded-lg border border-input bg-transparent px-3 text-base text-foreground transition-colors outline-none md:text-sm focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
+          >
+            <option value="">All statuses</option>
+            <option value="In production">In production</option>
+            <option value="Discontinued">Discontinued</option>
+          </select>
+        </div>
         {filmTypes.length > 0 && (
-          <div className="space-y-1.5 sm:col-span-2 lg:col-span-4">
+          <div className="space-y-1.5 sm:col-span-2 lg:col-span-5">
             <span id="camera-film-label" className="block text-xs font-medium text-muted-foreground">
               Film type
             </span>

@@ -4,6 +4,7 @@ import { cameras, systems, priceEstimates } from "@/db/schema";
 import { asc, desc, eq, and, or, sql, isNull, type AnyColumn } from "drizzle-orm";
 import { escapeLikeMetachars, parseMultiValueParam } from "@/lib/api-utils";
 import { buildNameSearch } from "@/lib/search";
+import { normalizeProductionStatus } from "@/lib/vocabularies";
 
 const PAGE_SIZE = 50;
 
@@ -18,6 +19,7 @@ export type CameraListParams = {
   sensorType?: string;
   cropFactor?: string;
   year?: string;
+  productionStatus?: string;
   priceMin?: string;
   priceMax?: string;
   sort?: string;
@@ -96,6 +98,12 @@ export const listCameras = unstable_cache(
       const val = parseInt(p.year);
       if (Number.isFinite(val))
         conditions.push(eq(cameras.yearIntroduced, val));
+    }
+    // Exact match on the PRODUCTION_STATUS vocabulary, as the lens list does;
+    // an unknown spelling matches nothing rather than everything.
+    const productionStatus = normalizeProductionStatus(p.productionStatus);
+    if (productionStatus) {
+      conditions.push(eq(cameras.productionStatus, productionStatus));
     }
     if (p.priceMin) {
       const val = parseInt(p.priceMin);
@@ -176,6 +184,6 @@ export const listCameras = unstable_cache(
 
     return { items: safeItems, nextCursor, total };
   },
-  ["camera-list-v2"],
+  ["camera-list-v3"],
   { revalidate: 3600, tags: ["cameras"] }
 );
