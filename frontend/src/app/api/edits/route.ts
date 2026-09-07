@@ -36,7 +36,7 @@ const editableFields: Record<EntityType, string[]> = {
     "name", "url", "description", "alias",
     "systemId",
     "sensorType", "sensorSize", "megapixels", "resolution",
-    "yearIntroduced", "bodyType", "weightG",
+    "yearIntroduced", "yearDiscontinued", "productionStatus", "bodyType", "weightG",
   ],
   system: ["name", "manufacturer", "mountType", "description"],
   collection: ["name", "description"],
@@ -46,7 +46,7 @@ const editableFields: Record<EntityType, string[]> = {
 // Text fields that should be normalized (empty string → null)
 const textFieldSets: Record<EntityType, string[]> = {
   lens: ["url", "brand", "description", "lensType", "era", "productionStatus"],
-  camera: ["url", "description", "alias", "sensorType", "sensorSize", "resolution", "bodyType"],
+  camera: ["url", "description", "alias", "sensorType", "sensorSize", "resolution", "bodyType", "productionStatus"],
   system: ["manufacturer", "mountType", "description"],
   collection: ["description"],
   series: ["description"],

@@ -172,6 +172,7 @@ export default async function CameraDetailPage({
     { label: "Shutter", value: specValue(camera.shutterType) },
     { label: "Weight", value: camera.weightG, unit: "g" },
     { label: "Introduced", value: camera.yearIntroduced },
+    { label: "Discontinued", value: camera.yearDiscontinued },
   ];
 
   const imagingRows: [string, string | number | null | undefined][] = [
@@ -198,6 +199,7 @@ export default async function CameraDetailPage({
     ["USB", specs["USB"]],
     ["Dimensions", specs["Dimensions"]],
     ["Year Introduced", camera.yearIntroduced],
+    ["Year Discontinued", camera.yearDiscontinued],
     ["Weight", camera.weightG ? `${camera.weightG}g` : specs["Weight"]],
     ["Format", specs["Format"]],
     ["GPS", specs["GPS"] && specs["GPS"] !== "None" ? specs["GPS"] : null],
@@ -239,6 +241,7 @@ export default async function CameraDetailPage({
             sensorSize: camera.sensorSize,
             megapixels: camera.megapixels,
             bodyType: camera.bodyType,
+            productionStatus: camera.productionStatus,
             weightG: camera.weightG,
             yearIntroduced: camera.yearIntroduced,
             averageRating: camera.averageRating,
@@ -279,6 +282,7 @@ export default async function CameraDetailPage({
           )}
           {builtInLens && <Badge variant="outline">Fixed lens</Badge>}
           {camera.bodyType && <Badge variant="outline">{camera.bodyType}</Badge>}
+          {camera.productionStatus && <Badge variant="status">{camera.productionStatus}</Badge>}
         </div>
       </div>
 
@@ -440,6 +444,8 @@ export default async function CameraDetailPage({
               megapixels: camera.megapixels,
               resolution: camera.resolution,
               yearIntroduced: camera.yearIntroduced,
+              yearDiscontinued: camera.yearDiscontinued,
+              productionStatus: camera.productionStatus,
               bodyType: camera.bodyType,
               weightG: camera.weightG,
             }}
@@ -453,6 +459,8 @@ export default async function CameraDetailPage({
               { name: "megapixels", label: "Megapixels", type: "number" },
               { name: "resolution", label: "Resolution", type: "text" },
               { name: "yearIntroduced", label: "Year Introduced", type: "number" },
+              { name: "yearDiscontinued", label: "Year Discontinued", type: "number" },
+              { name: "productionStatus", label: "Production Status", type: "text" },
               { name: "bodyType", label: "Body Type", type: "text" },
               { name: "weightG", label: "Weight (g)", type: "number" },
             ]}

@@ -456,6 +456,13 @@
       "when": 1788647598175,
       "tag": "0064_kit_shows_paid",
       "breakpoints": true
+    },
+    {
+      "idx": 65,
+      "version": "7",
+      "when": 1788772180872,
+      "tag": "0065_camera_production_status",
+      "breakpoints": true
     }
   ]
 }

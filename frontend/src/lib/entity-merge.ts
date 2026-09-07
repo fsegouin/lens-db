@@ -46,6 +46,8 @@ export const MERGE_FIELDS: Record<MergeEntityType, MergeField[]> = {
     { key: "megapixels", label: "Megapixels", kind: "number" },
     { key: "resolution", label: "Resolution", kind: "text" },
     { key: "yearIntroduced", label: "Year introduced", kind: "number" },
+    { key: "yearDiscontinued", label: "Year discontinued", kind: "number" },
+    { key: "productionStatus", label: "Production status", kind: "text" },
     { key: "weightG", label: "Weight (g)", kind: "number" },
   ],
   lens: [

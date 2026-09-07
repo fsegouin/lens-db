@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import ImageUploader from "@/components/admin/ImageUploader";
 import type { ImageData } from "@/lib/image-types";
 import { generateSlug } from "./generate-slug";
+import { PRODUCTION_STATUS } from "@/lib/vocabularies";
 
 interface CameraData {
   id: number;
@@ -19,6 +20,8 @@ interface CameraData {
   megapixels?: number | null;
   resolution?: string | null;
   yearIntroduced?: number | null;
+  yearDiscontinued?: number | null;
+  productionStatus?: string | null;
   bodyType?: string | null;
   weightG?: number | null;
   specs?: unknown;
@@ -52,6 +55,8 @@ export default function CameraForm({ camera, systems }: CameraFormProps) {
   const [megapixels, setMegapixels] = useState(camera?.megapixels?.toString() ?? "");
   const [resolution, setResolution] = useState(camera?.resolution ?? "");
   const [yearIntroduced, setYearIntroduced] = useState(camera?.yearIntroduced?.toString() ?? "");
+  const [yearDiscontinued, setYearDiscontinued] = useState(camera?.yearDiscontinued?.toString() ?? "");
+  const [productionStatus, setProductionStatus] = useState(camera?.productionStatus ?? "");
   const [bodyType, setBodyType] = useState(camera?.bodyType ?? "");
   const [weightG, setWeightG] = useState(camera?.weightG?.toString() ?? "");
   const [specsEntries, setSpecsEntries] = useState<[string, string][]>(() => {
@@ -98,6 +103,8 @@ export default function CameraForm({ camera, systems }: CameraFormProps) {
       megapixels: megapixels ? Number(megapixels) : null,
       resolution: resolution || null,
       yearIntroduced: yearIntroduced ? Number(yearIntroduced) : null,
+      yearDiscontinued: yearDiscontinued ? Number(yearDiscontinued) : null,
+      productionStatus: productionStatus || null,
       bodyType: bodyType || null,
       weightG: weightG ? Number(weightG) : null,
       specs: parsedSpecs,
@@ -289,6 +296,30 @@ export default function CameraForm({ camera, systems }: CameraFormProps) {
               onChange={(e) => setYearIntroduced(e.target.value)}
               className={`w-full ${inputClass}`}
             />
+          </div>
+          <div className="space-y-1">
+            <label className={labelClass}>Year Discontinued</label>
+            <input
+              type="number"
+              value={yearDiscontinued}
+              onChange={(e) => setYearDiscontinued(e.target.value)}
+              className={`w-full ${inputClass}`}
+            />
+          </div>
+          <div className="space-y-1">
+            <label className={labelClass}>Production Status</label>
+            <select
+              value={productionStatus}
+              onChange={(e) => setProductionStatus(e.target.value)}
+              className={`w-full ${inputClass}`}
+            >
+              <option value="">Unknown</option>
+              {PRODUCTION_STATUS.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
       </section>

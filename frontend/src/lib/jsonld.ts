@@ -191,6 +191,7 @@ type CameraNode = {
   sensorSize: string | null;
   megapixels: number | null;
   bodyType: string | null;
+  productionStatus: string | null;
   weightG: number | null;
   yearIntroduced: number | null;
   averageRating: number | null;
@@ -226,6 +227,7 @@ export function cameraJsonLd(
       property("Sensor size", camera.sensorSize),
       property("Effective resolution", camera.megapixels, { unitText: "MP" }),
       property("Body type", camera.bodyType),
+      property("Production status", camera.productionStatus),
     ].filter(Boolean),
     // A mean drawn from one or two anonymous votes is not an aggregate, and
     // publishing it as one tells a search engine the site is more certain than
