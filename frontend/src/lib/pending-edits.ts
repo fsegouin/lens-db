@@ -10,6 +10,12 @@ import {
   lensSeries,
 } from "@/db/schema";
 import { createRevision, type EntityType } from "@/lib/revisions";
+import {
+  normalizeCoverage,
+  normalizeEra,
+  normalizeLensType,
+  normalizeProductionStatus,
+} from "@/lib/vocabularies";
 import { sendEditApprovedEmail, sendEditRejectedEmail } from "@/lib/email";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
@@ -109,6 +115,38 @@ export type ApprovalResult =
  * On "entity_missing" the edit is auto-rejected before returning.
  * Shared by the single-edit route and the bulk approve-all endpoint.
  */
+/**
+ * Puts a proposed value into its controlled vocabulary, or refuses it.
+ *
+ * The allowlist above checks which field may be written, never what may go in
+ * it, so until now approving an edit wrote whatever string it carried. Four
+ * columns are filtered with exact equality, and `coverage` had already reached
+ * 17 spellings for six concepts once before — the Medium Format filter matched
+ * nothing at all because every such lens was recorded with a capital F.
+ *
+ * An edit does not have to be malicious to do that. The DPReview spec audit
+ * proposed the raw table's "Four Thirds" over a stored "micro-four-thirds"
+ * that already means the same thing, and 18 of those are queued right now.
+ *
+ * Returns `undefined` for a field with no vocabulary (write it unchanged), the
+ * slug for a value that maps, and `null` for one that does not (drop it).
+ */
+function normalizeControlledValue(field: string, value: unknown): string | null | undefined {
+  if (typeof value !== "string") return undefined;
+  switch (field) {
+    case "coverage":
+      return normalizeCoverage(value);
+    case "era":
+      return normalizeEra(value);
+    case "productionStatus":
+      return normalizeProductionStatus(value);
+    case "lensType":
+      return normalizeLensType(value);
+    default:
+      return undefined;
+  }
+}
+
 export async function applyPendingEditApproval(
   edit: typeof pendingEdits.$inferSelect,
   adminId: number,
@@ -142,7 +180,16 @@ export async function applyPendingEditApproval(
   const allowed = new Set(allowedFields[entityType] ?? []);
   const changes: Record<string, unknown> = {};
   for (const [key, val] of Object.entries(rawChanges)) {
-    if (allowed.has(key)) changes[key] = val;
+    if (!allowed.has(key)) continue;
+    const normalized = normalizeControlledValue(key, val);
+    // A value the vocabulary cannot place is dropped rather than written: these
+    // four columns are filtered with exact equality, so one stray spelling is a
+    // filter that silently returns nothing.
+    if (normalized !== undefined) {
+      if (normalized !== null) changes[key] = normalized;
+      continue;
+    }
+    changes[key] = val;
   }
 
   if (Object.keys(changes).length === 0) {
