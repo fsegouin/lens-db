@@ -5,6 +5,7 @@ import {
   opticalConstruction,
 } from "@/lib/seo";
 import { hasPublishableAverage } from "@/lib/ratings";
+import { maxApertureLabel } from "@/lib/aperture";
 
 type Json = Record<string, unknown>;
 
@@ -132,8 +133,9 @@ export function lensJsonLd(
       : undefined,
     additionalProperty: [
       property("Focal length", focal),
-      property("Maximum aperture", lens.apertureMin ? `f/${lens.apertureMin}` : null),
-      property("Minimum aperture", lens.apertureMax ? `f/${lens.apertureMax}` : null),
+      // Both columns are wide-open values; a "Minimum aperture" property built
+      // from apertureMax published f/5.6 as this lens's stopped-down limit.
+      property("Maximum aperture", maxApertureLabel(lens.apertureMin, lens.apertureMax)),
       property("Lens mount", lens.systemNames.length ? lens.systemNames.join("; ") : null),
       property("Image coverage", lens.coverage),
       property(

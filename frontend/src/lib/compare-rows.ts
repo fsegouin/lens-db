@@ -1,4 +1,5 @@
 import { formatMagnification } from "@/lib/format-magnification";
+import { maxApertureLabel } from "@/lib/aperture";
 
 /**
  * The rows a comparison shows, and the types they read.
@@ -70,13 +71,10 @@ export const LENS_SPEC_ROWS: SpecRow<ComparableLens>[] = [
   { label: "Type", getValue: (l) => l.lensType || EMPTY },
   { label: "Focal Length", getValue: focalLengthLabel },
   {
+    // Both columns are wide-open values, so they belong on one row as a range
+    // rather than as a "max" and a "min" that read as opposites.
     label: "Max Aperture",
-    getValue: (l) => (l.apertureMin ? `f/${l.apertureMin}` : EMPTY),
-  },
-  {
-    label: "Min Aperture",
-    getValue: (l) =>
-      l.apertureMax && l.apertureMax !== l.apertureMin ? `f/${l.apertureMax}` : EMPTY,
+    getValue: (l) => maxApertureLabel(l.apertureMin, l.apertureMax) ?? EMPTY,
   },
   { label: "Weight", getValue: (l) => (l.weightG ? `${l.weightG}g` : EMPTY) },
   { label: "Filter Size", getValue: (l) => (l.filterSizeMm ? `${l.filterSizeMm}mm` : EMPTY) },
