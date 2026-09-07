@@ -190,6 +190,44 @@ function isNoiseIssue(
 }
 
 /**
+ * Corrections a reviewer has already rejected, as `${entityId}:${field}` to the
+ * set of values refused for it.
+ *
+ * A rejection is a person saying "not this value". Without reading it back the
+ * audit re-proposes it on the next run, and a reviewer has to reject the same
+ * edit every week. Keyed by field and value rather than by entity so a genuinely
+ * new finding on the same lens still reaches the queue.
+ */
+async function previouslyRejected(
+  kind: EntityKind,
+  entityIds: number[],
+): Promise<Map<string, Set<string>>> {
+  const refused = new Map<string, Set<string>>();
+  if (entityIds.length === 0) return refused;
+  const rows = await db
+    .select({ entityId: pendingEdits.entityId, changes: pendingEdits.changes })
+    .from(pendingEdits)
+    .where(
+      and(
+        eq(pendingEdits.entityType, kind),
+        inArray(pendingEdits.entityId, entityIds),
+        eq(pendingEdits.status, "rejected"),
+        sql`${pendingEdits.summary} LIKE ${AUDIT_SUMMARY_PREFIX + "%"}`,
+      ),
+    );
+  for (const row of rows) {
+    const changes = (row.changes ?? {}) as Record<string, unknown>;
+    for (const [field, value] of Object.entries(changes)) {
+      if (field === "_audit") continue;
+      const key = `${row.entityId}:${field}`;
+      if (!refused.has(key)) refused.set(key, new Set());
+      refused.get(key)!.add(String(value));
+    }
+  }
+  return refused;
+}
+
+/**
  * Entities the watcher actually created or enriched. "review" candidates only
  * *suspect* their entity id, so they are excluded.
  */
@@ -328,6 +366,13 @@ export async function POST(request: NextRequest) {
             ? await db.select().from(lenses).where(inArray(lenses.id, ids)).orderBy(asc(lenses.id))
             : await db.select().from(cameras).where(inArray(cameras.id, ids)).orderBy(asc(cameras.id));
 
+        // What a reviewer has already turned down. Rejecting an edit used to
+        // leave no trace the audit could see, because the "already filed this"
+        // check below matches only edits still sitting at "pending" — so the
+        // next run re-proposed the very correction a person had just refused.
+        // Read those rejections back as a per-entity, per-field memory.
+        const refused = await previouslyRejected(kind, ids);
+
         for (const row of rows) {
           const entity = row as unknown as Record<string, unknown>;
           const rawSpecs = (entity.specs ?? {}) as Record<string, unknown>;
@@ -351,6 +396,8 @@ export async function POST(request: NextRequest) {
             if (isNoiseIssue(kind, issue, entity, rawSpecs, name)) return false;
             const coerced = coerceSuggestion(kind, issue.field, issue.suggestedValue);
             if (coerced === null || coerced === entity[issue.field]) return false;
+            // A reviewer already refused exactly this value for this field.
+            if (refused.get(`${entityId}:${issue.field}`)?.has(String(coerced))) return false;
             corrections[issue.field] = coerced;
             return true;
           });

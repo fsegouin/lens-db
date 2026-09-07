@@ -11,6 +11,7 @@ import {
 } from "@/lib/prices";
 import { formatDescription } from "@/lib/format-description";
 import { formatMagnification } from "@/lib/format-magnification";
+import { maxApertureLabel } from "@/lib/aperture";
 import { getImages } from "@/lib/images";
 import type { ImageData } from "@/lib/image-types";
 import { specValue } from "@/lib/spec-value";
@@ -192,13 +193,8 @@ export default async function LensDetailPage({
           : `${lens.focalLengthMin}-${lens.focalLengthMax}mm`
         : null,
     ],
-    ["Maximum Aperture", lens.apertureMin ? `f/${lens.apertureMin}` : null],
-    [
-      "Minimum Aperture",
-      lens.apertureMax && lens.apertureMax !== lens.apertureMin
-        ? `f/${lens.apertureMax}`
-        : null,
-    ],
+    // One row, the way a maker writes it on the barrel: see maxApertureLabel.
+    ["Maximum Aperture", maxApertureLabel(lens.apertureMin, lens.apertureMax)],
     ["Lens Elements", lens.lensElements],
     ["Lens Groups", lens.lensGroups],
     [
@@ -256,8 +252,8 @@ export default async function LensDetailPage({
     },
     {
       label: "Max aperture",
-      value: lens.apertureMin ? `f/${lens.apertureMin}` : null,
-      citation: citeOf("apertureMin"),
+      value: maxApertureLabel(lens.apertureMin, lens.apertureMax),
+      citation: citeOf("apertureMin", "apertureMax"),
     },
     {
       label: "Construction",
@@ -732,8 +728,8 @@ export default async function LensDetailPage({
               { name: "productionStatus", label: "Production Status", type: "text" },
               { name: "focalLengthMin", label: "Focal Length Min (mm)", type: "number" },
               { name: "focalLengthMax", label: "Focal Length Max (mm)", type: "number" },
-              { name: "apertureMin", label: "Max Aperture (f/)", type: "number" },
-              { name: "apertureMax", label: "Min Aperture (f/)", type: "number" },
+              { name: "apertureMin", label: "Max Aperture, wide end (f/)", type: "number" },
+              { name: "apertureMax", label: "Max Aperture, long end (f/)", type: "number" },
               { name: "weightG", label: "Weight (g)", type: "number" },
               { name: "filterSizeMm", label: "Filter Size (mm)", type: "number" },
               { name: "minFocusDistanceM", label: "Min Focus Distance (m)", type: "number" },

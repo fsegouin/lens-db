@@ -414,7 +414,7 @@ export default function LensForm({ lens, systems, tags }: LensFormProps) {
             />
           </div>
           <div className="space-y-1">
-            <label className={labelClass}>Aperture Min</label>
+            <label className={labelClass}>Max aperture, wide end</label>
             <input
               type="number"
               step="0.1"
@@ -424,7 +424,7 @@ export default function LensForm({ lens, systems, tags }: LensFormProps) {
             />
           </div>
           <div className="space-y-1">
-            <label className={labelClass}>Aperture Max</label>
+            <label className={labelClass}>Max aperture, long end</label>
             <input
               type="number"
               step="0.1"
