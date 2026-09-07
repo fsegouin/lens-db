@@ -6,7 +6,7 @@
  * parsing, mount-mapping, and duplicate-detection behavior server-side.
  */
 
-import { normalizeCoverage, normalizeLensType } from "@/lib/vocabularies";
+import { normalizeCoverage, normalizeLensType } from "./vocabularies.ts";
 
 export const DPREVIEW_BOT_EMAIL = "dpreview-watcher@thelensdb.com";
 export const DPREVIEW_BOT_DISPLAY_NAME = "DPReview Watcher";
@@ -194,6 +194,23 @@ export function parseAperture(str: string | null | undefined): number | null {
   return m ? parseFloat(m[1]) : null;
 }
 
+/**
+ * The brightest aperture at the LONG end of a zoom, which is what
+ * `lenses.aperture_max` holds: "F3.5-6.3" gives 6.3, and a single figure
+ * describes a prime or a constant-aperture zoom, so it gives that figure.
+ *
+ * Not to be confused with DPReview's "Minimum aperture" row (F22, F32), which
+ * is the stopped-down limit and belongs in no column of ours. Reading that row
+ * into aperture_max is the defect migration 0058 repaired on 450 primes and 77
+ * zooms, so it must not be re-introduced on the next import.
+ */
+export function parseApertureLongEnd(str: string | null | undefined): number | null {
+  if (!str) return null;
+  const m = str.match(/(?:^|[\s(])[fF]\/?(\d+\.?\d*)(?:\s*-\s*(\d+\.?\d*))?/);
+  if (!m) return null;
+  return parseFloat(m[2] ?? m[1]);
+}
+
 export function parseWeight(str: string | null | undefined): number | null {
   if (!str) return null;
   const m = str.replace(/,(?=\d{3})/g, "").match(/(\d+\.?\d*)\s*g/);
@@ -237,7 +254,10 @@ export function mapDpreviewSpecs(candidate: DpreviewCandidate): Record<string, u
 
   const focal = parseFocal(specs["Focal length"] || name);
   const apertureMin = parseAperture(specs["Maximum aperture"] || name);
-  const apertureMax = parseAperture(specs["Minimum aperture"]);
+  // Both columns describe the lens wide open. The long end comes from the same
+  // "Maximum aperture" row, never from "Minimum aperture" (F22) — see
+  // parseApertureLongEnd.
+  const apertureMax = parseApertureLongEnd(specs["Maximum aperture"] || name);
   const yearFromSpecs =
     (specs["Announced"] || specs["Year"] || "").match(/(\d{4})/)?.[1];
 
