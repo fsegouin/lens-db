@@ -48,7 +48,15 @@ export function normalizeCoverage(value: string | null | undefined): string | nu
   if (v.includes("four") && v.includes("third")) return "micro-four-thirds";
   if (v.includes("fourthirds")) return "micro-four-thirds";
   if (v.includes("medium format") || v === "medium-format") return "medium-format";
-  if (v === "1" || v.includes("1-inch") || v.includes("1 inch") || v.includes('1"')) {
+  // "one-inch" is this function's own output, and a normaliser that cannot read
+  // back what it wrote drops a legitimate value on the next pass.
+  if (
+    v === "1" ||
+    v === "one-inch" ||
+    v.includes("1-inch") ||
+    v.includes("1 inch") ||
+    v.includes('1"')
+  ) {
     return "one-inch";
   }
   return null;
