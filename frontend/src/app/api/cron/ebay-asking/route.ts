@@ -16,8 +16,13 @@ import {
   type ActiveListing,
 } from "@/lib/ebay-browse";
 import { recomputePriceEstimates } from "@/lib/price-pipeline";
-import { buildEbaySearchQuery, buildEbayLensSearchQuery } from "@/lib/ebay-search-query";
+import {
+  buildEbaySearchQuery,
+  buildEbayLensSearchQuery,
+  lensQueryFromKeywords,
+} from "@/lib/ebay-search-query";
 import { classifyRelevance } from "@/lib/price-classify-relevance";
+import { writeLensSearchKeywords } from "@/lib/ebay-lens-keywords";
 
 /**
  * Daily asking-price ingest over the Browse API.
@@ -77,6 +82,18 @@ const MIN_PLAUSIBLE_USD = 5;
 
 /** Relevant listings below which a camera's alias is worth a second search. */
 const ALIAS_SEARCH_THRESHOLD = 5;
+
+/**
+ * Raw listings below which a lens's catalogue name is judged to have failed
+ * as a query, and the words a model wrote for it are searched instead.
+ *
+ * Three is the sample the estimator needs before it publishes anything, so
+ * below it the first search bought nothing and the retry can only gain. The
+ * Browse API wants every word of a query in the title, and the first sweep
+ * found no listing for 4,373 lenses, 292 of them with twenty or more sales
+ * on record, because catalogue names carry words no seller writes.
+ */
+const LENS_FALLBACK_BELOW_LISTINGS = 3;
 
 /**
  * How long a daily asking snapshot is kept.
@@ -142,6 +159,10 @@ async function getBatch(entityType: "lens" | "camera", limit: number) {
       // (16 of them do). The scraped pipeline searched it when the primary
       // name came back thin, and dropping that would quietly lose those.
       alias: entityType === "camera" ? cameras.alias : sql<string | null>`NULL`,
+      // The words a model already wrote for a lens whose name found nothing,
+      // so the retry is paid for once rather than on every sweep.
+      searchKeywords:
+        entityType === "lens" ? lenses.ebaySearchQuery : sql<string | null>`NULL`,
     })
     .from(table)
     .leftJoin(
@@ -300,6 +321,7 @@ async function ingestOne(
   entityId: number,
   name: string,
   alias: string | null,
+  searchKeywords: string | null,
 ): Promise<{
   sampled: number;
   total: number;
@@ -325,21 +347,48 @@ async function ingestOne(
   // of how much of the pool we actually saw, so it counts both.
   let examined = sample.length;
 
+  // A second search folded into the first. Every listing is still judged
+  // against `judgeName`, so a wider net changes what is found, never what
+  // is accepted.
+  const widen = async (query: string, judgeName: string) => {
+    const found = await searchActiveListings(query);
+    const extra = spreadSample(found.listings, CLASSIFY_SAMPLE);
+    const judged = await keepRelevant(entityType, entityId, judgeName, extra);
+    cached += judged.cached;
+    classified += judged.classified;
+    const seen = new Set(relevant.map((r) => r.listing.legacyItemId));
+    for (const r of judged.kept) {
+      if (!seen.has(r.listing.legacyItemId)) relevant.push(r);
+    }
+    total += found.total;
+    examined += extra.length;
+  };
+
   // A camera sold under a second name can be nearly invisible under its
   // primary one, so fall back to the alias when the first search comes back
   // thin. Costs an extra call only for the handful of cameras that need it.
   if (alias && relevant.length < ALIAS_SEARCH_THRESHOLD) {
-    const aliasSearch = await searchActiveListings(buildQuery(alias));
-    const aliasSample = spreadSample(aliasSearch.listings, CLASSIFY_SAMPLE);
-    const aliasJudged = await keepRelevant(entityType, entityId, alias, aliasSample);
-    cached += aliasJudged.cached;
-    classified += aliasJudged.classified;
-    const seen = new Set(relevant.map((r) => r.listing.legacyItemId));
-    for (const r of aliasJudged.kept) {
-      if (!seen.has(r.listing.legacyItemId)) relevant.push(r);
+    await widen(buildQuery(alias), alias);
+  }
+
+  // A lens whose catalogue name finds nothing is searched again by the words
+  // a seller would write, asked of a model once and kept on the row. The
+  // judge still sees the full catalogue name, so "[II]" or "Gen. X" is still
+  // enforced where it matters: on what is accepted, not on what is found.
+  if (entityType === "lens" && listings.length < LENS_FALLBACK_BELOW_LISTINGS) {
+    let keywords = searchKeywords;
+    if (!keywords) {
+      keywords = await writeLensSearchKeywords(name);
+      if (keywords) {
+        await db
+          .update(lenses)
+          .set({ ebaySearchQuery: keywords })
+          .where(eq(lenses.id, entityId));
+      }
     }
-    total += aliasSearch.total;
-    examined += aliasSample.length;
+    if (keywords) {
+      await widen(lensQueryFromKeywords(keywords), name);
+    }
   }
 
   // The same floor the sold estimator uses: a cap or a box listed under the
@@ -541,6 +590,8 @@ export async function GET(request: NextRequest) {
           id: entityType === "lens" ? lenses.id : cameras.id,
           name: entityType === "lens" ? lenses.name : cameras.name,
           alias: entityType === "camera" ? cameras.alias : sql<string | null>`NULL`,
+          searchKeywords:
+            entityType === "lens" ? lenses.ebaySearchQuery : sql<string | null>`NULL`,
         })
         .from(entityType === "lens" ? lenses : cameras)
         .where(eq(entityType === "lens" ? lenses.id : cameras.id, onlyId))
@@ -564,6 +615,7 @@ export async function GET(request: NextRequest) {
         entity.id,
         entity.name,
         entity.alias ?? null,
+        entity.searchKeywords ?? null,
       );
       processed++;
       listingsFromCache += result.cached;
