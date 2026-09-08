@@ -33,6 +33,7 @@ import ImageGallery from "@/components/ImageGallery";
 import RatingWidget from "@/components/RatingWidget";
 import EditButton from "@/components/EditButton";
 import FlagDuplicateButton from "@/components/FlagDuplicateButton";
+import AdminEditLink from "@/components/AdminEditLink";
 import SpecsTable from "@/components/SpecsTable";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -358,7 +359,7 @@ export default async function LensDetailPage({
         <h1 className="text-3xl font-bold tracking-tight text-balance">
           {lens.name}
         </h1>
-        <div className="mt-2">
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
           <ProvenanceLine
             entityType="lens"
             entityId={lens.id}
@@ -367,6 +368,7 @@ export default async function LensDetailPage({
             lastEditor={provenance.lastEditor}
             saleCount={priceHistoryRows.length}
           />
+          <AdminEditLink entityType="lens" entityId={lens.id} compact />
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
           {lens.brand && (
@@ -747,6 +749,7 @@ export default async function LensDetailPage({
             ]}
           />
           <div className="flex items-center gap-2">
+            <AdminEditLink entityType="lens" entityId={lens.id} />
             <FlagDuplicateButton
               entityType="lens"
               entityId={lens.id}
