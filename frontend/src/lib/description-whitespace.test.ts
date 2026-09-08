@@ -151,3 +151,80 @@ describe("is idempotent", () => {
     assert.equal(repairDescription(once), once);
   });
 });
+
+describe("splits a digit from a capitalised word", () => {
+  // Press releases join the dateline to the headline more often than they make
+  // any other join, and no earlier rule keyed on a digit meeting a capital.
+  const damage: Array<[string, string]> = [
+    ["for the Nikon Z mount system October 10, 2019The pinnacle of the S-Line", "2019 The"],
+    ["only with a maximum aperture of f/0.95Outstanding resolution", "f/0.95 Outstanding"],
+    ["October 1996Elmsford, NY - Mamiya announces", "1996 Elmsford"],
+    ["OBERKOCHEN, GERMANY - 27 October 2011Carl Zeiss presents", "2011 Carl"],
+    ["June 01, 1999Next Generation Canon L-series Lenses", "1999 Next"],
+  ];
+  for (const [input, expected] of damage) {
+    it(`splits ${JSON.stringify(expected)}`, () => {
+      assert.ok(repairDescription(input).includes(expected), repairDescription(input));
+    });
+  }
+
+  // A capital carrying fewer than two lowercase letters is a model suffix, not
+  // a word, and that alone is what keeps these bodies spelled correctly.
+  const names = [
+    "replacing both the EOS-1Ds Mark III",
+    "The Nikon D2Xs is an APS-C body",
+    "The Canon EOS 5Ds is a 35mm DSLR",
+    "The Canon EOS 60Da is an APS-C body",
+    "the non-removable lens of the Nikon 35Ti.",
+    "the lens of the Fujifilm GA645Zi Professional",
+    "supports 4K video recording at up to 100Mbps.",
+  ];
+  for (const input of names) {
+    it(`leaves ${JSON.stringify(input.slice(0, 34))} alone`, () => {
+      assert.equal(repairDescription(input), input);
+    });
+  }
+});
+
+describe("splits off only a unit that occurs glued in the corpus", () => {
+  // A longest-prefix search over every unit read the front of an ordinary word
+  // as a measurement, inventing a word break in the middle of it.
+  const wasMangled: Array<[string, string]> = [
+    ["a special edition of the Sonnar T* 1.5/50standard lens", "1.5/50 standard"],
+    ["superior dust-proof and drip-proof*2performance. The large", "*2 performance"],
+    ["the large-format sensor*1measuring approximately", "*1 measuring"],
+    ["a combined weight of only 735grams / 25.9oz", "735 grams"],
+    ["the angle of view varies from 20.4degree to 8.2", "20.4 degree"],
+    ["it measures a mere 41millimeters in length", "41 millimeters"],
+    ["Hasselblad News Autumn 1997this lens was", "1997 this"],
+  ];
+  for (const [input, expected] of wasMangled) {
+    it(`splits before ${JSON.stringify(expected)} rather than inside it`, () => {
+      assert.ok(repairDescription(input).includes(expected), repairDescription(input));
+    });
+  }
+
+  const stillSplits: Array<[string, string]> = [
+    ["the 35mmlens is a classic", "35mm lens"],
+    ["a 400mmf/4.5-5.6 zoom", "400mm f/4.5"],
+    ["a 300mmand a 500mm", "300mm and"],
+    ["the 28mmoptical design", "28mm optical"],
+  ];
+  for (const [input, expected] of stillSplits) {
+    it(`still splits ${JSON.stringify(expected)}`, () => {
+      assert.ok(repairDescription(input).includes(expected), repairDescription(input));
+    });
+  }
+});
+
+describe("keeps trademarked internal capitals", () => {
+  for (const input of [
+    "two CompactFlash card slots",
+    "the WriteView LCD panel",
+    "with AstroTracer enabled",
+  ]) {
+    it(`leaves ${JSON.stringify(input)} alone`, () => {
+      assert.equal(repairDescription(input), input);
+    });
+  }
+});

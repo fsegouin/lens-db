@@ -32,6 +32,7 @@
  *   sentence glue   "mount.Robust"    -> "mount. Robust"
  *   camel glue      "theSIGMA"        -> "the SIGMA"      (eBAND, GmbH exempt)
  *   digit -> word   "f1.4it"          -> "f1.4 it"        (85mm, 4x, 1980s exempt)
+ *   digit -> Word   "2019The"         -> "2019 The"       (100Mbps, EOS-1Ds exempt)
  *   word -> digit   "the85mm"         -> "the 85mm"       (f2.8, XF23mm exempt)
  *
  * Runs that lost every space, like "minimizeghostingandflarewhile", have no
@@ -58,7 +59,48 @@ export const PROTECTED_TOKENS = new Set([
   "iAuto",
   "iTTL",
   "iA",
+  "CompactFlash",
+  "WriteView",
+  "BriteView",
+  "AstroTracer",
+  "MicroDrive",
+  "SuperTakumar",
+  "7Artisans",
 ]);
+
+/**
+ * Capitalised runs that may legitimately follow a digit with no space, so that
+ * "100Mbps" is left alone while "2019The" is split. Model suffixes such as the
+ * "Ds" of "EOS-1Ds" or the "Ti" of "35Ti" need no entry: a run of fewer than
+ * two lowercase letters after the capital is never treated as a word.
+ */
+const CAPITALISED_UNITS = new Set([
+  "Mbps", "Mbit", "Mbits", "Mbytes", "Mpix", "Mpixel", "Mpixels",
+  "Gbps", "Kbps", "Mhz", "Ghz", "Khz",
+  // OCR of "80mm", where the zero was read as a capital O.
+  "Omm",
+]);
+
+/** A model suffix in roman numerals, e.g. the "Gii" of "SAL500F40Gii". */
+const ROMAN_SUFFIX = /^[A-Z](?:ii|iii|iv|vi|vii|viii|ix|xi)$/;
+
+/**
+ * Units that may be split off the front of a longer run, turning "35mmlens"
+ * into "35mm lens". Only these three appear glued to a following word anywhere
+ * in the corpus, and the restriction is what the rest of the list cost: a
+ * longest-prefix search over every unit read "50standard" as the ordinal "50st"
+ * plus "andard", "735grams" as "735g rams", "20.4degree" as "20.4deg ree" and
+ * "1976this" as "1976th is". Where no unit prefixes the run the space goes
+ * straight after the digit, which is right for every one of those.
+ *
+ * "mm" and "cm" admit a remainder of one character so that "400mmf/4.5" splits
+ * as "400mm f/4.5" rather than "400m mf/4.5".
+ */
+const SPLITTABLE_UNIT_PREFIXES: ReadonlyArray<readonly [string, number]> = [
+  ["mm", 1],
+  ["cm", 1],
+  ["x", 2],
+];
 
 /**
  * Lowercase runs that may legitimately follow a digit with no space. Single
@@ -89,8 +131,16 @@ const SHORT_WORDS = new Set([
   "m", "mm", "cm", "nm",
 ]);
 
-/** Model names where a digit joins the word with no space, e.g. "X-Pro1". */
-const PROTECTED_PATTERNS = [/^X-Pro\d/i, /^X-[A-Z]\d/];
+/**
+ * Model names where a digit joins the word with no space, e.g. "X-Pro1".
+ *
+ * The Voigtlander rangefinders are here because their single-letter variant
+ * suffix looks exactly like the start of a following word: "Bessa-R2M and"
+ * arrived as "Bessa-R2Mand", and no rule can tell that from "2019The" without
+ * knowing that "and" is a word and "Mand" is not. Leaving those four joined is
+ * the lesser mistake.
+ */
+const PROTECTED_PATTERNS = [/^X-Pro\d/i, /^X-[A-Z]\d/, /^Bessa-R\d/i];
 
 /** Abbreviations where a following capital is normal, so no space is inserted. */
 const ABBREVIATIONS = new Set([
@@ -183,14 +233,13 @@ function repairToken(token: string): string {
     if (/[0-9]/.test(ch) && /[a-z]/.test(next)) {
       const run = (token.slice(i + 1).match(/^[a-z]+/) || [""])[0];
       if (!UNITS_AFTER_DIGIT.has(run)) {
-        // Longest unit that prefixes the run, so "35mmlens" splits after "mm"
-        // while "f1.4it" (no unit prefix) splits straight after the digit.
+        // Longest splittable unit that prefixes the run, so "35mmlens" splits
+        // after "mm" while "f1.4it" (no unit prefix) splits straight after the
+        // digit. See SPLITTABLE_UNIT_PREFIXES for why the list is this short.
         let unit = "";
-        for (let n = Math.min(run.length - 1, 6); n >= 1; n--) {
-          const candidate = run.slice(0, n);
-          if (UNITS_AFTER_DIGIT.has(candidate) && run.slice(n).length >= 2) {
-            unit = candidate;
-            break;
+        for (const [candidate, minRest] of SPLITTABLE_UNIT_PREFIXES) {
+          if (run.startsWith(candidate) && run.slice(candidate.length).length >= minRest) {
+            if (candidate.length > unit.length) unit = candidate;
           }
         }
         if (unit) {
@@ -203,12 +252,34 @@ function repairToken(token: string): string {
       }
     }
 
+    // 3b. Digit followed by a capitalised word: "October 10, 2019The pinnacle",
+    // "of f/0.95Outstanding", "October 1996Elmsford". Press releases join the
+    // dateline to the headline this way more than any other join in the corpus.
+    //
+    // A word here means a capital and at least two lowercase letters, which is
+    // what keeps the model suffixes intact: the "Ds" of "EOS-1Ds", the "Xs" of
+    // "D2Xs", the "Ti" of "35Ti" and the "Zi" of "GA645Zi" all fall short of it.
+    if (/[0-9]/.test(ch) && /[A-Z]/.test(next)) {
+      const word = (token.slice(i + 1).match(/^[A-Z][a-z]+/) || [""])[0];
+      if (word.length >= 3 && !CAPITALISED_UNITS.has(word) && !ROMAN_SUFFIX.test(word)) {
+        out += " ";
+        continue;
+      }
+    }
+
     // 4. Word followed by a digit: "the85mm", "Features1", "Sigma35mm".
     // The whole-word test keeps "f2.8", "XF23mm" and "X-Pro1" intact.
+    //
+    // A lone "a" before a digit is the Sony Alpha, not the article: the corpus
+    // spells the bodies "a7R V", "a6400", "a9" and "a1", and treating the "a"
+    // as a word renamed every one of them ("a 7R V", "a 6400"). English does
+    // not put the article straight before a numeral anyway — "an 85mm" is what
+    // that sentence would read.
     if (
       /[a-z]/.test(ch) &&
       /[0-9]/.test(next) &&
       isWordBeforeBoundary(token, i) &&
+      (token.slice(0, i + 1).match(/[a-z]+$/) || [""])[0] !== "a" &&
       !UNITS_AFTER_DIGIT.has((token.slice(0, i + 1).match(/[a-z]+$/) || [""])[0])
     ) {
       out += " ";
