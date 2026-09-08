@@ -17,6 +17,7 @@ import ImageGallery from "@/components/ImageGallery";
 import RatingWidget from "@/components/RatingWidget";
 import EditButton from "@/components/EditButton";
 import FlagDuplicateButton from "@/components/FlagDuplicateButton";
+import AdminEditLink from "@/components/AdminEditLink";
 import SpecsTable from "@/components/SpecsTable";
 import PriceCard from "@/components/PriceCard";
 import EntitySummaryLine from "@/components/EntitySummaryLine";
@@ -264,7 +265,7 @@ export default async function CameraDetailPage({
             Also known as: {camera.alias}
           </p>
         )}
-        <div className="mt-2">
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
           <ProvenanceLine
             entityType="camera"
             entityId={camera.id}
@@ -273,6 +274,7 @@ export default async function CameraDetailPage({
             lastEditor={provenance.lastEditor}
             saleCount={priceHistoryRows.length}
           />
+          <AdminEditLink entityType="camera" entityId={camera.id} compact />
         </div>
         <div className="mt-2 flex flex-wrap items-center gap-2">
           {system && (
@@ -466,6 +468,7 @@ export default async function CameraDetailPage({
             ]}
           />
           <div className="flex items-center gap-2">
+            <AdminEditLink entityType="camera" entityId={camera.id} />
             <FlagDuplicateButton
               entityType="camera"
               entityId={camera.id}
