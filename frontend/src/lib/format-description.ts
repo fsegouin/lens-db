@@ -9,7 +9,21 @@ export function formatDescription(raw: string): string[] {
   let text = raw;
 
   // Remove footnote markers like *1, *2 etc.
-  text = text.replace(/\*\d+/g, "");
+  //
+  // A marker is an asterisk and one or two digits. Both halves of that are
+  // load-bearing. A bare `\*\d+` also matched the "*1" of the Zeiss coating
+  // mark "T*1,4/50" and printed it as "T,4/50", and it matched the "*300" of
+  // "***300mm focal length" and printed "**mm"; the lookbehind and the
+  // two-digit ceiling leave both alone.
+  //
+  // A marker that sits between two words is replaced by a space rather than by
+  // nothing, since the import had already deleted the space around it:
+  // "(brightest)*2in Nikon history" is "(brightest) in Nikon history", not
+  // "(brightest)in Nikon history".
+  text = text.replace(/(?<![Tt*])\*\d{1,2}(?!\d)(?=[A-Za-z])/g, " ");
+  text = text.replace(/(?<![Tt*])\*\d{1,2}(?!\d)/g, "");
+  // A marker that was parenthesised on its own leaves an empty pair behind.
+  text = text.replace(/\(\s*\)/g, "");
 
   // Restore the spaces the lens-db.com import deleted at every inline-tag
   // boundary. This used to be two bare regexes here, `([.;:])([A-Za-z])` and
@@ -25,9 +39,15 @@ export function formatDescription(raw: string): string[] {
   // - Lines starting with bullet-like patterns
   const paragraphs: string[] = [];
 
-  // First, split on likely section boundaries
+  // First, split on likely section boundaries.
+  //
+  // The lookahead has to reject a header it is standing in the middle of.
+  // Because the pattern is zero-width and case-insensitive, "Primary features:"
+  // matched twice — once before "Primary" and again before "features:" — and
+  // the second match cut the header in half, leaving a paragraph that read
+  // "Primary" and another that began "features:".
   const sections = text.split(
-    /(?=(?:Primary features|Key features|Main features|Features|Specifications|Primary specifications):|(?:TOKYO|NEW YORK|VALHALLA|MELVILLE)\s*[-–—]\s*)/i
+    /(?<!\b(?:Primary|Key|Main|Additional)[ \t])(?=(?:Primary features|Key features|Main features|Features|Specifications|Primary specifications):|(?:TOKYO|NEW YORK|VALHALLA|MELVILLE)\s*[-–—]\s*)/i
   );
 
   // A blank line is an author's paragraph break, and text that has any is

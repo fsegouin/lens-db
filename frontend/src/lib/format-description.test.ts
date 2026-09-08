@@ -63,3 +63,64 @@ describe("paragraph breaks written by an author", () => {
     ]);
   });
 });
+
+describe("removes footnote markers without eating the text around them", () => {
+  it("leaves a space where the marker joined two words", () => {
+    // The import deleted the space around the marker too, so removing the
+    // marker outright printed "(brightest)in Nikon history".
+    assert.deepEqual(
+      formatDescription("an f/0.95 maximum aperture, the fastest (brightest)*2in Nikon history."),
+      ["an f/0.95 maximum aperture, the fastest (brightest) in Nikon history."]
+    );
+  });
+
+  it("removes a marker that already stands next to punctuation", () => {
+    assert.deepEqual(formatDescription("for still life, etc.*1 An image sensor that measures"), [
+      "for still life, etc. An image sensor that measures",
+    ]);
+  });
+
+  it("keeps the Zeiss T* coating mark, whose digits are a lens spec", () => {
+    // A bare /\*\d+/ read the "*1" of "T*1,4/50" as a footnote and printed the
+    // lens as "T,4/50".
+    for (const text of [
+      "Carl Zeiss is complementing the Planar T*1,4/50 and T*1,4/85 lenses",
+      "The Carl Zeiss Vario-Sonnar T*3.5-4.5/28-70 lens is a compact zoom",
+      "photographers consider the Distagon T*4/50 CFi lens ideal",
+    ]) {
+      assert.deepEqual(formatDescription(text), [text]);
+    }
+  });
+
+  it("keeps a focal length behind a *** separator", () => {
+    // /\*\d+/ matched the "*300" of "***300mm" and printed "**mm".
+    assert.deepEqual(
+      formatDescription("the rigors of location shooting.***300mm, f/3.2 Century Tele"),
+      ["the rigors of location shooting.***300mm, f/3.2 Century Tele"]
+    );
+  });
+});
+
+describe("section headers", () => {
+  it("does not cut a header in half", () => {
+    // The zero-width lookahead matched twice on "Primary features:" — once on
+    // the whole header and again on the bare "Features:" alternative — leaving
+    // a paragraph reading "Primary" and another beginning "features:".
+    assert.deepEqual(
+      formatDescription(
+        "This case has been designed for flexible use. Primary features: The symbol of the Nikon Z mount system."
+      ),
+      [
+        "This case has been designed for flexible use.",
+        "Primary features: The symbol of the Nikon Z mount system.",
+      ]
+    );
+  });
+
+  it("still breaks before an unqualified header", () => {
+    assert.deepEqual(formatDescription("A closing sentence. Features: sharp and light."), [
+      "A closing sentence.",
+      "Features: sharp and light.",
+    ]);
+  });
+});
