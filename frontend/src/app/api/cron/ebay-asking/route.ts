@@ -349,8 +349,8 @@ async function ingestOne(
 
   // A second search folded into the first. Every listing is still judged
   // against `judgeName`, so a wider net changes what is found, never what
-  // is accepted.
-  const widen = async (query: string, judgeName: string) => {
+  // is accepted. Returns how many listings the search itself turned up.
+  const widen = async (query: string, judgeName: string): Promise<number> => {
     const found = await searchActiveListings(query);
     const extra = spreadSample(found.listings, CLASSIFY_SAMPLE);
     const judged = await keepRelevant(entityType, entityId, judgeName, extra);
@@ -362,6 +362,7 @@ async function ingestOne(
     }
     total += found.total;
     examined += extra.length;
+    return found.listings.length;
   };
 
   // A camera sold under a second name can be nearly invisible under its
@@ -372,22 +373,26 @@ async function ingestOne(
   }
 
   // A lens whose catalogue name finds nothing is searched again by the words
-  // a seller would write, asked of a model once and kept on the row. The
-  // judge still sees the full catalogue name, so "[II]" or "Gen. X" is still
-  // enforced where it matters: on what is accepted, not on what is found.
+  // a seller would write. The judge still sees the full catalogue name, so
+  // "[II]" or "Gen. X" is still enforced where it matters: on what is
+  // accepted, not on what is found.
+  //
+  // The words are kept on the row only once they have found something, so
+  // a lens is never charged for them twice. An answer that found nothing is
+  // not kept: it may be the lens has no listings today, or it may be that the
+  // model wrote a query as dead as the name, and the two look the same from
+  // here. Asking again next sweep costs a fraction of a cent and is the only
+  // way a dead query ever gets replaced.
   if (entityType === "lens" && listings.length < LENS_FALLBACK_BELOW_LISTINGS) {
-    let keywords = searchKeywords;
-    if (!keywords) {
-      keywords = await writeLensSearchKeywords(name);
-      if (keywords) {
+    const keywords = searchKeywords ?? (await writeLensSearchKeywords(name));
+    if (keywords) {
+      const found = await widen(lensQueryFromKeywords(keywords), name);
+      if (!searchKeywords && found > 0) {
         await db
           .update(lenses)
           .set({ ebaySearchQuery: keywords })
           .where(eq(lenses.id, entityId));
       }
-    }
-    if (keywords) {
-      await widen(lensQueryFromKeywords(keywords), name);
     }
   }
 
