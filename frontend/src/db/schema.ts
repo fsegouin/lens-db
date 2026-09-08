@@ -91,7 +91,7 @@ export const lenses = pgTable(
     // lens, written by a model the first time the catalogue name itself
     // finds nothing. The Browse API wants every word of a query in the
     // title, and catalogue names carry qualifiers ("[II]", "Gen. X", "FDn")
-    // that no listing ever does. Null until it has been needed.
+    // that no listing ever does. Null until an answer has found listings.
     ebaySearchQuery: text("ebay_search_query"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   },
