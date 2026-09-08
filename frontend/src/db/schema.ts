@@ -87,6 +87,12 @@ export const lenses = pgTable(
     // same optical product (e.g. Summicron-M 50mm f/2 Type IV / Type V)
     versionGroupId: integer("version_group_id").references(() => lensVersionGroups.id),
     versionLabel: text("version_label"), // e.g. "Type IV", "II", "Mark 2"
+    // The keywords an eBay seller would actually put in a title for this
+    // lens, written by a model the first time the catalogue name itself
+    // finds nothing. The Browse API wants every word of a query in the
+    // title, and catalogue names carry qualifiers ("[II]", "Gen. X", "FDn")
+    // that no listing ever does. Null until it has been needed.
+    ebaySearchQuery: text("ebay_search_query"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   },
   (table) => [
