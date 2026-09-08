@@ -149,6 +149,10 @@ export const cameras = pgTable(
     submittedByIp: text("submitted_by_ip"),
     protectionLevel: text("protection_level").default("none"), // "none" | "autoconfirmed" | "trusted" | "admin"
     mergedIntoId: integer("merged_into_id"), // self-referencing: if set, this entity was merged into another
+    // Same purpose as lenses.ebaySearchQuery: the words a seller would put
+    // in a title, written by a model when the catalogue name finds nothing,
+    // and kept once they have found listings.
+    ebaySearchQuery: text("ebay_search_query"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   },
   (table) => [

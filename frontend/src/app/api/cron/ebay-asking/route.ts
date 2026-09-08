@@ -19,10 +19,11 @@ import { recomputePriceEstimates } from "@/lib/price-pipeline";
 import {
   buildEbaySearchQuery,
   buildEbayLensSearchQuery,
+  cameraQueryFromKeywords,
   lensQueryFromKeywords,
 } from "@/lib/ebay-search-query";
 import { classifyRelevance } from "@/lib/price-classify-relevance";
-import { writeLensSearchKeywords } from "@/lib/ebay-lens-keywords";
+import { writeSearchKeywords } from "@/lib/ebay-search-keywords";
 
 /**
  * Daily asking-price ingest over the Browse API.
@@ -84,16 +85,17 @@ const MIN_PLAUSIBLE_USD = 5;
 const ALIAS_SEARCH_THRESHOLD = 5;
 
 /**
- * Raw listings below which a lens's catalogue name is judged to have failed
- * as a query, and the words a model wrote for it are searched instead.
+ * Raw listings below which an entity's catalogue name is judged to have
+ * failed as a query, and the words a model wrote for it are searched instead.
  *
  * Three is the sample the estimator needs before it publishes anything, so
  * below it the first search bought nothing and the retry can only gain. The
  * Browse API wants every word of a query in the title, and the first sweep
- * found no listing for 4,373 lenses, 292 of them with twenty or more sales
- * on record, because catalogue names carry words no seller writes.
+ * found no listing for 4,373 lenses and 429 bodies, 292 of the lenses with
+ * twenty or more sales on record, because catalogue names carry words no
+ * seller writes.
  */
-const LENS_FALLBACK_BELOW_LISTINGS = 3;
+const FALLBACK_BELOW_LISTINGS = 3;
 
 /**
  * How long a daily asking snapshot is kept.
@@ -159,10 +161,9 @@ async function getBatch(entityType: "lens" | "camera", limit: number) {
       // (16 of them do). The scraped pipeline searched it when the primary
       // name came back thin, and dropping that would quietly lose those.
       alias: entityType === "camera" ? cameras.alias : sql<string | null>`NULL`,
-      // The words a model already wrote for a lens whose name found nothing,
-      // so the retry is paid for once rather than on every sweep.
-      searchKeywords:
-        entityType === "lens" ? lenses.ebaySearchQuery : sql<string | null>`NULL`,
+      // The words a model already wrote for an entity whose name found
+      // nothing, so the retry is paid for once rather than on every sweep.
+      searchKeywords: table.ebaySearchQuery,
     })
     .from(table)
     .leftJoin(
@@ -365,33 +366,42 @@ async function ingestOne(
     return found.listings.length;
   };
 
+  // Raw listings the searches so far have turned up, before any judging.
+  // This is what decides whether the name has failed as a query.
+  let rawFound = listings.length;
+
   // A camera sold under a second name can be nearly invisible under its
   // primary one, so fall back to the alias when the first search comes back
   // thin. Costs an extra call only for the handful of cameras that need it.
   if (alias && relevant.length < ALIAS_SEARCH_THRESHOLD) {
-    await widen(buildQuery(alias), alias);
+    rawFound += await widen(buildQuery(alias), alias);
   }
 
-  // A lens whose catalogue name finds nothing is searched again by the words
-  // a seller would write. The judge still sees the full catalogue name, so
-  // "[II]" or "Gen. X" is still enforced where it matters: on what is
-  // accepted, not on what is found.
+  // An entity whose catalogue name finds nothing is searched again by the
+  // words a seller would write. The judge still sees the full catalogue
+  // name, so "[II]" or "Gen. X" is still enforced where it matters: on what
+  // is accepted, not on what is found.
   //
   // The words are kept on the row only once they have found something, so
-  // a lens is never charged for them twice. An answer that found nothing is
-  // not kept: it may be the lens has no listings today, or it may be that the
+  // an entity is never charged for them twice. An answer that found nothing
+  // is not kept: it may be there are no listings today, or it may be that the
   // model wrote a query as dead as the name, and the two look the same from
   // here. Asking again next sweep costs a fraction of a cent and is the only
   // way a dead query ever gets replaced.
-  if (entityType === "lens" && listings.length < LENS_FALLBACK_BELOW_LISTINGS) {
-    const keywords = searchKeywords ?? (await writeLensSearchKeywords(name));
+  if (rawFound < FALLBACK_BELOW_LISTINGS) {
+    const keywords = searchKeywords ?? (await writeSearchKeywords(entityType, name));
     if (keywords) {
-      const found = await widen(lensQueryFromKeywords(keywords), name);
+      const query =
+        entityType === "lens"
+          ? lensQueryFromKeywords(keywords)
+          : cameraQueryFromKeywords(keywords);
+      const found = await widen(query, name);
       if (!searchKeywords && found > 0) {
+        const table = entityType === "lens" ? lenses : cameras;
         await db
-          .update(lenses)
+          .update(table)
           .set({ ebaySearchQuery: keywords })
-          .where(eq(lenses.id, entityId));
+          .where(eq(table.id, entityId));
       }
     }
   }
@@ -596,7 +606,7 @@ export async function GET(request: NextRequest) {
           name: entityType === "lens" ? lenses.name : cameras.name,
           alias: entityType === "camera" ? cameras.alias : sql<string | null>`NULL`,
           searchKeywords:
-            entityType === "lens" ? lenses.ebaySearchQuery : sql<string | null>`NULL`,
+            entityType === "lens" ? lenses.ebaySearchQuery : cameras.ebaySearchQuery,
         })
         .from(entityType === "lens" ? lenses : cameras)
         .where(eq(entityType === "lens" ? lenses.id : cameras.id, onlyId))
