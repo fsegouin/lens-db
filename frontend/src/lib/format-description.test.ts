@@ -47,6 +47,17 @@ describe("paragraph breaks written by an author", () => {
     assert.deepEqual(formatDescription(text), [long, "A short closing paragraph."]);
   });
 
+  it("splits an authored block past a thousand characters", () => {
+    // A list repaired by scripts/apply-runon-lists.mjs makes the whole
+    // description count as authored, and at the old ceiling of 1500 that
+    // turned the prose above the list into a single wall.
+    const wall = `${filler(400)} ${filler(400)} ${filler(400)}`;
+    const paragraphs = formatDescription(`${wall}\n\nA repaired list item.`);
+    assert.ok(paragraphs.length > 2, `expected the 1200-char block to split, got ${paragraphs.length}`);
+    assert.equal(paragraphs.at(-1), "A repaired list item.");
+    assert.equal(paragraphs.slice(0, -1).join(" "), wall);
+  });
+
   it("still splits a block nobody would write as one paragraph", () => {
     // A scraped row with one blank line followed by thousands of characters.
     const wall = Array.from({ length: 6 }, () => filler(300)).join(" ");

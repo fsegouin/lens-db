@@ -55,8 +55,18 @@ export function formatDescription(raw: string): string[] {
   // break: imported text wraps mid-sentence at the width of the page it was
   // scraped from. A block nobody would write as one paragraph (a few scraped
   // rows carry a blank line and then thousands of characters) is still split.
+  //
+  // The ceiling on "a paragraph its author chose" is a thousand characters.
+  // It used to be fifteen hundred, which was fine while every blank line in
+  // the corpus came from a person. scripts/apply-runon-lists.mjs now writes
+  // them too, to give a flattened bullet list its items back, and that made
+  // whole descriptions count as authored on the strength of a list at the
+  // bottom: a lens whose prose was shown as three paragraphs of six hundred
+  // characters became one wall of thirteen hundred. Nobody writes those, and
+  // the one description in the catalogue that sat in the old gap reads better
+  // split.
   const authored = /\n[ \t]*\n/.test(text);
-  const splitAbove = authored ? 1500 : 500;
+  const splitAbove = authored ? 1000 : 500;
 
   for (const section of sections) {
     for (const block of section.split(/\n[ \t]*\n/)) {
