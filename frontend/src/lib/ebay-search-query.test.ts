@@ -2,7 +2,9 @@ import { test, describe } from "node:test";
 import assert from "node:assert";
 import {
   buildEbayLensSearchQuery,
-  cleanLensKeywords,
+  buildEbaySearchQuery,
+  cameraQueryFromKeywords,
+  cleanSearchKeywords,
   lensQueryFromKeywords,
 } from "./ebay-search-query.ts";
 
@@ -25,22 +27,46 @@ describe("lensQueryFromKeywords", () => {
   });
 });
 
-describe("cleanLensKeywords", () => {
-  test("tidies what the model wrote", () => {
-    assert.strictEqual(cleanLensKeywords("  Canon   FD 50mm  1.4 SSC "), "Canon FD 50mm 1.4 SSC");
-    assert.strictEqual(cleanLensKeywords("\"Minolta MD 135mm f/2\""), "Minolta MD 135mm f/2");
+/**
+ * The catalogue writes the names a body was sold under elsewhere in
+ * brackets. Every one of those words would be required in the title, and no
+ * listing carries them all, so they cannot be part of the query.
+ */
+describe("buildEbaySearchQuery", () => {
+  test("drops the bracketed market names and historical maker prefixes", () => {
+    assert.strictEqual(
+      buildEbaySearchQuery("Canon EOS Rebel T6i (EOS 750D / Kiss X8i)"),
+      "Canon EOS Rebel T6i camera body",
+    );
+    assert.strictEqual(
+      buildEbaySearchQuery("Asahi Pentax Spotmatic SP"),
+      "Pentax Spotmatic SP camera body",
+    );
   });
 
-  test("drops a trailing 'lens', which the wrapper adds itself", () => {
-    assert.strictEqual(cleanLensKeywords("Nikon 200mm f/4 micro lens"), "Nikon 200mm f/4 micro");
-    assert.strictEqual(cleanLensKeywords("Nikon 200mm f/4 Lens"), "Nikon 200mm f/4");
+  test("the keyword query asks only for a camera, since it runs when the body query found nothing", () => {
+    assert.strictEqual(cameraQueryFromKeywords("Sony A77 II"), "Sony A77 II camera");
+  });
+});
+
+describe("cleanSearchKeywords", () => {
+  test("tidies what the model wrote", () => {
+    assert.strictEqual(cleanSearchKeywords("  Canon   FD 50mm  1.4 SSC "), "Canon FD 50mm 1.4 SSC");
+    assert.strictEqual(cleanSearchKeywords("\"Minolta MD 135mm f/2\""), "Minolta MD 135mm f/2");
+  });
+
+  test("drops a trailing product word, which the wrapper adds itself", () => {
+    assert.strictEqual(cleanSearchKeywords("Nikon 200mm f/4 micro lens"), "Nikon 200mm f/4 micro");
+    assert.strictEqual(cleanSearchKeywords("Nikon 200mm f/4 Lens"), "Nikon 200mm f/4");
+    assert.strictEqual(cleanSearchKeywords("Leica M6 camera body"), "Leica M6");
+    assert.strictEqual(cleanSearchKeywords("Leica M6 camera"), "Leica M6");
   });
 
   test("refuses anything that would exclude words or is not a query", () => {
-    assert.strictEqual(cleanLensKeywords("Canon FD 50mm -SSC"), null);
-    assert.strictEqual(cleanLensKeywords(""), null);
-    assert.strictEqual(cleanLensKeywords("   "), null);
-    assert.strictEqual(cleanLensKeywords(null), null);
-    assert.strictEqual(cleanLensKeywords("x".repeat(81)), null);
+    assert.strictEqual(cleanSearchKeywords("Canon FD 50mm -SSC"), null);
+    assert.strictEqual(cleanSearchKeywords(""), null);
+    assert.strictEqual(cleanSearchKeywords("   "), null);
+    assert.strictEqual(cleanSearchKeywords(null), null);
+    assert.strictEqual(cleanSearchKeywords("x".repeat(81)), null);
   });
 });

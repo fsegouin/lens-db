@@ -470,6 +470,13 @@
       "when": 1788772181872,
       "tag": "0066_lens_ebay_search_query",
       "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1788772182872,
+      "tag": "0067_camera_ebay_search_query",
+      "breakpoints": true
     }
   ]
 }
