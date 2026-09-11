@@ -1,15 +1,17 @@
 name: eBay Price Pipeline (Browse API)
 
 # Replaces the scraped sold-listing pipeline, which eBay's bot wall closed in
-# July 2026. Everything here goes through the official Browse API server-side,
-# so there is no browser, no session and nothing to be blocked. The runner only
-# drives the loop; all the work happens in the cron routes.
+# July 2026 for sold-search pages.
 #
 # Two passes:
-#   asking  — one call per entity, records the day's asking aggregate and
-#             starts watching a sample of the live listings.
-#   resolve — one call per watched listing, turning the ones that have ended
-#             into real recorded sales.
+#   asking: one Browse call per entity, records the day's asking aggregate
+#           and starts watching a sample of the live listings.
+#   resolve: the runner reads each ended listing's own page (/itm/<id>) in a
+#            browser and the cron route decides. The Browse API reports a
+#            listing its seller pulled in the same shape as a sale, and the
+#            page is the only place the two differ. Browse is still asked for
+#            a confirmed sale's price and for pages with no banner, about
+#            half the pages read.
 
 on:
   schedule:
@@ -34,8 +36,8 @@ on:
         description: "Max asking calls (1 per entity)"
         default: "1600"
       resolve_budget:
-        description: "Max resolve calls (1 per ended listing)"
-        default: "2600"
+        description: "Max listing pages read (1 per listing due a check)"
+        default: "800"
 
 permissions:
   contents: read
@@ -52,12 +54,13 @@ jobs:
       # and it could not be confirmed against the account because the
       # developer analytics scope is refused on these keys, so the split is
       # deliberately short of the ceiling. 1600 sweeps the 11,486-entity
-      # catalogue in about a week, 2600 resolves the listings that ended, and
-      # both loops check the budget before fetching a page, so each can
-      # overrun by up to one page. Worst case lands near 4350, leaving room
-      # for the listings shown on entity pages.
+      # catalogue in about a week, at about 1.5 calls an entity once the
+      # alias and seller-word retries are counted. RESOLVE_BUDGET counts
+      # listing pages, not Browse calls: about half of them cost one, and the
+      # route stops spending at the same reserve the asking pass keeps for
+      # the listings shown on entity pages. 800 pages is about 45 minutes.
       ASKING_BUDGET: ${{ inputs.asking_budget || '1600' }}
-      RESOLVE_BUDGET: ${{ inputs.resolve_budget || '2600' }}
+      RESOLVE_BUDGET: ${{ inputs.resolve_budget || '800' }}
       PAGE: "20"
     steps:
       - name: Asking-price snapshots
@@ -106,31 +109,16 @@ jobs:
             echo "::endgroup::"
           done
 
+      # The resolve pass reads listing pages in a real browser, so it needs the
+      # repo and the scraper's Playwright; the asking pass above needs neither.
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Install script dependencies
+        run: cd scraper && npm ci
+
       - name: Resolve ended listings into sales
-        run: |
-          set -euo pipefail
-          SPENT=0
-          echo "::group::resolve"
-          while [ "$SPENT" -lt "$RESOLVE_BUDGET" ]; do
-            RESP=$(curl -sS --fail-with-body \
-              -H "Authorization: Bearer $CRON_SECRET" \
-              "$API_URL/api/cron/ebay-resolve?limit=100")
-            CHECKED=$(jq -r '.checked // 0' <<<"$RESP")
-            SOLD=$(jq -r '.sold // 0' <<<"$RESP")
-            PENDING=$(jq -r '.stillPending // 0' <<<"$RESP")
-            LIMITED=$(jq -r '.rateLimited // false' <<<"$RESP")
-            EXHAUSTED=$(jq -r '.quotaExhausted // false' <<<"$RESP")
-            QUOTA=$(jq -r '.quotaRemaining // "?"' <<<"$RESP")
-            SPENT=$((SPENT + CHECKED))
-            echo "  checked $CHECKED, sold $SOLD (spent $SPENT, $PENDING pending, quota $QUOTA)"
-            if [ "$EXHAUSTED" = "true" ]; then
-              echo "  daily Browse allowance is down to its reserve; stopping"
-              break
-            fi
-            if [ "$LIMITED" = "true" ]; then
-              echo "  eBay refused further calls; stopping this pass"
-              break
-            fi
-            if [ "$CHECKED" -eq 0 ]; then break; fi
-          done
-          echo "::endgroup::"
+        run: node scraper/ebay-resolve-action.mjs

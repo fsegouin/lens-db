@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { readListingOutcome } from "./ebay-listing-page.mjs";
+import { readListingOutcome, readListingPage } from "./ebay-listing-page.mjs";
 
 /**
  * Banners verbatim from listings the watcher recorded as sold, read on
@@ -42,5 +42,41 @@ describe("readListingOutcome", () => {
 
   it("does not read a block page as anything", () => {
     assert.equal(readListingOutcome("Error Page | eBay Pardon our interruption"), null);
+  });
+});
+
+describe("readListingPage", () => {
+  const soldText = "This listing sold on Tue, Sep 8 at 11:45 AM.";
+
+  it("passes a readable page through to the banner", () => {
+    assert.equal(readListingPage({ status: 200, title: "Tamron 186D | eBay", text: soldText }), "sold");
+  });
+
+  it("calls a cold-session 403 blocked, not bannerless", () => {
+    assert.equal(readListingPage({ status: 403, title: "Error Page | eBay", text: "" }), "blocked");
+  });
+
+  it("calls a page that never loaded blocked", () => {
+    assert.equal(readListingPage({ status: null }), "blocked");
+  });
+
+  it("calls a 200 challenge page blocked", () => {
+    assert.equal(
+      readListingPage({ status: 200, title: "Security Measure | eBay", text: "Please verify yourself" }),
+      "blocked",
+    );
+  });
+
+  it("leaves a catalogue-page redirect with no verdict", () => {
+    // What eBay serves for some ended listings: the product page, with other
+    // sellers' listings on it and nothing about ours.
+    assert.equal(
+      readListingPage({
+        status: 200,
+        title: "Nikon NIKKOR 28-85mm f/3.5-4.5 AF Lens for sale online | eBay",
+        text: "See full description Buy It Now Add to cart See all details About this product",
+      }),
+      null,
+    );
   });
 });
