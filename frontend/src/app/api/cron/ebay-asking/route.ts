@@ -333,7 +333,14 @@ async function ingestOne(
   const buildQuery = (n: string) =>
     entityType === "lens" ? buildEbayLensSearchQuery(n) : buildEbaySearchQuery(n);
 
-  const { listings, total: rawTotal } = await searchActiveListings(buildQuery(name));
+  const { listings, total: rawTotal, complete } = await searchActiveListings(buildQuery(name));
+
+  // Every listing any search returned, judged or not, and whether each search
+  // fitted on its one page. This is what the watch list is diffed against: a
+  // watched listing is still live if any search returned it, whether or not
+  // it landed in the classified sample.
+  const listedIds = new Set(listings.map((l) => l.legacyItemId));
+  let wholePool = complete;
 
   // Spread the classified sample across the price-sorted results so the
   // relevance rate is measured over the whole range, not just the cheap end.
@@ -353,6 +360,8 @@ async function ingestOne(
   // is accepted. Returns how many listings the search itself turned up.
   const widen = async (query: string, judgeName: string): Promise<number> => {
     const found = await searchActiveListings(query);
+    for (const l of found.listings) listedIds.add(l.legacyItemId);
+    wholePool &&= found.complete;
     const extra = spreadSample(found.listings, CLASSIFY_SAMPLE);
     const judged = await keepRelevant(entityType, entityId, judgeName, extra);
     cached += judged.cached;
@@ -442,10 +451,11 @@ async function ingestOne(
       set: snapshot,
     });
 
-  // The disappearance signal is only trustworthy when the classified sample
-  // covered everything eBay had: past that, a listing can be missing from our
-  // slice while still being perfectly alive.
-  await syncWatchList(entityType, entityId, relevant, total <= examined);
+  // The disappearance signal is only trustworthy when every search fitted on
+  // its page: past that, a listing can be missing from what came back while
+  // still being perfectly alive. It used to require the 20-listing classified
+  // sample to cover the pool, which left most watched listings on the timer.
+  await syncWatchList(entityType, entityId, relevant, listedIds, wholePool);
   await recomputePriceEstimates(entityType, entityId);
   return { sampled: prices.length, total, median, cached, classified };
 }
@@ -462,10 +472,10 @@ async function syncWatchList(
   entityType: "lens" | "camera",
   entityId: number,
   relevant: RelevantListing[],
+  listedIds: Set<string>,
   sawWholePool: boolean,
 ): Promise<void> {
   const now = new Date();
-  const seenIds = new Set(relevant.map((r) => r.listing.legacyItemId));
 
   const existing = await db
     .select({ legacyItemId: ebayListingWatch.legacyItemId })
@@ -482,7 +492,7 @@ async function syncWatchList(
   // Still listed. Clearing disappearedAt matters: eBay's result pages shuffle,
   // so a listing can drop out of one search and come back in the next, and a
   // returning listing must leave the resolve queue rather than burn a call.
-  const stillListed = [...seenIds].filter((id) => watchedIds.has(id));
+  const stillListed = [...watchedIds].filter((id) => listedIds.has(id));
   if (stillListed.length > 0) {
     await db
       .update(ebayListingWatch)
@@ -500,10 +510,10 @@ async function syncWatchList(
   }
 
   // Gone from a sample that covered the whole pool, so it really has ended.
-  // Where the pool was larger than what we classified, absence proves nothing
+  // Where the pool was larger than a page of results, absence proves nothing
   // and those rows keep resolving on the timer instead.
   const vanished = sawWholePool
-    ? [...watchedIds].filter((id) => !seenIds.has(id))
+    ? [...watchedIds].filter((id) => !listedIds.has(id))
     : [];
   if (vanished.length > 0) {
     await db

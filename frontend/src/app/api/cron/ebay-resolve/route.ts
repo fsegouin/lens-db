@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { isCronAuthorized } from "@/lib/api-utils";
 import { db } from "@/db";
 import { ebayListingWatch, priceHistory } from "@/db/schema";
-import { sql, eq, and, isNull, isNotNull, asc, or, lt } from "drizzle-orm";
+import { sql, eq, and, isNull, isNotNull, asc, or, lt, gte } from "drizzle-orm";
 import { resolveListing, getBrowseQuota, EbayApiError } from "@/lib/ebay-browse";
 import { recomputePriceEstimates } from "@/lib/price-pipeline";
 
@@ -28,7 +28,15 @@ const MIN_AGE_DAYS_BEFORE_CHECK = 3;
  * only entities whose live pool exceeds the API's 200-result page. Kept long
  * because every such check usually just reports "still active".
  */
-const RECHECK_AFTER_DAYS = 14;
+const RECHECK_AFTER_DAYS = 30;
+/**
+ * Timer checks allowed in any 24 hours. The timer queue held 29,000 rows in
+ * September 2026, which at one check per interval is thousands of calls a day
+ * spent mostly on listings that are still up, while a disappeared listing
+ * turns into a sale about one time in six. The cap keeps the timer from ever
+ * owning the day's budget again.
+ */
+const TIMER_DAILY_CAP = 300;
 /**
  * How long a resolved watch row is kept before deletion. The sale it produced
  * lives permanently in price_history; the row itself is only scaffolding.
@@ -96,18 +104,35 @@ export async function GET(request: NextRequest) {
     .orderBy(asc(ebayListingWatch.disappearedAt))
     .limit(batchLimit);
 
-  // Entities whose pool is bigger than the sample we classify never get a
-  // trustworthy disappearance signal, because a listing can fall out of our
-  // slice while still being live. Only those rows need a timer sweep, and it
-  // gets whatever budget the disappeared queue left over.
+  // Entities with more live listings than one page of search results never
+  // get a trustworthy disappearance signal, because a listing can fall off
+  // the page while still being live. Only those rows need a timer sweep, and
+  // it gets whatever budget the disappeared queue left over, up to its cap.
   //
   // The pool_complete = false test is what keeps this cheap. Without it the
   // timer treats every pending row alike and spends the whole daily budget
-  // re-checking listings that are still up, for the ~88% of entities whose
-  // next weekly sweep would have caught them for nothing. Rows predating the
+  // re-checking listings that are still up, for the entities whose next
+  // weekly sweep would have caught them for nothing. Rows predating the
   // column are null, which fails this test and is the right default: the next
   // sweep of that entity fills it in.
-  const room = batchLimit - disappeared.length;
+  //
+  // A checked row with no disappearance is a timer check: a disappeared row
+  // that proved live has its flag cleared below, so it counts here too, which
+  // errs on the side of spending less.
+  const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const [{ timerSpent }] = await db
+    .select({ timerSpent: sql<number>`count(*)` })
+    .from(ebayListingWatch)
+    .where(
+      and(
+        isNull(ebayListingWatch.disappearedAt),
+        gte(ebayListingWatch.lastCheckedAt, dayAgo),
+      ),
+    );
+  const room = Math.min(
+    batchLimit - disappeared.length,
+    TIMER_DAILY_CAP - Number(timerSpent),
+  );
   const timed =
     room > 0
       ? await db
@@ -159,7 +184,13 @@ export async function GET(request: NextRequest) {
       counts.active++;
       await db
         .update(ebayListingWatch)
-        .set({ lastCheckedAt: now })
+        // A disappeared listing that is still up only fell out of one search.
+        // Clearing the flag takes it out of the disappeared queue, which is
+        // read before anything else and has no check date of its own: left
+        // set, the same live listings came back at the head of every batch,
+        // and one run spent 2,000 calls on about 170 listings. The next sweep
+        // flags it again if it really has gone.
+        .set({ lastCheckedAt: now, disappearedAt: null })
         .where(eq(ebayListingWatch.id, row.id));
       continue;
     }
