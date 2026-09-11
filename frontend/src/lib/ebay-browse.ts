@@ -37,6 +37,11 @@ export interface ActiveSearchResult {
   listings: ActiveListing[];
   /** eBay's count of all matching listings, far larger than what we page. */
   total: number;
+  /**
+   * Whether the one page returned every match, so a listing missing from it
+   * has really gone rather than fallen onto a page we never fetched.
+   */
+  complete: boolean;
 }
 
 interface ItemSummary {
@@ -100,7 +105,10 @@ export async function searchActiveListings(
     });
   }
 
-  return { listings, total: Number(data.total ?? listings.length) };
+  // Counted against what eBay sent rather than what survived the filter
+  // above: a no-bid auction is still a match, it just cannot be watched.
+  const total = Number(data.total ?? listings.length);
+  return { listings, total, complete: (data.itemSummaries?.length ?? 0) >= total };
 }
 
 export interface BrowseQuota {
