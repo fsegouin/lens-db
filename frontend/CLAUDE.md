@@ -43,7 +43,7 @@ src/
 │   │   ├── cameras/route.ts    # GET: search/paginate cameras
 │   │   ├── chat/route.ts       # POST: AI chat (streamed, DB tools)
 │   │   ├── comparisons/route.ts # GET: top comparisons, POST: record comparison
-│   │   ├── cron/               # Cron routes: ebay-prices, ebay-lens-prices, dpreview-lenses, dpreview-review, dpreview-cameras, dpreview-camera-review, dpreview-audit, flush-view-counts, warm-prices, weekly-digest
+│   │   ├── cron/               # Cron routes: ebay-asking, ebay-resolve, ebay-prices, ebay-lens-prices, dpreview-lenses, dpreview-review, dpreview-cameras, dpreview-camera-review, dpreview-audit, keh-catalogue, keh-match, recompute-prices, revalidate, flush-view-counts, warm-prices, weekly-digest
 │   │   ├── duplicates/route.ts # POST: flag duplicate entities
 │   │   ├── edits/route.ts      # User-submitted edits
 │   │   ├── lenses/route.ts     # GET: search/filter/paginate lenses
@@ -114,7 +114,7 @@ Systems: one row per physical mount, not per camera family or per-lens variant (
 Engagement: `lensRatings`, `cameraRatings`, `lensComparisons`, `cameraComparisons`
 Community edits: `revisions`, `pendingEdits`, `duplicateFlags`, `issueReports`, `blockedIps`
 Accounts: `users` (with `digestOptIn`), `emailVerificationTokens`, `passwordResetTokens`, `kitItems`
-Prices: `priceEstimates`, `priceHistory` (eBay sold-listing pipeline)
+Prices: `priceEstimates`, `priceHistory` (sold prices), plus the Browse API pipeline's `ebayAskingSnapshots` (one asking aggregate per entity per day), `ebayListingWatch` (live listings being watched for an ending) and `ebayListingVerdicts` (remembered relevance-classifier verdicts)
 DPReview watcher: `lensVersionGroups` (lens generations via `lenses.versionGroupId`), `dpreviewLensCandidates` and `dpreviewCameraCandidates` (seen-registries, status pending/imported/rejected/matched/review). Cameras have no version-group equivalent: a successor body is its own `cameras` row, so the camera LLM verdict is binary (duplicate / new_camera) where the lens one has three values.
 
 Key relationships:

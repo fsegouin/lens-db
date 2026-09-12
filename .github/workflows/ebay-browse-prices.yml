@@ -5,7 +5,11 @@ name: eBay Price Pipeline (Browse API)
 #
 # Two passes:
 #   asking: one Browse call per entity, records the day's asking aggregate
-#           and starts watching a sample of the live listings.
+#           and starts watching a sample of the live listings. The route
+#           ingests each batch several entities at a time; an entity is
+#           almost entirely waiting, so overlapping them costs no extra
+#           calls and is what keeps the job inside the free runner
+#           allowance, which is billed by the minute.
 #   resolve: the runner reads each ended listing's own page (/itm/<id>) in a
 #            browser and the cron route decides. The Browse API reports a
 #            listing its seller pulled in the same shape as a sale, and the
@@ -48,8 +52,11 @@ jobs:
     environment: production
     timeout-minutes: 180
     env:
-      API_URL: ${{ secrets.API_URL }}
-      CRON_SECRET: ${{ secrets.CRON_SECRET }}
+      # API_URL and CRON_SECRET are set on the two steps that call the API
+      # rather than here. npm ci runs third-party lifecycle scripts, and a
+      # job-level secret sits in the environment of every one of them, so a
+      # single compromised transitive dependency would be handed the only
+      # thing protecting every /api/cron route.
       # eBay's documented default is 5000 Browse calls/day for the whole app,
       # and it could not be confirmed against the account because the
       # developer analytics scope is refused on these keys, so the split is
@@ -58,12 +65,26 @@ jobs:
       # alias and seller-word retries are counted. RESOLVE_BUDGET counts
       # listing pages, not Browse calls: about half of them cost one, and the
       # route stops spending at the same reserve the asking pass keeps for
-      # the listings shown on entity pages. 800 pages is about 45 minutes.
+      # the listings shown on entity pages.
       ASKING_BUDGET: ${{ inputs.asking_budget || '1600' }}
       RESOLVE_BUDGET: ${{ inputs.resolve_budget || '800' }}
-      PAGE: "20"
+      # Entities per request. Each one costs a query that scans the catalogue
+      # for the longest-unseen rows and a second that counts what is still
+      # due, so the fewer requests the sweep is split into the less of the
+      # run is spent asking where to start. The route ingests the batch
+      # several entities at a time and caps itself at 300s, which 40 clears
+      # with room to spare.
+      PAGE: "40"
+      # Listing pages read at once in the resolve pass, each in its own
+      # browser session. Raise only against the blocked-page count in the
+      # run log: the pass stops itself when more than half a batch comes
+      # back blocked.
+      RESOLVE_CONCURRENCY: "4"
     steps:
       - name: Asking-price snapshots
+        env:
+          API_URL: ${{ secrets.API_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
           set -euo pipefail
           # ASKING_BUDGET is the total across both catalogues, split in
@@ -90,10 +111,11 @@ jobs:
               REMAINING=$(jq -r '.remainingToday // 0' <<<"$RESP")
               LIMITED=$(jq -r '.rateLimited // false' <<<"$RESP")
               FAILED=$(jq -r '.failed // 0' <<<"$RESP")
+              SKIPPED=$(jq -r '.skipped // 0' <<<"$RESP")
               EXHAUSTED=$(jq -r '.quotaExhausted // false' <<<"$RESP")
               QUOTA=$(jq -r '.quotaRemaining // "?"' <<<"$RESP")
               SPENT=$((SPENT + PROCESSED))
-              echo "  +$PROCESSED (failed $FAILED, spent $SPENT, $REMAINING due, quota $QUOTA)"
+              echo "  +$PROCESSED (failed $FAILED, skipped $SKIPPED, spent $SPENT, $REMAINING due, quota $QUOTA)"
               if [ "$EXHAUSTED" = "true" ]; then
                 echo "  daily Browse allowance is down to its reserve; stopping"
                 break
@@ -121,4 +143,7 @@ jobs:
         run: cd scraper && npm ci
 
       - name: Resolve ended listings into sales
+        env:
+          API_URL: ${{ secrets.API_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: node scraper/ebay-resolve-action.mjs

@@ -8,7 +8,7 @@ import {
   ebayListingWatch,
   ebayListingVerdicts,
 } from "@/db/schema";
-import { sql, isNull, desc, and, eq, inArray, lt } from "drizzle-orm";
+import { sql, isNull, desc, and, eq, gte, inArray, lt, count, notExists } from "drizzle-orm";
 import {
   searchActiveListings,
   getBrowseQuota,
@@ -24,6 +24,7 @@ import {
 } from "@/lib/ebay-search-query";
 import { classifyRelevance } from "@/lib/price-classify-relevance";
 import { writeSearchKeywords } from "@/lib/ebay-search-keywords";
+import { mapConcurrent } from "@/lib/concurrent";
 
 /**
  * Daily asking-price ingest over the Browse API.
@@ -39,6 +40,37 @@ import { writeSearchKeywords } from "@/lib/ebay-search-keywords";
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 200;
+
+/**
+ * Entities ingested at once within a batch.
+ *
+ * An entity is barely any work and almost entirely waiting: one or two eBay
+ * searches, a classifier call for the listings no verdict is remembered for,
+ * and a dozen round trips to the pooler. Run strictly one at a time that is
+ * ~2.5s of wall clock each, so a 1,600-entity sweep held a GitHub runner for
+ * over an hour, billed by the minute against a 2,000-minute monthly free
+ * allowance.
+ *
+ * Eight is set by the narrowest resource rather than by feel. The pg pool
+ * allows four clients per instance, and an entity spends roughly a fifth of
+ * its time in the database, so eight in flight asks for about 1.6 clients on
+ * average and queues only in bursts. It also keeps the eBay and classifier
+ * call rates well inside what a single batch could previously reach.
+ */
+const DEFAULT_CONCURRENCY = 8;
+
+/**
+ * Concurrency ceiling, so a mistyped query param cannot open the throttle on
+ * eBay, the classifier and the pooler all at once.
+ *
+ * Held at the default rather than above it because the pool is the binding
+ * constraint: a queued checkout carries the pool's 10s connectionTimeoutMillis,
+ * and a checkout that loses that race surfaces as an ordinary failed entity
+ * rather than as a pool problem, which is the kind of failure nobody
+ * diagnoses. Eight workers over four clients queue at most four deep; sixteen
+ * queue twelve, and the margin stops being comfortable.
+ */
+const MAX_CONCURRENCY = 8;
 
 /**
  * Listings watched per entity, derived from the call budget rather than
@@ -131,6 +163,23 @@ const VERDICT_RETENTION_DAYS = 180;
 
 export const maxDuration = 300;
 
+/**
+ * Seconds of the request's ceiling held back, so an entity is only started
+ * when there is time to finish it and still run the retention deletes, the
+ * due count and the response.
+ *
+ * Past the ceiling the platform kills the function mid-flight: the runner's
+ * curl sees a 504, `set -e` fails the step, and every later step in the
+ * workflow is skipped, including the resolve pass. Returning a short batch
+ * instead costs nothing, because whatever was not started is still due and
+ * the shell loop simply asks again.
+ *
+ * One entity's own worst case (every eBay and classifier call hitting its
+ * timeout) is longer than this margin, so the guard bounds the overrun at
+ * roughly one entity rather than removing it.
+ */
+const WORKER_DEADLINE_MARGIN_S = 60;
+
 function percentile(sorted: number[], p: number): number | null {
   if (sorted.length === 0) return null;
   return sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * p))];
@@ -184,24 +233,38 @@ async function getBatch(entityType: "lens" | "camera", limit: number) {
     .limit(limit);
 }
 
-/** How many entities are still awaiting today's snapshot. */
+/**
+ * How many entities are still awaiting today's snapshot.
+ *
+ * Counted in the database rather than by grouping every entity and measuring
+ * the result: this runs on every batch, and the old form shipped one row per
+ * due entity back over the wire, which for a catalogue this size was thousands
+ * of rows read by nothing but `.length`. The NOT EXISTS probe rides the
+ * uq_ebay_asking_entity_day index straight to today's row.
+ */
 async function countDue(entityType: "lens" | "camera"): Promise<number> {
   const table = entityType === "lens" ? lenses : cameras;
-  const due = await db
-    .select({ id: table.id })
+  const [row] = await db
+    .select({ due: count() })
     .from(table)
-    .leftJoin(
-      ebayAskingSnapshots,
-      sql`${ebayAskingSnapshots.entityType} = ${entityType}
-          AND ${ebayAskingSnapshots.entityId} = ${table.id}`,
-    )
-    .where(isNull(table.mergedIntoId))
-    .groupBy(table.id)
-    .having(
-      sql`max(${ebayAskingSnapshots.observedOn}) IS NULL
-          OR max(${ebayAskingSnapshots.observedOn}) < CURRENT_DATE`,
+    .where(
+      and(
+        isNull(table.mergedIntoId),
+        notExists(
+          db
+            .select({ one: sql`1` })
+            .from(ebayAskingSnapshots)
+            .where(
+              and(
+                eq(ebayAskingSnapshots.entityType, entityType),
+                eq(ebayAskingSnapshots.entityId, table.id),
+                gte(ebayAskingSnapshots.observedOn, sql`CURRENT_DATE`),
+              ),
+            ),
+        ),
+      ),
     );
-  return due.length;
+  return row?.due ?? 0;
 }
 
 /** A listing the classifier accepted, carrying the grade it assigned. */
@@ -583,6 +646,12 @@ export async function GET(request: NextRequest) {
     MAX_LIMIT,
     Math.max(1, Number(params.get("limit")) || DEFAULT_LIMIT),
   );
+  // Tunable per call so the rate can be backed off against a live eBay or
+  // classifier problem without waiting for a deploy.
+  const concurrency = Math.min(
+    MAX_CONCURRENCY,
+    Math.max(1, Number(params.get("concurrency")) || DEFAULT_CONCURRENCY),
+  );
 
   // Size this batch against what eBay says is actually left, not against what
   // the caller asked for. A budget agreed in advance cannot know what else
@@ -631,9 +700,32 @@ export async function GET(request: NextRequest) {
   let listingsFromCache = 0;
   let listingsClassified = 0;
   let failed = 0;
+  // Entities the batch declined to start, because eBay had refused us or the
+  // request ran out of its ceiling. Reported so a batch that comes back short
+  // says why, instead of looking like a quiet one.
+  let skipped = 0;
   let rateLimited = false;
 
-  for (const entity of batch) {
+  // Entities are ingested several at a time. Each is independent (its own
+  // searches, its own rows, keyed by its own id) and nearly all of its
+  // elapsed time is spent waiting on eBay, the classifier or the pooler, so
+  // overlapping them costs no extra API calls and turns an hour of runner
+  // time into minutes. The counters below are plain increments rather than
+  // reduced results because the request is single-threaded: only one worker
+  // is ever between statements.
+  const deadline = Date.now() + (maxDuration - WORKER_DEADLINE_MARGIN_S) * 1000;
+
+  await mapConcurrent(batch, concurrency, async (entity) => {
+    // A quota refusal means every call still to be made would fail too, so
+    // the entities not yet started are left for the next sweep rather than
+    // burned generating identical errors. The workers already in flight run
+    // to completion; there is nothing to gain by discarding their answers.
+    //
+    // The deadline is the same idea against the clock rather than the quota.
+    if (rateLimited || Date.now() > deadline) {
+      skipped++;
+      return;
+    }
     try {
       const result = await ingestOne(
         entityType,
@@ -647,17 +739,16 @@ export async function GET(request: NextRequest) {
       listingsClassified += result.classified;
       if (result.sampled > 0) withListings++;
     } catch (error) {
-      // A quota refusal means every remaining call fails too, so stop rather
-      // than burn the rest of the batch generating identical errors.
       if (error instanceof EbayApiError && (error.status === 429 || error.status === 403)) {
         rateLimited = true;
+        skipped++;
         console.error(`[ebay-asking] eBay refused (${error.status}); stopping run`);
-        break;
+        return;
       }
       failed++;
       console.error(`[ebay-asking] ${entity.name}:`, error);
     }
-  }
+  });
 
   // Drop snapshots nothing reads any more. Cheap enough to run every call:
   // with the index on observed_on this is a range scan that matches nothing
@@ -683,6 +774,7 @@ export async function GET(request: NextRequest) {
     processed,
     withListings,
     failed,
+    skipped,
     rateLimited,
     quotaExhausted: false,
     quotaRemaining: quota?.remaining ?? null,
