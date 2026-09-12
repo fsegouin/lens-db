@@ -3,19 +3,29 @@ name: eBay Price Pipeline (Browse API)
 # Replaces the scraped sold-listing pipeline, which eBay's bot wall closed in
 # July 2026 for sold-search pages.
 #
-# Two passes:
-#   asking: one Browse call per entity, records the day's asking aggregate
-#           and starts watching a sample of the live listings. The route
-#           ingests each batch several entities at a time; an entity is
-#           almost entirely waiting, so overlapping them costs no extra
-#           calls and is what keeps the job inside the free runner
-#           allowance, which is billed by the minute.
+# Two passes, resolve first:
 #   resolve: the runner reads each ended listing's own page (/itm/<id>) in a
 #            browser and the cron route decides. The Browse API reports a
 #            listing its seller pulled in the same shape as a sale, and the
 #            page is the only place the two differ. Browse is still asked for
 #            a confirmed sale's price and for pages with no banner, about
 #            half the pages read.
+#   asking: one Browse call per entity, records the day's asking aggregate
+#           and starts watching a sample of the live listings. The route
+#           ingests each batch several entities at a time; an entity is
+#           almost entirely waiting, so overlapping them costs no extra
+#           calls and is what keeps the run short.
+#
+# Resolve goes first because the two passes draw on one daily allowance and
+# nothing divides it between them. Asking will spend everything down to the
+# site's reserve, so whichever runs second gets what is left. On 2026-09-12
+# the second run of the day started at 2,240 calls, asking took it to 370 in
+# eight minutes, and resolve read no pages at all.
+#
+# Ordering settles it without a second budget to keep in step: resolve is the
+# cheap one (217 Browse calls for 800 pages on 2026-09-12) and the urgent one,
+# since a listing has to be read while the page is still up. Asking is a
+# rotation over the whole catalogue and loses nothing by resuming tomorrow.
 
 on:
   schedule:
@@ -65,7 +75,9 @@ jobs:
       # alias and seller-word retries are counted. RESOLVE_BUDGET counts
       # listing pages, not Browse calls: about half of them cost one, and the
       # route stops spending at the same reserve the asking pass keeps for
-      # the listings shown on entity pages.
+      # the listings shown on entity pages. Resolve is served first, so this
+      # budget is the one that gets what it asks for and ASKING_BUDGET is the
+      # one that goes short on a day the allowance is already part spent.
       ASKING_BUDGET: ${{ inputs.asking_budget || '1600' }}
       RESOLVE_BUDGET: ${{ inputs.resolve_budget || '800' }}
       # Entities per request. Each one costs a query that scans the catalogue
@@ -81,6 +93,31 @@ jobs:
       # back blocked.
       RESOLVE_CONCURRENCY: "4"
     steps:
+      # The resolve pass reads listing pages in a real browser, so it needs the
+      # repo and the scraper's Playwright; the asking pass below needs neither.
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Install script dependencies
+        run: cd scraper && npm ci
+
+      - name: Resolve ended listings into sales
+        id: resolve
+        # The script exits non-zero when more than half the pages came back
+        # blocked, which is a real signal and must not be lost. But with
+        # `set -e` a failure here would now skip the asking pass entirely,
+        # which is the trap that comes with running this first. So the step
+        # is allowed to fail, asking still runs, and the guard at the end of
+        # the job fails the run afterwards.
+        continue-on-error: true
+        env:
+          API_URL: ${{ secrets.API_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: node scraper/ebay-resolve-action.mjs
+
       - name: Asking-price snapshots
         env:
           API_URL: ${{ secrets.API_URL }}
@@ -131,19 +168,15 @@ jobs:
             echo "::endgroup::"
           done
 
-      # The resolve pass reads listing pages in a real browser, so it needs the
-      # repo and the scraper's Playwright; the asking pass above needs neither.
-      - uses: actions/checkout@v6
-
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 24
-
-      - name: Install script dependencies
-        run: cd scraper && npm ci
-
-      - name: Resolve ended listings into sales
-        env:
-          API_URL: ${{ secrets.API_URL }}
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
-        run: node scraper/ebay-resolve-action.mjs
+      # Fails the run when the resolve pass failed, after the asking pass has
+      # had its turn. `outcome` is the step's real result; `conclusion` is the
+      # one continue-on-error rewrote, so this reads the former.
+      #
+      # always() because a bare `if` has an implicit success() ANDed onto it:
+      # without it, an asking step that fails skips this guard and the run
+      # never says the resolve pass failed too.
+      - name: Report a failed resolve pass
+        if: always() && steps.resolve.outcome == 'failure'
+        run: |
+          echo "::error::The resolve pass failed; see the step above."
+          exit 1
