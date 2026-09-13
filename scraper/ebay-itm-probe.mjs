@@ -9,15 +9,19 @@
  *
  * Reads through the same reader the pipeline uses (lib/ebay-reader.mjs), with
  * the same number of sessions at once, because the pipeline's first runs with
- * several sessions lost the whole Chrome process about 25 seconds into the
- * first batch, on a runner, and never on a Mac. Loads a fixed set of listings
- * whose outcome is already known (read from a home connection on 2026-09-12),
- * twice over, so a block that only starts after some volume shows up too.
- * Prints one line per page and a tally, and always exits 0: the log is the
- * result.
+ * several sessions lost the whole Chrome process about 20 seconds into the
+ * first batch, on a runner, and never on a Mac. Each reader gets its own
+ * Chrome process (PROBE_SHARED=1 puts them all on one, the shape that died):
+ * one browser reading one page at a time is the shape that read 800 pages
+ * on 2026-09-12 without incident, and separate processes share nothing but
+ * the machine. Loads a fixed set of listings whose outcome is already known
+ * (read from a home connection on 2026-09-12), twice over, so a block that
+ * only starts after some volume shows up too. Prints one line per page and a
+ * tally, and always exits 0: the log is the result.
  *
  * Usage: node scraper/ebay-itm-probe.mjs
- * Env: PROBE_READERS (sessions at once, default 4).
+ * Env: PROBE_READERS (sessions at once, default 4), PROBE_SHARED (1 for one
+ * Chrome process shared by every reader).
  */
 
 import { chromium } from "playwright-core";
@@ -38,40 +42,49 @@ const KNOWN = {
 };
 
 const READERS = Math.max(1, Number(process.env.PROBE_READERS) || 4);
+const SHARED = process.env.PROBE_SHARED === "1";
 
 const expected = new Map(
   Object.entries(KNOWN).flatMap(([outcome, ids]) => ids.map((id) => [id, outcome])),
 );
 const ids = [...expected.keys(), ...expected.keys()];
 
-// Chrome logs a failed assertion to a file in its profile directory unless
-// told to use stderr, and on the runner the profile is gone with the process.
-// With DEBUG=pw:browser set, Playwright relays stderr into the run log.
-const browser = await chromium.launch({
-  channel: "chrome",
-  headless: true,
-  // No audio output at all: see the note on media in lib/ebay-reader.mjs.
-  args: ["--enable-logging=stderr", "--v=0", "--disable-audio-output"],
-});
-let browserGone = false;
-let closingBrowser = false;
-browser.on("disconnected", () => {
-  browserGone = true;
-  if (!closingBrowser) console.error("browser disconnected: Chrome exited or crashed");
-});
-
 const tally = { match: 0, blocked: 0, unread: 0, mismatch: 0, chromeGone: 0 };
 const started = Date.now();
 const elapsed = () => `${((Date.now() - started) / 1000).toFixed(1)}s`;
 
+/**
+ * Launch one Chrome and report when it goes away. Chrome logs a failed
+ * assertion to a file in its profile directory unless told to use stderr,
+ * and on the runner the profile is gone with the process; with
+ * DEBUG=pw:browser set, Playwright relays stderr into the run log.
+ */
+async function launch(label) {
+  const browser = await chromium.launch({
+    channel: "chrome",
+    headless: true,
+    args: ["--enable-logging=stderr", "--v=0", "--disable-audio-output"],
+  });
+  const state = { browser, gone: false, closing: false, died: false };
+  browser.on("disconnected", () => {
+    state.gone = true;
+    if (state.closing) return;
+    state.died = true;
+    console.error(`${elapsed()} ${label}: Chrome exited or crashed`);
+  });
+  return state;
+}
+
+const browsers = [];
 try {
-  const readers = await Promise.all(
-    Array.from({ length: READERS }, (_, i) =>
-      createReader(browser, `reader ${i + 1}`, { browserGone: () => browserGone }),
-    ),
-  );
+  const readers = [];
+  for (let i = 0; i < READERS; i++) {
+    const state = SHARED && browsers[0] ? browsers[0] : await launch(SHARED ? "browser" : `browser ${i + 1}`);
+    if (!browsers.includes(state)) browsers.push(state);
+    readers.push(await createReader(state.browser, `reader ${i + 1}`, { browserGone: () => state.gone }));
+  }
   await Promise.all(readers.map((reader) => reader.warm()));
-  console.log(`${elapsed()} warmed ${READERS} readers`);
+  console.log(`${elapsed()} warmed ${READERS} readers on ${browsers.length} Chrome process(es)`);
 
   let next = 0;
   await Promise.all(
@@ -99,8 +112,13 @@ try {
     }),
   );
 } finally {
-  closingBrowser = true;
-  await browser.close().catch(() => {});
+  for (const state of browsers) {
+    state.closing = true;
+    await state.browser.close().catch(() => {});
+  }
 }
 
-console.log(`\nTALLY ${JSON.stringify(tally)} of ${ids.length} page loads, ${READERS} readers`);
+console.log(
+  `\nTALLY ${JSON.stringify(tally)} of ${ids.length} page loads, ${READERS} readers, ` +
+    `${browsers.length} Chrome process(es), ${browsers.filter((b) => b.died).length} died`,
+);
