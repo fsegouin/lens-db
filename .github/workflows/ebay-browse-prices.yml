@@ -90,10 +90,11 @@ jobs:
       # Listing pages read at once in the resolve pass, each in its own
       # browser session. Raise only against the blocked-page count in the
       # run log: the pass stops itself when more than half a batch comes
-      # back blocked. This is a ceiling, not a promise: when Chrome itself
-      # dies the pass relaunches it with half as many readers and says so in
-      # its totals line, so a run that "ended with 1 reader(s)" is telling
-      # you the runner could not hold four.
+      # back blocked. Each reader runs its own Chrome, because on this runner
+      # a Chrome dies with SIGTRAP about 20 s after launch some of the time;
+      # a reader whose Chrome dies relaunches it and the totals line counts
+      # the relaunches, so a run that says "2 of 4 reader(s) still up" is
+      # telling you two of them died too often and retired.
       RESOLVE_CONCURRENCY: "4"
     steps:
       # The resolve pass reads listing pages in a real browser, so it needs the
