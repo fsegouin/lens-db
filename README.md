@@ -24,7 +24,7 @@ The frontend lives in [`frontend/`](frontend/) and uses:
 - React 19
 - TypeScript
 - Drizzle ORM
-- Supabase PostgreSQL
+- PostgreSQL 17, self-hosted with Docker (see [`infra/db/`](infra/db/README.md))
 - Tailwind CSS v4
 - Upstash Redis for rate limiting
 - Vercel AI SDK (AI Gateway) for chat, price classification, and DPReview import dedupe/audit checks
@@ -114,27 +114,27 @@ The scanners deliberately report rather than import. Neither list is clean enoug
 
 ## Database Backups
 
-Supabase Free has no automated backups, so [`.github/workflows/db-backup.yml`](.github/workflows/db-backup.yml) runs [`scraper/db-backup.sh`](scraper/db-backup.sh) every Sunday at 03:00 UTC: `pg_dump` (custom format, compressed), a `pg_restore --list` sanity check, upload to a **private** R2 bucket, and pruning to the newest 12 weekly and 12 monthly copies (a dump made in the first week of a month is also kept under `monthly/`).
+The database is self-hosted ([`infra/db/`](infra/db/README.md)) and keeps a nightly dump on the server. For the offsite copy, [`.github/workflows/db-backup.yml`](.github/workflows/db-backup.yml) runs [`scraper/db-backup.sh`](scraper/db-backup.sh) every Sunday at 03:00 UTC: `pg_dump` (custom format, compressed), a `pg_restore --list` sanity check, upload to a **private** R2 bucket, and pruning to the newest 12 weekly and 12 monthly copies (a dump made in the first week of a month is also kept under `monthly/`).
 
 Secrets it needs, set on the `Production` environment (Settings → Environments → Production → Add environment secret), not as plain repository secrets:
 
 | Secret | Value |
 |---|---|
-| `BACKUP_DATABASE_URL` | Supabase **session** pooler URL (port 5432, `sslmode=verify-full`). Never the 6543 transaction pooler — `pg_dump` needs a session. |
+| `BACKUP_DATABASE_URL` | The **session** URL (port 5432, `sslmode=verify-full`). Never the 6543 transaction pooler: `pg_dump` needs a session. |
 | `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | An R2 API token scoped to the backup bucket |
 | `R2_BACKUP_BUCKET` | A private bucket, separate from the public images bucket |
 
 Run it by hand with **Run workflow** (tick *dry run* to only dump and verify), or locally:
 
 ```bash
-BACKUP_DATABASE_URL="$SUPABASE_DATABASE_URL" DRY_RUN=1 bash scraper/db-backup.sh
+BACKUP_DATABASE_URL="$SESSION_DATABASE_URL" DRY_RUN=1 bash scraper/db-backup.sh
 ```
 
-Restore with a PostgreSQL 17+ client. The dump already carries `--no-owner --no-privileges`; drop `pg_stat_statements` from the list because Supabase preinstalls it, and run the restore in the background because the pooler is slow (~15 min per 10 MB):
+Restore with a PostgreSQL 17+ client. The dump already carries `--no-owner --no-privileges`; drop the extensions from the list because the server already has them:
 
 ```bash
-pg_restore --list lens-db-YYYY-MM-DD.dump | grep -v pg_stat_statements > restore.list
-pg_restore -d "$SUPABASE_DATABASE_URL" --clean --if-exists --use-list restore.list lens-db-YYYY-MM-DD.dump
+pg_restore --list lens-db-YYYY-MM-DD.dump | grep -vE 'pg_stat_statements|pg_trgm' > restore.list
+pg_restore -d "$SESSION_DATABASE_URL" --clean --if-exists --use-list restore.list lens-db-YYYY-MM-DD.dump
 ```
 
 ## Notes

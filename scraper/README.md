@@ -47,9 +47,9 @@ Extracts structured data (specs, descriptions, images, system info) from the dow
 python import_to_db.py --input data.json
 ```
 
-Imports the parsed data into the Supabase PostgreSQL database. Requires `DATABASE_URL` environment variable.
+Imports the parsed data into the PostgreSQL database. Requires `DATABASE_URL` environment variable.
 
-The Python scripts hand `DATABASE_URL` straight to psycopg2. Supabase signs its pooler certificates with its own root CA, so either use `sslmode=require` in that URL or add `sslrootcert=<path to frontend/src/db/supabase-ca.ts's PEM>` alongside `sslmode=verify-full`.
+The Python scripts hand `DATABASE_URL` straight to psycopg2. The database presents a certificate signed by a private root CA, so either use `sslmode=require` in that URL or add `sslrootcert=<path to infra/db/certs/ca.crt>` alongside `sslmode=verify-full`.
 
 ## Output Format
 

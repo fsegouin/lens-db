@@ -1,7 +1,7 @@
 /**
  * Neon-compatible tagged-template `sql` on top of node-postgres so the one-off
- * maintenance scripts in this directory keep their shape after the move to
- * Supabase:
+ * maintenance scripts in this directory keep their shape after the move off
+ * Neon:
  *
  *   const sql = createSql();                              // reads DATABASE_URL
  *   const rows = await sql`SELECT ... WHERE id = ${id}`;  // parameterised
@@ -10,23 +10,22 @@
  *   sql`... ${sql`fragment`} ...`                          // nested fragments splice in
  *
  * Every form resolves to the row array, like the Neon driver did.
- * Mirrors src/db/pool.ts: TLS pinned to the Supabase root CA, URL TLS params ignored.
+ * Mirrors src/db/pool.ts: TLS pinned to the root CAs in db-ca.ts, URL TLS params ignored.
  */
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import pg from "pg";
 
-// The CA lives in src/db/supabase-ca.ts as a template literal so the app can
-// bundle it; pull the PEM block out of that file rather than duplicating it.
+// The CA bundle lives in src/db/db-ca.ts as template literals so the app can
+// bundle it; pull every PEM block out of that file rather than duplicating them.
 const caSource = readFileSync(
-  fileURLToPath(new URL("../../src/db/supabase-ca.ts", import.meta.url)),
+  fileURLToPath(new URL("../../src/db/db-ca.ts", import.meta.url)),
   "utf8",
 );
-const caMatch = caSource.match(/-----BEGIN CERTIFICATE-----[\s\S]*?-----END CERTIFICATE-----/);
-if (!caMatch) {
-  throw new Error("Could not find the Supabase root CA PEM block in src/db/supabase-ca.ts");
+const DB_ROOT_CAS = [...caSource.matchAll(/-----BEGIN CERTIFICATE-----[\s\S]*?-----END CERTIFICATE-----/g)].map((m) => m[0]);
+if (DB_ROOT_CAS.length === 0) {
+  throw new Error("Could not find a root CA PEM block in src/db/db-ca.ts");
 }
-const SUPABASE_ROOT_CA = caMatch[0];
 
 const FRAGMENT = Symbol("sql-fragment");
 const TLS_URL_PARAMS = ["sslmode", "ssl", "sslcert", "sslkey", "sslrootcert", "sslnegotiation", "uselibpqcompat"];
@@ -52,7 +51,7 @@ export function createPool(databaseUrl = process.env.DATABASE_URL, { max = 2 } =
   for (const param of TLS_URL_PARAMS) url.searchParams.delete(param);
   const pool = new pg.Pool({
     connectionString: url.toString(),
-    ssl: { ca: SUPABASE_ROOT_CA, rejectUnauthorized: true },
+    ssl: { ca: DB_ROOT_CAS, rejectUnauthorized: true },
     max,
     connectionTimeoutMillis: 10_000,
     // One-off scripts rarely call sql.end(); let the process exit once the

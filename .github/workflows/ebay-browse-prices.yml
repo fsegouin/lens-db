@@ -116,6 +116,8 @@ jobs:
         env:
           API_URL: ${{ secrets.API_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          # Chrome's own stderr in the log, so a crash says why it crashed.
+          DEBUG: pw:browser
         run: node scraper/ebay-resolve-action.mjs
 
       - name: Asking-price snapshots

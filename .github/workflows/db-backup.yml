@@ -1,5 +1,5 @@
 name: Weekly DB Backup
-# Supabase Free has no automated backups. Dump the database once a week to a
+# Offsite copy of the self-hosted database. Dump it once a week to a
 # private R2 bucket (scraper/db-backup.sh: pg_dump custom format, verified
 # with pg_restore --list, 12 weekly + 12 monthly copies kept).
 on:
@@ -20,7 +20,7 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
-      - name: Install PostgreSQL 17 client (matches the Supabase server)
+      - name: Install PostgreSQL 17 client (matches the server)
         run: |
           sudo install -d /usr/share/postgresql-common/pgdg
           sudo curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \

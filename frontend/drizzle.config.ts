@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { defineConfig } from "drizzle-kit";
-import { SUPABASE_SSL } from "./src/db/supabase-ca";
+import { DB_SSL } from "./src/db/db-ca";
 
 const DEFAULT_POSTGRES_PORT = 5432;
 
@@ -31,8 +31,8 @@ const cwd = process.cwd();
 loadEnvFile(resolve(cwd, ".env"));
 loadEnvFile(resolve(cwd, ".env.local"));
 
-// drizzle-kit opens its own pg connection and cannot verify Supabase's
-// self-signed chain from a bare URL, so split the URL into fields and pin the CA.
+// drizzle-kit opens its own pg connection and cannot verify a private CA
+// chain from a bare URL, so split the URL into fields and pin the CA bundle.
 function dbCredentials(databaseUrl: string | undefined) {
   if (!databaseUrl) {
     throw new Error("DATABASE_URL environment variable is not set");
@@ -44,7 +44,7 @@ function dbCredentials(databaseUrl: string | undefined) {
     user: decodeURIComponent(url.username),
     password: decodeURIComponent(url.password),
     database: url.pathname.replace(/^\//, ""),
-    ssl: SUPABASE_SSL,
+    ssl: DB_SSL,
   };
 }
 

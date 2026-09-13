@@ -45,3 +45,8 @@ scraper/lens-duplicate-tier*.jsonl
 scraper/lens-duplicate-refine.log
 scraper/kenrockwell-older-*
 scraper/kenrockwell-camera-drafts-*
+
+# Database container: local secrets, certs and dumps
+infra/db/.env
+infra/db/certs/
+infra/db/backups/

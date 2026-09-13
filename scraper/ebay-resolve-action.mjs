@@ -15,19 +15,21 @@
  * its verdict, so a page that keeps failing cannot jam the head of it.
  *
  * Stops when the page budget is spent, the queue is empty, the route reports
- * the Browse allowance at its reserve, or most of a batch was blocked. Exits
- * non-zero when more than half of all page loads were blocked, so being shut
- * out does not look like a quiet day.
+ * the Browse allowance at its reserve, most of a batch was blocked, or Chrome
+ * itself has gone. Exits non-zero when more than half of all page loads were
+ * blocked, so being shut out does not look like a quiet day.
  *
- * Pages are read by several independent browser sessions at once, so a slow
- * listing delays only its own reader.
+ * Pages are read by several independent browser sessions at once
+ * (lib/ebay-reader.mjs), so a slow listing delays only its own reader. A
+ * session whose page crashes or closes is rebuilt for the next listing and
+ * the one it was on is reported as null.
  *
  * Env: API_URL, CRON_SECRET, RESOLVE_BUDGET (pages, default 800),
  * RESOLVE_BATCH (default 50), RESOLVE_CONCURRENCY (readers, default 4).
  */
 
 import { chromium } from "playwright-core";
-import { readListingPage } from "../frontend/scripts/lib/ebay-listing-page.mjs";
+import { createReader } from "./lib/ebay-reader.mjs";
 
 const { API_URL, CRON_SECRET } = process.env;
 const BUDGET = Number(process.env.RESOLVE_BUDGET || 800);
@@ -52,52 +54,13 @@ async function api(path, init = {}) {
 }
 
 const browser = await chromium.launch({ channel: "chrome", headless: true });
-
-/**
- * One independent reader: its own context, so its own cookie jar and its own
- * eBay session. Sharing a single tab meant every page load waited for the one
- * before it, and at ~3s a page a budget of 800 held the runner for most of an
- * hour. Separate contexts rather than separate tabs on one, so a session eBay
- * decides to block takes only its own reader down with it.
- */
-async function createReader() {
-  const context = await browser.newContext({
-    userAgent:
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-    viewport: { width: 1280, height: 800 },
-    locale: "en-US",
-  });
-  const page = await context.newPage();
-
-  async function load(url) {
-    const res = await page
-      .goto(url, { waitUntil: "domcontentloaded", timeout: 45_000 })
-      .catch(() => null);
-    await page.waitForTimeout(1_500);
-    return {
-      status: res?.status() ?? null,
-      title: await page.title().catch(() => ""),
-      text: await page.innerText("body").catch(() => ""),
-    };
-  }
-
-  // eBay answers the first request of a session with no cookies with a 403,
-  // whichever page it is. One visit to the home page gets the session going.
-  async function warm() {
-    await load("https://www.ebay.com/");
-  }
-
-  async function readPage(itemId) {
-    let verdict = "blocked";
-    for (let attempt = 0; attempt < 2 && verdict === "blocked"; attempt++) {
-      if (attempt > 0) await warm();
-      verdict = readListingPage(await load(`https://www.ebay.com/itm/${itemId}`));
-    }
-    return verdict;
-  }
-
-  return { warm, readPage };
-}
+// Set when Chrome itself goes away; readers then stop rebuilding sessions.
+let browserGone = false;
+let closingBrowser = false;
+browser.on("disconnected", () => {
+  browserGone = true;
+  if (!closingBrowser) console.error("browser disconnected: Chrome exited or crashed");
+});
 
 /**
  * Read a batch of listings across every reader at once, keeping the results
@@ -132,7 +95,9 @@ try {
   // fails to open or eBay refuses the warm-up. Launched above, these would
   // leave a Chromium running for the life of the job.
   const readers = await Promise.all(
-    Array.from({ length: CONCURRENCY }, () => createReader()),
+    Array.from({ length: CONCURRENCY }, (_, i) =>
+      createReader(browser, `reader ${i + 1}`, { browserGone: () => browserGone }),
+    ),
   );
   await Promise.all(readers.map((reader) => reader.warm()));
 
@@ -179,6 +144,7 @@ try {
     }
   }
 } finally {
+  closingBrowser = true;
   await browser.close();
 }
 

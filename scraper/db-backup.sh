@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Weekly Postgres backup → Cloudflare R2.
 #
-# Dumps the Supabase database with pg_dump (custom format, compressed),
+# Dumps the production database with pg_dump (custom format, compressed),
 # verifies the archive is readable, uploads it to a PRIVATE R2 bucket and
 # prunes old copies. Run by .github/workflows/db-backup.yml; runnable locally
 # with the same variables.
@@ -21,7 +21,7 @@
 #   monthly/lens-db-YYYY-MM-DD.dump   the first run of each month (day ≤ 7)
 #
 # Restore (PG 17+ client, --no-owner/--no-privileges are already baked in):
-#   pg_restore --list lens-db-YYYY-MM-DD.dump | grep -v pg_stat_statements > restore.list
+#   pg_restore --list lens-db-YYYY-MM-DD.dump | grep -vE 'pg_stat_statements|pg_trgm' > restore.list
 #   pg_restore -d "$SESSION_POOLER_URL" --clean --if-exists --use-list restore.list lens-db-YYYY-MM-DD.dump
 # See the "Restore gotchas" in the project memory / README: restoring through
 # the pooler is slow (~15 min per 10 MB), run it in the background.
@@ -37,17 +37,17 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 
-# Supabase's pooler chain is signed by its own root CA, pinned in the app.
-# libpq reads PGSSLROOTCERT, so the URL can keep sslmode=verify-full.
-# The PEM sits inside a template literal, so strip the TS prefix/suffix on
-# the first and last lines.
+# The server chain is signed by a private root CA, pinned in the app.
+# libpq reads PGSSLROOTCERT (a bundle is fine), so the URL can keep
+# sslmode=verify-full. The PEMs sit inside template literals, so strip the
+# TS prefix/suffix around each block.
 sed -n '/-----BEGIN CERTIFICATE-----/,/-----END CERTIFICATE-----/p' \
-  "$repo_root/frontend/src/db/supabase-ca.ts" \
+  "$repo_root/frontend/src/db/db-ca.ts" \
   | sed -e 's/.*-----BEGIN CERTIFICATE-----/-----BEGIN CERTIFICATE-----/' \
         -e 's/-----END CERTIFICATE-----.*/-----END CERTIFICATE-----/' \
-  > "$work/supabase-ca.pem"
-grep -q 'BEGIN CERTIFICATE' "$work/supabase-ca.pem" || { echo "could not extract Supabase CA" >&2; exit 1; }
-export PGSSLROOTCERT="$work/supabase-ca.pem"
+  > "$work/db-ca.pem"
+grep -q 'BEGIN CERTIFICATE' "$work/db-ca.pem" || { echo "could not extract the DB root CA" >&2; exit 1; }
+export PGSSLROOTCERT="$work/db-ca.pem"
 export PGSSLMODE=verify-full
 
 today="$(date -u +%Y-%m-%d)"
@@ -56,7 +56,7 @@ file="lens-db-${today}.dump"
 path="$work/$file"
 
 echo "pg_dump → $file"
-# The session pooler occasionally drops a long COPY mid-stream ("SSL error:
+# A pooler occasionally drops a long COPY mid-stream ("SSL error:
 # unexpected eof while reading"); a fresh attempt normally succeeds.
 attempt=1
 until pg_dump --format=custom --compress=6 --no-owner --no-privileges \
