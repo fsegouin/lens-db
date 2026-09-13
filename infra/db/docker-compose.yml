@@ -1,0 +1,132 @@
+# The Lens DB production database.
+#
+#   postgres   Postgres 17.6, TLS only, port 5432 (sessions: migrations, dumps, admin)
+#   pgbouncer  transaction pooler, port 6543 (the app's DATABASE_URL)
+#   backup     nightly pg_dump into ./backups, pruned after BACKUP_KEEP_DAYS
+#   ddns       optional (profile "ddns"): keeps db.thelensdb.com on the current public IP
+#
+# First run: cp .env.example .env, fill it in, put server.crt + server.key in
+# ./certs (see gen-certs.sh), then `docker compose up -d --build`.
+
+name: lens-db
+
+services:
+  postgres:
+    build: .
+    image: lens-db-postgres:17.6
+    container_name: lens-db-postgres
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    # Only what the entrypoint needs to fix cert ownership and drop to the postgres user.
+    cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, SETGID, SETUID]
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      LENSDB_PASSWORD: ${LENSDB_PASSWORD:?set LENSDB_PASSWORD in .env}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./certs:/certs-src:ro
+    tmpfs:
+      - /run/certs
+    shm_size: 256m
+    stop_grace_period: 60s
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+    logging:
+      driver: json-file
+      options: { max-size: "20m", max-file: "5" }
+
+  pgbouncer:
+    build: ./pgbouncer
+    image: lens-db-pgbouncer:1
+    container_name: lens-db-pgbouncer
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, SETGID, SETUID]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      LENSDB_PASSWORD: ${LENSDB_PASSWORD:?set LENSDB_PASSWORD in .env}
+      PGBOUNCER_MAX_CLIENT_CONN: ${PGBOUNCER_MAX_CLIENT_CONN:-500}
+      PGBOUNCER_DEFAULT_POOL_SIZE: ${PGBOUNCER_DEFAULT_POOL_SIZE:-20}
+    ports:
+      - "${POOLER_PORT:-6543}:6543"
+    volumes:
+      - ./certs:/certs-src:ro
+    tmpfs:
+      - /run/pgbouncer
+    healthcheck:
+      test: ["CMD-SHELL", "PGPASSWORD=$$LENSDB_PASSWORD psql -h 127.0.0.1 -p 6543 -U lensdb -d lensdb -tAc 'select 1' | grep -q 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 4
+      start_period: 10s
+    logging:
+      driver: json-file
+      options: { max-size: "20m", max-file: "5" }
+
+  backup:
+    image: postgres:17.6
+    container_name: lens-db-backup
+    init: true
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, SETGID, SETUID]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGUSER: lensdb
+      PGPASSWORD: ${LENSDB_PASSWORD:?set LENSDB_PASSWORD in .env}
+      PGDATABASE: lensdb
+      PGSSLMODE: require
+      BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-14}
+      BACKUP_HOUR_UTC: ${BACKUP_HOUR_UTC:-03}
+      BACKUP_ON_START: ${BACKUP_ON_START:-0}
+    volumes:
+      - ./backups:/backups
+      - ./backup.sh:/backup.sh:ro
+    entrypoint: ["bash", "/backup.sh"]
+    logging:
+      driver: json-file
+      options: { max-size: "5m", max-file: "3" }
+
+  ddns:
+    image: alpine:3.20
+    container_name: lens-db-ddns
+    profiles: ["ddns"]
+    init: true
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, SETGID, SETUID]
+    environment:
+      VERCEL_TOKEN: ${VERCEL_TOKEN:-}
+      VERCEL_TEAM_ID: ${VERCEL_TEAM_ID:-}
+      VERCEL_DNS_RECORD_ID: ${VERCEL_DNS_RECORD_ID:-}
+      DDNS_HOSTNAME: ${DDNS_HOSTNAME:-db.thelensdb.com}
+      DDNS_INTERVAL: ${DDNS_INTERVAL:-300}
+    volumes:
+      - ./ddns.sh:/ddns.sh:ro
+    command: sh -c "apk add --no-cache curl bind-tools >/dev/null && exec sh /ddns.sh"
+    logging:
+      driver: json-file
+      options: { max-size: "5m", max-file: "3" }
+
+volumes:
+  pgdata:

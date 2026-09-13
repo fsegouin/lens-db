@@ -1,5 +1,5 @@
 import { Pool } from "pg";
-import { SUPABASE_SSL } from "./supabase-ca";
+import { DB_SSL } from "./db-ca";
 
 const MAX_CLIENTS_PER_INSTANCE = 4;
 const IDLE_TIMEOUT_MS = 10_000;
@@ -12,16 +12,16 @@ const TLS_URL_PARAMS = ["sslmode", "ssl", "sslcert", "sslkey", "sslrootcert", "s
 /**
  * Builds the pg Pool used by the app and the MCP server.
  *
- * Serverless: keep the per-instance pool tiny and let the Supabase pooler
- * (transaction mode, port 6543) do the real multiplexing. TLS is always on
- * with the chain verified against Supabase's pinned root CA.
+ * Serverless: keep the per-instance pool tiny and let the transaction pooler
+ * (pgbouncer, port 6543) do the real multiplexing. TLS is always on with the
+ * chain verified against the pinned root CAs in db-ca.ts.
  */
 export function createPool(databaseUrl: string) {
   const url = new URL(databaseUrl);
   for (const param of TLS_URL_PARAMS) url.searchParams.delete(param);
   const pool = new Pool({
     connectionString: url.toString(),
-    ssl: SUPABASE_SSL,
+    ssl: DB_SSL,
     max: MAX_CLIENTS_PER_INSTANCE,
     idleTimeoutMillis: IDLE_TIMEOUT_MS,
     connectionTimeoutMillis: CONNECTION_TIMEOUT_MS,

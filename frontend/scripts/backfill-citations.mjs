@@ -25,8 +25,8 @@ const env = Object.fromEntries(
   readFileSync(`${root}.env.local`, "utf8").split("\n")
     .filter((l) => l.includes("=") && !l.trim().startsWith("#"))
     .map((l) => { const i = l.indexOf("="); return [l.slice(0, i).trim(), l.slice(i + 1).trim().replace(/^["']|["']$/g, "")]; }));
-const ca = readFileSync(`${root}src/db/supabase-ca.ts`, "utf8")
-  .match(/-----BEGIN CERTIFICATE-----[\s\S]*?-----END CERTIFICATE-----/)[0];
+const ca = [...readFileSync(`${root}src/db/db-ca.ts`, "utf8")
+  .matchAll(/-----BEGIN CERTIFICATE-----[\s\S]*?-----END CERTIFICATE-----/g)].map((m) => m[0]);
 const u = new URL(env.DATABASE_URL);
 const pool = new pg.Pool({
   host: u.hostname, port: +u.port || 6543, user: decodeURIComponent(u.username),
