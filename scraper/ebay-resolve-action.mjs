@@ -78,7 +78,8 @@ async function launch(count) {
   browser = await chromium.launch({
     channel: "chrome",
     headless: true,
-    args: ["--enable-logging=stderr", "--v=0"],
+    // No audio output at all: see the note on media in lib/ebay-reader.mjs.
+    args: ["--enable-logging=stderr", "--v=0", "--disable-audio-output"],
   });
   browserGone = false;
   closingBrowser = false;

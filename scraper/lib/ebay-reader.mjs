@@ -32,21 +32,21 @@ export async function createReader(browser, name, { browserGone = () => false, o
       viewport: { width: 1280, height: 800 },
       locale: "en-US",
     });
-    // eBay's page scripts open a WebRTC peer connection and enumerate media
-    // devices on every listing page, for fingerprinting. Each of those is
-    // work for the browser process (device ranking, an audio service with no
-    // sound card to fall back on), and with several readers doing it at once
-    // on a GitHub runner the browser process tripped an internal check and
-    // died with SIGTRAP about 20 s into a batch (2026-09-13, three runs in
-    // five). One reader doing the same serially never did. The banners this
-    // reader looks for need neither, so the page gets a browser without them.
+    // Listing pages autoplay their video, muted, and a muted stream still
+    // opens an audio output. On a GitHub runner there is no sound device, so
+    // Chrome's audio service falls back to ALSA and reports a broken pipe,
+    // and with several readers doing that at once the browser process died
+    // with SIGTRAP seconds later, about 20 s into a batch (2026-09-13, four
+    // runs in six; one reader doing it serially never did). The banners this
+    // reader looks for need no media, so nothing in the page gets to play.
     await context.addInitScript(() => {
-      for (const name of ["RTCPeerConnection", "webkitRTCPeerConnection", "RTCDataChannel"]) {
-        Object.defineProperty(window, name, { value: undefined, configurable: true });
-      }
-      if (navigator.mediaDevices) {
-        Object.defineProperty(navigator, "mediaDevices", { value: undefined, configurable: true });
-      }
+      const noPlay = () => Promise.reject(new DOMException("playback is off", "NotAllowedError"));
+      Object.defineProperty(HTMLMediaElement.prototype, "play", { value: noPlay, configurable: true });
+      Object.defineProperty(HTMLMediaElement.prototype, "autoplay", {
+        get: () => false,
+        set: () => {},
+        configurable: true,
+      });
     });
     page = await context.newPage();
     crashed = false;
