@@ -24,6 +24,15 @@
  * session whose page crashes or closes is rebuilt for the next listing and
  * the one it was on is reported as null.
  *
+ * When Chrome itself dies the pass relaunches it with half as many readers
+ * and carries on, down to one. The first two runs with four readers lost the
+ * whole browser process about 25 seconds into the first batch (2026-09-13),
+ * on a runner and never on a Mac, while one reader had read 800 pages the
+ * day before. Halving finds the concurrency the runner tolerates without a
+ * diagnosis, and the log says which it settled on. Listings a dying browser
+ * left unread are not posted, so the route hands them out again next time.
+ * After MAX_RELAUNCHES deaths the pass stops rather than loop.
+ *
  * Env: API_URL, CRON_SECRET, RESOLVE_BUDGET (pages, default 800),
  * RESOLVE_BATCH (default 50), RESOLVE_CONCURRENCY (readers, default 4).
  */
@@ -53,34 +62,95 @@ async function api(path, init = {}) {
   return JSON.parse(body);
 }
 
-const browser = await chromium.launch({ channel: "chrome", headless: true });
+const MAX_RELAUNCHES = 3;
+
+let browser;
+let readers = [];
 // Set when Chrome itself goes away; readers then stop rebuilding sessions.
 let browserGone = false;
 let closingBrowser = false;
-browser.on("disconnected", () => {
-  browserGone = true;
-  if (!closingBrowser) console.error("browser disconnected: Chrome exited or crashed");
-});
+
+/** Launch Chrome and open `count` warmed readers on it. */
+async function launch(count) {
+  browser = await chromium.launch({ channel: "chrome", headless: true });
+  browserGone = false;
+  closingBrowser = false;
+  const thisBrowser = browser;
+  browser.on("disconnected", () => {
+    if (browser !== thisBrowser) return;
+    browserGone = true;
+    if (!closingBrowser) console.error("browser disconnected: Chrome exited or crashed");
+  });
+  readers = await Promise.all(
+    Array.from({ length: count }, (_, i) =>
+      createReader(browser, `reader ${i + 1}`, { browserGone: isBrowserGone }),
+    ),
+  );
+  await Promise.all(readers.map((reader) => reader.warm()));
+}
+
+function isBrowserGone() {
+  return browserGone || !browser.isConnected();
+}
+
+/**
+ * Whether Chrome is gone, giving Playwright a moment to notice. A dying
+ * browser fails the calls made on it before its disconnect is reported, so
+ * a reader that could not rebuild its session may be reporting a death the
+ * flag above has not caught up with yet.
+ */
+async function browserGoneSoon(ms = 3_000) {
+  const until = Date.now() + ms;
+  while (!isBrowserGone() && Date.now() < until) {
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  return isBrowserGone();
+}
+
+/**
+ * launch(), except that Chrome dying during the warm-up is reported and left
+ * for the loop below to relaunch, the same as dying mid-batch.
+ */
+async function launchOrNote(count) {
+  try {
+    await launch(count);
+  } catch (err) {
+    if (!(await browserGoneSoon())) throw err;
+    console.error(`  Chrome died during warm-up (${err.message.split("\n")[0]})`);
+  }
+}
+
+async function closeBrowser() {
+  closingBrowser = true;
+  await browser?.close().catch(() => {});
+}
 
 /**
  * Read a batch of listings across every reader at once, keeping the results
  * in the order the queue gave them. Readers pull from a shared cursor, so a
- * listing whose page is slow to settle delays only its own reader.
+ * listing whose page is slow to settle delays only its own reader. When
+ * Chrome dies partway, each reader stops at the listing it was on and the
+ * batch comes back short: only listings actually read are in it.
  */
-async function readBatch(readers, listings) {
+async function readBatch(listings) {
   const results = new Array(listings.length);
   let next = 0;
   await Promise.all(
     readers.map(async (reader) => {
       for (let i = next++; i < listings.length; i = next++) {
-        results[i] = {
-          id: listings[i].id,
-          page: await reader.readPage(listings[i].legacyItemId),
-        };
+        try {
+          results[i] = {
+            id: listings[i].id,
+            page: await reader.readPage(listings[i].legacyItemId),
+          };
+        } catch (err) {
+          if (await browserGoneSoon()) return;
+          throw err;
+        }
       }
     }),
   );
-  return results;
+  return results.filter(Boolean);
 }
 
 const totals = {
@@ -88,20 +158,30 @@ const totals = {
   active: 0, blocked: 0, deferred: 0, failed: 0, browseCalls: 0,
 };
 let spent = 0;
+let concurrency = CONCURRENCY;
+let relaunches = 0;
 
-console.log(`resolve (page budget ${BUDGET}, ${CONCURRENCY} readers)`);
+console.log(`resolve (page budget ${BUDGET}, ${concurrency} readers)`);
 try {
   // Inside the try so the finally below closes the browser when a context
-  // fails to open or eBay refuses the warm-up. Launched above, these would
-  // leave a Chromium running for the life of the job.
-  const readers = await Promise.all(
-    Array.from({ length: CONCURRENCY }, (_, i) =>
-      createReader(browser, `reader ${i + 1}`, { browserGone: () => browserGone }),
-    ),
-  );
-  await Promise.all(readers.map((reader) => reader.warm()));
+  // fails to open or eBay refuses the warm-up, which would otherwise leave a
+  // Chrome running for the life of the job.
+  await launchOrNote(concurrency);
 
   while (spent < BUDGET) {
+    if (isBrowserGone()) {
+      if (relaunches >= MAX_RELAUNCHES) {
+        console.log(`  Chrome died ${relaunches + 1} times; stopping`);
+        break;
+      }
+      relaunches++;
+      concurrency = Math.max(1, Math.floor(concurrency / 2));
+      console.log(`  Chrome died; relaunching with ${concurrency} reader(s) (relaunch ${relaunches} of ${MAX_RELAUNCHES})`);
+      await closeBrowser();
+      await launchOrNote(concurrency);
+      continue;
+    }
+
     const queue = await api(`/api/cron/ebay-resolve?limit=${Math.min(BATCH, BUDGET - spent)}`);
     if (queue.quotaExhausted) {
       console.log(`  daily Browse allowance is down to its reserve (${queue.quotaRemaining}); stopping`);
@@ -112,7 +192,8 @@ try {
       break;
     }
 
-    const results = await readBatch(readers, queue.listings);
+    const results = await readBatch(queue.listings);
+    if (results.length === 0) continue;
     spent += results.length;
     const batchBlocked = results.filter((r) => r.page === "blocked").length;
 
@@ -144,11 +225,13 @@ try {
     }
   }
 } finally {
-  closingBrowser = true;
-  await browser.close();
+  await closeBrowser();
 }
 
-console.log(`\ntotals ${JSON.stringify(totals)} over ${spent} pages`);
+console.log(
+  `\ntotals ${JSON.stringify(totals)} over ${spent} pages` +
+    (relaunches ? `, Chrome relaunched ${relaunches} time(s), ended with ${concurrency} reader(s)` : ""),
+);
 if (spent > 0 && totals.blocked * 2 > spent) {
   console.error("More than half the listing pages were blocked: eBay is refusing this runner");
   process.exit(1);
