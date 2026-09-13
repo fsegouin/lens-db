@@ -72,7 +72,14 @@ let closingBrowser = false;
 
 /** Launch Chrome and open `count` warmed readers on it. */
 async function launch(count) {
-  browser = await chromium.launch({ channel: "chrome", headless: true });
+  // Chrome logs a failed assertion to a file in its profile directory unless
+  // told to use stderr, and the profile is gone with the process. The
+  // workflow sets DEBUG=pw:browser so Playwright relays stderr into the log.
+  browser = await chromium.launch({
+    channel: "chrome",
+    headless: true,
+    args: ["--enable-logging=stderr", "--v=0"],
+  });
   browserGone = false;
   closingBrowser = false;
   const thisBrowser = browser;
