@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { normalizeBodyType } from "@/lib/body-type";
+import { normalizeSensorSize } from "@/lib/sensor-size";
 import { isCronAuthorized } from "@/lib/api-utils";
 import { db } from "@/db";
 import {
@@ -186,6 +188,21 @@ function isNoiseIssue(
     // reformatted with an appended megapixel count. A suggestion that merely
     // restates the raw table is the extraction working, not a defect.
     if (field === "sensorSize" && /\d\s*[×x]\s*\d/.test(suggested)) return true;
+    // Both columns hold a vocabulary of the site's own, not DPReview's:
+    // "Mid-size SLR" is stored as "DSLR" and '1/2.3"' as "1/2.3″". A
+    // suggestion that lands on the stored label once normalised is the
+    // extraction working, not a defect.
+    if (field === "sensorSize" && normalizeSensorSize(suggested, current.megapixels) === current.sensorSize) {
+      return true;
+    }
+    if (field === "bodyType" && normalizeBodyType(suggested, true) === current.bodyType) {
+      return true;
+    }
+    // DPReview's "Rangefinder-style mirrorless" is a digital Leica M stored as
+    // Rangefinder on purpose, not a disagreement.
+    if (field === "bodyType" && current.bodyType === "Rangefinder" && /rangefinder-style/i.test(suggested)) {
+      return true;
+    }
     if (field === "resolution" && typeof current.resolution === "string") {
       const digits = (v: string) => v.replace(/[^\d]/g, "");
       if (digits(suggested) && current.resolution.replace(/[^\d]/g, "").startsWith(digits(suggested))) {

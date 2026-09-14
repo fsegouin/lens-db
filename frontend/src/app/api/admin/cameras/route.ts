@@ -4,6 +4,7 @@ import { cameras, systems } from "@/db/schema";
 import { requireAdminAPI } from "@/lib/admin-auth";
 import { revalidateEntity } from "@/lib/revalidate-entity";
 import { normalizeSensorSize } from "@/lib/sensor-size";
+import { normalizeBodyType } from "@/lib/body-type";
 import { and, or, sql, eq, isNull } from "drizzle-orm";
 import { buildNameSearch } from "@/lib/search";
 import { buildOrderBy } from "@/lib/admin-sort";
@@ -120,7 +121,7 @@ export async function POST(request: NextRequest) {
       yearIntroduced: yearIntroduced != null ? Number(yearIntroduced) : null,
       yearDiscontinued: yearDiscontinued != null ? Number(yearDiscontinued) : null,
       productionStatus: productionStatus || null,
-      bodyType: bodyType || null,
+      bodyType: normalizeBodyType(bodyType, megapixels),
       weightG: weightG != null ? Number(weightG) : null,
       specs: specs || {},
       images: images || [],

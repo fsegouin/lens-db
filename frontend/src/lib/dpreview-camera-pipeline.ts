@@ -4,6 +4,7 @@ import { cameras, pendingEdits, systems } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { createRevision } from "@/lib/revisions";
 import { findSystemId } from "@/lib/dpreview-import";
+import { bodyTypeForMount } from "@/lib/body-type";
 import { getBotUserId, uploadCandidateImages } from "@/lib/dpreview-pipeline";
 import {
   cameraMountString,
@@ -52,6 +53,11 @@ export async function createPendingCamera(
   const allSystems = await db.select({ id: systems.id, name: systems.name }).from(systems);
   // Fixed-lens compacts publish no mount, and correctly get a null system.
   changes.systemId = findSystemId(cameraMountString(candidate), allSystems);
+  changes.bodyType = bodyTypeForMount(
+    changes.bodyType as string | null,
+    allSystems.find((s) => s.id === changes.systemId)?.name,
+    candidate.name,
+  );
 
   changes.slug = await uniqueCameraSlug(String(changes.slug));
   changes.images = await uploadCandidateImages(candidate, "cameras");
@@ -105,6 +111,11 @@ export async function enrichCameraFromCandidate(
   const mapped = mapDpreviewCameraSpecs(candidate);
   const allSystems = await db.select({ id: systems.id, name: systems.name }).from(systems);
   mapped.systemId = findSystemId(cameraMountString(candidate), allSystems);
+  mapped.bodyType = bodyTypeForMount(
+    mapped.bodyType as string | null,
+    allSystems.find((s) => s.id === (camera.systemId ?? mapped.systemId))?.name,
+    camera.name,
+  );
 
   const updates: Record<string, unknown> = {};
 

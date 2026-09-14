@@ -59,6 +59,16 @@ function bodyStyle(value: string | null): string | null {
   return /focal-plane|leaf shutter/i.test(value) ? null : value;
 }
 
+/**
+ * The lens-db.com import put a shutter mechanism ("Focal-plane", "In-lens
+ * leaf shutter") under a spec named "Type", and camera-wiki put a sentence
+ * about the whole camera there. Only the former is a shutter fact.
+ */
+function shutterFromType(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  return /shutter|focal-plane|leaf/i.test(value) && value.length <= 40 ? value : undefined;
+}
+
 /** Cameras have no brand column; the name's first token is the best proxy. */
 function cameraBrand(name: string, manufacturer: string | null): string | null {
   if (manufacturer && name.toLowerCase().startsWith(manufacturer.toLowerCase())) {
@@ -177,7 +187,7 @@ export default async function CameraDetailPage({
   ];
 
   const imagingRows: [string, string | number | null | undefined][] = [
-    ["Shutter type", camera.shutterType || specs["Type"]],
+    ["Shutter type", camera.shutterType || shutterFromType(specs["Type"])],
     ["Shutter control", specs["Model"]],
     ["Film Type", specs["Film type"]],
     ["Imaging Sensor", camera.sensorType || specs["Imaging sensor"] || specs["Imaging plane"]],

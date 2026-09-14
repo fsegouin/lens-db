@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { cameras, systems } from "@/db/schema";
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, isNull } from "drizzle-orm";
 import { unstable_cache } from "next/cache";
 import CameraList from "@/components/CameraList";
 import { listCameras, type CameraListItem } from "@/lib/camera-list";
@@ -14,8 +14,9 @@ const getCachedDropdownData = unstable_cache(
         .innerJoin(cameras, eq(cameras.systemId, systems.id))
         .orderBy(asc(systems.name)),
       db
-        .select({ specs: cameras.specs, sensorType: cameras.sensorType, sensorSize: cameras.sensorSize })
-        .from(cameras),
+        .select({ specs: cameras.specs, sensorType: cameras.sensorType, sensorSize: cameras.sensorSize, bodyType: cameras.bodyType })
+        .from(cameras)
+        .where(isNull(cameras.mergedIntoId)),
     ]);
 
     const typeSet = new Set<string>();
@@ -27,7 +28,7 @@ const getCachedDropdownData = unstable_cache(
 
     for (const r of allCameras) {
       const s = (r.specs || {}) as Record<string, string>;
-      if (s["Type"]) typeSet.add(s["Type"]);
+      if (r.bodyType) typeSet.add(r.bodyType);
       if (s["Model"]) {
         if (s["Model"].startsWith("Electronically controlled"))
           modelSet.add("Electronically controlled");
