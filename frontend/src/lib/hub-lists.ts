@@ -31,6 +31,7 @@ const lensRowColumns = {
   focalLengthMin: lenses.focalLengthMin,
   focalLengthMax: lenses.focalLengthMax,
   apertureMin: lenses.apertureMin,
+  apertureMax: lenses.apertureMax,
   yearIntroduced: lenses.yearIntroduced,
   isZoom: lenses.isZoom,
   isPrime: lenses.isPrime,
@@ -45,6 +46,7 @@ export type HubLensRow = {
   focalLengthMin: number | null;
   focalLengthMax: number | null;
   apertureMin: number | null;
+  apertureMax: number | null;
   yearIntroduced: number | null;
   isZoom: boolean | null;
   isPrime: boolean | null;
@@ -79,6 +81,8 @@ const withSystem = (rows: (HubLensRow & { systemName: string | null })[]): HubLe
 /**
  * Every lens sold in a mount (lens_systems), not only those whose primary
  * mount it is. Live rows only: a merged-away lens keeps its membership row.
+ * No row cap: the page filters in the browser, and a cap of 500 silently cut
+ * off the six largest mounts (Canon EF has over 800).
  */
 export const getSystemLenses = unstable_cache(
   async (systemId: number): Promise<HubLensRow[]> =>
@@ -87,9 +91,8 @@ export const getSystemLenses = unstable_cache(
       .from(lensSystems)
       .innerJoin(lenses, eq(lensSystems.lensId, lenses.id))
       .where(and(eq(lensSystems.systemId, systemId), isNull(lenses.mergedIntoId)))
-      .orderBy(...familyOrder())
-      .limit(500),
-  ["system-lenses"],
+      .orderBy(...familyOrder()),
+  ["system-lenses-v2"],
   { revalidate: 604800, tags: ["lenses"] },
 );
 
