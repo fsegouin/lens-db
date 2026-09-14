@@ -85,6 +85,12 @@ export default function MountCatalogue({ systemSlug, systemName, lenses, cameras
     [lenses],
   );
   const defaultTab: MountTab = lenses.length > 0 ? "lenses" : "cameras";
+  // Tabs earn their place only where a list has filters. On a small mount
+  // with both lists short, tabs with nothing under them read as a broken
+  // feature, so the two tables are stacked instead. There `tab` names the
+  // list sorted last, which is the one the URL records.
+  const hasTabs =
+    tabs.length > 1 && (lenses.length >= FILTER_MIN_ROWS || cameras.length >= FILTER_MIN_ROWS);
 
   // The server renders the unfiltered catalogue, which keeps the page static
   // and cached. The query string is only readable in the browser, where it is
@@ -137,7 +143,6 @@ export default function MountCatalogue({ systemSlug, systemName, lenses, cameras
 
   if (tabs.length === 0) return null;
 
-  const hasTabs = tabs.length > 1;
   const counts: Record<MountTab, number> = { lenses: lenses.length, cameras: cameras.length };
 
   function selectTab(next: MountTab) {
@@ -147,7 +152,7 @@ export default function MountCatalogue({ systemSlug, systemName, lenses, cameras
   }
 
   return (
-    <section className="space-y-5">
+    <section className={hasTabs ? "space-y-5" : "space-y-8"}>
       {hasTabs && (
         <div
           role="tablist"
@@ -195,7 +200,7 @@ export default function MountCatalogue({ systemSlug, systemName, lenses, cameras
           id={`mount-panel-${t}`}
           role={hasTabs ? "tabpanel" : undefined}
           aria-labelledby={hasTabs ? `mount-tab-${t}` : undefined}
-          hidden={t !== tab}
+          hidden={hasTabs && t !== tab}
           className="space-y-4"
         >
           <h2
@@ -215,7 +220,10 @@ export default function MountCatalogue({ systemSlug, systemName, lenses, cameras
               filters={lensFilters}
               onFiltersChange={setLensFilters}
               sort={lensSort}
-              onSortChange={setLensSort}
+              onSortChange={(sort) => {
+                setLensSort(sort);
+                if (!hasTabs) setTab("lenses");
+              }}
             />
           ) : (
             <CameraPanel
@@ -226,7 +234,10 @@ export default function MountCatalogue({ systemSlug, systemName, lenses, cameras
               filters={cameraFilters}
               onFiltersChange={setCameraFilters}
               sort={cameraSort}
-              onSortChange={setCameraSort}
+              onSortChange={(sort) => {
+                setCameraSort(sort);
+                if (!hasTabs) setTab("cameras");
+              }}
             />
           )}
         </div>
