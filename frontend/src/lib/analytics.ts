@@ -15,6 +15,7 @@ export type EventName =
   | "lens_sort_change"
   | "camera_filter_apply"
   | "camera_sort_change"
+  | "mount_filter_apply"
   | "comparison_start"
   // The membership funnel. Until these existed the site could count searches
   // and filter clicks but not a single sign-up, so "why do so few visitors

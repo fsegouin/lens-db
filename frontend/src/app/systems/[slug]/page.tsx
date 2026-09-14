@@ -9,15 +9,8 @@ import { db } from "@/db";
 import { systemRedirects, systems } from "@/db/schema";
 import { getSystemCameras, getSystemLenses } from "@/lib/hub-lists";
 import ViewTracker from "@/components/ViewTracker";
+import MountCatalogue from "@/components/MountCatalogue";
 import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 
 export const revalidate = 604800;
 
@@ -146,109 +139,12 @@ export default async function SystemDetailPage({
         </p>
       )}
 
-      {systemLenses.length > 0 && (
-        <div>
-          <h2 className="mb-3 text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-            Lenses ({systemLenses.length})
-          </h2>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead scope="col">Name</TableHead>
-                  <TableHead scope="col">Brand</TableHead>
-                  <TableHead scope="col">Focal Length</TableHead>
-                  <TableHead scope="col">Aperture</TableHead>
-                  <TableHead scope="col">Type</TableHead>
-                  <TableHead scope="col">Year</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {systemLenses.map((lens) => (
-                  <TableRow key={lens.id}>
-                    <TableCell>
-                      <Link
-                        href={`/lenses/${lens.slug}`}
-                        className="font-medium text-zinc-900 hover:underline dark:text-zinc-100"
-                      >
-                        {lens.name}
-                      </Link>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">{lens.brand || "\u2014"}</TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {lens.focalLengthMin
-                        ? lens.focalLengthMin === lens.focalLengthMax
-                          ? `${lens.focalLengthMin}mm`
-                          : `${lens.focalLengthMin}-${lens.focalLengthMax}mm`
-                        : "\u2014"}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {lens.apertureMin ? `f/${lens.apertureMin}` : "\u2014"}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {lens.isZoom && <Badge variant="zoom">Zoom</Badge>}
-                        {lens.isPrime && <Badge variant="prime">Prime</Badge>}
-                        {lens.isMacro && <Badge variant="macro">Macro</Badge>}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {lens.yearIntroduced || "\u2014"}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </div>
-      )}
-
-      {systemCameras.length > 0 && (
-        <div>
-          <h2 className="mb-3 text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-            Cameras ({systemCameras.length})
-          </h2>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead scope="col">Name</TableHead>
-                  <TableHead scope="col">Sensor Type</TableHead>
-                  <TableHead scope="col">Sensor Size</TableHead>
-                  <TableHead scope="col">Megapixels</TableHead>
-                  <TableHead scope="col">Year</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {systemCameras.map((camera) => (
-                  <TableRow key={camera.id}>
-                    <TableCell>
-                      <Link
-                        href={`/cameras/${camera.slug}`}
-                        className="font-medium text-zinc-900 hover:underline dark:text-zinc-100"
-                      >
-                        {camera.name}
-                      </Link>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {camera.sensorType || "\u2014"}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {camera.sensorSize || "\u2014"}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {camera.megapixels ? `${camera.megapixels} MP` : "\u2014"}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {camera.yearIntroduced || "\u2014"}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </div>
-      )}
+      <MountCatalogue
+        systemSlug={system.slug}
+        systemName={system.name}
+        lenses={systemLenses}
+        cameras={systemCameras}
+      />
 
       <ViewTracker type="system" id={system.id} />
     </div>
