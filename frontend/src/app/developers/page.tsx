@@ -156,9 +156,9 @@ export default async function DevelopersPage() {
         anything that is wrong.
       </p>
       <p className="mt-3 leading-relaxed">
-        Used prices are not in the API. They are derived from eBay completed
-        listings, which this site may show but may not redistribute, so they
-        stay on the pages.
+        Used prices are not in the API. They are derived from online
+        marketplace listings, which this site may show but may not
+        redistribute, so they stay on the pages.
       </p>
 
       <h2 className="mt-10 text-xl font-semibold">Fair use</h2>
