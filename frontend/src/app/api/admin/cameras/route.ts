@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { cameras, systems } from "@/db/schema";
 import { requireAdminAPI } from "@/lib/admin-auth";
 import { revalidateEntity } from "@/lib/revalidate-entity";
+import { normalizeSensorSize } from "@/lib/sensor-size";
 import { and, or, sql, eq, isNull } from "drizzle-orm";
 import { buildNameSearch } from "@/lib/search";
 import { buildOrderBy } from "@/lib/admin-sort";
@@ -113,7 +114,7 @@ export async function POST(request: NextRequest) {
       description: description || null,
       alias: alias || null,
       sensorType: sensorType || null,
-      sensorSize: sensorSize || null,
+      sensorSize: normalizeSensorSize(sensorSize, megapixels),
       megapixels: megapixels != null ? Number(megapixels) : null,
       resolution: resolution || null,
       yearIntroduced: yearIntroduced != null ? Number(yearIntroduced) : null,

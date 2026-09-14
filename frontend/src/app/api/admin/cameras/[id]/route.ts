@@ -5,6 +5,7 @@ import { cameras } from "@/db/schema";
 import { requireAdminAPI, getAdminUserFromToken } from "@/lib/admin-auth";
 import { createRevision } from "@/lib/revisions";
 import { revalidateEntity, touchesLists } from "@/lib/revalidate-entity";
+import { normalizeSensorSize } from "@/lib/sensor-size";
 import { eq } from "drizzle-orm";
 
 export async function GET(
@@ -54,7 +55,7 @@ export async function PUT(
   if (description !== undefined) updates.description = description || null;
   if (alias !== undefined) updates.alias = alias || null;
   if (sensorType !== undefined) updates.sensorType = sensorType || null;
-  if (sensorSize !== undefined) updates.sensorSize = sensorSize || null;
+  if (sensorSize !== undefined) updates.sensorSize = normalizeSensorSize(sensorSize, megapixels);
   if (megapixels !== undefined) updates.megapixels = megapixels != null ? Number(megapixels) : null;
   if (resolution !== undefined) updates.resolution = resolution || null;
   if (yearIntroduced !== undefined) updates.yearIntroduced = yearIntroduced != null ? Number(yearIntroduced) : null;

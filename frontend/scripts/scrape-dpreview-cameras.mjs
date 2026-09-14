@@ -62,7 +62,7 @@ export const EXTRACT_CAMERA_JS = `
   // Sensor size normalization
   if (result.sensorSize) {
     if (result.sensorSize.toLowerCase().includes('full frame')) {
-      result.sensorSizeNorm = '35mm full frame';
+      result.sensorSizeNorm = 'Full frame';
     } else if (result.sensorSize.toLowerCase().includes('aps-c') || result.sensorSize.toLowerCase().includes('23.5') || result.sensorSize.toLowerCase().includes('22.')) {
       result.sensorSizeNorm = 'APS-C';
     } else if (result.sensorSize.toLowerCase().includes('four thirds') || result.sensorSize.toLowerCase().includes('17.3')) {

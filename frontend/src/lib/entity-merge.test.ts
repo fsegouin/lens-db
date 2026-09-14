@@ -20,13 +20,13 @@ const keeper = {
   url: "https://lens-db.com/camera/contax-139-quartz-1979/",
   systemId: 89,
   description: "The Contax 139 Quartz is a 35mm camera, introduced in 1979.",
-  sensorSize: "35mm full frame",
+  sensorSize: "35mm",
   yearIntroduced: 1979,
   weightG: 500,
   bodyType: null,
   shutterType: null,
   alias: null,
-  specs: { Type: "Focal-plane", Weight: "500g", "Maximum format": "35mm full frame" },
+  specs: { Type: "Focal-plane", Weight: "500g", "Maximum format": "35mm" },
   images: [],
 };
 
@@ -37,13 +37,13 @@ const loser = {
   url: "https://camera-wiki.org/wiki/Contax_139",
   systemId: 89,
   description: "The Contax 139 is a 35mm SLR camera from Japan, introduced in 1979.",
-  sensorSize: "35mm full frame",
+  sensorSize: "35mm",
   yearIntroduced: 1979,
   weightG: null,
   bodyType: "SLR",
   shutterType: "Electronic",
   alias: null,
-  specs: { Film: "35mm film", Origin: "Japan", "Maximum format": "35mm full frame" },
+  specs: { Film: "35mm film", Origin: "Japan", "Maximum format": "35mm" },
   images: [{ src: "https://r2/cameras/contax-139/1.webp", alt: "Contax 139" }],
 };
 
@@ -100,7 +100,7 @@ describe("applyTake", () => {
     assert.deepEqual(updates.specs, {
       Type: "Focal-plane",
       Weight: "500g",
-      "Maximum format": "35mm full frame",
+      "Maximum format": "35mm",
       Origin: "Japan",
     });
     assert.deepEqual(updates.images, loser.images);

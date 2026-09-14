@@ -7,6 +7,7 @@ import { createRevision } from "@/lib/revisions";
 import { getUserTier } from "@/lib/edit-validation";
 import { getClientIP, hashIP } from "@/lib/api-utils";
 import { createRateLimit } from "@/lib/rate-limit";
+import { normalizeSensorSize } from "@/lib/sensor-size";
 
 const submitLimiter = createRateLimit("submissions", 10, "3600 s"); // 10 submissions per hour
 
@@ -211,7 +212,7 @@ export async function POST(request: NextRequest) {
         description: (entityData.description as string) || null,
         alias: (entityData.alias as string) || null,
         sensorType: (entityData.sensorType as string) || null,
-        sensorSize: (entityData.sensorSize as string) || null,
+        sensorSize: normalizeSensorSize(entityData.sensorSize, entityData.megapixels),
         megapixels: (entityData.megapixels as number) ?? null,
         resolution: (entityData.resolution as string) || null,
         yearIntroduced: (entityData.yearIntroduced as number) ?? null,

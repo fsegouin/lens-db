@@ -48,7 +48,7 @@ const cameraFields = [
   { name: "url", label: "Reference URL", type: "text" },
   { name: "alias", label: "Alias", type: "text" },
   { name: "sensorType", label: "Sensor Type", type: "text", placeholder: "e.g. CMOS, CCD" },
-  { name: "sensorSize", label: "Sensor Size", type: "text", placeholder: "e.g. Full Frame, APS-C" },
+  { name: "sensorSize", label: "Sensor Size", type: "text", placeholder: "e.g. Full frame, APS-C, 35mm" },
   { name: "megapixels", label: "Megapixels", type: "number" },
   { name: "resolution", label: "Resolution", type: "text", placeholder: "e.g. 6000x4000" },
   { name: "yearIntroduced", label: "Year Introduced", type: "number" },
