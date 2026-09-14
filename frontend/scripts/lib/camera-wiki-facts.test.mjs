@@ -175,7 +175,7 @@ describe("categories", () => {
 
 describe("format, in the catalogue's own vocabulary", () => {
   it("maps 35mm and medium format", () => {
-    assert.equal(extractFormat(["Japanese 35mm SLR"]), "35mm full frame");
+    assert.equal(extractFormat(["Japanese 35mm SLR"]), "35mm");
     assert.equal(extractFormat(["German 6x9 viewfinder folding", "120 film"]), "Medium format 6x9");
   });
 

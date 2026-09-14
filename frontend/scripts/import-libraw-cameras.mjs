@@ -112,12 +112,12 @@ const CAMERAS = [
   // they are here at all.
   { name: "Sony NEX-VG20", year: 2011, mp: 16.1, sensorSize: "APS-C", mount: "Sony E", source: DPREVIEW_VG20 },
   { name: "Sony NEX-VG30", year: 2012, mp: 16.1, sensorSize: "APS-C", mount: "Sony E", source: DPREVIEW_VG },
-  { name: "Sony NEX-VG900", year: 2012, mp: 24.3, sensorSize: "35mm full frame", mount: "Sony E", source: DPREVIEW_VG, note: "The first consumer full-frame interchangeable-lens camcorder." },
+  { name: "Sony NEX-VG900", year: 2012, mp: 24.3, sensorSize: "Full frame", mount: "Sony E", source: DPREVIEW_VG, note: "The first consumer full-frame interchangeable-lens camcorder." },
 
   { name: "Ricoh GXR Mount A12", year: 2011, mp: 12, sensorSize: "APS-C", mount: "Leica M", source: DPREVIEW_GXR, note: "The M-mount unit of the modular GXR; the other GXR units have a fixed lens." },
   { name: "Leica Digital-Modul-R", year: 2005, mp: 10, sensorSize: null, mount: "Leica R", source: DPREVIEW_DMR, note: "Digital back for the R8 and R9, made with Imacon." },
   { name: "Minolta RD-175", year: 1995, mp: 0.41, sensorSize: null, mount: null, source: WIKI_RD175, note: "Three CCDs behind a beam splitter. LibRaw lists it as \"Minolta RD175 / Agfa ActionCam\"." },
-  { name: "Zenit M", year: 2018, mp: 24, sensorSize: "35mm full frame", mount: null, source: DPREVIEW_ZENIT, note: "Built with Leica on the M (Typ 240). Sources disagree on how to name the mount, so it is left unset." },
+  { name: "Zenit M", year: 2018, mp: 24, sensorSize: "Full frame", mount: null, source: DPREVIEW_ZENIT, note: "Built with Leica on the M (Typ 240). Sources disagree on how to name the mount, so it is left unset." },
 
   // Reported by the scanner but left without figures: no source consulted here
   // states a year for them, and a variant's year is not safe to assume from the

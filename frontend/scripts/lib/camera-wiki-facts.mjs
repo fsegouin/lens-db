@@ -207,8 +207,8 @@ export function extractShutterType(text) {
 }
 
 /**
- * The film format, in the vocabulary the catalogue already uses — "35mm full
- * frame", "Medium format 6x6", "Half frame" — rather than the raw category text.
+ * The film format, in the vocabulary the catalogue already uses ("35mm",
+ * "Medium format 6x6", "Half frame") rather than the raw category text.
  * `cameras.sensor_size` holds this for film bodies, which is how the existing
  * rows record what a camera shoots.
  */
@@ -235,7 +235,7 @@ export function extractFormat(categories) {
   const sheet = joined.match(/\b(\d{1,2})\s*[x×]\s*(\d{1,2})\s*(?:in|cm)\b/i);
   if (sheet) return `Sheet film ${sheet[1]}x${sheet[2]}`;
 
-  if (/\b35mm\b/.test(joined)) return "35mm full frame";
+  if (/\b35mm\b/.test(joined)) return "35mm";
   if (/\b110 film\b/.test(joined)) return "110 film";
   if (/\b126 film\b/.test(joined)) return "126 film";
   if (/\b127 film\b/.test(joined)) return "127 film";
@@ -338,12 +338,11 @@ export function composeDescription({ name, maker, bodyType, film, country, years
   const kind = readableBodyType(bodyType);
 
   const words = [];
-  // The format is stored the way the specs panel wants it ("35mm full frame",
+  // The format is stored the way the specs panel wants it ("35mm",
   // "Medium format 6x6"); a sentence wants it shorter and lower case.
   if (film) {
     const spoken = film
       .replace(/ film$/, "")
-      .replace(/^35mm full frame$/i, "35mm")
       .replace(/^Medium format 120$/i, "120 roll film")
       .replace(/^Medium format /i, "medium format ")
       .replace(/^Sheet film /i, "sheet film ")

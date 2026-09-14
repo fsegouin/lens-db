@@ -403,7 +403,7 @@ try {
           body_type, sensor_size, year_introduced, weight_g, specs, verified
         ) VALUES (
           ${c.name}, ${slug}, ${c.alias}, ${WIKI + c.source}, NULL, ${lens.id},
-          'Compact', '35mm full frame', ${c.year}, ${c.weightG},
+          'Compact', '35mm', ${c.year}, ${c.weightG},
           ${JSON.stringify({ "Film type": "135 cartridge-loaded film", Source: WIKI + c.source })}::jsonb,
           true
         )`;

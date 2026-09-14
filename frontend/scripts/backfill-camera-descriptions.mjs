@@ -35,7 +35,7 @@ function inferBodyType(row) {
   return "DSLR";
 }
 
-/** "27.4 x 18.1 mm" is a sensor; "35mm full frame" is a film format. */
+/** "27.4 x 18.1 mm" is a sensor; "35mm" is a film format. */
 function isSensorMeasurement(sensorSize) {
   return Boolean(sensorSize) && /\d\s*x\s*\d/.test(sensorSize) && /mm/i.test(sensorSize);
 }

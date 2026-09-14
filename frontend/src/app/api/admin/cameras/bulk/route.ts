@@ -3,7 +3,8 @@ import { db } from "@/db";
 import { cameras } from "@/db/schema";
 import { requireAdminAPI } from "@/lib/admin-auth";
 import { revalidateEntity } from "@/lib/revalidate-entity";
-import { inArray } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
+import { normalizeSensorSize } from "@/lib/sensor-size";
 
 const MAX_IDS = 200;
 
@@ -33,7 +34,22 @@ export async function POST(request: NextRequest) {
       if (!allowedFields.includes(field as typeof allowedFields[number])) {
         return NextResponse.json({ error: `Field "${field}" is not allowed for bulk edit` }, { status: 400 });
       }
-      await db.update(cameras).set({ [field]: fieldValue || null }).where(inArray(cameras.id, ids));
+      if (field === "sensorSize") {
+        // The label depends on whether each body is digital, so the same
+        // form value can land as "Full frame" on one row and "35mm" on another.
+        const rows = await db
+          .select({ id: cameras.id, megapixels: cameras.megapixels })
+          .from(cameras)
+          .where(inArray(cameras.id, ids));
+        for (const row of rows) {
+          await db
+            .update(cameras)
+            .set({ sensorSize: normalizeSensorSize(fieldValue, row.megapixels) })
+            .where(eq(cameras.id, row.id));
+        }
+      } else {
+        await db.update(cameras).set({ [field]: fieldValue || null }).where(inArray(cameras.id, ids));
+      }
       revalidateEntity("camera");
       return NextResponse.json({ success: true, affected: ids.length });
     }

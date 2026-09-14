@@ -100,7 +100,7 @@ describe("filterLenses", () => {
 
 describe("filterCameras", () => {
   test("matches sensor size exactly", () => {
-    const rows = [camera("Nikon D850", { sensorSize: "35mm full frame" }), camera("Nikon D500", { sensorSize: "APS-C" })];
+    const rows = [camera("Nikon D850", { sensorSize: "Full frame" }), camera("Nikon D500", { sensorSize: "APS-C" })];
     assert.deepEqual(names(filterCameras(rows, { ...EMPTY_CAMERA_FILTERS, sensorSize: "APS-C" })), ["Nikon D500"]);
     assert.deepEqual(names(filterCameras(rows, { ...EMPTY_CAMERA_FILTERS, q: "d850" })), ["Nikon D850"]);
   });
@@ -191,6 +191,6 @@ describe("links to the full filter bars", () => {
   });
 
   test("carry the mount and filters to /cameras", () => {
-    assert.equal(cameraFinderHref("leica-m", { q: "", sensorSize: "35mm full frame" }), "/cameras?system=leica-m&sensorSize=35mm+full+frame");
+    assert.equal(cameraFinderHref("leica-m", { q: "", sensorSize: "Full frame" }), "/cameras?system=leica-m&sensorSize=Full+frame");
   });
 });
