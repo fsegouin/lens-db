@@ -11,6 +11,8 @@
  */
 
 import { extractBrand, generateSlug, parseWeight } from "@/lib/dpreview-import";
+import { normalizeBodyType } from "@/lib/body-type";
+import { mapSensorSize } from "@/lib/sensor-size";
 
 export interface DpreviewCameraCandidate {
   dpreviewSlug: string;
@@ -66,52 +68,6 @@ export function mapResolution(
   return megapixels !== null ? `${base} - ${Math.round(megapixels)} MP` : base;
 }
 
-// Format names as the database actually spells them, widest first. DPReview
-// publishes physical dimensions ("35.9 × 23.9 mm") while cameras.sensor_size
-// is an exact-match browse filter over format names, so an unmapped raw
-// dimension string would create a junk facet entry for a single body.
-const SENSOR_BANDS: { minWidthMm: number; maxWidthMm: number; name: string }[] = [
-  { minWidthMm: 46, maxWidthMm: 70, name: "Medium format" },
-  { minWidthMm: 40, maxWidthMm: 46, name: "Medium format 44x33" },
-  { minWidthMm: 33, maxWidthMm: 40, name: "Full frame" },
-  { minWidthMm: 26, maxWidthMm: 33, name: "APS-H" },
-  { minWidthMm: 20, maxWidthMm: 26, name: "APS-C" },
-  { minWidthMm: 15, maxWidthMm: 20, name: "Four Thirds" },
-  { minWidthMm: 11, maxWidthMm: 15, name: "1″" },
-  { minWidthMm: 7.0, maxWidthMm: 8.0, name: '1/1.7"' },
-  { minWidthMm: 5.5, maxWidthMm: 7.0, name: '1/2.3"' },
-];
-
-// Checked before the dimensions, for pages that name the format outright.
-// Order matters: "APS-H" must be tested before "APS-C" would ever be, and
-// "Medium format" is the coarsest fallback of the three.
-const SENSOR_NAMES: [RegExp, string][] = [
-  [/aps-?h/i, "APS-H"],
-  [/aps-?c/i, "APS-C"],
-  [/(micro )?four ?thirds|\bmft\b/i, "Four Thirds"],
-  [/full[- ]frame/i, "Full frame"],
-  [/medium format/i, "Medium format"],
-];
-
-/**
- * DPReview's "Sensor size" → the format name used by cameras.sensor_size.
- * Returns null rather than guessing: an unmapped size stays visible in the
- * raw specs jsonb, and a null column is honest where a wrong facet is not.
- */
-export function mapSensorSize(raw: string | null | undefined): string | null {
-  if (!raw) return null;
-  for (const [re, name] of SENSOR_NAMES) {
-    if (re.test(raw)) return name;
-  }
-  const m = raw.match(/(\d+\.?\d*)\s*[×x]\s*(\d+\.?\d*)\s*mm/i);
-  if (!m) return null;
-  const width = parseFloat(m[1]);
-  for (const band of SENSOR_BANDS) {
-    if (width >= band.minWidthMm && width < band.maxWidthMm) return band.name;
-  }
-  return null;
-}
-
 /**
  * Deterministic mapping of a DPReview camera "Full Specs" table into typed
  * camera columns. Unknown labels are ignored here but survive in the raw
@@ -140,7 +96,8 @@ export function mapDpreviewCameraSpecs(
     sensorSize: mapSensorSize(specs["Sensor size"]),
     megapixels,
     resolution: mapResolution(specs["Max resolution"], megapixels),
-    bodyType: specs["Body type"]?.trim() || null,
+    // Every body DPReview lists is digital, megapixel row or not.
+    bodyType: normalizeBodyType(specs["Body type"], true),
     weightG: parseWeight(specs["Weight (inc. batteries)"] || specs["Weight"]),
     yearIntroduced,
     systemId: null, // filled in by the caller via findSystemId

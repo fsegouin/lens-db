@@ -6,6 +6,7 @@ import { requireAdminAPI, getAdminUserFromToken } from "@/lib/admin-auth";
 import { createRevision } from "@/lib/revisions";
 import { revalidateEntity, touchesLists } from "@/lib/revalidate-entity";
 import { normalizeSensorSize } from "@/lib/sensor-size";
+import { normalizeBodyType } from "@/lib/body-type";
 import { eq } from "drizzle-orm";
 
 export async function GET(
@@ -61,7 +62,7 @@ export async function PUT(
   if (yearIntroduced !== undefined) updates.yearIntroduced = yearIntroduced != null ? Number(yearIntroduced) : null;
   if (yearDiscontinued !== undefined) updates.yearDiscontinued = yearDiscontinued != null ? Number(yearDiscontinued) : null;
   if (productionStatus !== undefined) updates.productionStatus = productionStatus || null;
-  if (bodyType !== undefined) updates.bodyType = bodyType || null;
+  if (bodyType !== undefined) updates.bodyType = normalizeBodyType(bodyType, megapixels);
   if (weightG !== undefined) updates.weightG = weightG != null ? Number(weightG) : null;
   if (specs !== undefined) updates.specs = specs;
   if (images !== undefined) updates.images = images;

@@ -8,6 +8,7 @@ import { getUserTier } from "@/lib/edit-validation";
 import { getClientIP, hashIP } from "@/lib/api-utils";
 import { createRateLimit } from "@/lib/rate-limit";
 import { normalizeSensorSize } from "@/lib/sensor-size";
+import { normalizeBodyType } from "@/lib/body-type";
 
 const submitLimiter = createRateLimit("submissions", 10, "3600 s"); // 10 submissions per hour
 
@@ -216,7 +217,7 @@ export async function POST(request: NextRequest) {
         megapixels: (entityData.megapixels as number) ?? null,
         resolution: (entityData.resolution as string) || null,
         yearIntroduced: (entityData.yearIntroduced as number) ?? null,
-        bodyType: (entityData.bodyType as string) || null,
+        bodyType: normalizeBodyType(entityData.bodyType, entityData.megapixels),
         weightG: (entityData.weightG as number) ?? null,
         specs: {},
         images: [],

@@ -65,7 +65,7 @@ export const listCameras = unstable_cache(
       conditions.push(eq(systems.slug, p.system));
     }
     if (p.type) {
-      conditions.push(sql`${cameras.specs}->>'Type' = ${p.type}`);
+      conditions.push(eq(cameras.bodyType, p.type));
     }
     if (p.model) {
       conditions.push(

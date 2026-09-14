@@ -18,6 +18,8 @@ import {
   normalizeLensType,
   normalizeProductionStatus,
 } from "@/lib/vocabularies";
+import { normalizeSensorSize } from "@/lib/sensor-size";
+import { normalizeBodyType } from "@/lib/body-type";
 import { sendEditApprovedEmail, sendEditRejectedEmail } from "@/lib/email";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
@@ -233,6 +235,37 @@ export async function applyPendingEditApproval(
       continue;
     }
     changes[key] = val;
+  }
+
+  // sensorSize and bodyType have a vocabulary too, but the right label depends
+  // on whether the body is digital ("SLR" is a DSLR with megapixels, "35mm" is
+  // Full frame), so they are normalised here with the row's megapixels. This is
+  // where a DPReview audit correction such as "Mid-size SLR" would otherwise
+  // reach the table verbatim.
+  if (
+    entityType === "camera" &&
+    (typeof changes.sensorSize === "string" || typeof changes.bodyType === "string")
+  ) {
+    let megapixels: unknown = changes.megapixels;
+    if (megapixels === undefined && edit.entityId !== 0) {
+      const [row] = await db
+        .select({ megapixels: cameras.megapixels })
+        .from(cameras)
+        .where(eq(cameras.id, edit.entityId))
+        .limit(1);
+      megapixels = row?.megapixels ?? null;
+    }
+    // A new DPReview camera whose page has no pixel count still names its
+    // sensor type, and no film body has one.
+    if (megapixels == null && typeof changes.sensorType === "string" && changes.sensorType.trim()) {
+      megapixels = true;
+    }
+    if (typeof changes.sensorSize === "string") {
+      changes.sensorSize = normalizeSensorSize(changes.sensorSize, megapixels);
+    }
+    if (typeof changes.bodyType === "string") {
+      changes.bodyType = normalizeBodyType(changes.bodyType, megapixels);
+    }
   }
 
   if (Object.keys(changes).length === 0) {

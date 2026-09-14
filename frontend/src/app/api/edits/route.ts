@@ -11,6 +11,7 @@ import { getClientIP, hashIP } from "@/lib/api-utils";
 import { createRateLimit } from "@/lib/rate-limit";
 import { eq } from "drizzle-orm";
 import { normalizeSensorSize } from "@/lib/sensor-size";
+import { normalizeBodyType } from "@/lib/body-type";
 
 const editLimiter = createRateLimit("edits", 30, "3600 s"); // 30 edits per hour
 
@@ -137,11 +138,14 @@ export async function POST(request: NextRequest) {
   for (const field of textFields) {
     if (updates[field] === "") updates[field] = null;
   }
-  if (type === "camera" && updates.sensorSize !== undefined) {
-    updates.sensorSize = normalizeSensorSize(
-      updates.sensorSize,
-      updates.megapixels !== undefined ? updates.megapixels : currentData.megapixels,
-    );
+  if (type === "camera") {
+    const megapixels = updates.megapixels !== undefined ? updates.megapixels : currentData.megapixels;
+    if (updates.sensorSize !== undefined) {
+      updates.sensorSize = normalizeSensorSize(updates.sensorSize, megapixels);
+    }
+    if (updates.bodyType !== undefined) {
+      updates.bodyType = normalizeBodyType(updates.bodyType, megapixels);
+    }
   }
 
   if (Object.keys(updates).length === 0) {
