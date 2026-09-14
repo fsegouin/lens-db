@@ -1,11 +1,3 @@
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import PriceChart, { type AskingSnapshot } from "@/components/PriceChart";
 import { getPriceDisplay } from "@/lib/price-display";
 
@@ -18,7 +10,7 @@ interface PriceEstimate {
   priceMintHigh: number | null;
   /**
    * Where the figure came from: "sold" (real completed sales), "keh" (a
-   * dealer's graded stock, corrected) or "asking" (live eBay listings,
+   * dealer's graded stock, corrected) or "asking" (live marketplace listings,
    * corrected). The last two are inferences and say so on the card.
    *
    * The card never names the dealer. Which shop we buy the comparison from is
@@ -28,7 +20,6 @@ interface PriceEstimate {
    */
   priceSource: string;
   sourceUrl: string | null;
-  sourceName: string | null;
   extractedAt: Date;
 }
 
@@ -37,13 +28,13 @@ interface PriceHistoryEntry {
   condition: string | null;
   priceUsd: number | null;
   source: string | null;
-  sourceUrl: string | null;
 }
 
 interface PriceCardProps {
   estimate: PriceEstimate | null;
   history: PriceHistoryEntry[];
-  /** Daily asking aggregates, charted against the recorded sales. */
+  /** Daily asking aggregates, charted against the recorded sales. The
+   * individual sale records feed the chart only; they are never listed. */
   asking?: AskingSnapshot[];
 }
 
@@ -53,23 +44,6 @@ function formatPrice(low: number | null, high: number | null) {
   if (low === high || high == null) return `$${low?.toLocaleString()}`;
   if (low == null) return `$${high.toLocaleString()}`;
   return `$${low.toLocaleString()}–${high.toLocaleString()}`;
-}
-
-function formatCondition(cond: string | null) {
-  if (!cond) return "—";
-  const labels: Record<string, string> = {
-    A: "Excellent",
-    "A+": "Excellent",
-    B: "Good",
-    "B+": "Good",
-    "B-A": "Good",
-    "B-C": "Fair",
-    C: "Fair",
-    "C+": "Fair",
-    "C-B": "Fair",
-    D: "Poor",
-  };
-  return labels[cond] ?? cond;
 }
 
 export default function PriceCard({
@@ -84,9 +58,10 @@ export default function PriceCard({
       : null;
 
   // An estimate row can exist with no prices at all (1,707 lens rows do).
-  // Without prices and without sales there is nothing to show, and a bare
-  // "Used prices" heading over an empty box is worse than no section.
-  if (!shownEstimate && history.length === 0 && asking.length === 0) return null;
+  // Without prices, and with too few points for the chart, there is nothing
+  // to show, and a bare "Used prices" heading over an empty box is worse
+  // than no section.
+  if (!shownEstimate && history.length < 2 && asking.length < 2) return null;
 
   const display = getPriceDisplay(shownEstimate);
   const showTiers = display?.showTiers ?? false;
@@ -110,8 +85,8 @@ export default function PriceCard({
   const basis = fromAsking
     ? `Estimated from ${
         askingSample != null
-          ? `${askingSample} current eBay ${askingSample === 1 ? "listing" : "listings"}`
-          : "current eBay listings"
+          ? `${askingSample} current ${askingSample === 1 ? "listing" : "listings"} on online marketplaces`
+          : "current listings on online marketplaces"
       }, adjusted for the gap between what sellers ask and what buyers pay.`
     : fromKeh
       ? "Estimated from current used listings, adjusted for the gap between what sellers ask and what buyers pay."
@@ -167,14 +142,12 @@ export default function PriceCard({
           <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-2 border-t border-border px-3 py-2.5">
             <span className="text-xs text-muted-foreground">
               {/*
-                Only a sold estimate may name its source. The other two carry
-                the name of a shop we would rather not advertise, and this
-                branch is one refactor away from printing it: it is unreachable
-                for them today only because they set a single condition tier
-                and the tiers have to ascend to get here.
+                The card never names where a figure came from, whatever the
+                source. Keep it that way: two of the sources carry the name of
+                a shop we would rather not advertise.
               */}
               {shownEstimate.priceSource === "sold"
-                ? `Based on recent ${shownEstimate.sourceName || "eBay"} sales`
+                ? "Based on recent sales on online marketplaces"
                 : "Based on current used listings"}
               {" · "}
               {new Date(shownEstimate.extractedAt).toLocaleDateString("en-US", {
@@ -190,54 +163,6 @@ export default function PriceCard({
         <PriceChart history={history} asking={asking} />
       )}
 
-      {history.length > 0 && (
-        <details className="group">
-          <summary className="cursor-pointer text-sm font-medium text-muted-foreground hover:text-foreground">
-            Sale history ({history.length} records)
-          </summary>
-          <div className="mt-2 max-h-72 overflow-auto rounded-lg border border-zinc-200 dark:border-zinc-800">
-            <Table aria-label="Sale history">
-              <TableHeader>
-                <TableRow>
-                  <TableHead scope="col" className="text-xs">Date</TableHead>
-                  <TableHead scope="col" className="text-xs">Condition</TableHead>
-                  <TableHead scope="col" className="text-xs text-right">Price</TableHead>
-                  <TableHead scope="col" className="text-xs">Source</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {history.map((entry, i) => (
-                  <TableRow key={i}>
-                    <TableCell className="text-sm">{entry.saleDate ?? "—"}</TableCell>
-                    <TableCell className="text-sm">
-                      {formatCondition(entry.condition)}
-                    </TableCell>
-                    <TableCell className="text-sm text-right font-medium">
-                      {entry.priceUsd != null
-                        ? `$${entry.priceUsd.toLocaleString()}`
-                        : "—"}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {entry.sourceUrl ? (
-                        <a
-                          href={entry.sourceUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="underline hover:text-zinc-700 dark:hover:text-zinc-300"
-                        >
-                          {entry.source ?? "Link"}
-                        </a>
-                      ) : (
-                        entry.source ?? "—"
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </details>
-      )}
     </div>
   );
 }

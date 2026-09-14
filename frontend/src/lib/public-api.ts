@@ -8,9 +8,9 @@ import { NextResponse } from "next/server";
  * tools break when it moves, so the field sets are written out by hand rather
  * than spreading a database row, and the version lives in the path.
  *
- * What is deliberately absent is the used-price data. It is derived from eBay
- * completed listings, which this site may show but may not redistribute, so it
- * stays on the pages and out of the API.
+ * What is deliberately absent is the used-price data. It is derived from
+ * online marketplace listings, which this site may show but may not
+ * redistribute, so it stays on the pages and out of the API.
  */
 
 export const API_VERSION = "v1";
@@ -19,7 +19,7 @@ export const LICENCE = {
   facts:
     "Factual records (names, mounts, focal lengths, apertures, dates, flange distances) may be used freely with attribution to thelensdb.com.",
   excluded:
-    "Used price data is not included: it is derived from eBay completed listings and cannot be redistributed.",
+    "Used price data is not included: it is derived from online marketplace listings and cannot be redistributed.",
 } as const;
 
 /** Cross-origin and cache headers every public response carries. */

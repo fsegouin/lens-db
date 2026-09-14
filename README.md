@@ -13,9 +13,6 @@ The Lens DB is a camera and lens database project built from archived `lens-db.c
 - `scraper/`
   Python tools for discovering archived pages, downloading them from the Wayback Machine, parsing structured data, and importing it into PostgreSQL, plus Node scripts (eBay price scrapers and the DPReview new-lens watcher) run via GitHub Actions in `.github/workflows/` or manually against the `/api/cron/*` endpoints.
 
-- `docs/`
-  Project notes and implementation plans.
-
 ## Main App
 
 The frontend lives in [`frontend/`](frontend/) and uses:
