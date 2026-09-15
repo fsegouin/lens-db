@@ -2,11 +2,14 @@ import { revalidateTag } from "next/cache";
 import { db } from "@/db";
 import { priceTag } from "@/lib/prices";
 import {
+  lenses,
+  cameras,
   priceHistory,
   priceEstimates,
   ebayAskingSnapshots,
   kehProducts,
 } from "@/db/schema";
+import { revalidateEntity } from "@/lib/revalidate-entity";
 import { eq, and, sql, gte, inArray, isNull, desc } from "drizzle-orm";
 import { ASKING_TO_SOLD_RATIO } from "@/lib/ebay-browse";
 import { KEH_TO_SOLD_RATIO } from "@/lib/keh";
@@ -388,8 +391,28 @@ async function upsertFromKeh(
       set: values,
     });
 
-  revalidateTag(priceTag(entityType, entityId), "max");
+  await publishEstimate(entityType, entityId);
   return true;
+}
+
+/**
+ * Make a new estimate visible.
+ *
+ * Clearing the price tag refreshes the cached price rows, but the entity
+ * page itself is served from the ISR cache for a week and reads nothing
+ * until it is re-rendered, so a sale stored on Monday stayed invisible until
+ * the following week. Refreshing the page alone leaves the site-wide lists
+ * cached, as an image edit does.
+ */
+async function publishEstimate(entityType: string, entityId: number): Promise<void> {
+  revalidateTag(priceTag(entityType, entityId), "max");
+  const table = entityType === "lens" ? lenses : cameras;
+  const [row] = await db
+    .select({ slug: table.slug })
+    .from(table)
+    .where(eq(table.id, entityId))
+    .limit(1);
+  if (row?.slug) revalidateEntity(entityType === "lens" ? "lens" : "camera", row.slug, "row");
 }
 
 export async function recomputePriceEstimates(
@@ -451,7 +474,7 @@ export async function recomputePriceEstimates(
         target: [priceEstimates.entityType, priceEstimates.entityId],
         set: { extractedAt: now },
       });
-    revalidateTag(priceTag(entityType, entityId), "max");
+    await publishEstimate(entityType, entityId);
     return;
   }
 
@@ -537,5 +560,5 @@ export async function recomputePriceEstimates(
       },
     });
 
-  revalidateTag(priceTag(entityType, entityId), "max");
+  await publishEstimate(entityType, entityId);
 }

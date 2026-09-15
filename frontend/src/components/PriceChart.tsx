@@ -4,7 +4,6 @@ import {
   ResponsiveContainer,
   ComposedChart,
   Line,
-  Area,
   Scatter,
   XAxis,
   YAxis,
@@ -12,29 +11,20 @@ import {
   Tooltip,
 } from "recharts";
 
-interface PriceHistoryEntry {
+export interface PriceHistoryEntry {
   saleDate: string | null;
   condition: string | null;
   priceUsd: number | null;
-  source: string | null;
-}
-
-export interface AskingSnapshot {
-  observedOn: string | null;
-  medianUsd: number | null;
-  p25Usd: number | null;
-  p75Usd: number | null;
-  sampleCount: number;
 }
 
 interface PriceChartProps {
   history: PriceHistoryEntry[];
-  /** Daily asking aggregates. Absent on entities never polled. */
-  asking?: AskingSnapshot[];
 }
 
 const SOLD_COLOR = "#3b82f6";
-const ASKING_COLOR = "#f59e0b";
+const HOUR_MS = 3_600_000;
+const SIX_MONTHS_MS = 180 * 24 * HOUR_MS;
+const ONE_YEAR_MS = 365 * 24 * HOUR_MS;
 
 const CONDITION_LABELS: Record<string, string> = {
   A: "Excellent",
@@ -55,9 +45,6 @@ type ChartRow = {
   price?: number;
   condition?: string | null;
   trend?: number;
-  askingMedian?: number;
-  askingBand?: [number, number];
-  askingSamples?: number;
 };
 
 function formatDate(dateStr: string) {
@@ -79,42 +66,19 @@ function CustomTooltip({
   if (!active || !payload?.length) return null;
   const row = payload[0].payload;
 
-  // A row is either a recorded sale or a day's asking reading, never both:
-  // sales carry a jittered timestamp so each dot stays individually hoverable.
-  const isSale = row.price != null;
+  // Every row is a sale; the guard only narrows the optional field.
+  if (row.price == null) return null;
 
   return (
     <div className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm shadow-md dark:border-zinc-700 dark:bg-zinc-800">
-      {isSale ? (
-        <>
-          <p className="font-medium text-zinc-900 dark:text-zinc-100">
-            ${row.price!.toLocaleString()}
-          </p>
-          <p className="text-muted-foreground">Sold {formatDate(row.date)}</p>
-          {row.condition && (
-            <p className="text-xs text-muted-foreground">
-              {CONDITION_LABELS[row.condition] ?? row.condition}
-            </p>
-          )}
-        </>
-      ) : (
-        <>
-          <p className="font-medium text-zinc-900 dark:text-zinc-100">
-            ${row.askingMedian?.toLocaleString()}
-          </p>
-          <p className="text-muted-foreground">Asked {formatDate(row.date)}</p>
-          {row.askingBand && (
-            <p className="text-xs text-muted-foreground">
-              Most listed ${row.askingBand[0].toLocaleString()} to $
-              {row.askingBand[1].toLocaleString()}
-            </p>
-          )}
-          {row.askingSamples != null && (
-            <p className="text-xs text-muted-foreground">
-              {row.askingSamples} {row.askingSamples === 1 ? "listing" : "listings"}
-            </p>
-          )}
-        </>
+      <p className="font-medium text-zinc-900 dark:text-zinc-100">
+        ${row.price.toLocaleString()}
+      </p>
+      <p className="text-muted-foreground">Sold {formatDate(row.date)}</p>
+      {row.condition && (
+        <p className="text-xs text-muted-foreground">
+          {CONDITION_LABELS[row.condition] ?? row.condition}
+        </p>
       )}
     </div>
   );
@@ -133,83 +97,47 @@ function LegendKey({ color, label }: { color: string; label: string }) {
   );
 }
 
-export default function PriceChart({ history, asking = [] }: PriceChartProps) {
+export default function PriceChart({ history }: PriceChartProps) {
   const rawSales = history
-    .filter((e) => e.saleDate && e.priceUsd != null)
+    .filter(
+      (e): e is PriceHistoryEntry & { saleDate: string; priceUsd: number } =>
+        !!e.saleDate && e.priceUsd != null,
+    )
     .map((e) => ({
-      date: e.saleDate!,
-      price: e.priceUsd!,
+      date: e.saleDate,
+      price: e.priceUsd,
       condition: e.condition,
-      timestamp: toTimestamp(e.saleDate!),
+      timestamp: toTimestamp(e.saleDate),
     }))
     .sort((a, b) => a.timestamp - b.timestamp);
 
   // Offset same-date sales slightly so each dot is individually hoverable.
   const seen = new Map<number, number>();
-  const hourMs = 3600000;
   const sales = rawSales.map((p) => {
     const count = seen.get(p.timestamp) ?? 0;
     seen.set(p.timestamp, count + 1);
-    return { ...p, timestamp: p.timestamp + count * hourMs };
+    return { ...p, timestamp: p.timestamp + count * HOUR_MS };
   });
 
-  const askingPoints = asking
-    .filter((a) => a.observedOn && a.medianUsd != null)
-    .map((a) => ({
-      date: a.observedOn!,
-      timestamp: toTimestamp(a.observedOn!),
-      median: a.medianUsd!,
-      low: a.p25Usd,
-      high: a.p75Usd,
-      samples: a.sampleCount,
-    }))
-    .sort((a, b) => a.timestamp - b.timestamp);
-
-  const hasSales = sales.length >= 2;
-  const hasAsking = askingPoints.length >= 2;
-  if (!hasSales && !hasAsking) return null;
+  if (sales.length < 2) return null;
 
   // Rolling average over the sales, so the trend reads through the scatter.
-  const rows: ChartRow[] = [];
-  if (sales.length > 0) {
-    const span = sales[sales.length - 1].timestamp - sales[0].timestamp;
-    const sixMonthsMs = 180 * 24 * 60 * 60 * 1000;
-    const windowMs = Math.max(sixMonthsMs, span * 0.15);
-    for (const p of sales) {
-      const nearby = sales.filter(
-        (o) => Math.abs(o.timestamp - p.timestamp) <= windowMs / 2,
-      );
-      rows.push({
-        timestamp: p.timestamp,
-        date: p.date,
-        price: p.price,
-        condition: p.condition,
-        trend: hasSales
-          ? Math.round(nearby.reduce((s, o) => s + o.price, 0) / nearby.length)
-          : undefined,
-      });
-    }
-  }
+  const span = sales[sales.length - 1].timestamp - sales[0].timestamp;
+  const windowMs = Math.max(SIX_MONTHS_MS, span * 0.15);
+  const rows: ChartRow[] = sales.map((p) => {
+    const nearby = sales.filter(
+      (o) => Math.abs(o.timestamp - p.timestamp) <= windowMs / 2,
+    );
+    return {
+      timestamp: p.timestamp,
+      date: p.date,
+      price: p.price,
+      condition: p.condition,
+      trend: Math.round(nearby.reduce((s, o) => s + o.price, 0) / nearby.length),
+    };
+  });
 
-  for (const a of askingPoints) {
-    rows.push({
-      timestamp: a.timestamp,
-      date: a.date,
-      askingMedian: a.median,
-      askingBand:
-        a.low != null && a.high != null ? [a.low, a.high] : undefined,
-      askingSamples: a.samples,
-    });
-  }
-
-  rows.sort((a, b) => a.timestamp - b.timestamp);
-
-  const values = [
-    ...sales.map((p) => p.price),
-    ...askingPoints.flatMap((a) =>
-      [a.median, a.low, a.high].filter((v): v is number => v != null),
-    ),
-  ];
+  const values = sales.map((p) => p.price);
   const minPrice = Math.min(...values);
   const maxPrice = Math.max(...values);
   const padding = Math.max(10, Math.round((maxPrice - minPrice) * 0.1));
@@ -227,35 +155,16 @@ export default function PriceChart({ history, asking = [] }: PriceChartProps) {
         )
       : [firstTs];
 
-  const latestAsking = askingPoints[askingPoints.length - 1]?.median;
-  const label = [
-    hasSales ? `Chart of ${sales.length} recorded sale prices` : "Chart",
-    hasAsking
-      ? `against daily asking prices, most recently a $${latestAsking?.toLocaleString()} asking median`
-      : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
+  const label = `Chart of ${sales.length} recorded sale prices`;
 
   return (
     <div className="space-y-2">
-      {(hasSales || hasAsking) && (
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-          {hasSales && <LegendKey color={SOLD_COLOR} label="Sold" />}
-          {hasAsking && (
-            <LegendKey
-              color={ASKING_COLOR}
-              // Naming the start date stops the line's mid-chart appearance
-              // reading as a sudden price move rather than the point we
-              // began recording asking prices at all.
-              label={`Asking (tracked from ${formatDate(askingPoints[0].date)})`}
-            />
-          )}
-        </div>
-      )}
-      <div className="h-48 w-full" role="img" aria-label={label}>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+        <LegendKey color={SOLD_COLOR} label="Sold" />
+      </div>
+      <div className="h-48 w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={rows} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
+          <ComposedChart data={rows} title={label} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
             <CartesianGrid
               strokeDasharray="3 3"
               className="stroke-zinc-200 dark:stroke-zinc-700"
@@ -268,8 +177,7 @@ export default function PriceChart({ history, asking = [] }: PriceChartProps) {
               ticks={ticks}
               tickFormatter={(ts) => {
                 const d = new Date(ts);
-                const oneYear = 365 * 24 * 60 * 60 * 1000;
-                if (lastTs - firstTs < oneYear * 3) {
+                if (lastTs - firstTs < ONE_YEAR_MS * 3) {
                   return d.toLocaleDateString("en-US", {
                     month: "short",
                     year: "2-digit",
@@ -289,55 +197,19 @@ export default function PriceChart({ history, asking = [] }: PriceChartProps) {
             />
             <Tooltip content={<CustomTooltip />} />
 
-            {/*
-              Declaration order is paint order, and it is load-bearing here.
-              The asking series covers only the recent months, which is exactly
-              where the sale dots bunch up, so drawing the scatter last buried
-              the amber band under a pile of blue and made the line nearly
-              impossible to hover. Sales go down first, asking on top.
-            */}
             <Scatter dataKey="price" fill={SOLD_COLOR} fillOpacity={0.6} r={4} />
 
-            {/* The quarter-to-three-quarter spread of what sellers are asking. */}
-            {hasAsking && (
-              <Area
-                dataKey="askingBand"
-                stroke={ASKING_COLOR}
-                strokeOpacity={0.5}
-                strokeWidth={1}
-                fill={ASKING_COLOR}
-                fillOpacity={0.22}
-                connectNulls
-                isAnimationActive={false}
-                activeDot={false}
-              />
-            )}
+            <Line
+              dataKey="trend"
+              type="monotone"
+              stroke={SOLD_COLOR}
+              strokeWidth={2}
+              dot={false}
+              activeDot={false}
+              connectNulls
+              isAnimationActive={false}
+            />
 
-            {hasSales && (
-              <Line
-                dataKey="trend"
-                type="monotone"
-                stroke={SOLD_COLOR}
-                strokeWidth={2}
-                dot={false}
-                activeDot={false}
-                connectNulls
-                isAnimationActive={false}
-              />
-            )}
-
-            {hasAsking && (
-              <Line
-                dataKey="askingMedian"
-                type="monotone"
-                stroke={ASKING_COLOR}
-                strokeWidth={2.5}
-                dot={askingPoints.length < 10 ? { r: 3 } : false}
-                activeDot={{ r: 4 }}
-                connectNulls
-                isAnimationActive={false}
-              />
-            )}
           </ComposedChart>
         </ResponsiveContainer>
       </div>

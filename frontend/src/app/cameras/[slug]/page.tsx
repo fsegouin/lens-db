@@ -5,7 +5,6 @@ import JsonLd from "@/components/JsonLd";
 import {
   getEntityPriceEstimate,
   getEntityPriceHistory,
-  getEntityAskingHistory,
 } from "@/lib/prices";
 import { getCameraBySlug, getCameraSlugById } from "@/lib/cameras";
 import { getCameraRelations } from "@/lib/camera-relations";
@@ -124,7 +123,6 @@ export default async function CameraDetailPage({
   const [
     priceEstimate,
     priceHistoryRows,
-    askingRows,
     relations,
     provenance,
     owners,
@@ -132,7 +130,6 @@ export default async function CameraDetailPage({
     await Promise.all([
       getEntityPriceEstimate("camera", camera.id),
       getEntityPriceHistory("camera", camera.id),
-      getEntityAskingHistory("camera", camera.id),
       getCameraRelations(camera.systemId),
       getProvenance("camera", camera.id),
       getOwnersOf("camera", camera.id),
@@ -222,7 +219,6 @@ export default async function CameraDetailPage({
       <PriceCard
         estimate={priceEstimate ?? null}
         history={priceHistoryRows}
-        asking={askingRows}
       />
       <EbayListings query={camera.name} entitySlug={camera.slug} />
       <div>
@@ -409,7 +405,7 @@ export default async function CameraDetailPage({
               className="underline underline-offset-2"
             >
               See all {relations.lensCount.toLocaleString()} lenses that fit the{" "}
-              {camera.name} →
+              {camera.name} <span aria-hidden="true">→</span>
             </Link>
           </p>
         </div>

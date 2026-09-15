@@ -61,12 +61,12 @@ function Attribution({
     : "text-zinc-600 dark:text-zinc-400 [&_a:hover]:text-zinc-800 dark:[&_a:hover]:text-zinc-200";
   const credit = image.credit
     ? image.sourceUrl
-      ? <a href={image.sourceUrl} target="_blank" rel="noopener noreferrer nofollow" className="underline">{image.credit}</a>
+      ? <a href={image.sourceUrl} target="_blank" rel="noopener noreferrer nofollow" className="underline">{image.credit}<span className="sr-only"> (opens in a new tab)</span></a>
       : image.credit
     : null;
   const licence = image.license
     ? image.licenseUrl
-      ? <a href={image.licenseUrl} target="_blank" rel="noopener noreferrer nofollow" className="underline">{image.license}</a>
+      ? <a href={image.licenseUrl} target="_blank" rel="noopener noreferrer nofollow" className="underline">{image.license}<span className="sr-only"> (opens in a new tab)</span></a>
       : image.license
     : null;
   return (

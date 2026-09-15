@@ -57,7 +57,7 @@ export function UserMenu() {
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-accent hover:text-accent-foreground dark:text-zinc-300"
-        aria-label="Account menu"
+        aria-label={`Account menu for ${user.displayName}`}
       >
         <User className="h-3.5 w-3.5" />
         <span className="hidden sm:inline">{user.displayName}</span>

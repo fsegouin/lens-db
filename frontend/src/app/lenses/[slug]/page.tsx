@@ -7,7 +7,6 @@ import { getOwnersOf } from "@/lib/kit";
 import {
   getEntityPriceEstimate,
   getEntityPriceHistory,
-  getEntityAskingHistory,
 } from "@/lib/prices";
 import { formatDescription } from "@/lib/format-description";
 import { formatMagnification } from "@/lib/format-magnification";
@@ -128,7 +127,6 @@ export default async function LensDetailPage({
   const [
     priceEstimate,
     priceHistoryRows,
-    askingRows,
     relations,
     provenance,
     rivals,
@@ -137,7 +135,6 @@ export default async function LensDetailPage({
     await Promise.all([
       getEntityPriceEstimate("lens", lens.id),
       getEntityPriceHistory("lens", lens.id),
-      getEntityAskingHistory("lens", lens.id),
       getLensRelations(lens.id, lens.systemId, lens.versionGroupId),
       getProvenance("lens", lens.id),
       getRivalsForLens(lens.id),
@@ -296,7 +293,6 @@ export default async function LensDetailPage({
       <PriceCard
         estimate={priceEstimate ?? null}
         history={priceHistoryRows}
-        asking={askingRows}
       />
       <EbayListings query={lens.name} entityType="lens" entitySlug={lens.slug} />
       <div>
@@ -608,7 +604,7 @@ export default async function LensDetailPage({
                 href={`/systems/${mounts[0].slug}`}
                 className="text-zinc-700 underline underline-offset-2 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-zinc-100"
               >
-                See every {mounts[0].name} lens and body →
+                See every {mounts[0].name} lens and body <span aria-hidden="true">→</span>
               </Link>
             </p>
           )}

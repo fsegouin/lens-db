@@ -1,6 +1,7 @@
 import { unstable_cache } from "next/cache";
 import { buildEbaySearchQuery, buildEbayLensSearchQuery } from "@/lib/ebay-search-query";
 import { getEbayAccessToken } from "@/lib/ebay-auth";
+import { affiliateSearchUrl } from "@/lib/ebay-affiliate";
 
 export interface EbayListing {
   itemId: string;
@@ -31,6 +32,10 @@ interface EbaySearchResponse {
 }
 
 const EBAY_CAMPAIGN_ID = process.env.EBAY_CAMPAIGN_ID ?? "";
+const CAMERAS_AND_PHOTO_CATEGORY_ID = "625";
+const LISTINGS_PER_PAGE = 6;
+const EBAY_TIMEOUT_MS = 5000;
+const LISTINGS_CACHE_SECONDS = 3600;
 
 // ISO 3166-1 alpha-2 country code -> eBay Browse API marketplace ID.
 // The marketplace determines both inventory and currency. Countries
@@ -53,7 +58,7 @@ const MARKETPLACE_BY_COUNTRY: Record<string, string> = {
 };
 
 /** Marketplace for a country code, falling back to the US site. */
-export function marketplaceForCountry(countryCode: string): string {
+function marketplaceForCountry(countryCode: string): string {
   return MARKETPLACE_BY_COUNTRY[countryCode.toUpperCase()] ?? "EBAY_US";
 }
 
@@ -64,17 +69,14 @@ export function searchQueryFor(query: string, entityType: "camera" | "lens"): st
     : buildEbaySearchQuery(query);
 }
 
-export function affiliateUrl(searchQuery: string): string {
-  if (!EBAY_CAMPAIGN_ID) {
-    return `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(searchQuery)}`;
-  }
-  return `https://rover.ebay.com/rover/1/711-53200-19255-0/1?campid=${EBAY_CAMPAIGN_ID}&toolid=10001&mpre=${encodeURIComponent(`https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(searchQuery)}`)}`;
+/** The tagged search-results link for a query on the reader's eBay site. */
+export function affiliateUrl(searchQuery: string, countryCode: string): string {
+  return affiliateSearchUrl(searchQuery, countryCode, EBAY_CAMPAIGN_ID);
 }
 
 async function fetchFromEbay(
   query: string,
   countryCode: string,
-  marketplaceId: string,
   entityType: "camera" | "lens",
 ): Promise<EbayListing[]> {
   if (!process.env.EBAY_APP_ID || !process.env.EBAY_CERT_ID) return [];
@@ -85,15 +87,15 @@ async function fetchFromEbay(
 
     const params = new URLSearchParams({
       q: searchQuery,
-      limit: "6",
-      category_ids: "625",
+      limit: String(LISTINGS_PER_PAGE),
+      category_ids: CAMERAS_AND_PHOTO_CATEGORY_ID,
       filter: `deliveryCountry:${countryCode},conditions:{USED}`,
       sort: "newlyListed",
     });
 
     const requestHeaders: Record<string, string> = {
       Authorization: `Bearer ${token}`,
-      "X-EBAY-C-MARKETPLACE-ID": marketplaceId,
+      "X-EBAY-C-MARKETPLACE-ID": marketplaceForCountry(countryCode),
     };
 
     if (EBAY_CAMPAIGN_ID) {
@@ -104,7 +106,7 @@ async function fetchFromEbay(
     // the request for as long as eBay keeps the socket open.
     const res = await fetch(
       `https://api.ebay.com/buy/browse/v1/item_summary/search?${params}`,
-      { headers: requestHeaders, signal: AbortSignal.timeout(5000) },
+      { headers: requestHeaders, signal: AbortSignal.timeout(EBAY_TIMEOUT_MS) },
     );
 
     if (!res.ok) {
@@ -139,7 +141,7 @@ export const getEbayListings = unstable_cache(
     countryCode: string,
     entityType: "camera" | "lens",
   ): Promise<EbayListing[]> =>
-    fetchFromEbay(query, countryCode, marketplaceForCountry(countryCode), entityType),
+    fetchFromEbay(query, countryCode, entityType),
   ["ebay-listings"],
-  { revalidate: 3600, tags: ["ebay-listings"] },
+  { revalidate: LISTINGS_CACHE_SECONDS, tags: ["ebay-listings"] },
 );

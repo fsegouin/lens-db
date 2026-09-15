@@ -64,7 +64,7 @@ function SetFieldModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => onClose(false)}>
       <div
-        role="dialog"
+        role="dialog" aria-modal="true"
         aria-label="Set field value"
         className="w-full max-w-md rounded-xl border border-zinc-200 bg-white p-6 shadow-xl dark:border-zinc-700 dark:bg-zinc-900"
         onClick={(e) => e.stopPropagation()}

@@ -30,7 +30,11 @@ export async function GET(request: NextRequest) {
   }
 
   const encoder = new TextEncoder();
+  let cancelled = false;
   const stream = new ReadableStream({
+    cancel() {
+      cancelled = true;
+    },
     async start(controller) {
       const line = (o: unknown) => controller.enqueue(encoder.encode(JSON.stringify(o) + "\n"));
       try {
@@ -56,6 +60,7 @@ export async function GET(request: NextRequest) {
         } else {
           let after = 0;
           for (;;) {
+            if (cancelled) return;
             const { items, nextAfter } =
               type === "lenses"
                 ? await getPublicLenses({ limit: PAGE, after })

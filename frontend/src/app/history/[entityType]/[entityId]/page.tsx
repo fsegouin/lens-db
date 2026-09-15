@@ -49,7 +49,9 @@ export async function generateMetadata({
 }) {
   const { entityType, entityId } = await params;
   if (!validTypes.has(entityType)) return { title: "Not Found" };
-  const entity = await getEntityName(entityType as EntityType, parseInt(entityId, 10));
+  const id = parseInt(entityId, 10);
+  if (isNaN(id)) return { title: "Not Found" };
+  const entity = await getEntityName(entityType as EntityType, id);
   return {
     title: entity
       ? `Revision History: ${entity.name}`

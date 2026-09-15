@@ -31,6 +31,7 @@ export default function CollectionLensManager({
       const searchId = ++searchIdRef.current;
       if (!q.trim()) {
         setSearchResults([]);
+        setSearching(false);
         return;
       }
 

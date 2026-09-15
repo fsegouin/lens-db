@@ -112,14 +112,6 @@ export type ApprovalResult =
     };
 
 /**
- * Apply one pending edit (the "approve" action): re-validates the changes
- * against the field allowlist, creates or updates the entity, writes the
- * revision, marks the edit approved, and revalidates the public page.
- *
- * On "entity_missing" the edit is auto-rejected before returning.
- * Shared by the single-edit route and the bulk approve-all endpoint.
- */
-/**
  * Tell the DPReview watcher's seen-registry how a reviewer answered.
  *
  * The registry is how the watcher decides what is new: a product it has
@@ -192,6 +184,14 @@ function normalizeControlledValue(field: string, value: unknown): string | null 
   }
 }
 
+/**
+ * Apply one pending edit (the "approve" action): re-validates the changes
+ * against the field allowlist, creates or updates the entity, writes the
+ * revision, marks the edit approved, and revalidates the public page.
+ *
+ * On "entity_missing" the edit is auto-rejected before returning.
+ * Shared by the single-edit route and the bulk approve-all endpoint.
+ */
 export async function applyPendingEditApproval(
   edit: typeof pendingEdits.$inferSelect,
   adminId: number,

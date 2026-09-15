@@ -44,7 +44,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         pendingDuplicateCount={Number(pendingDuplicateCount)}
         navItems={adminNav}
       />
-      <main className="flex-1 overflow-y-auto pt-12 md:pt-0">{children}</main>
+      <div className="flex-1 overflow-y-auto pt-12 md:pt-0">{children}</div>
     </div>
   );
 }

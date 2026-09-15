@@ -169,8 +169,8 @@ export const maxDuration = 300;
  * due count and the response.
  *
  * Past the ceiling the platform kills the function mid-flight: the runner's
- * curl sees a 504, `set -e` fails the step, and every later step in the
- * workflow is skipped, including the resolve pass. Returning a short batch
+ * curl sees a 504, `set -e` fails the step, and every later step of the
+ * runner's script is skipped, including the resolve pass. Returning a short batch
  * instead costs nothing, because whatever was not started is still due and
  * the shell loop simply asks again.
  *

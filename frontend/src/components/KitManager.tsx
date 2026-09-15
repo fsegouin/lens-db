@@ -444,7 +444,7 @@ export default function KitManager({
                         scope="col"
                         className={tableHeadClass}
                       >
-                        {h}
+                        {h || <span className="sr-only">Actions</span>}
                       </th>
                     ))}
                   </tr>

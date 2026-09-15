@@ -1,6 +1,6 @@
 import { generateText, Output } from "ai";
 import { z } from "zod";
-import type { RawListing } from "@/lib/price-classify";
+import { CLASSIFIER_MODEL, type RawListing } from "@/lib/price-classify";
 
 const ClassifiedLensListingSchema = z.object({
   listings: z.array(
@@ -8,14 +8,8 @@ const ClassifiedLensListingSchema = z.object({
       isRelevant: z.boolean().describe(
         "True only if: (1) this is the exact target lens model (correct focal length, aperture, brand, mount), (2) it's in working condition (not for parts/repair/broken/untested), (3) it's a single item (not a lot or bundle with camera body)",
       ),
-      isLensOnly: z.boolean().describe(
-        "True if the listing is for the lens only (no camera body bundled)",
-      ),
       conditionGrade: z.enum(["excellent", "good", "fair", "skip"]).describe(
         "Be strict — most lenses are 'good'. excellent: ONLY mint/near-mint with zero caveats (10-20% of listings). good: the default for working lenses — clean optics, smooth focus and aperture. fair: cosmetic issues, minor dust, stiff focus, oil on blades. skip: fungus, mold, haze, scratches on elements, separation, cloudy/foggy optics, broken, parts, untested.",
-      ),
-      conditionNotes: z.string().describe(
-        "Brief notes about condition from the listing title",
       ),
       effectivePrice: z.number().describe(
         "The actual sale price in USD (not including shipping)",
@@ -34,9 +28,7 @@ const BATCH_SIZE = 20;
 function placeholderListing(): ClassifiedLensListing {
   return {
     isRelevant: false,
-    isLensOnly: false,
     conditionGrade: "skip",
-    conditionNotes: "classification unavailable",
     effectivePrice: 0,
   };
 }
@@ -77,7 +69,7 @@ function hasWord(haystack: string, word: string): boolean {
  * dropped sale costs an estimate one data point, a wrong one moves the price
  * shown to everybody.
  */
-export function missingDiscriminator(lensName: string, title: string): boolean {
+function missingDiscriminator(lensName: string, title: string): boolean {
   const name = normalise(lensName);
   const listing = normalise(title);
   return DISCRIMINATORS.some(
@@ -88,6 +80,10 @@ export function missingDiscriminator(lensName: string, title: string): boolean {
 export async function classifyLensListings(
   lensName: string,
   listings: RawListing[],
+  {
+    model = CLASSIFIER_MODEL,
+    onUsage,
+  }: { model?: string; onUsage?: (usage: { inputTokens?: number; outputTokens?: number }) => void } = {},
 ): Promise<ClassifiedLensListing[]> {
   const allClassified: ClassifiedLensListing[] = [];
   let anyBatchSucceeded = false;
@@ -125,18 +121,19 @@ Condition grading — be strict, most used lenses are "good", not "excellent":
 - fair: Any lens with caveats: cosmetic damage noted, minor dust inside, stiff focus ring, oil on aperture blades, "works but...", vague condition claims.
 - skip: fungus, mold, haze, scratches on elements, separation, cloudy/foggy optics, broken, for parts, untested.
 
-For each listing provide: isRelevant, isLensOnly, conditionGrade, conditionNotes, effectivePrice.
+For each listing provide: isRelevant, conditionGrade, effectivePrice.
 
 Listings:
 ${listingLines}`;
 
     try {
-      const { output } = await generateText({
-        model: "google/gemini-3.1-flash-lite",
+      const { output, usage } = await generateText({
+        model,
         output: Output.object({ schema: ClassifiedLensListingSchema }),
         prompt,
         timeout: 60_000,
       });
+      onUsage?.(usage);
 
       // Pad/truncate to exactly batch.length so downstream positional joins
       // (classified[i] ↔ raw[i]) never shift when the LLM miscounts.
@@ -149,11 +146,7 @@ ${listingLines}`;
       // for. Only ever turns relevance off.
       for (let j = 0; j < results.length; j++) {
         if (results[j].isRelevant && missingDiscriminator(lensName, batch[j].title)) {
-          results[j] = {
-            ...results[j],
-            isRelevant: false,
-            conditionNotes: "rejected: title omits a defining word of the model",
-          };
+          results[j] = { ...results[j], isRelevant: false };
         }
       }
       allClassified.push(...results);
@@ -168,7 +161,7 @@ ${listingLines}`;
     }
   }
 
-  // If every batch failed, surface the error instead of returning [] —
+  // If every batch failed, surface the error instead of returning []:
   // an empty result here would be indistinguishable from "no relevant listings"
   // and the caller would wrongly mark the lens as freshly scraped.
   if (listings.length > 0 && !anyBatchSucceeded && lastError !== undefined) {

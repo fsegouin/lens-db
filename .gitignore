@@ -47,3 +47,4 @@ scraper/kenrockwell-camera-drafts-*
 infra/db/.env
 infra/db/certs/
 infra/db/backups/
+

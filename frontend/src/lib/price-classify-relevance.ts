@@ -4,11 +4,9 @@ import { z } from "zod";
 /**
  * A leaner classifier for the asking-price ingest.
  *
- * The scraped pipeline's classifier returns five fields per listing, of which
- * this ingest reads two: it never uses isLensOnly, never uses effectivePrice
- * (the Browse API gives an authoritative one), and never reads conditionNotes,
- * which is free prose. At 20 listings a call that prose was most of the output
- * bill, so it is not asked for here.
+ * The scraped pipeline's classifier also returns effectivePrice, which this
+ * ingest never uses: the Browse API gives an authoritative one. Only relevance
+ * and grade are asked for here.
  *
  * The judgement itself is unchanged. The strictness rules are what stop a
  * "Canon EF" search pricing a 1973 body off EF-mount lenses, so they are kept
