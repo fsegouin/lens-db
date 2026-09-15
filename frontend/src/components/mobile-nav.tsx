@@ -20,8 +20,9 @@ const navLinks = [
   { href: "/chat", label: "Chat" },
 ];
 
-export function MobileNav() {
+export function MobileNav({ chatEnabled = true }: { chatEnabled?: boolean }) {
   const [open, setOpen] = useState(false);
+  const links = chatEnabled ? navLinks : navLinks.filter((l) => l.href !== "/chat");
   const pathname = usePathname();
   const { user } = useUser();
 
@@ -36,7 +37,7 @@ export function MobileNav() {
         <div className="px-4 pt-12 pb-4">
           <SheetTitle className="text-lg font-bold">Menu</SheetTitle>
           <nav className="mt-4 flex flex-col gap-1">
-            {navLinks.map((link) => {
+            {links.map((link) => {
               const isActive = pathname === link.href || (link.href !== "/" && pathname.startsWith(link.href));
               return (
                 <Link

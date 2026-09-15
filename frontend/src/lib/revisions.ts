@@ -10,6 +10,7 @@ import {
   users,
 } from "@/db/schema";
 import { eq, and, desc, sql, count } from "drizzle-orm";
+import { revalidateEntity } from "@/lib/revalidate-entity";
 
 export type EntityType = "lens" | "camera" | "system" | "collection" | "series";
 
@@ -313,6 +314,13 @@ export async function revertToRevision(
     .update(table)
     .set(updateData as Record<string, unknown>)
     .where(eq(table.id, target.entityId));
+
+  // The row cache and the page would otherwise keep serving the pre-revert
+  // state. A revert can change any field, so the lists are refreshed too.
+  if (entityType === "lens" || entityType === "camera") {
+    const slug = typeof updateData.slug === "string" ? updateData.slug : null;
+    revalidateEntity(entityType, slug);
+  }
 
   return createRevision({
     entityType,

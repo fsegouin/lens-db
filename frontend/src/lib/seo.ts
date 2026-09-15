@@ -203,6 +203,42 @@ type EntityMetadataInput = {
   images?: string[];
 };
 
+const LEAD_STOP_WORDS = new Set([
+  "the", "and", "with", "from", "that", "this", "for", "its", "was", "were",
+  "has", "have", "into", "onto", "takes", "camera", "lens", "lenses", "mount",
+  "introduced", "records", "megapixels",
+]);
+
+function contentWords(text: string): Set<string> {
+  const words = new Set<string>();
+  for (const w of text.toLowerCase().match(/[a-z0-9][a-z0-9.\-]*/g) ?? []) {
+    if (w.length >= 3 && !LEAD_STOP_WORDS.has(w)) words.add(w);
+  }
+  return words;
+}
+
+/**
+ * Whether a stored description says anything the generated lead does not.
+ *
+ * Most camera descriptions were written by a template from the same fields
+ * the lead sentence is built from ("The X is a 35mm camera, introduced in
+ * 1978. It takes Y mount lenses."), so a page showed the same sentence twice.
+ * A description is worth its space when it carries words the lead lacks; a
+ * short one that only rearranges the lead's own facts is not.
+ */
+export function descriptionAddsToLead(description: string, lead: string, name: string): boolean {
+  const text = description.trim();
+  if (!text) return false;
+  const stub = text.length < 200 && new RegExp(`^The ${escapeRegExp(name)} is an? `).test(text);
+  const fresh = [...contentWords(text)].filter((w) => !contentWords(lead).has(w));
+  if (stub && fresh.length <= 4) return false;
+  return fresh.length > 2 || text.length > 300;
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 /**
  * A meta description trimmed to fit, ending on a word.
  *

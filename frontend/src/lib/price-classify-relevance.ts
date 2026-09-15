@@ -4,9 +4,8 @@ import { z } from "zod";
 /**
  * A leaner classifier for the asking-price ingest.
  *
- * The scraped pipeline's classifier also returns effectivePrice, which this
- * ingest never uses: the Browse API gives an authoritative one. Only relevance
- * and grade are asked for here.
+ * Like the scraped pipeline's classifier, this asks only for relevance and
+ * grade; the price is always the one eBay reported.
  *
  * The judgement itself is unchanged. The strictness rules are what stop a
  * "Canon EF" search pricing a 1973 body off EF-mount lenses, so they are kept

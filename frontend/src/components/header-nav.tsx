@@ -15,8 +15,9 @@ const navLinks: { href: string; label: string; badge?: string }[] = [
   { href: "/chat", label: "Chat", badge: "New" },
 ];
 
-export function HeaderNav() {
+export function HeaderNav({ chatEnabled = true }: { chatEnabled?: boolean }) {
   const pathname = usePathname();
+  const links = chatEnabled ? navLinks : navLinks.filter((l) => l.href !== "/chat");
   const { open } = useSearch();
 
   return (
@@ -33,7 +34,7 @@ export function HeaderNav() {
           className="hidden gap-1 lg:flex"
           aria-label="Main navigation"
         >
-          {navLinks.map((link) => {
+          {links.map((link) => {
             const isActive = pathname === link.href || (link.href !== "/" && pathname.startsWith(link.href));
             return (
               <Link

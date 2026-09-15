@@ -4,14 +4,14 @@ import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { getClientIP, rateLimitedResponse } from "@/lib/api-utils";
 import { createRateLimit } from "@/lib/rate-limit";
-import { verifyPassword, createUserSession, userSessionCookieOptions } from "@/lib/user-auth";
+import { verifyPassword, createUserSession, userSessionCookieOptions, hashPassword, passwordNeedsRehash } from "@/lib/user-auth";
 
 const loginLimiter = createRateLimit("auth-login", 10, "60 s");
 
-// Well-formed "salt:hash" value used to equalize response timing when the
+// Well-formed "pbkdf2:<iterations>:<salt>:<hash>" value used to equalize response timing when the
 // account doesn't exist (prevents user-enumeration via timing side-channel).
 const DUMMY_PASSWORD_HASH =
-  "00000000000000000000000000000000:0000000000000000000000000000000000000000000000000000000000000000";
+  "pbkdf2:600000:ab274800585cea0d8813dfbcf6f2f3e7:03d45ffd4dac74f7669144c9441b3d7e3b098a5c26ea2550af6fea5585305ddd";
 
 export async function POST(request: NextRequest) {
   try {
@@ -72,7 +72,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const sessionToken = await createUserSession(user.id);
+    // A hash written under the old format or cost is upgraded now that the
+    // password is known; the session is bound to whichever hash is current.
+    let currentHash = user.passwordHash;
+    if (passwordNeedsRehash(currentHash)) {
+      currentHash = await hashPassword(password);
+      await db.update(users).set({ passwordHash: currentHash }).where(eq(users.id, user.id));
+    }
+    const sessionToken = await createUserSession(user.id, currentHash);
     const response = NextResponse.json({
       success: true,
       user: { id: user.id, displayName: user.displayName },

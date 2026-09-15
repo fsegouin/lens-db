@@ -8,7 +8,7 @@ import {
 } from "@/lib/prices";
 import { getCameraBySlug, getCameraSlugById } from "@/lib/cameras";
 import { getCameraRelations } from "@/lib/camera-relations";
-import { cameraDescription, cameraLead, entityMetadata, SITE_URL } from "@/lib/seo";
+import { cameraDescription, cameraLead, descriptionAddsToLead, entityMetadata, SITE_URL } from "@/lib/seo";
 import { cameraJsonLd } from "@/lib/jsonld";
 import { getPriceDisplay } from "@/lib/price-display";
 import ViewTracker from "@/components/ViewTracker";
@@ -316,7 +316,7 @@ export default async function CameraDetailPage({
             />
           )}
 
-      {camera.description && (
+      {camera.description && descriptionAddsToLead(camera.description, leadSentence, camera.name) && (
         <div className="space-y-3">
           {formatDescription(camera.description).map((paragraph, i) => (
             <p key={i} className="leading-relaxed text-zinc-700 dark:text-zinc-300">

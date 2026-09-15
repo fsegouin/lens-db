@@ -21,6 +21,7 @@ import {
   entityMetadata,
   lensDescription,
   lensLead,
+  descriptionAddsToLead,
   opticalConstruction,
   SITE_URL,
 } from "@/lib/seo";
@@ -434,7 +435,7 @@ export default async function LensDetailPage({
             />
           )}
 
-      {lens.description && (
+      {lens.description && descriptionAddsToLead(lens.description, leadSentence, lens.name) && (
         <div className="space-y-3">
           {formatDescription(lens.description).map((paragraph, i) => (
             <p key={i} className="leading-relaxed text-zinc-700 dark:text-zinc-300">

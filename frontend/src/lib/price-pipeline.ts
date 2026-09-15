@@ -29,7 +29,6 @@ type NewRow = typeof priceHistory.$inferInsert;
 export interface ClassifiedSaleInput {
   isRelevant: boolean;
   conditionGrade: string;
-  effectivePrice: number;
 }
 
 export async function storeClassifiedSales(
@@ -48,13 +47,17 @@ export async function storeClassifiedSales(
     const rawListing = raw[i];
     if (!rawListing) continue;
     if (!cl.isRelevant || cl.conditionGrade === "skip") continue;
+    // The price is the figure eBay reported, never one the model wrote: a
+    // listing title is seller text, and a model reading it may only accept
+    // or reject the sale, not reprice it.
+    if (!Number.isFinite(rawListing.price) || rawListing.price <= 0) continue;
 
     const row: NewRow = {
       entityType,
       entityId,
       saleDate: rawListing.date,
       condition: GRADE_MAP[cl.conditionGrade] ?? cl.conditionGrade,
-      priceUsd: Math.round(cl.effectivePrice),
+      priceUsd: Math.round(rawListing.price),
       source: "eBay",
       sourceUrl: rawListing.url ?? null,
       // The evidence, kept with the figure. A sold listing stops being public,

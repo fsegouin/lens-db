@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { lenses, cameras, pendingEdits } from "@/db/schema";
 import { requireUserAPI } from "@/lib/user-auth";
 import { createRevision } from "@/lib/revisions";
+import { revalidateEntity } from "@/lib/revalidate-entity";
 import { getUserTier } from "@/lib/edit-validation";
 import { getClientIP, hashIP } from "@/lib/api-utils";
 import { createRateLimit } from "@/lib/rate-limit";
@@ -250,6 +251,9 @@ export async function POST(request: NextRequest) {
     ipHash,
     autoPatrol: isAdmin || isTrusted,
   });
+
+  // A new row must reach the cached lists, not just its own page.
+  revalidateEntity(entityType, created.slug);
 
   return NextResponse.json({
     success: true,
