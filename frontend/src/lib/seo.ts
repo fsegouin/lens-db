@@ -204,10 +204,6 @@ type EntityMetadataInput = {
 };
 
 /**
- * Title/description/canonical/OG in one place so every entity route emits the
- * same shape. The root layout supplies the "| The Lens DB" suffix.
- */
-/**
  * A meta description trimmed to fit, ending on a word.
  *
  * A hard character cut lands mid-word in the search result it is written for
@@ -223,6 +219,10 @@ export function metaDescription(text: string, max = 158): string {
   return `${(at > max * 0.6 ? cut.slice(0, at) : cut).replace(/[,;:]$/, "")}\u2026`;
 }
 
+/**
+ * Title/description/canonical/OG in one place so every entity route emits the
+ * same shape. The root layout supplies the "| The Lens DB" suffix.
+ */
 export function entityMetadata({
   title,
   description,

@@ -11,7 +11,7 @@ pnpm db:migrate       # Apply Drizzle migrations (drizzle-kit migrate)
 pnpm build            # Production build (runs db:migrate first)
 pnpm start            # Start production server
 pnpm lint             # ESLint (next/core-web-vitals + typescript)
-pnpm test             # node:test suites (src/**/*.test.ts), no database needed
+pnpm test             # node:test suites (src/**/*.test.ts and scripts/**/*.test.mjs), no database needed
 ```
 
 ## Tech Stack
@@ -21,7 +21,7 @@ pnpm test             # node:test suites (src/**/*.test.ts), no database needed
 - **Styling**: Tailwind CSS v4 (via PostCSS plugin, dark mode with `dark:` utilities, zinc palette)
 - **Database**: self-hosted PostgreSQL 17 (Docker stack in `infra/db/`) via Drizzle ORM (node-postgres driver, through the pgbouncer transaction pooler on port 6543)
 - **Rate Limiting**: Upstash Redis (sliding window)
-- **AI**: Vercel AI SDK via AI Gateway — chat (`/chat`, tools from the `lens-db-mcp-server` workspace package), eBay listing classification, and DPReview import dedupe/audit checks (all `google/gemini-3.1-flash-lite`)
+- **AI**: Vercel AI SDK via AI Gateway: chat (`/chat`, `google/gemini-2.5-flash`, tools from the `lens-db-mcp-server` workspace package), plus eBay listing classification, KEH matching and DPReview import dedupe/audit checks (`google/gemini-3.1-flash-lite`; the listing classifiers honour `LISTING_CLASSIFIER_MODEL`)
 - **Email**: Resend (verification, welcome, password reset, edit reviewed, weekly digest)
 - **Image Storage**: Cloudflare R2 (admin uploads, served from R2 public URL)
 - **Analytics**: Vercel Analytics + Speed Insights; custom events in `src/lib/analytics.ts` cover search, filters and the whole membership funnel (signup_prompt_click, register_started, registered, email_verified, signed_in, kit_add, rating_submit, edit_submitted, digest_opt_in)
@@ -57,7 +57,7 @@ src/
 │   ├── admin/                  # Admin portal: login + (authenticated) CRUD pages
 │   ├── chat/                   # AI chat page
 │   ├── lenses/                 # List ([slug] detail, compare, series)
-│   ├── cameras/                # List ([...slug] detail — catch-all for nested paths)
+│   ├── cameras/                # List ([slug] detail, [slug]/lenses)
 │   ├── collections/            # List ([slug] detail with lens table)
 │   ├── systems/                # List ([slug] detail with lens + camera tables)
 │   ├── search/                 # Global search across lenses, cameras, systems
@@ -92,10 +92,9 @@ src/
     ├── user-auth.ts            # User accounts: PBKDF2 password hashing, HMAC-signed sessions
     ├── api-utils.ts            # getClientIP, hashIP (SHA-256), rateLimitedResponse
     ├── rate-limit.ts           # Upstash limiters the firewall can't express (per-account, hourly)
-    ├── ebay-auth.ts / ebay-search-query.ts / ebay-types.ts  # eBay API integration
+    ├── ebay-auth.ts / ebay-browse.ts / ebay-search-query.ts / ebay-affiliate.ts / ebay-types.ts  # eBay Browse API integration and affiliate links
     ├── price-classify.ts / price-classify-lens.ts  # LLM listing classification (Gemini)
     ├── price-pipeline.ts / prices.ts  # Price history + estimates
-    ├── revisions.ts / apply-correction.ts / edit-validation.ts  # Community edits
     ├── email.ts                # Resend: sendEmail + layout, verification/welcome/reset/edit-reviewed templates
     ├── email-digest.ts         # Weekly "new in the catalogue" digest (own Resend client)
     ├── new-entities.ts         # Recently added lenses and cameras (page, feed, digest)
@@ -274,8 +273,11 @@ RESEND_REPLY_TO=       # Optional: inbox that replies to transactional mail shou
 RESEND_FROM_EMAIL=     # From address for emails
 APP_URL=               # Base URL for email links
 AI_GATEWAY_API_KEY=    # Vercel AI Gateway key (/chat, price classification, DPReview dedupe/audit)
+LISTING_CLASSIFIER_MODEL=  # Optional: override the eBay listing classifier model (default google/gemini-3.1-flash-lite)
 CRON_SECRET=           # Bearer token protecting /api/cron/* endpoints
 EBAY_APP_ID=           # eBay API credentials (price pipeline)
+PARSE_API_KEY=         # KEH catalogue mirror (src/lib/keh.ts, /api/cron/keh-catalogue)
+PUBLIC_API_ENABLED=    # "true" opens /api/v1, /api/mcp and /developers (src/proxy.ts)
 EBAY_CERT_ID=
 EBAY_CAMPAIGN_ID=      # eBay Partner Network campaign (affiliate links)
 R2_ACCOUNT_ID=         # Cloudflare R2 (admin image uploads)
@@ -290,7 +292,6 @@ See `.env.example` for details. All env files are gitignored.
 ## Gotchas
 
 - **pnpm only**: `preinstall` script rejects npm/yarn — always use `pnpm`
-- **Camera catch-all slug**: `/cameras/[...slug]` supports multi-segment paths (slugs with `/` in them)
 - **Comparison ordering**: `lensComparisons` enforces `lensId1 < lensId2` — always pass the smaller ID first
 - **Local images gitignored**: `/public/images/lenses/` and `/public/images/cameras/` are in `.gitignore` — they come from a separate scraper
 - **Security headers**: Comprehensive headers set in `next.config.ts` (HSTS, X-Frame-Options DENY, CSP-adjacent)
@@ -366,3 +367,13 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 ---
 
 **These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

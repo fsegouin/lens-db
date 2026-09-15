@@ -1,3 +1,6 @@
+
+/** Refresh this long before eBay says the token dies, so a request never carries one that expires in flight. */
+const TOKEN_REFRESH_BUFFER_SECONDS = 300;
 let cachedToken: { token: string; expiresAt: number } | null = null;
 
 /**
@@ -43,6 +46,7 @@ async function fetchAccessToken(): Promise<string> {
       Authorization: `Basic ${credentials}`,
     },
     body: "grant_type=client_credentials&scope=https://api.ebay.com/oauth/api_scope",
+    signal: AbortSignal.timeout(5000),
   });
 
   if (!res.ok) {
@@ -53,7 +57,7 @@ async function fetchAccessToken(): Promise<string> {
 
   cachedToken = {
     token: data.access_token,
-    expiresAt: Date.now() + (data.expires_in - 300) * 1000,
+    expiresAt: Date.now() + (data.expires_in - TOKEN_REFRESH_BUFFER_SECONDS) * 1000,
   };
 
   return data.access_token;

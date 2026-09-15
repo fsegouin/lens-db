@@ -93,7 +93,7 @@ function ItemSearch({
           </div>
           <Button
             variant="outline"
-            size="sm"
+            size="sm" aria-label={`Change ${label}`}
             onClick={() => {
               onSelect(null);
               reset();

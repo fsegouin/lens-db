@@ -1,4 +1,4 @@
-import PriceChart, { type AskingSnapshot } from "@/components/PriceChart";
+import PriceChart, { type PriceHistoryEntry } from "@/components/PriceChart";
 import { getPriceDisplay } from "@/lib/price-display";
 
 interface PriceEstimate {
@@ -23,19 +23,9 @@ interface PriceEstimate {
   extractedAt: Date;
 }
 
-interface PriceHistoryEntry {
-  saleDate: string | null;
-  condition: string | null;
-  priceUsd: number | null;
-  source: string | null;
-}
-
 interface PriceCardProps {
   estimate: PriceEstimate | null;
   history: PriceHistoryEntry[];
-  /** Daily asking aggregates, charted against the recorded sales. The
-   * individual sale records feed the chart only; they are never listed. */
-  asking?: AskingSnapshot[];
 }
 
 function formatPrice(low: number | null, high: number | null) {
@@ -49,7 +39,6 @@ function formatPrice(low: number | null, high: number | null) {
 export default function PriceCard({
   estimate,
   history,
-  asking = [],
 }: PriceCardProps) {
   const shownEstimate =
     estimate != null &&
@@ -61,7 +50,7 @@ export default function PriceCard({
   // Without prices, and with too few points for the chart, there is nothing
   // to show, and a bare "Used prices" heading over an empty box is worse
   // than no section.
-  if (!shownEstimate && history.length < 2 && asking.length < 2) return null;
+  if (!shownEstimate && history.length < 2) return null;
 
   const display = getPriceDisplay(shownEstimate);
   const showTiers = display?.showTiers ?? false;
@@ -75,21 +64,9 @@ export default function PriceCard({
   const fromAsking = shownEstimate?.priceSource === "asking";
   const fromKeh = shownEstimate?.priceSource === "keh";
 
-  // How many live listings the figure rests on. Naming it matters most where
-  // the number is smallest: an estimate from three listings and one from
-  // eighty read identically otherwise.
-  const askingSample = fromAsking
-    ? (asking[asking.length - 1]?.sampleCount ?? null)
-    : null;
-
-  const basis = fromAsking
-    ? `Estimated from ${
-        askingSample != null
-          ? `${askingSample} current ${askingSample === 1 ? "listing" : "listings"} on online marketplaces`
-          : "current listings on online marketplaces"
-      }, adjusted for the gap between what sellers ask and what buyers pay.`
-    : fromKeh
-      ? "Estimated from current used listings, adjusted for the gap between what sellers ask and what buyers pay."
+  const basis =
+    fromAsking || fromKeh
+      ? "Estimated from listings observed on online marketplaces, adjusted for the gap between what sellers ask and what buyers pay."
       : "Too few graded sales to separate conditions.";
 
   return (
@@ -159,9 +136,7 @@ export default function PriceCard({
         </div>
       )}
 
-      {(history.length >= 2 || asking.length >= 2) && (
-        <PriceChart history={history} asking={asking} />
-      )}
+      {history.length >= 2 && <PriceChart history={history} />}
 
     </div>
   );

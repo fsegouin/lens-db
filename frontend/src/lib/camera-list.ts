@@ -100,7 +100,8 @@ export const listCameras = unstable_cache(
         conditions.push(eq(cameras.yearIntroduced, val));
     }
     // Exact match on the PRODUCTION_STATUS vocabulary, as the lens list does;
-    // an unknown spelling matches nothing rather than everything.
+    // a spelling the vocabulary cannot place drops the filter rather than
+    // matching nothing.
     const productionStatus = normalizeProductionStatus(p.productionStatus);
     if (productionStatus) {
       conditions.push(eq(cameras.productionStatus, productionStatus));

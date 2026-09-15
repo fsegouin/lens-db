@@ -223,9 +223,9 @@ export default async function CameraLensesPage({
         </p>
       )}
 
-      {/* Only native fit is shown: adapted combinations need mount register
-          data the systems table does not carry yet. A body with no mount has
-          nothing to adapt to, so the note would only confuse. */}
+      {/* Only native fit is shown here; adapted combinations live on
+          /adapters, worked from each mount's flange distance. A body with no
+          mount has nothing to adapt to, so the note would only confuse. */}
       {!builtInLens && (
         <p className="mt-8 border-t border-border pt-4 text-xs text-muted-foreground">
           Native fit only. Lenses from other mounts may fit with an adapter,

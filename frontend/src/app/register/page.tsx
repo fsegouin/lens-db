@@ -49,7 +49,7 @@ export default function RegisterPage() {
           <li>Get credit by name on every page you correct.</li>
           <li>Get a weekly note of new glass, only if you ask for one.</li>
         </ul>
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
         <div className="space-y-2">
           <label htmlFor="displayName" className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
             Display name

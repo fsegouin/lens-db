@@ -162,24 +162,3 @@ export function publicCamera(row: CameraRow, mount: string | null = null) {
   };
 }
 
-type MountRow = {
-  slug: string;
-  name: string;
-  flangeDistanceMm: number | null;
-  mountType: string | null;
-};
-
-export function publicMount(
-  row: MountRow,
-  counts?: { lenses: number; cameras: number },
-) {
-  return {
-    id: row.slug,
-    url: `https://thelensdb.com/systems/${row.slug}`,
-    name: row.name,
-    /** Flange focal distance in mm: the register, and the whole basis of adapting. */
-    flangeDistanceMm: row.flangeDistanceMm,
-    mountType: row.mountType,
-    ...(counts ? { lensCount: counts.lenses, cameraCount: counts.cameras } : {}),
-  };
-}

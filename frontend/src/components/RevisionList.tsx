@@ -101,7 +101,7 @@ export default function RevisionList({ revisions }: { revisions: Revision[] }) {
     } catch {
       setFailedIds((prev) => new Set(prev).add(revisionId));
     } finally {
-      setLoading(null);
+      setLoading((current) => (current === revisionId ? null : current));
     }
   }
 
@@ -165,7 +165,7 @@ export default function RevisionList({ revisions }: { revisions: Revision[] }) {
             {expandedId === rev.id && (
               <div className="border-t border-zinc-200 bg-zinc-50/50 p-3 dark:border-zinc-800 dark:bg-zinc-900/30">
                 {loading === rev.id ? (
-                  <p className="text-xs text-muted-foreground">Loading diff...</p>
+                  <p role="status" className="text-xs text-muted-foreground">Loading diff...</p>
                 ) : failedIds.has(rev.id) ? (
                   <p className="text-xs text-muted-foreground">
                     Failed to load diff.{" "}

@@ -65,6 +65,7 @@ function MountsCell({ mounts, onSelect }: { mounts: SystemOption[]; onSelect: (s
         <button
           type="button"
           onClick={() => setExpanded(true)}
+          aria-label={`${hidden} more ${hidden === 1 ? "mount" : "mounts"}, show all`}
           className="shrink-0 rounded bg-muted px-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
         >
           +{hidden}
@@ -687,7 +688,7 @@ export default function LensList({
       {/* The skeleton lives inside the desktop wrapper, so without this the
           card list had no sign that more rows were on the way. */}
       {loading && (
-        <p className="py-3 text-center text-sm text-muted-foreground xl:hidden">
+        <p role="status" className="py-3 text-center text-sm text-muted-foreground xl:hidden">
           Loading more...
         </p>
       )}

@@ -15,7 +15,7 @@ function ListingSkeleton() {
 
 export default function EbayListingsSkeleton() {
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" role="status" aria-label="Loading eBay listings">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold tracking-wider text-muted-foreground uppercase">
           eBay Listings

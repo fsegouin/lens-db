@@ -25,6 +25,23 @@ function formatCurrency(value: string, currency: string): string {
   }
 }
 
+function SectionHeading() {
+  return (
+    <h2 className="text-sm font-semibold tracking-wider text-muted-foreground uppercase">
+      eBay Listings
+    </h2>
+  );
+}
+
+function AffiliateDisclosure() {
+  return (
+    <p className="text-right text-[10px] text-muted-foreground">
+      As an eBay Partner Network affiliate, The Lens DB earns from qualifying
+      purchases.
+    </p>
+  );
+}
+
 /**
  * Fetched on the client so the surrounding page stays statically cacheable:
  * the listings depend on the visitor's country, which the /api/ebay route
@@ -48,20 +65,43 @@ export default function EbayListings({
         setListings(data.listings ?? []);
         setSearchUrl(data.searchUrl);
       })
-      .catch(() => setListings([]));
+      .catch(() => {
+        if (!controller.signal.aborted) setListings([]);
+      });
 
     return () => controller.abort();
   }, [query, entityType]);
 
   if (listings === null) return <EbayListingsSkeleton />;
-  if (listings.length === 0) return null;
+
+  // No listing matched the query today. The search page itself may still
+  // find something (the API wants every word in the title, the site does
+  // not), and it is the only affiliate link this page would otherwise have.
+  if (listings.length === 0) {
+    if (!searchUrl) return null;
+    return (
+      <div className="space-y-2">
+        <SectionHeading />
+        <p className="text-sm text-muted-foreground">
+          No current listings matched.{" "}
+          <EbayTrackedLink
+            href={searchUrl}
+            event="ebay_view_all_click"
+            eventProps={{ entity_type: entityType, entity_slug: entitySlug, empty: true }}
+            className="underline hover:text-foreground"
+          >
+            Search eBay
+          </EbayTrackedLink>
+        </p>
+        <AffiliateDisclosure />
+      </div>
+    );
+  }
 
   return (
     <div className="@container space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold tracking-wider text-muted-foreground uppercase">
-          eBay Listings
-        </h2>
+        <SectionHeading />
         {searchUrl && (
           <EbayTrackedLink
             href={searchUrl}
@@ -127,10 +167,7 @@ export default function EbayListings({
         ))}
       </div>
 
-      <p className="text-right text-[10px] text-muted-foreground">
-        As an eBay Partner Network affiliate, The Lens DB earns from qualifying
-        purchases.
-      </p>
+      <AffiliateDisclosure />
     </div>
   );
 }

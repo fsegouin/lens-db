@@ -67,7 +67,7 @@ export default async function DevelopersPage() {
                   scope="col"
                   className={tableHeadClass}
                 >
-                  {h}
+                  {h || <span className="sr-only">Method</span>}
                 </th>
               ))}
             </tr>

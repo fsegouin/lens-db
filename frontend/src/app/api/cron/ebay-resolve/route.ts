@@ -17,7 +17,7 @@ import { recomputePriceEstimates } from "@/lib/price-pipeline";
  *
  * GET hands the runner the listings due a check. The runner reads each
  * listing's own page (/itm/<id>) and POSTs back what the page said, and POST
- * applies it (scraper/ebay-resolve-action.mjs drives both).
+ * applies it (the resolve runner drives both).
  *
  * The page comes first because the Browse API cannot tell a sale from a
  * listing its seller pulled: both come back with a sold quantity, nothing

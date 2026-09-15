@@ -1,4 +1,4 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { fieldCitations } from "@/db/schema";
 
@@ -49,27 +49,6 @@ export async function getCitations(
   return new Map(rows.map((r) => [r.field, r]));
 }
 
-/** The same, for a page that lists many entities. */
-export async function getCitationCounts(
-  entityType: string,
-  entityIds: number[],
-): Promise<Map<number, number>> {
-  if (entityIds.length === 0) return new Map();
-  const rows = await db
-    .select({ entityId: fieldCitations.entityId, field: fieldCitations.field })
-    .from(fieldCitations)
-    .where(
-      and(
-        eq(fieldCitations.entityType, entityType),
-        inArray(fieldCitations.entityId, entityIds),
-      ),
-    );
-
-  const counts = new Map<number, number>();
-  for (const r of rows) counts.set(r.entityId, (counts.get(r.entityId) ?? 0) + 1);
-  return counts;
-}
-
 export type CitationInput = {
   entityType: string;
   entityId: number;
@@ -117,11 +96,3 @@ export async function citeField(input: CitationInput): Promise<void> {
     });
 }
 
-export async function citeFields(inputs: CitationInput[]): Promise<number> {
-  let n = 0;
-  for (const input of inputs) {
-    await citeField(input);
-    n++;
-  }
-  return n;
-}

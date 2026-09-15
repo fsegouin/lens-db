@@ -247,6 +247,7 @@ export default function SubmitForm({ systems }: { systems: SystemOption[] }) {
             ) : field.type === "boolean" ? (
               <label className="flex items-center gap-2">
                 <input
+                  id={field.name}
                   type="checkbox"
                   checked={!!formData[field.name]}
                   onChange={(e) => updateField(field.name, e.target.checked)}
@@ -292,7 +293,7 @@ export default function SubmitForm({ systems }: { systems: SystemOption[] }) {
       </div>
 
       {error && (
-        <p className="text-sm font-medium text-red-600 dark:text-red-400">
+        <p role="alert" className="text-sm font-medium text-red-600 dark:text-red-400">
           {error}
         </p>
       )}

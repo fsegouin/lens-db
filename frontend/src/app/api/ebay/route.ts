@@ -7,7 +7,7 @@ import {
 
 // Entity pages fetch their eBay listings from here on the client. Keeping the
 // geo lookup (and the eBay round-trip) out of the page render is what lets
-// /lenses/[slug] and /cameras/[...slug] be served from the CDN cache.
+// /lenses/[slug] and /cameras/[slug] be served from the CDN cache.
 export async function GET(request: NextRequest) {
   const params = new URL(request.url).searchParams;
   const query = params.get("q")?.trim().slice(0, 200);
@@ -27,6 +27,6 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({
     listings,
-    searchUrl: affiliateUrl(searchQueryFor(query, entityType)),
+    searchUrl: affiliateUrl(searchQueryFor(query, entityType), country),
   });
 }

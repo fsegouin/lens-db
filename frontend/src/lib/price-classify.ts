@@ -7,17 +7,8 @@ const ClassifiedListingSchema = z.object({
       isRelevant: z.boolean().describe(
         "True only if: (1) this is the exact target camera model, (2) it's in working condition (not for parts/repair/broken/untested), (3) it's a single item (not a lot)",
       ),
-      isBodyOnly: z.boolean().describe(
-        "True if the listing is for the camera body only (no lens included)",
-      ),
-      includesLens: z.string().nullable().describe(
-        "If a lens is included, describe it (e.g. 'FD 50mm f/1.8'). Null if body only.",
-      ),
       conditionGrade: z.enum(["excellent", "good", "fair", "skip"]).describe(
         "Be strict — most cameras are 'good'. excellent: ONLY mint/near-mint/top-mint with zero caveats (10-20% of listings). good: the default for any working camera in decent shape — Exc+5, Very Good, tested, CLA'd, refurbished. fair: working but with noted issues, cosmetic damage, needs work, or vague condition claims. skip: broken, parts, untested.",
-      ),
-      conditionNotes: z.string().describe(
-        "Brief notes about condition from the listing title",
       ),
       effectivePrice: z.number().describe(
         "The actual sale price in USD (not including shipping)",
@@ -37,6 +28,9 @@ export interface RawListing {
   url?: string;
 }
 
+/** Overridable so the same prompt can be measured against another model. */
+export const CLASSIFIER_MODEL = process.env.LISTING_CLASSIFIER_MODEL || "google/gemini-3.1-flash-lite";
+
 const BATCH_SIZE = 20;
 
 // Placeholder used to keep positional alignment with the raw listings when a
@@ -45,10 +39,7 @@ const BATCH_SIZE = 20;
 function placeholderListing(): ClassifiedListing {
   return {
     isRelevant: false,
-    isBodyOnly: false,
-    includesLens: null,
     conditionGrade: "skip",
-    conditionNotes: "classification unavailable",
     effectivePrice: 0,
   };
 }
@@ -56,6 +47,7 @@ function placeholderListing(): ClassifiedListing {
 export async function classifyListings(
   cameraName: string,
   listings: RawListing[],
+  { model = CLASSIFIER_MODEL }: { model?: string } = {},
 ): Promise<ClassifiedListing[]> {
   const allClassified: ClassifiedListing[] = [];
   let anyBatchSucceeded = false;
@@ -84,14 +76,14 @@ Condition grading — be strict, most used cameras are "good", not "excellent":
 - good: The default for working cameras. Includes [Exc+5], [Exc+4], Excellent, Very Good, tested/working, CLA'd, Good Refurbished, Very Good Refurbished. Most listings should be here.
 - fair: Any camera with caveats: *Read, cosmetic damage noted, "works but...", needs light seals, minor issues mentioned, no condition info given, just "body only" with no condition claim.
 
-For each listing provide: isRelevant, isBodyOnly, includesLens, conditionGrade, conditionNotes, effectivePrice.
+For each listing provide: isRelevant, conditionGrade, effectivePrice.
 
 Listings:
 ${listingLines}`;
 
     try {
       const { output } = await generateText({
-        model: "google/gemini-3.1-flash-lite",
+        model,
         output: Output.object({ schema: ClassifiedListingSchema }),
         prompt,
         timeout: 60_000,
@@ -115,7 +107,7 @@ ${listingLines}`;
     }
   }
 
-  // If every batch failed, surface the error instead of returning [] —
+  // If every batch failed, surface the error instead of returning []:
   // an empty result here would be indistinguishable from "no relevant listings"
   // and the caller would wrongly mark the camera as freshly scraped.
   if (listings.length > 0 && !anyBatchSucceeded && lastError !== undefined) {

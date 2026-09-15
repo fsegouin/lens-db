@@ -761,7 +761,7 @@ export default function CameraList({
         {/* The skeleton lives inside the desktop wrapper, so without this the
             card list had no sign that more rows were on the way. */}
         {loading && (
-          <p className="py-3 text-center text-sm text-muted-foreground xl:hidden">
+          <p role="status" className="py-3 text-center text-sm text-muted-foreground xl:hidden">
             Loading more...
           </p>
         )}

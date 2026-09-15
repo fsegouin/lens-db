@@ -1,5 +1,5 @@
 import { unstable_cache } from "next/cache";
-import { and, asc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { lenses, lensSystems } from "@/db/schema";
 
@@ -55,15 +55,3 @@ export const getLensesForMount = unstable_cache(
   { revalidate: 2592000, tags: ["lenses", "cameras"] },
 );
 
-/** Slugs for the sitemap: every camera that has a mount worth listing. */
-export const getCamerasWithMounts = unstable_cache(
-  async (): Promise<{ slug: string }[]> => {
-    const rows = await db
-      .select({ slug: sql<string>`c.slug` })
-      .from(sql`cameras c`)
-      .where(sql`c.merged_into_id is null and c.system_id is not null`);
-    return rows;
-  },
-  ["cameras-with-mounts"],
-  { revalidate: 604800, tags: ["cameras"] },
-);

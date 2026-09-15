@@ -47,3 +47,15 @@ scraper/kenrockwell-camera-drafts-*
 infra/db/.env
 infra/db/certs/
 infra/db/backups/
+
+# The scraper folder stays local except the DPReview watchers and the backup
+# script the workflows run, and the package files they install from.
+/scraper/*
+!/scraper/README.md
+!/scraper/package.json
+!/scraper/package-lock.json
+!/scraper/dpreview-watch-action.mjs
+!/scraper/dpreview-review-cli.mjs
+!/scraper/dpreview-audit-cli.mjs
+!/scraper/db-backup.sh
+/infra/scraper/

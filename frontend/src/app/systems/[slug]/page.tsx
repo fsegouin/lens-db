@@ -119,6 +119,7 @@ export default async function SystemDetailPage({
               target="_blank"
               className="font-mono text-xs text-muted-foreground underline underline-offset-2 transition-colors hover:text-foreground"
               title="This mount on Wikidata"
+              aria-label={`${system.wikidataQid} on Wikidata, opens in a new tab`}
             >
               {system.wikidataQid}
             </a>

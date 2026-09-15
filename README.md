@@ -11,7 +11,7 @@ The Lens DB is a camera and lens database project built from archived `lens-db.c
   TypeScript MCP server exposing lens/camera search, detail, price, and compatibility tools. Its tool implementations are also consumed by the frontend chat via the `lens-db-mcp-server` workspace dependency.
 
 - `scraper/`
-  Python tools for discovering archived pages, downloading them from the Wayback Machine, parsing structured data, and importing it into PostgreSQL, plus Node scripts (eBay price scrapers and the DPReview new-lens watcher) run via GitHub Actions in `.github/workflows/` or manually against the `/api/cron/*` endpoints.
+  Node scripts for the DPReview new-product watchers, run via GitHub Actions in `.github/workflows/` or manually against the `/api/cron/*` endpoints.
 
 ## Main App
 
@@ -50,20 +50,7 @@ See [`frontend/.env.example`](frontend/.env.example) for the full list.
 
 ## Scraper
 
-The scraper lives in [`scraper/`](scraper/) and is used to rebuild or extend the dataset from archived The Lens DB pages.
-
-### Basic Flow
-
-```bash
-cd scraper
-pip install -r requirements.txt
-python discover_urls.py --output urls.json
-python fetch_pages.py --input urls.json --output-dir pages/
-python parse_lenses.py --input-dir pages/ --output data.json
-python import_to_db.py --input data.json
-```
-
-See [`scraper/README.md`](scraper/README.md) for the full scraper workflow.
+The DPReview watchers live in [`scraper/`](scraper/); see [`scraper/README.md`](scraper/README.md).
 
 ## Catalogue Gap Scanning
 

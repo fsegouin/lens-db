@@ -68,7 +68,7 @@ export default function ForgotPasswordPage() {
           Enter the address you signed up with and we will send a link to choose
           a new one.
         </p>
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
         <div className="space-y-2">
           <label htmlFor="email" className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
             Email

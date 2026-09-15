@@ -20,6 +20,7 @@ export default function EbayTrackedLink({ href, event, eventProps, className, ch
       onClick={() => trackEvent(event, eventProps)}
     >
       {children}
+      <span className="sr-only"> (opens in a new tab)</span>
     </a>
   );
 }
