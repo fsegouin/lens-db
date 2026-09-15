@@ -31,7 +31,7 @@ pnpm test             # node:test suites (src/**/*.test.ts and scripts/**/*.test
 
 ```
 src/
-├── proxy.ts                    # Next.js 16 proxy: /admin auth redirect + CSRF Origin check
+├── proxy.ts                    # Next.js 16 proxy: gates /api/v1, /api/mcp, /developers (PUBLIC_API_ENABLED) and /api/chat (CHAT_ENABLED), /admin auth redirect, CSRF Origin check
 ├── instrumentation-client.ts   # Client init: BotID protection for routes in src/lib/botid.ts
 ├── hooks/use-entity-search.ts  # Client hook: debounced lens/camera typeahead search
 ├── app/
@@ -228,7 +228,7 @@ Role-protected admin at `/admin/*` for CRUD management of all entities. Admins a
 
 ### Auth Flow
 - User accounts: PBKDF2 password hashing, email verification via Resend (`src/lib/user-auth.ts`)
-- Session: stateless HMAC-signed token (`userId.expiresAt.signature`, signed with `SESSION_SECRET`) in HTTP-only cookie `user_session`, 30-day TTL
+- Session: stateless HMAC-signed token (`userId.expiresAt.keyTag.signature`, signed with `SESSION_SECRET`; `keyTag` is a short digest of the password hash, so a password change or reset ends every session) in HTTP-only cookie `user_session`, 30-day TTL
 - `src/proxy.ts` redirects users without a `user_session` cookie away from `/admin/*` to `/login`; role is validated server-side (`/admin/login` just redirects to `/login`)
 - API routes use `requireAdminAPI()` from `src/lib/admin-auth.ts`; pages use `requireAdmin()`
 - Login rate limited: 10 req/60s (registration: 5 req/60s)
@@ -278,6 +278,7 @@ CRON_SECRET=           # Bearer token protecting /api/cron/* endpoints
 EBAY_APP_ID=           # eBay API credentials (price pipeline)
 PARSE_API_KEY=         # KEH catalogue mirror (src/lib/keh.ts, /api/cron/keh-catalogue)
 PUBLIC_API_ENABLED=    # "true" opens /api/v1, /api/mcp and /developers (src/proxy.ts)
+CHAT_ENABLED=          # "false" turns the chat off: /api/chat and /chat 404, nav and footer hide it (src/proxy.ts)
 EBAY_CERT_ID=
 EBAY_CAMPAIGN_ID=      # eBay Partner Network campaign (affiliate links)
 R2_ACCOUNT_ID=         # Cloudflare R2 (admin image uploads)
@@ -297,9 +298,9 @@ See `.env.example` for details. All env files are gitignored.
 - **Security headers**: Comprehensive headers set in `next.config.ts` (HSTS, X-Frame-Options DENY, CSP-adjacent)
 - **Raw specs JSON**: Hidden in production on camera detail pages (dev-only debug display)
 - **Path alias**: `@/*` maps to `./src/*`
-- **Sessions are stateless**: HMAC-signed tokens validated with `SESSION_SECRET` — no server-side session store; rotating the secret invalidates all sessions
+- **Sessions are stateless**: HMAC-signed tokens validated with `SESSION_SECRET`, no server-side session store; rotating the secret invalidates all sessions, and a password change or reset invalidates that account's sessions via the token's key tag
 - **Next.js 16 proxy (not middleware)**: In Next.js 16, `middleware.ts` is replaced by `proxy.ts`. Always use `src/proxy.ts` — never create `middleware.ts`
-- **Admin proxy**: `src/proxy.ts` only checks cookie existence (and enforces CSRF Origin checks on mutating `/api/*` requests); full session + role validation happens in API routes and page helpers
+- **Admin proxy**: `src/proxy.ts` only checks cookie existence (and enforces CSRF Origin checks on mutating `/api/*` requests, and 404s the developer surface and `/api/chat` when their env switches are off); full session + role validation happens in API routes and page helpers
 - **Rate limiting off in dev**: limiters are no-ops when `NODE_ENV=development` (`src/lib/redis.ts` returns null)
 
 # CLAUDE.md

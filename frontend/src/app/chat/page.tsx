@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import ChatInterface from "@/components/ChatInterface";
+import { chatEnabled } from "@/proxy";
 
 export const metadata: Metadata = {
   title: "Chat",
@@ -7,6 +9,7 @@ export const metadata: Metadata = {
 };
 
 export default function ChatPage() {
+  if (!chatEnabled()) notFound();
   return (
     <>
       <style>{`[data-slot="separator"], footer { display: none !important; }`}</style>

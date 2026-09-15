@@ -7,6 +7,7 @@ import { GeistMono } from "geist/font/mono";
 import HeaderSearch from "@/components/HeaderSearch";
 import { HeaderNav } from "@/components/header-nav";
 import { MobileNav } from "@/components/mobile-nav";
+import { chatEnabled } from "@/proxy";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SearchProvider } from "@/components/search-context";
@@ -90,6 +91,10 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const chatOn = chatEnabled();
+  const sections = chatOn
+    ? footerSections
+    : footerSections.map((s) => ({ ...s, links: s.links.filter((l) => l.href !== "/chat") }));
   return (
     <html lang="en" suppressHydrationWarning>
       <body
@@ -110,12 +115,12 @@ export default function RootLayout({
                   >
                     THE LENS DB
                   </Link>
-                  <HeaderNav />
+                  <HeaderNav chatEnabled={chatOn} />
                   <div className="flex items-center gap-1">
                     <HeaderSearch />
                     <ThemeToggle />
                     <UserMenu />
-                    <MobileNav />
+                    <MobileNav chatEnabled={chatOn} />
                   </div>
                 </div>
               </header>
@@ -126,7 +131,7 @@ export default function RootLayout({
             <Separator />
             <footer>
               <div className="mx-auto max-w-7xl space-y-8 px-4 py-10 sm:px-6 lg:px-8">
-                <FooterNav sections={footerSections} />
+                <FooterNav sections={sections} />
                 <div className="space-y-2 border-t border-border pt-6">
                   <p className="text-sm text-muted-foreground">
                     The Lens DB, a community reference for camera lenses,

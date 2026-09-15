@@ -15,6 +15,15 @@ export function publicApiEnabled(): boolean {
   return process.env.PUBLIC_API_ENABLED === "true";
 }
 
+/**
+ * The chat costs a model call per message with no account behind it. Set
+ * CHAT_ENABLED=false to switch it off entirely: the API answers 404, the page
+ * is a 404, and the navigation and footer stop linking to it.
+ */
+export function chatEnabled(): boolean {
+  return process.env.CHAT_ENABLED !== "false";
+}
+
 function isDeveloperSurface(pathname: string): boolean {
   return DEVELOPER_SURFACE.some(
     (base) => pathname === base || pathname.startsWith(`${base}/`),
@@ -35,6 +44,9 @@ export function proxy(request: NextRequest) {
   // A 404 rather than a 403: an endpoint that is not open yet should not
   // announce that it exists.
   if (isDeveloperSurface(pathname) && !publicApiEnabled()) {
+    return new NextResponse(null, { status: 404 });
+  }
+  if (pathname === "/api/chat" && !chatEnabled()) {
     return new NextResponse(null, { status: 404 });
   }
 
