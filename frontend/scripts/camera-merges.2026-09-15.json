@@ -1,0 +1,278 @@
+[
+ {
+  "keepId": 77,
+  "keepName": "Canon EOS 1100D",
+  "mergeId": 3133,
+  "mergeName": "Canon EOS 1100D (EOS Rebel T3 / EOS Kiss X50)",
+  "alias": "EOS Rebel T3 / EOS Kiss X50",
+  "source": "market names, Canon product history, 2026-09-15"
+ },
+ {
+  "keepId": 78,
+  "keepName": "Canon EOS 1200D",
+  "mergeId": 3082,
+  "mergeName": "Canon EOS 1200D (EOS Rebel T5 / EOS Kiss X70)",
+  "alias": "EOS Rebel T5 / EOS Kiss X70",
+  "source": "market names, Canon product history, 2026-09-15"
+ },
+ {
+  "keepId": 100,
+  "keepName": "Canon EOS 300D",
+  "mergeId": 3176,
+  "mergeName": "Canon EOS 300D (EOS Digital Rebel / EOS Kiss Digital)",
+  "alias": "EOS Digital Rebel / EOS Kiss Digital",
+  "source": "market names, Canon product history, 2026-09-15"
+ },
+ {
+  "keepId": 102,
+  "keepName": "Canon EOS 350D",
+  "mergeId": 3173,
+  "mergeName": "Canon EOS 350D (EOS Digital Rebel XT / EOS Kiss Digital N)",
+  "alias": "EOS Digital Rebel XT / EOS Kiss Digital N",
+  "source": "market names, Canon product history, 2026-09-15"
+ },
+ {
+  "keepId": 104,
+  "keepName": "Canon EOS 400D",
+  "mergeId": 3167,
+  "mergeName": "Canon EOS 400D (EOS Digital Rebel XTi / EOS Kiss Digital X)",
+  "alias": "EOS Digital Rebel XTi / EOS Kiss Digital X",
+  "source": "market names, Canon product history, 2026-09-15"
+ },
+ {
+  "keepId": 106,
+  "keepName": "Canon EOS 450D",
+  "mergeId": 3159,
+  "mergeName": "Canon EOS 450D (EOS Rebel XSi / EOS Kiss X2)",
+  "alias": "EOS Rebel XSi / EOS Kiss X2",
+  "source": "market names, Canon product history, 2026-09-15"
+ },
+ {
+  "keepId": 108,
+  "keepName": "Canon EOS 500D",
+  "mergeId": 3151,
+  "mergeName": "Canon EOS 500D (EOS Rebel T1i / EOS Kiss X3)",
+  "alias": "EOS Rebel T1i / EOS Kiss X3",
+  "source": "market names, Canon product history, 2026-09-15"
+ },
+ {
+  "keepId": 110,
+  "keepName": "Canon EOS 550D",
+  "mergeId": 3144,
+  "mergeName": "Canon EOS 550D (EOS Rebel T2i / EOS Kiss X4)",
+  "alias": "EOS Rebel T2i / EOS Kiss X4",
+  "source": "market names, Canon product history, 2026-09-15"
+ },
+ {
+  "keepId": 154,
+  "keepName": "Canon EOS M50",
+  "mergeId": 3040,
+  "mergeName": "Canon EOS M50 (EOS Kiss M)",
+  "alias": "EOS Kiss M",
+  "source": "market names, Canon product history, 2026-09-15"
+ },
+ {
+  "keepId": 155,
+  "keepName": "Canon EOS M50 mark II",
+  "mergeId": 3025,
+  "mergeName": "Canon EOS M50 Mark II (EOS Kiss M2)",
+  "alias": "EOS Kiss M2",
+  "source": "market names, Canon product history, 2026-09-15"
+ },
+ {
+  "keepId": 3156,
+  "keepName": "Canon EOS 1000D (EOS Rebel XS / Kiss F Digital)",
+  "name": "Canon EOS 1000D",
+  "alias": "EOS Rebel XS / EOS Kiss F",
+  "source": "market names, Canon product history, 2026-09-15"
+ },
+ {
+  "keepId": 3098,
+  "keepName": "Canon EOS 700D (EOS Rebel T5i / EOS Kiss X7i)",
+  "name": "Canon EOS 700D",
+  "alias": "EOS Rebel T5i / EOS Kiss X7i",
+  "source": "market names, Canon product history, 2026-09-15"
+ },
+ {
+  "keepId": 103,
+  "keepName": "Canon EOS 4000D",
+  "name": "Canon EOS 4000D",
+  "alias": "EOS Rebel T100 / EOS 3000D",
+  "source": "market names, Canon product history, 2026-09-15"
+ },
+ {
+  "keepId": 75,
+  "keepName": "Canon EOS 100D",
+  "mergeId": 3097,
+  "mergeName": "Canon EOS Rebel SL1 (EOS 100D)",
+  "alias": "EOS Rebel SL1 / EOS Kiss X7",
+  "source": "market names, Canon product history, 2026-09-15"
+ },
+ {
+  "keepId": 95,
+  "keepName": "Canon EOS 200D",
+  "mergeId": 3048,
+  "mergeName": "Canon EOS Rebel SL2 (EOS 200D / Kiss X9)",
+  "alias": "EOS Rebel SL2 / EOS Kiss X9",
+  "source": "market names, Canon product history, 2026-09-15"
+ },
+ {
+  "keepId": 97,
+  "keepName": "Canon EOS 250D",
+  "mergeId": 3034,
+  "mergeName": "Canon EOS Rebel SL3 (EOS 250D / EOS Kiss X10)",
+  "alias": "EOS Rebel SL3 / EOS Kiss X10",
+  "source": "market names, Canon product history, 2026-09-15"
+ },
+ {
+  "keepId": 122,
+  "keepName": "Canon EOS 650D",
+  "mergeId": 3113,
+  "mergeName": "Canon EOS Rebel T4i (EOS 650D / EOS Kiss X6i)",
+  "alias": "EOS Rebel T4i / EOS Kiss X6i",
+  "source": "market names, Canon product history, 2026-09-15"
+ },
+ {
+  "keepId": 79,
+  "keepName": "Canon EOS 1300D",
+  "mergeId": 3059,
+  "mergeName": "Canon EOS Rebel T6 (EOS 1300D)",
+  "alias": "EOS Rebel T6 / EOS Kiss X80",
+  "source": "market names, Canon product history, 2026-09-15"
+ },
+ {
+  "keepId": 129,
+  "keepName": "Canon EOS 750D",
+  "mergeId": 3069,
+  "mergeName": "Canon EOS Rebel T6i (EOS 750D / Kiss X8i)",
+  "alias": "EOS Rebel T6i / EOS Kiss X8i",
+  "source": "market names, Canon product history, 2026-09-15"
+ },
+ {
+  "keepId": 130,
+  "keepName": "Canon EOS 760D",
+  "mergeId": 3068,
+  "mergeName": "Canon EOS Rebel T6s (EOS 760D / EOS 8000D)",
+  "alias": "EOS Rebel T6s / EOS 8000D",
+  "source": "market names, Canon product history, 2026-09-15"
+ },
+ {
+  "keepId": 94,
+  "keepName": "Canon EOS 2000D",
+  "mergeId": 3041,
+  "mergeName": "Canon EOS Rebel T7 (EOS 2000D)",
+  "alias": "EOS Rebel T7 / EOS Kiss X90",
+  "source": "market names, Canon product history, 2026-09-15"
+ },
+ {
+  "keepId": 134,
+  "keepName": "Canon EOS 800D",
+  "mergeId": 3050,
+  "mergeName": "Canon EOS Rebel T7i / EOS 800D / Kiss X9i",
+  "alias": "EOS Rebel T7i / EOS Kiss X9i",
+  "source": "market names, Canon product history, 2026-09-15"
+ },
+ {
+  "keepId": 137,
+  "keepName": "Canon EOS 850D",
+  "mergeId": 3030,
+  "mergeName": "Canon EOS Rebel T8i (EOS 850D / EOS Kiss X10i)",
+  "alias": "EOS Rebel T8i / EOS Kiss X10i",
+  "source": "market names, Canon product history, 2026-09-15"
+ },
+ {
+  "keepId": 4775,
+  "keepName": "Canon EOS 1000",
+  "mergeId": 3251,
+  "mergeName": "Canon EOS Rebel",
+  "alias": "EOS Rebel / EOS 1000 QD",
+  "source": "market names, Canon product history, 2026-09-15",
+  "yearIntroduced": 1990
+ },
+ {
+  "keepId": 3253,
+  "keepName": "Canon EOS Rebel S",
+  "name": "Canon EOS 1000F",
+  "alias": "EOS Rebel S",
+  "source": "market names, Canon product history, 2026-09-15"
+ },
+ {
+  "keepId": 3254,
+  "keepName": "Canon EOS Rebel S II",
+  "name": "Canon EOS 1000F N",
+  "alias": "EOS Rebel S II",
+  "source": "market names, Canon product history, 2026-09-15"
+ },
+ {
+  "keepId": 4806,
+  "keepName": "Canon EOS 500",
+  "mergeId": 175,
+  "mergeName": "Canon EOS Rebel XS",
+  "alias": "EOS Rebel XS / EOS Rebel X / EOS Kiss",
+  "source": "market names, Canon product history, 2026-09-15"
+ },
+ {
+  "keepId": 4806,
+  "keepName": "Canon EOS 500",
+  "mergeId": 174,
+  "mergeName": "Canon EOS Rebel X",
+  "alias": "EOS Rebel XS / EOS Rebel X / EOS Kiss",
+  "source": "market names, Canon product history, 2026-09-15"
+ },
+ {
+  "keepId": 4798,
+  "keepName": "Canon EOS 500N",
+  "mergeId": 169,
+  "mergeName": "Canon EOS Rebel G",
+  "alias": "EOS Rebel G / New EOS Kiss",
+  "source": "market names, Canon product history, 2026-09-15"
+ },
+ {
+  "keepId": 4776,
+  "keepName": "Canon EOS 300",
+  "mergeId": 168,
+  "mergeName": "Canon EOS Rebel 2000",
+  "alias": "EOS Rebel 2000 / EOS Kiss III",
+  "source": "market names, Canon product history, 2026-09-15"
+ },
+ {
+  "keepId": 4777,
+  "keepName": "Canon EOS 3000N",
+  "mergeId": 176,
+  "mergeName": "Canon EOS Rebel XS N DATE",
+  "alias": "EOS Rebel XS N / EOS Kiss III L",
+  "source": "market names, Canon product history, 2026-09-15"
+ },
+ {
+  "keepId": 4777,
+  "keepName": "Canon EOS 3000N",
+  "mergeId": 3250,
+  "mergeName": "Canon EOS Kiss III L",
+  "alias": "EOS Rebel XS N / EOS Kiss III L",
+  "source": "market names, Canon product history, 2026-09-15"
+ },
+ {
+  "keepId": 173,
+  "keepName": "Canon EOS Rebel Ti",
+  "name": "Canon EOS 300V",
+  "alias": "EOS Rebel Ti / EOS Kiss 5",
+  "source": "market names, Canon product history, 2026-09-15"
+ },
+ {
+  "keepId": 4805,
+  "keepName": "Canon EOS 3000V",
+  "mergeId": 170,
+  "mergeName": "Canon EOS Rebel K2",
+  "alias": "EOS Rebel K2 / EOS Kiss Lite",
+  "source": "market names, Canon product history, 2026-09-15"
+ },
+ {
+  "keepId": 4779,
+  "keepName": "Canon EOS 300X",
+  "mergeId": 172,
+  "mergeName": "Canon EOS Rebel T2",
+  "alias": "EOS Rebel T2 / EOS Kiss 7",
+  "source": "market names, Canon product history, 2026-09-15",
+  "yearIntroduced": 2004
+ }
+]

@@ -12,26 +12,29 @@
 interface EbaySite {
   /** EPN rotation id for this site. */
   rotation: string;
+  /** eBay's numeric site id, the `siteid` the tracking link carries. */
+  siteId: number;
   domain: string;
 }
 
 // Keyed by the same country codes as the Browse marketplace map, so a reader
 // searched on EBAY_DE is sent to ebay.de. Countries without an EPN site of
-// their own fall back to the US programme, as their listings already do.
+// their own (Poland among them) fall back to the US programme, as their
+// listings already do.
 const SITE_BY_COUNTRY: Record<string, EbaySite> = {
-  US: { rotation: "711-53200-19255-0", domain: "www.ebay.com" },
-  GB: { rotation: "710-53481-19255-0", domain: "www.ebay.co.uk" },
-  DE: { rotation: "707-53477-19255-0", domain: "www.ebay.de" },
-  FR: { rotation: "709-53476-19255-0", domain: "www.ebay.fr" },
-  IT: { rotation: "724-53478-19255-0", domain: "www.ebay.it" },
-  ES: { rotation: "1185-53479-19255-0", domain: "www.ebay.es" },
-  AT: { rotation: "5221-53469-19255-0", domain: "www.ebay.at" },
-  CH: { rotation: "5222-53480-19255-0", domain: "www.ebay.ch" },
-  BE: { rotation: "1553-53471-19255-0", domain: "www.benl.ebay.be" },
-  NL: { rotation: "1346-53482-19255-0", domain: "www.ebay.nl" },
-  IE: { rotation: "5282-53468-19255-0", domain: "www.ebay.ie" },
-  AU: { rotation: "705-53470-19255-0", domain: "www.ebay.com.au" },
-  CA: { rotation: "706-53473-19255-0", domain: "www.ebay.ca" },
+  US: { rotation: "711-53200-19255-0", siteId: 0, domain: "www.ebay.com" },
+  GB: { rotation: "710-53481-19255-0", siteId: 3, domain: "www.ebay.co.uk" },
+  DE: { rotation: "707-53477-19255-0", siteId: 77, domain: "www.ebay.de" },
+  FR: { rotation: "709-53476-19255-0", siteId: 71, domain: "www.ebay.fr" },
+  IT: { rotation: "724-53478-19255-0", siteId: 101, domain: "www.ebay.it" },
+  ES: { rotation: "1185-53479-19255-0", siteId: 186, domain: "www.ebay.es" },
+  AT: { rotation: "5221-53469-19255-0", siteId: 16, domain: "www.ebay.at" },
+  CH: { rotation: "5222-53480-19255-0", siteId: 193, domain: "www.ebay.ch" },
+  BE: { rotation: "1553-53471-19255-0", siteId: 123, domain: "www.benl.ebay.be" },
+  NL: { rotation: "1346-53482-19255-0", siteId: 146, domain: "www.ebay.nl" },
+  IE: { rotation: "5282-53468-19255-0", siteId: 205, domain: "www.ebay.ie" },
+  AU: { rotation: "705-53470-19255-0", siteId: 15, domain: "www.ebay.com.au" },
+  CA: { rotation: "706-53473-19255-0", siteId: 2, domain: "www.ebay.ca" },
 };
 
 export function ebaySiteForCountry(countryCode: string): EbaySite {
@@ -39,9 +42,14 @@ export function ebaySiteForCountry(countryCode: string): EbaySite {
 }
 
 /**
- * The search results page for a query on the reader's eBay site, tagged for
- * the affiliate programme when a campaign id is configured and plain when
- * it is not, so a local build without credentials still links somewhere.
+ * The search results page for a query on the reader's eBay site, carrying the
+ * affiliate tracking parameters when a campaign id is configured and plain
+ * when it is not, so a local build without credentials still links somewhere.
+ *
+ * The parameters ride on the eBay URL itself. The older rover.ebay.com
+ * redirect form stopped resolving to the search page in September 2026 and
+ * answered with a tracking pixel instead, which is what a reader saw when
+ * they clicked "view all".
  */
 export function affiliateSearchUrl(
   searchQuery: string,
@@ -49,7 +57,15 @@ export function affiliateSearchUrl(
   campaignId: string,
 ): string {
   const site = ebaySiteForCountry(countryCode);
-  const target = `https://${site.domain}/sch/i.html?_nkw=${encodeURIComponent(searchQuery)}`;
-  if (!campaignId) return target;
-  return `https://rover.ebay.com/rover/1/${site.rotation}/1?campid=${campaignId}&toolid=10001&mpre=${encodeURIComponent(target)}`;
+  const url = new URL(`https://${site.domain}/sch/i.html`);
+  url.searchParams.set("_nkw", searchQuery);
+  if (campaignId) {
+    url.searchParams.set("mkcid", "1");
+    url.searchParams.set("mkrid", site.rotation);
+    url.searchParams.set("siteid", String(site.siteId));
+    url.searchParams.set("campid", campaignId);
+    url.searchParams.set("toolid", "10001");
+    url.searchParams.set("mkevt", "1");
+  }
+  return url.toString();
 }
