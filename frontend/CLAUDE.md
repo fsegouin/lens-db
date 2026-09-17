@@ -113,7 +113,7 @@ Systems: one row per physical mount, not per camera family or per-lens variant (
 Engagement: `lensRatings`, `cameraRatings`, `lensComparisons`, `cameraComparisons`
 Community edits: `revisions`, `pendingEdits`, `duplicateFlags`, `issueReports`, `blockedIps`
 Accounts: `users` (with `digestOptIn`), `emailVerificationTokens`, `passwordResetTokens`, `kitItems`
-Prices: `priceEstimates`, `priceHistory` (sold prices), plus the Browse API pipeline's `ebayAskingSnapshots` (one asking aggregate per entity per day), `ebayListingWatch` (live listings being watched for an ending) and `ebayListingVerdicts` (remembered relevance-classifier verdicts)
+Prices: `priceEstimates`, `priceHistory` (sold prices) and `ebaySoldVerdicts` (audit log of every sold-listing classifier verdict, accepted or rejected, pruned after 180 days), plus the Browse API pipeline's `ebayAskingSnapshots` (one asking aggregate per entity per day), `ebayListingWatch` (live listings being watched for an ending) and `ebayListingVerdicts` (remembered relevance-classifier verdicts for the asking-price watcher)
 DPReview watcher: `lensVersionGroups` (lens generations via `lenses.versionGroupId`), `dpreviewLensCandidates` and `dpreviewCameraCandidates` (seen-registries, status pending/imported/rejected/matched/review). Cameras have no version-group equivalent: a successor body is its own `cameras` row, so the camera LLM verdict is binary (duplicate / new_camera) where the lens one has three values.
 
 Key relationships:
@@ -131,6 +131,7 @@ Vercel runs `drizzle-kit migrate` before `next build` (`"build": "pnpm db:migrat
 Rules:
 
 - **Always use `drizzle-kit generate` for schema changes.** It writes the SQL, updates `_journal.json`, and creates the matching `meta/NNNN_snapshot.json` atomically. Never hand-drop a `.sql` into `drizzle/`.
+- **`drizzle-kit generate` currently cannot run, so recent migrations are hand-written.** The snapshots stopped being re-derived around migration 0033, so they are missing five tables and several columns that prod really has. `generate` therefore blocks on a TTY prompt asking whether the already-shipped `kit_items.acquired_on` to `acquired_year` rename is a rename. Until the snapshots are rebaselined against the live schema, a new migration means writing the `.sql`, the `_journal.json` entry and the `meta/NNNN_snapshot.json` by hand, and the journal entry is the part that decides whether it runs at all. Snapshots 0065 to 0067 also shared one id, which made `generate` fail outright; that chain was repaired in 0069.
 - **For data-only migrations**, use `pnpm exec drizzle-kit generate --custom --name <slug>`. This creates an empty registered migration you fill in with custom SQL.
 - **Commit the SQL + journal + snapshot together.** If a PR touches `drizzle/*.sql` but not `_journal.json`, something is wrong.
 - **Write migrations idempotently** so partial prior states (manual hotfixes, interrupted runs) don't break reruns: `ADD COLUMN IF NOT EXISTS`, `DROP ... IF EXISTS`, `COALESCE(..., 0)` around scalar subqueries used in arithmetic, name- or id-based `WHERE` clauses that simply match nothing if the target is gone.

@@ -484,6 +484,13 @@
       "when": 1788772183872,
       "tag": "0068_collection_card_descriptions",
       "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "7",
+      "when": 1789684649746,
+      "tag": "0069_ebay_sold_verdicts",
+      "breakpoints": true
     }
   ]
 }

@@ -1,6 +1,6 @@
 {
-  "id": "54642494-4904-4b63-b618-122e57831159",
-  "prevId": "cd7af29d-eebe-48ff-b1ee-3fd9509ffc47",
+  "id": "81853f40-b4e0-4b85-8ebb-79dfe9c08b92",
+  "prevId": "54642494-4904-4b63-b618-122e57831159",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -460,6 +460,52 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.collection_redirects": {
+      "name": "collection_redirects",
+      "schema": "",
+      "columns": {
+        "old_slug": {
+          "name": "old_slug",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "collection_id": {
+          "name": "collection_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "collection_redirects_collection_id_collections_id_fk": {
+          "name": "collection_redirects_collection_id_collections_id_fk",
+          "tableFrom": "collection_redirects",
+          "columnsFrom": [
+            "collection_id"
+          ],
+          "tableTo": "collections",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.collections": {
       "name": "collections",
       "schema": "",
@@ -518,6 +564,151 @@
           "name": "collections_name_unique",
           "columns": [
             "name"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.dpreview_camera_candidates": {
+      "name": "dpreview_camera_candidates",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "dpreview_slug": {
+          "name": "dpreview_slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "dpreview_url": {
+          "name": "dpreview_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
+        "camera_id": {
+          "name": "camera_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pending_edit_id": {
+          "name": "pending_edit_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "candidate_data": {
+          "name": "candidate_data",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "llm_verdict": {
+          "name": "llm_verdict",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "llm_confidence": {
+          "name": "llm_confidence",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "llm_reasoning": {
+          "name": "llm_reasoning",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "first_seen_at": {
+          "name": "first_seen_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "last_seen_at": {
+          "name": "last_seen_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "idx_dpreview_camera_candidates_status": {
+          "name": "idx_dpreview_camera_candidates_status",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "dpreview_camera_candidates_camera_id_cameras_id_fk": {
+          "name": "dpreview_camera_candidates_camera_id_cameras_id_fk",
+          "tableFrom": "dpreview_camera_candidates",
+          "columnsFrom": [
+            "camera_id"
+          ],
+          "tableTo": "cameras",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        },
+        "dpreview_camera_candidates_pending_edit_id_pending_edits_id_fk": {
+          "name": "dpreview_camera_candidates_pending_edit_id_pending_edits_id_fk",
+          "tableFrom": "dpreview_camera_candidates",
+          "columnsFrom": [
+            "pending_edit_id"
+          ],
+          "tableTo": "pending_edits",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "dpreview_camera_candidates_dpreview_slug_unique": {
+          "name": "dpreview_camera_candidates_dpreview_slug_unique",
+          "columns": [
+            "dpreview_slug"
           ],
           "nullsNotDistinct": false
         }
@@ -797,6 +988,140 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.ebay_sold_verdicts": {
+      "name": "ebay_sold_verdicts",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "entity_type": {
+          "name": "entity_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "entity_id": {
+          "name": "entity_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "listing_key": {
+          "name": "listing_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "model": {
+          "name": "model",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "price_usd": {
+          "name": "price_usd",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sale_date": {
+          "name": "sale_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "condition": {
+          "name": "condition",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_relevant": {
+          "name": "is_relevant",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "grade": {
+          "name": "grade",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "judged_at": {
+          "name": "judged_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "idx_ebay_sold_verdicts_entity": {
+          "name": "idx_ebay_sold_verdicts_entity",
+          "columns": [
+            {
+              "expression": "entity_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "entity_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "idx_ebay_sold_verdicts_judged_at": {
+          "name": "idx_ebay_sold_verdicts_judged_at",
+          "columns": [
+            {
+              "expression": "judged_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "uq_ebay_sold_verdict": {
+          "name": "uq_ebay_sold_verdict",
+          "columns": [
+            "entity_type",
+            "entity_id",
+            "listing_key",
+            "model"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -1361,6 +1686,102 @@
           "columns": [
             "lens_id",
             "camera_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.lens_optical_twins": {
+      "name": "lens_optical_twins",
+      "schema": "",
+      "columns": {
+        "lens_id": {
+          "name": "lens_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "twin_id": {
+          "name": "twin_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'rebadge'"
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "idx_lens_optical_twins_twin": {
+          "name": "idx_lens_optical_twins_twin",
+          "columns": [
+            {
+              "expression": "twin_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "lens_optical_twins_lens_id_lenses_id_fk": {
+          "name": "lens_optical_twins_lens_id_lenses_id_fk",
+          "tableFrom": "lens_optical_twins",
+          "columnsFrom": [
+            "lens_id"
+          ],
+          "tableTo": "lenses",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        },
+        "lens_optical_twins_twin_id_lenses_id_fk": {
+          "name": "lens_optical_twins_twin_id_lenses_id_fk",
+          "tableFrom": "lens_optical_twins",
+          "columnsFrom": [
+            "twin_id"
+          ],
+          "tableTo": "lenses",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {
+        "lens_optical_twins_lens_id_twin_id_pk": {
+          "name": "lens_optical_twins_lens_id_twin_id_pk",
+          "columns": [
+            "lens_id",
+            "twin_id"
           ]
         }
       },
@@ -2177,6 +2598,72 @@
           "name": "lenses_slug_unique",
           "columns": [
             "slug"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.password_reset_tokens": {
+      "name": "password_reset_tokens",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "token": {
+          "name": "token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "password_reset_tokens_user_id_users_id_fk": {
+          "name": "password_reset_tokens_user_id_users_id_fk",
+          "tableFrom": "password_reset_tokens",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "tableTo": "users",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "password_reset_tokens_token_unique": {
+          "name": "password_reset_tokens_token_unique",
+          "columns": [
+            "token"
           ],
           "nullsNotDistinct": false
         }
@@ -3138,359 +3625,6 @@
           "name": "users_handle_unique",
           "columns": [
             "handle"
-          ],
-          "nullsNotDistinct": false
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.collection_redirects": {
-      "name": "collection_redirects",
-      "schema": "",
-      "columns": {
-        "old_slug": {
-          "name": "old_slug",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "collection_id": {
-          "name": "collection_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "collection_redirects_collection_id_collections_id_fk": {
-          "name": "collection_redirects_collection_id_collections_id_fk",
-          "tableFrom": "collection_redirects",
-          "columnsFrom": [
-            "collection_id"
-          ],
-          "tableTo": "collections",
-          "columnsTo": [
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.dpreview_camera_candidates": {
-      "name": "dpreview_camera_candidates",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "dpreview_slug": {
-          "name": "dpreview_slug",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "dpreview_url": {
-          "name": "dpreview_url",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "status": {
-          "name": "status",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'pending'"
-        },
-        "camera_id": {
-          "name": "camera_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "pending_edit_id": {
-          "name": "pending_edit_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "candidate_data": {
-          "name": "candidate_data",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "llm_verdict": {
-          "name": "llm_verdict",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "llm_confidence": {
-          "name": "llm_confidence",
-          "type": "real",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "llm_reasoning": {
-          "name": "llm_reasoning",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "first_seen_at": {
-          "name": "first_seen_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "now()"
-        },
-        "last_seen_at": {
-          "name": "last_seen_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "idx_dpreview_camera_candidates_status": {
-          "name": "idx_dpreview_camera_candidates_status",
-          "columns": [
-            {
-              "expression": "status",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "with": {},
-          "method": "btree",
-          "concurrently": false
-        }
-      },
-      "foreignKeys": {
-        "dpreview_camera_candidates_camera_id_cameras_id_fk": {
-          "name": "dpreview_camera_candidates_camera_id_cameras_id_fk",
-          "tableFrom": "dpreview_camera_candidates",
-          "columnsFrom": [
-            "camera_id"
-          ],
-          "tableTo": "cameras",
-          "columnsTo": [
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "no action"
-        },
-        "dpreview_camera_candidates_pending_edit_id_pending_edits_id_fk": {
-          "name": "dpreview_camera_candidates_pending_edit_id_pending_edits_id_fk",
-          "tableFrom": "dpreview_camera_candidates",
-          "columnsFrom": [
-            "pending_edit_id"
-          ],
-          "tableTo": "pending_edits",
-          "columnsTo": [
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "dpreview_camera_candidates_dpreview_slug_unique": {
-          "name": "dpreview_camera_candidates_dpreview_slug_unique",
-          "columns": [
-            "dpreview_slug"
-          ],
-          "nullsNotDistinct": false
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.lens_optical_twins": {
-      "name": "lens_optical_twins",
-      "schema": "",
-      "columns": {
-        "lens_id": {
-          "name": "lens_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "twin_id": {
-          "name": "twin_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "kind": {
-          "name": "kind",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'rebadge'"
-        },
-        "note": {
-          "name": "note",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "idx_lens_optical_twins_twin": {
-          "name": "idx_lens_optical_twins_twin",
-          "columns": [
-            {
-              "expression": "twin_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "with": {},
-          "method": "btree",
-          "concurrently": false
-        }
-      },
-      "foreignKeys": {
-        "lens_optical_twins_lens_id_lenses_id_fk": {
-          "name": "lens_optical_twins_lens_id_lenses_id_fk",
-          "tableFrom": "lens_optical_twins",
-          "columnsFrom": [
-            "lens_id"
-          ],
-          "tableTo": "lenses",
-          "columnsTo": [
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
-        },
-        "lens_optical_twins_twin_id_lenses_id_fk": {
-          "name": "lens_optical_twins_twin_id_lenses_id_fk",
-          "tableFrom": "lens_optical_twins",
-          "columnsFrom": [
-            "twin_id"
-          ],
-          "tableTo": "lenses",
-          "columnsTo": [
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
-        }
-      },
-      "compositePrimaryKeys": {
-        "lens_optical_twins_lens_id_twin_id_pk": {
-          "name": "lens_optical_twins_lens_id_twin_id_pk",
-          "columns": [
-            "lens_id",
-            "twin_id"
-          ]
-        }
-      },
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.password_reset_tokens": {
-      "name": "password_reset_tokens",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "token": {
-          "name": "token",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "expires_at": {
-          "name": "expires_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "password_reset_tokens_user_id_users_id_fk": {
-          "name": "password_reset_tokens_user_id_users_id_fk",
-          "tableFrom": "password_reset_tokens",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "tableTo": "users",
-          "columnsTo": [
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "password_reset_tokens_token_unique": {
-          "name": "password_reset_tokens_token_unique",
-          "columns": [
-            "token"
           ],
           "nullsNotDistinct": false
         }

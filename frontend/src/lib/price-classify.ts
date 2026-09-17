@@ -17,6 +17,9 @@ const ClassifiedListingSchema = z.object({
 export type ClassifiedListing = z.infer<typeof ClassifiedListingSchema>["listings"][number];
 
 export interface RawListing {
+  // eBay's numeric item id. Optional because other sources have no such id,
+  // but the sold scraper drops any listing it cannot read one from.
+  itemId?: string;
   title: string;
   price: number;
   date: string;

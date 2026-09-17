@@ -5,7 +5,11 @@ import { cameras, priceEstimates } from "@/db/schema";
 import { sql, isNull, desc } from "drizzle-orm";
 import type { EbayListing } from "@/lib/ebay-types";
 import { classifyListings } from "@/lib/price-classify";
-import { storeClassifiedSales, recomputePriceEstimates } from "@/lib/price-pipeline";
+import {
+  storeClassifiedSales,
+  recomputePriceEstimates,
+  pruneSoldVerdicts,
+} from "@/lib/price-pipeline";
 
 const BATCH_SIZE = 400;
 
@@ -99,6 +103,12 @@ export async function GET(request: NextRequest) {
     getCameraBatch(),
     getCameraRotationStats(staleBefore),
   ]);
+
+  // Once per run rather than per entity: the classifier audit trail is
+  // written on every POST and would otherwise grow without bound.
+  await pruneSoldVerdicts().catch((error) => {
+    console.error("[cron] verdict prune failed:", error);
+  });
 
   return NextResponse.json({ cameras: cameraBatch, stats });
 }

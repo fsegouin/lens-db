@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { revalidateTag } from "next/cache";
 import { db } from "@/db";
 import { priceTag } from "@/lib/prices";
@@ -7,13 +8,14 @@ import {
   priceHistory,
   priceEstimates,
   ebayAskingSnapshots,
+  ebaySoldVerdicts,
   kehProducts,
 } from "@/db/schema";
 import { revalidateEntity } from "@/lib/revalidate-entity";
-import { eq, and, sql, gte, inArray, isNull, desc } from "drizzle-orm";
+import { eq, and, sql, gte, lt, inArray, isNull, desc } from "drizzle-orm";
 import { ASKING_TO_SOLD_RATIO } from "@/lib/ebay-browse";
 import { KEH_TO_SOLD_RATIO } from "@/lib/keh";
-import type { RawListing } from "@/lib/price-classify";
+import { CLASSIFIER_MODEL, type RawListing } from "@/lib/price-classify";
 
 const GRADE_MAP: Record<string, string> = {
   excellent: "A",
@@ -31,12 +33,121 @@ export interface ClassifiedSaleInput {
   conditionGrade: string;
 }
 
+/**
+ * Stable identity for a scraped sold listing.
+ *
+ * eBay's numeric item id, and a digest of the listing's own facts for sources
+ * that carry no such id. Falling back rather than skipping is deliberate: a
+ * listing with no id is exactly the one that cannot be looked up later, so it
+ * is the one whose verdict is worth keeping.
+ */
+function listingKey(l: RawListing): string {
+  if (l.itemId) return l.itemId;
+  const id = l.url?.match(/\/itm\/(\d+)/)?.[1];
+  if (id) return id;
+  const digest = createHash("sha1")
+    .update(`${l.title}|${l.price}|${l.date}`)
+    .digest("hex")
+    .slice(0, 16);
+  return `d:${digest}`;
+}
+
+/**
+ * Record what the classifier decided about every listing it was shown.
+ *
+ * Deliberately separate from the price_history write and deliberately
+ * swallowing its own errors: this is an audit trail, and losing a real sale
+ * because the trail could not be written would be the wrong trade every time.
+ */
+/** Postgres integer ceiling. A price past it would reject the whole statement. */
+const INT4_MAX = 2147483647;
+
+function storablePrice(price: number): number | null {
+  if (!Number.isFinite(price)) return null;
+  const rounded = Math.round(price);
+  return Math.abs(rounded) <= INT4_MAX ? rounded : null;
+}
+
+async function logSoldVerdicts(
+  entityType: string,
+  entityId: number,
+  classified: ClassifiedSaleInput[],
+  raw: RawListing[],
+  model: string,
+): Promise<void> {
+  // Last verdict wins within a run. A repeated listing in one scrape would
+  // otherwise make Postgres reject the whole statement for touching a row
+  // twice, taking the entity's audit trail down with it.
+  const byKey = new Map<string, typeof ebaySoldVerdicts.$inferInsert>();
+  for (let i = 0; i < raw.length; i++) {
+    const rawListing = raw[i];
+    const cl = classified[i];
+    if (!rawListing || !cl) continue;
+    const key = listingKey(rawListing);
+    byKey.set(key, {
+      entityType,
+      entityId,
+      listingKey: key,
+      model,
+      title: rawListing.title,
+      priceUsd: storablePrice(rawListing.price),
+      saleDate: rawListing.date || null,
+      condition: rawListing.condition ?? null,
+      isRelevant: cl.isRelevant,
+      grade: cl.conditionGrade || null,
+      judgedAt: new Date(),
+    });
+  }
+  if (byKey.size === 0) return;
+
+  const rows = [...byKey.values()];
+  await db
+    .insert(ebaySoldVerdicts)
+    .values(rows)
+    .onConflictDoUpdate({
+      target: [
+        ebaySoldVerdicts.entityType,
+        ebaySoldVerdicts.entityId,
+        ebaySoldVerdicts.listingKey,
+        ebaySoldVerdicts.model,
+      ],
+      set: {
+        isRelevant: sql`excluded.is_relevant`,
+        grade: sql`excluded.grade`,
+        title: sql`excluded.title`,
+        priceUsd: sql`excluded.price_usd`,
+        saleDate: sql`excluded.sale_date`,
+        condition: sql`excluded.condition`,
+        judgedAt: sql`excluded.judged_at`,
+      },
+    });
+}
+
+/**
+ * Verdicts outlive the listings they describe. eBay serves a sold listing for
+ * about 90 days, so anything older than this window can no longer be checked
+ * against the thing it judged and is only taking up room.
+ */
+const VERDICT_RETENTION_DAYS = 180;
+
+export async function pruneSoldVerdicts(): Promise<number> {
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - VERDICT_RETENTION_DAYS);
+  const result = await db
+    .delete(ebaySoldVerdicts)
+    .where(lt(ebaySoldVerdicts.judgedAt, cutoff));
+  return result.rowCount ?? 0;
+}
+
 export async function storeClassifiedSales(
   entityType: string,
   entityId: number,
   classified: ClassifiedSaleInput[],
   raw: RawListing[],
   extractedAt: string,
+  // Named so a shadow run against a candidate classifier files its verdicts
+  // under its own name instead of overwriting the live model's.
+  model: string = CLASSIFIER_MODEL,
 ): Promise<number> {
   const extractedAtDate = new Date(extractedAt);
   const withUrl: NewRow[] = [];
@@ -121,6 +232,15 @@ export async function storeClassifiedSales(
       await db.insert(priceHistory).values(fresh);
       stored += fresh.length;
     }
+  }
+
+  try {
+    await logSoldVerdicts(entityType, entityId, classified, raw, model);
+  } catch (error) {
+    console.error(
+      `[price-pipeline] verdict log failed for ${entityType} ${entityId}:`,
+      error,
+    );
   }
 
   return stored;
