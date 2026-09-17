@@ -921,6 +921,53 @@ export const ebayListingVerdicts = pgTable(
   ]
 );
 
+/**
+ * Every verdict the sold-listing classifier reached, accepted or rejected.
+ *
+ * price_history only keeps what was accepted, so until now a rejection left no
+ * trace: there was no way to ask how often the model turned down a real sale,
+ * or to check a suspected false accept against what else it saw that run. A
+ * sold listing also stops resolving on eBay within weeks, so the title has to
+ * be kept here or the decision becomes unauditable.
+ *
+ * `model` is part of the key rather than a bare column so two models can judge
+ * the same listing and be compared row against row, which is what makes a
+ * shadow run against a candidate classifier a query rather than an experiment.
+ */
+export const ebaySoldVerdicts = pgTable(
+  "ebay_sold_verdicts",
+  {
+    id: serial("id").primaryKey(),
+    entityType: text("entity_type").notNull(),
+    entityId: integer("entity_id").notNull(),
+    // eBay's numeric item id where the listing carried a url, otherwise a
+    // digest of title/price/date. Sold scrapes do not always yield a link, and
+    // a rejection with no key at all is the one we would most want back.
+    listingKey: text("listing_key").notNull(),
+    model: text("model").notNull(),
+    title: text("title").notNull(),
+    priceUsd: integer("price_usd"),
+    saleDate: date("sale_date"),
+    condition: text("condition"),
+    isRelevant: boolean("is_relevant").notNull(),
+    // Null only when the classifier returned nothing gradeable.
+    grade: text("grade"),
+    judgedAt: timestamp("judged_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    unique("uq_ebay_sold_verdict").on(
+      table.entityType,
+      table.entityId,
+      table.listingKey,
+      table.model,
+    ),
+    index("idx_ebay_sold_verdicts_entity").on(table.entityType, table.entityId),
+    // Retention: the pipeline re-judges live sold listings for as long as eBay
+    // serves them, so without a sweep this table grows without bound.
+    index("idx_ebay_sold_verdicts_judged_at").on(table.judgedAt),
+  ]
+);
+
 // KEH's used-lens catalogue, mirrored locally.
 //
 // KEH is a graded dealer rather than a marketplace, so a row here is a price
