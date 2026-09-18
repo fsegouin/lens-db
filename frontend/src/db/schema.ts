@@ -952,6 +952,10 @@ export const ebaySoldVerdicts = pgTable(
     isRelevant: boolean("is_relevant").notNull(),
     // Null only when the classifier returned nothing gradeable.
     grade: text("grade"),
+    // Confidence behind isRelevant, where the model reports one. Kept so an
+    // accept threshold can be re-cut against recorded runs instead of by
+    // judging every listing again. Null for models that answer yes or no.
+    probability: real("probability"),
     judgedAt: timestamp("judged_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [

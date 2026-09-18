@@ -16,6 +16,7 @@ import { eq, and, sql, gte, lt, inArray, isNull, desc } from "drizzle-orm";
 import { ASKING_TO_SOLD_RATIO } from "@/lib/ebay-browse";
 import { KEH_TO_SOLD_RATIO } from "@/lib/keh";
 import { CLASSIFIER_MODEL, type RawListing } from "@/lib/price-classify";
+import { classifyWithJev, shouldShadow, JEV_MODEL } from "@/lib/price-classify-jev";
 
 const GRADE_MAP: Record<string, string> = {
   excellent: "A",
@@ -31,6 +32,8 @@ type NewRow = typeof priceHistory.$inferInsert;
 export interface ClassifiedSaleInput {
   isRelevant: boolean;
   conditionGrade: string;
+  /** Confidence, where the classifier reports one. */
+  probability?: number;
 }
 
 /**
@@ -95,6 +98,7 @@ async function logSoldVerdicts(
       condition: rawListing.condition ?? null,
       isRelevant: cl.isRelevant,
       grade: cl.conditionGrade || null,
+      probability: cl.probability ?? null,
       judgedAt: new Date(),
     });
   }
@@ -118,6 +122,7 @@ async function logSoldVerdicts(
         priceUsd: sql`excluded.price_usd`,
         saleDate: sql`excluded.sale_date`,
         condition: sql`excluded.condition`,
+        probability: sql`excluded.probability`,
         judgedAt: sql`excluded.judged_at`,
       },
     });
@@ -684,4 +689,53 @@ export async function recomputePriceEstimates(
     });
 
   await publishEstimate(entityType, entityId);
+}
+
+/**
+ * Run the evaluation model over the same listings the live classifier just saw
+ * and record what it would have decided, without changing anything that is
+ * stored.
+ *
+ * Deliberately after the sale has been written and deliberately silent on
+ * failure: this is a measurement, and a measurement must never be able to cost
+ * a price. Sampling is per entity rather than per listing so a shadowed entity
+ * is comparable end to end.
+ */
+export async function runJevShadow(
+  entityType: string,
+  entityId: number,
+  targetName: string,
+  raw: RawListing[],
+): Promise<number> {
+  if (!raw.length || !shouldShadow()) return 0;
+  try {
+    const verdicts = await classifyWithJev(entityType, targetName, raw);
+    const paired: { cl: ClassifiedSaleInput; listing: RawListing }[] = [];
+    for (let i = 0; i < raw.length; i++) {
+      const v = verdicts[i];
+      if (v) paired.push({ cl: v, listing: raw[i] });
+    }
+    if (!paired.length) {
+      // Distinguishable from "not sampled", which also writes nothing: a
+      // wrong key or a renamed model would otherwise fail in total silence.
+      console.error(
+        `[price-pipeline] jev shadow: all ${raw.length} calls failed for ${entityType} ${entityId}`,
+      );
+      return 0;
+    }
+    await logSoldVerdicts(
+      entityType,
+      entityId,
+      paired.map((p) => p.cl),
+      paired.map((p) => p.listing),
+      JEV_MODEL,
+    );
+    return paired.length;
+  } catch (error) {
+    console.error(
+      `[price-pipeline] jev shadow failed for ${entityType} ${entityId}:`,
+      error,
+    );
+    return 0;
+  }
 }

@@ -9,6 +9,7 @@ import {
   storeClassifiedSales,
   recomputePriceEstimates,
   pruneSoldVerdicts,
+  runJevShadow,
 } from "@/lib/price-pipeline";
 
 const BATCH_SIZE = 400;
@@ -170,6 +171,14 @@ export async function POST(request: NextRequest) {
     // Always upsert price_estimates to mark this lens as scraped
     // (even with 0 listings/stored, so we don't re-scrape it next run)
     await recomputePriceEstimates("lens", lensId);
+
+    // Second opinion, recorded and never acted on. Last on purpose: every
+    // pipeline write is already committed, so the worst a slow or stalled
+    // shadow can do is burn the tail of the request budget. Off unless
+    // JEV_SHADOW_RATE is set; see price-classify-jev.ts.
+    if (listings?.length) {
+      await runJevShadow("lens", lensId, lensName, listings);
+    }
 
     console.log(`[ebay-lens-prices]   ${lensName}: Relevant: ${relevant}, Stored: ${stored}`);
 
