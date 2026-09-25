@@ -14,6 +14,7 @@ import {
 } from "@/lib/compare-rows";
 import { trackEvent } from "@/lib/analytics";
 import { useEntitySearch, type EntityType } from "@/hooks/use-entity-search";
+import CameraSizeComparison from "@/components/CameraSizeComparison";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -284,6 +285,10 @@ export default function CompareClient() {
         <ItemSearch label="Item 1" lockedType={lockedType} selected={item1} onSelect={setItem1} />
         <ItemSearch label="Item 2" lockedType={lockedType} selected={item2} onSelect={setItem2} />
       </div>
+
+      {item1?.type === "camera" && item2?.type === "camera" && (
+        <CameraSizeComparison first={item1.data} second={item2.data} />
+      )}
 
       {item1 && item2 && item1.type === item2.type ? (
         <div className="rounded-lg border border-border">

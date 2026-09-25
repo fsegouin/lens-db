@@ -145,6 +145,11 @@ export const cameras = pgTable(
     ratingCount: integer("rating_count").default(0),
     specs: jsonb("specs").default({}),
     images: jsonb("images").default([]),
+    // The straight-on cut-out the compare page draws to scale, a
+    // CameraFrontView (lib/camera-dimensions.ts). Kept apart from `images` so
+    // an edit to the gallery cannot silently drop it; written by
+    // scripts/camera-front-views.mjs.
+    frontView: jsonb("front_view"),
     verified: boolean("verified").default(true).notNull(),
     submittedByIp: text("submitted_by_ip"),
     protectionLevel: text("protection_level").default("none"), // "none" | "autoconfirmed" | "trusted" | "admin"

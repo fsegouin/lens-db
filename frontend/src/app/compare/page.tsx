@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 
 export default function ComparePage() {
   return (
-    <div className="mx-auto max-w-5xl space-y-8">
+    <div className="mx-auto w-full max-w-5xl space-y-8">
       <div>
         <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100">
           Compare
