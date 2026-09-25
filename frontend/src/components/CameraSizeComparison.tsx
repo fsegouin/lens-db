@@ -35,12 +35,13 @@ type Tone = { line: string; stageLine: string; chip: string; dot: string; band: 
 
 // Two hues a reader can tell apart at a glance, with chip text that clears
 // 4.5:1 in both themes. Deliberately not the brand accent, which marks
-// identity and state rather than categories. The stage is a pale plate in
-// both themes, so the lines drawn on it keep their light-theme colour.
+// identity and state rather than categories. The lines on the stage go a
+// shade darker on the light theme, where a 600 crossing a faded body falls
+// under 3:1.
 const TONES: [Tone, Tone] = [
   {
     line: "border-sky-600 dark:border-sky-400",
-    stageLine: "border-sky-700",
+    stageLine: "border-sky-700 dark:border-sky-400",
     chip: "bg-sky-700 text-white dark:bg-sky-300 dark:text-sky-950",
     dot: "bg-sky-600 dark:bg-sky-400",
     band: "bg-sky-600/10 dark:bg-sky-400/10",
@@ -48,7 +49,7 @@ const TONES: [Tone, Tone] = [
   },
   {
     line: "border-rose-600 dark:border-rose-400",
-    stageLine: "border-rose-700",
+    stageLine: "border-rose-700 dark:border-rose-400",
     chip: "bg-rose-700 text-white dark:bg-rose-300 dark:text-rose-950",
     dot: "bg-rose-600 dark:bg-rose-400",
     band: "bg-rose-600/10 dark:bg-rose-400/10",
@@ -245,6 +246,61 @@ function BandPair({
   );
 }
 
+/**
+ * A box room drawn in hairlines behind the stage and its gutters: a back
+ * wall, with the floor and ceiling running out to the corners in
+ * perspective, so the bodies stand in a space rather than float on the page.
+ * `baseline` is the front edge of the floor, where the bodies stand, as a
+ * percentage of the height from the top.
+ */
+function Room({ baseline }: { baseline: number }) {
+  const wallTop = 6;
+  const wallBottom = baseline - 14;
+  const wallLeft = 16;
+  const wallRight = 84;
+  const horizon = (wallTop + wallBottom) / 2;
+  const lines: [number, number, number, number][] = [
+    // The back wall.
+    [wallLeft, wallTop, wallRight, wallTop],
+    [wallLeft, wallBottom, wallRight, wallBottom],
+    [wallLeft, wallTop, wallLeft, wallBottom],
+    [wallRight, wallTop, wallRight, wallBottom],
+    // Ceiling and floor edges out to the corners.
+    [0, 0, wallLeft, wallTop],
+    [100, 0, wallRight, wallTop],
+    [0, baseline, wallLeft, wallBottom],
+    [100, baseline, wallRight, wallBottom],
+    // The front edge of the floor, which the bodies stand on.
+    [0, baseline, 100, baseline],
+    // Floor boards converging on the wall, a horizon and a centre line.
+    [18, baseline, 34, wallBottom],
+    [82, baseline, 66, wallBottom],
+    [0, horizon, 100, horizon],
+    [50, wallTop, 50, baseline],
+  ];
+  return (
+    <svg
+      aria-hidden
+      className="pointer-events-none absolute inset-0 size-full text-zinc-300 dark:text-zinc-700"
+      viewBox="0 0 100 100"
+      preserveAspectRatio="none"
+    >
+      {lines.map(([x1, y1, x2, y2], i) => (
+        <line
+          key={i}
+          x1={x1}
+          y1={y1}
+          x2={x2}
+          y2={y2}
+          stroke="currentColor"
+          strokeWidth={1}
+          vectorEffect="non-scaling-stroke"
+        />
+      ))}
+    </svg>
+  );
+}
+
 const width = (d: CameraDimensions) => d.widthMm;
 const height = (d: CameraDimensions) => d.heightMm;
 
@@ -279,7 +335,8 @@ export default function CameraSizeComparison({
   const maxW = Math.max(a.dims.widthMm, b.dims.widthMm);
   const maxH = Math.max(a.dims.heightMm, b.dims.heightMm);
   const stageW = maxW * 1.06;
-  const headroom = maxH * 0.12;
+  // The headroom keeps the taller body under the room's back wall.
+  const headroom = maxH * 0.24;
   const floor = maxH * 0.03;
   const stageH = maxH + headroom + floor;
 
@@ -314,17 +371,20 @@ export default function CameraSizeComparison({
 
       {withPhotos ? (
         <div aria-hidden className="mx-auto mt-4" style={{ maxWidth: `calc(${STAGE_MAX_REM * (stageW / stageH)}rem + 16rem)` }}>
-          <div className={GRID}>
+          <div className={`relative ${GRID}`}>
+            <Room baseline={((stageH - floor) / stageH) * 100} />
             <div className="relative">
               <HeightMark side={a} other={b} align="left" bottom={topOf(a)} />
             </div>
             <div
-              className="relative rounded-md bg-zinc-100 dark:bg-zinc-300"
+              className="relative"
               style={{ aspectRatio: `${stageW} / ${stageH}` }}
             >
-              {/* A pale plate in both themes, as the gallery does for studio
-                  shots: most bodies are black, and on a dark plate they
-                  vanish. The height lines carry across it behind the bodies. */}
+              {/* No plate: the bodies stand in the room on the page itself.
+                  Each is edged with a 1px rim, dark on the light theme so a
+                  silver body keeps its outline, light on the dark theme so a
+                  black one does. The height lines carry across behind the
+                  bodies. */}
               {sides.map((side) => (
                 <div
                   key={`h-${side.camera.id}`}
@@ -335,7 +395,7 @@ export default function CameraSizeComparison({
               {drawOrder.map((side, i) => (
                 <div
                   key={side.camera.id}
-                  className={`absolute ${i === 0 ? "opacity-45" : ""}`}
+                  className={`absolute [filter:drop-shadow(0_0_1px_rgb(0_0_0/0.3))] dark:[filter:drop-shadow(0_0_1px_rgb(255_255_255/0.6))] ${i === 0 ? "opacity-45 dark:opacity-60" : ""}`}
                   style={{
                     left: pct((stageW - side.dims.widthMm) / 2, stageW),
                     width: pct(side.dims.widthMm, stageW),
@@ -346,7 +406,6 @@ export default function CameraSizeComparison({
                   <Cutout view={side.view!} dims={side.dims} />
                 </div>
               ))}
-              <div className="absolute inset-x-0 border-t border-zinc-400" style={{ bottom: pct(floor, stageH) }} />
             </div>
             <div className="relative">
               <HeightMark side={b} other={a} align="right" bottom={topOf(b)} />
