@@ -10,7 +10,8 @@
     "build": "pnpm db:migrate && next build",
     "start": "next start",
     "test": "node --test 'src/**/*.test.ts' 'scripts/**/*.test.mjs'",
-    "lint": "eslint"
+    "lint": "eslint",
+    "front-views": "node scripts/camera-front-views.mjs"
   },
   "dependencies": {
     "@ai-sdk/gateway": "^3.0.101",

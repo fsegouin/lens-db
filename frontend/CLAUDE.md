@@ -12,6 +12,7 @@ pnpm build            # Production build (runs db:migrate first)
 pnpm start            # Start production server
 pnpm lint             # ESLint (next/core-web-vitals + typescript)
 pnpm test             # node:test suites (src/**/*.test.ts and scripts/**/*.test.mjs), no database needed
+pnpm front-views      # Pick size-comparison front views (dry run; add --slug <slug>, --apply, --force). Also runs from the repo root
 ```
 
 ## Tech Stack

@@ -155,7 +155,11 @@ for (const r of results) {
 }
 console.log(`\n${found.length} front views found`);
 for (const [reason, n] of Object.entries(tally).sort((a, b) => b[1] - a[1])) console.log(`  ${n} skipped: ${reason}`);
-if (ONLY_SLUG) console.log(results);
+if (ONLY_SLUG) {
+  for (const { camera, view, reject } of results) {
+    console.log(`\n${camera.slug}: ${view ? `front view ${view.src}` : `none (${reject})`}`);
+  }
+}
 
 if (!APPLY) {
   console.log("\nDry run. Pass --apply to write.");

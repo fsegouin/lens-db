@@ -1,4 +1,7 @@
 {
   "name": "lens-db-root",
-  "private": true
+  "private": true,
+  "scripts": {
+    "front-views": "pnpm --dir frontend front-views"
+  }
 }
