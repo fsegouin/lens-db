@@ -19,15 +19,16 @@ import type { ImageData } from "@/lib/image-types";
  * baseline, the larger one behind. Each height is marked by a line at the
  * body's top, labelled in a gutter beside the stage, and each width by a band
  * directly under the baseline, so every figure sits against what it measures.
- * Without both photos the two dimensions are bands on their own. Depth has no
- * picture to belong to, so it is only in the sentence above. Nothing renders
- * unless both records hold readable dimensions.
+ * Depth has no picture to belong to, so it is only in the sentence above.
+ * Nothing renders unless both records hold readable dimensions and a front
+ * view: bars without the bodies read as a chart that lost its picture, and the
+ * spec table below already carries the figures.
  */
 
 type Side = {
   camera: ComparableCamera;
   dims: CameraDimensions;
-  view: CameraFrontView | null;
+  view: CameraFrontView;
   tone: Tone;
 };
 
@@ -302,7 +303,6 @@ function Room({ baseline }: { baseline: number }) {
 }
 
 const width = (d: CameraDimensions) => d.widthMm;
-const height = (d: CameraDimensions) => d.heightMm;
 
 export default function CameraSizeComparison({
   first,
@@ -313,22 +313,13 @@ export default function CameraSizeComparison({
 }) {
   const dimsA = cameraDimensionsFromSpecs(first.specs);
   const dimsB = cameraDimensionsFromSpecs(second.specs);
-  if (!dimsA || !dimsB) return null;
+  const viewA = isCameraFrontView(first.frontView) ? first.frontView : null;
+  const viewB = isCameraFrontView(second.frontView) ? second.frontView : null;
+  if (!dimsA || !dimsB || !viewA || !viewB) return null;
 
-  const a: Side = {
-    camera: first,
-    dims: dimsA,
-    view: isCameraFrontView(first.frontView) ? first.frontView : null,
-    tone: TONES[0],
-  };
-  const b: Side = {
-    camera: second,
-    dims: dimsB,
-    view: isCameraFrontView(second.frontView) ? second.frontView : null,
-    tone: TONES[1],
-  };
+  const a: Side = { camera: first, dims: dimsA, view: viewA, tone: TONES[0] };
+  const b: Side = { camera: second, dims: dimsB, view: viewB, tone: TONES[1] };
   const sides: [Side, Side] = [a, b];
-  const withPhotos = !!a.view && !!b.view;
 
   // Stage coordinates are millimetres, with headroom for the taller body's
   // label and a sliver of floor under the baseline.
@@ -346,11 +337,7 @@ export default function CameraSizeComparison({
   const topOf = (s: Side) => pct(floor + s.dims.heightMm, stageH);
 
   const credited = sides
-    .map((s) =>
-      s.view
-        ? ((s.camera.images as ImageData[] | undefined) ?? []).find((img) => img?.src === s.view!.src)
-        : undefined,
-    )
+    .map((s) => ((s.camera.images as ImageData[] | undefined) ?? []).find((img) => img?.src === s.view.src))
     .filter((img): img is ImageData => !!img && !!(img.credit || img.license));
 
   return (
@@ -369,65 +356,56 @@ export default function CameraSizeComparison({
         ))}
       </ul>
 
-      {withPhotos ? (
-        <div aria-hidden className="mx-auto mt-4" style={{ maxWidth: `calc(${STAGE_MAX_REM * (stageW / stageH)}rem + 16rem)` }}>
-          <div className={`relative ${GRID}`}>
-            <Room baseline={((stageH - floor) / stageH) * 100} />
-            <div className="relative">
-              <HeightMark side={a} other={b} align="left" bottom={topOf(a)} />
-            </div>
-            <div
-              className="relative"
-              style={{ aspectRatio: `${stageW} / ${stageH}` }}
-            >
-              {/* No plate: the bodies stand in the room on the page itself.
-                  Each is edged with a 1px rim, dark on the light theme so a
-                  silver body keeps its outline, light on the dark theme so a
-                  black one does. The height lines carry across behind the
-                  bodies. */}
-              {sides.map((side) => (
-                <div
-                  key={`h-${side.camera.id}`}
-                  className={`absolute inset-x-0 border-t-[1.5px] border-dashed ${side.tone.stageLine}`}
-                  style={{ bottom: topOf(side) }}
-                />
-              ))}
-              {drawOrder.map((side, i) => (
-                <div
-                  key={side.camera.id}
-                  className={`absolute [filter:drop-shadow(0_0_1px_rgb(0_0_0/0.3))] dark:[filter:drop-shadow(0_0_1px_rgb(255_255_255/0.6))] ${i === 0 ? "opacity-45 dark:opacity-60" : ""}`}
-                  style={{
-                    left: pct((stageW - side.dims.widthMm) / 2, stageW),
-                    width: pct(side.dims.widthMm, stageW),
-                    bottom: pct(floor, stageH),
-                    height: pct(side.dims.heightMm, stageH),
-                  }}
-                >
-                  <Cutout view={side.view!} dims={side.dims} />
-                </div>
-              ))}
-            </div>
-            <div className="relative">
-              <HeightMark side={b} other={a} align="right" bottom={topOf(b)} />
-            </div>
+      <div aria-hidden className="mx-auto mt-4" style={{ maxWidth: `calc(${STAGE_MAX_REM * (stageW / stageH)}rem + 16rem)` }}>
+        <div className={`relative ${GRID}`}>
+          <Room baseline={((stageH - floor) / stageH) * 100} />
+          <div className="relative">
+            <HeightMark side={a} other={b} align="left" bottom={topOf(a)} />
           </div>
-          <div className={`${GRID} mt-1`}>
-            <div className="col-start-2">
-              <BandPair sides={sides} label="Width" pick={width} scale={stageW} />
-            </div>
+          <div
+            className="relative"
+            style={{ aspectRatio: `${stageW} / ${stageH}` }}
+          >
+            {/* No plate: the bodies stand in the room on the page itself.
+                Each is edged with a 1px rim, dark on the light theme so a
+                silver body keeps its outline, light on the dark theme so a
+                black one does. The height lines carry across behind the
+                bodies. */}
+            {sides.map((side) => (
+              <div
+                key={`h-${side.camera.id}`}
+                className={`absolute inset-x-0 border-t-[1.5px] border-dashed ${side.tone.stageLine}`}
+                style={{ bottom: topOf(side) }}
+              />
+            ))}
+            {drawOrder.map((side, i) => (
+              <div
+                key={side.camera.id}
+                className={`absolute [filter:drop-shadow(0_0_1px_rgb(0_0_0/0.3))] dark:[filter:drop-shadow(0_0_1px_rgb(255_255_255/0.6))] ${i === 0 ? "opacity-45 dark:opacity-60" : ""}`}
+                style={{
+                  left: pct((stageW - side.dims.widthMm) / 2, stageW),
+                  width: pct(side.dims.widthMm, stageW),
+                  bottom: pct(floor, stageH),
+                  height: pct(side.dims.heightMm, stageH),
+                }}
+              >
+                <Cutout view={side.view} dims={side.dims} />
+              </div>
+            ))}
+          </div>
+          <div className="relative">
+            <HeightMark side={b} other={a} align="right" bottom={topOf(b)} />
           </div>
         </div>
-      ) : (
-        <div aria-hidden className="mt-4 space-y-4">
-          <BandPair sides={sides} label="Width" pick={width} scale={Math.max(maxW, maxH) * 1.06} />
-          <BandPair sides={sides} label="Height" pick={height} scale={Math.max(maxW, maxH) * 1.06} />
+        <div className={`${GRID} mt-1`}>
+          <div className="col-start-2">
+            <BandPair sides={sides} label="Width" pick={width} scale={stageW} />
+          </div>
         </div>
-      )}
+      </div>
 
       <p className="mt-4 text-xs text-muted-foreground">
-        {withPhotos
-          ? "Front views drawn to one scale from the recorded body dimensions."
-          : "Drawn to one scale from the recorded body dimensions."}
+        Front views drawn to one scale from the recorded body dimensions.
       </p>
       {credited.map((img) => (
         <Attribution key={img.src} image={img} className="text-left" />
