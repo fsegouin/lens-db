@@ -42,7 +42,7 @@ function plateFor(image: ImageData): { className: string; style?: CSSProperties 
  * an admin on the edit form. A source URL alone is provenance for us rather
  * than a credit for the reader, so it prints nothing on its own.
  */
-function Attribution({
+export function Attribution({
   image,
   onOverlay = false,
   className = "",

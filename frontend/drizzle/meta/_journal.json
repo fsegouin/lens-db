@@ -498,6 +498,13 @@
       "when": 1789723622043,
       "tag": "0070_sold_verdict_probability",
       "breakpoints": true
+    },
+    {
+      "idx": 71,
+      "version": "7",
+      "when": 1790328341533,
+      "tag": "0071_camera_front_view",
+      "breakpoints": true
     }
   ]
 }

@@ -55,6 +55,8 @@ export type ComparableCamera = {
   bodyType: string | null;
   weightG: number | null;
   specs: Record<string, string> | null;
+  images?: unknown;
+  frontView?: unknown;
 };
 
 export type SpecRow<T> = { label: string; getValue: (item: T) => string };

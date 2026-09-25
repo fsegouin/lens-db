@@ -76,6 +76,7 @@ src/
 │   ├── ChatInterface.tsx       # Client: AI chat UI
 │   ├── EbayListings.tsx / PriceCard.tsx / PriceChart.tsx  # eBay price display
 │   ├── ImageGallery.tsx        # Client: image grid with lightbox
+│   ├── CameraSizeComparison.tsx # Client: two camera bodies drawn to one scale on /compare
 │   ├── RatingWidget.tsx        # Client: 10-star rating with submit/delete
 │   ├── SearchInput.tsx / HeaderSearch.tsx  # Debounced search inputs
 │   ├── ViewTracker.tsx         # Client: silent view tracking (sessionStorage dedup)
@@ -214,6 +215,7 @@ All API routes return JSON. Error responses: 400 (validation), 401 (auth), 409 (
 - Fallback to DB-stored image URLs
 - Admin uploads go to Cloudflare R2 (`src/lib/r2-upload.ts`, resized with sharp)
 - Remote images: R2 public hostname configured in `next.config.ts` `remotePatterns`
+- `cameras.front_view` names the straight-on cut-out the compare page's size view (`CameraSizeComparison`) draws to scale, with its outline crop in pixels. `scripts/camera-front-views.mjs` fills it: a photo qualifies when it has a transparent ground and its outline has the width-to-height ratio of the `Dimensions` spec (parsed by `lib/camera-dimensions.ts`) within 8%, which rejects angled shots. Without a front view on both cameras the size view falls back to bars
 
 ### View Tracking
 - `ViewTracker` component deduplicates via `sessionStorage` (once per session per resource)
