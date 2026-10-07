@@ -278,7 +278,7 @@ export default function AdminTable({
             <thead className="sticky top-0 z-10">
               <tr className="shadow-[inset_0_-1px_0_theme(colors.zinc.200)] dark:shadow-[inset_0_-1px_0_theme(colors.zinc.800)]">
                 {hasBulk && (
-                  <th className="bg-white px-3 py-2 dark:bg-zinc-950">
+                  <th scope="col" className="bg-white px-3 py-2 dark:bg-zinc-950">
                     <input
                       type="checkbox"
                       aria-label="Select all rows on this page"
@@ -290,6 +290,7 @@ export default function AdminTable({
                 )}
                 {columns.map((col) => (
                   <th
+                    scope="col"
                     key={col.key}
                     className={`bg-white px-9 py-2 text-left font-medium text-zinc-500 dark:bg-zinc-950 ${
                       col.sortKey
@@ -303,7 +304,7 @@ export default function AdminTable({
                   </th>
                 ))}
                 {rowActions && (
-                  <th className="bg-white px-9 py-2 text-left font-medium text-zinc-500 dark:bg-zinc-950">
+                  <th scope="col" className="bg-white px-9 py-2 text-left font-medium text-zinc-500 dark:bg-zinc-950">
                     Actions
                   </th>
                 )}

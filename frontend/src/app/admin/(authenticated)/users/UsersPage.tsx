@@ -65,6 +65,7 @@ export default function UsersPage() {
       </div>
 
       <Input
+        aria-label="Search by display name"
         placeholder="Search by display name..."
         value={search}
         onChange={(e) => { setSearch(e.target.value); setPage(1); }}
@@ -80,11 +81,11 @@ export default function UsersPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-zinc-200 text-left dark:border-zinc-800">
-                <th className="pb-2 pr-4 font-medium text-muted-foreground">User</th>
-                <th className="pb-2 pr-4 font-medium text-muted-foreground">Role</th>
-                <th className="pb-2 pr-4 font-medium text-muted-foreground">Edits</th>
-                <th className="pb-2 pr-4 font-medium text-muted-foreground">Joined</th>
-                <th className="pb-2 font-medium text-muted-foreground">Status</th>
+                <th scope="col" className="pb-2 pr-4 font-medium text-muted-foreground">User</th>
+                <th scope="col" className="pb-2 pr-4 font-medium text-muted-foreground">Role</th>
+                <th scope="col" className="pb-2 pr-4 font-medium text-muted-foreground">Edits</th>
+                <th scope="col" className="pb-2 pr-4 font-medium text-muted-foreground">Joined</th>
+                <th scope="col" className="pb-2 font-medium text-muted-foreground">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/50">
