@@ -28,8 +28,19 @@ export interface RawListing {
   url?: string;
 }
 
-/** Overridable so the same prompt can be measured against another model. */
-export const CLASSIFIER_MODEL = process.env.LISTING_CLASSIFIER_MODEL || "google/gemini-3.1-flash-lite";
+/**
+ * The model behind every eBay call: both sold-listing classifiers, the
+ * asking-price relevance check and the search-keyword writer. Overridable so
+ * the same prompt can be measured against another model.
+ *
+ * Chosen on wrong accepts, since a wrong variant accepted moves a published
+ * price while a missed sale costs one data point. Against two-model reference
+ * labels on 640 listings it accepted fewer wrong listings than
+ * gemini-3.1-flash-lite, graded camera condition far closer to the references,
+ * and cost about half as much per call. It is a reasoning model and takes
+ * around 8 s a batch against 2 s.
+ */
+export const CLASSIFIER_MODEL = process.env.LISTING_CLASSIFIER_MODEL || "openai/gpt-6-luna";
 
 const BATCH_SIZE = 20;
 
