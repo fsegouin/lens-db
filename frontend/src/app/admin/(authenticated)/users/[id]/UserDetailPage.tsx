@@ -169,6 +169,7 @@ export default function UserDetailPage() {
         )}
         {!user.isBanned && (
           <Input
+            aria-label="Ban reason"
             placeholder="Ban reason (optional)"
             value={banReason}
             onChange={(e) => setBanReason(e.target.value)}

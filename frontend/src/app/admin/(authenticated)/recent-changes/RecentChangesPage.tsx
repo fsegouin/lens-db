@@ -95,6 +95,7 @@ export default function RecentChangesPage() {
 
       <div className="flex flex-wrap gap-3">
         <select
+          aria-label="Filter by type"
           value={filterType}
           onChange={(e) => { setFilterType(e.target.value); setPage(1); }}
           className="rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"

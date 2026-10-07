@@ -77,6 +77,7 @@ function TableHead({ className, ...props }: React.ComponentProps<"th">) {
   return (
     <th
       data-slot="table-head"
+      scope="col"
       className={cn(
         // The column label should not outrank the data. This header was
         // --foreground while the cells under it were --muted-foreground, so
