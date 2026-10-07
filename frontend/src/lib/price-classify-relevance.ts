@@ -1,5 +1,6 @@
 import { generateText, Output } from "ai";
 import { z } from "zod";
+import { CLASSIFIER_MODEL } from "@/lib/price-classify";
 
 /**
  * A leaner classifier for the asking-price ingest.
@@ -58,6 +59,7 @@ export async function classifyRelevance(
   kind: "lens" | "camera",
   name: string,
   listings: RelevanceInput[],
+  { model = CLASSIFIER_MODEL }: { model?: string } = {},
 ): Promise<(RelevanceVerdict | null)[]> {
   const out: (RelevanceVerdict | null)[] = [];
   const thing = kind === "lens" ? "lens" : "camera body";
@@ -88,7 +90,7 @@ ${lines}`;
 
     try {
       const { output } = await generateText({
-        model: "google/gemini-3.1-flash-lite",
+        model,
         output: Output.object({ schema: RelevanceSchema }),
         prompt,
         timeout: 60_000,

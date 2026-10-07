@@ -1,6 +1,7 @@
 import { generateText, Output } from "ai";
 import { z } from "zod";
 import { cleanSearchKeywords } from "./ebay-search-query.ts";
+import { CLASSIFIER_MODEL } from "./price-classify.ts";
 
 /**
  * Ask a model for the words an eBay seller would put in a title for a lens
@@ -55,6 +56,7 @@ ${BRAND_RULE}
 export async function writeSearchKeywords(
   kind: "lens" | "camera",
   name: string,
+  { model = CLASSIFIER_MODEL }: { model?: string } = {},
 ): Promise<string | null> {
   const thing = kind === "lens" ? "lens" : "camera body";
   const prompt = `Write an eBay keyword search for the ${thing}: "${name}".
@@ -70,7 +72,7 @@ Return only the keywords.`;
 
   try {
     const { output } = await generateText({
-      model: "google/gemini-3.1-flash-lite",
+      model,
       output: Output.object({ schema: KeywordsSchema }),
       prompt,
       timeout: 30_000,

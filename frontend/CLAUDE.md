@@ -22,7 +22,7 @@ pnpm front-views      # Pick size-comparison front views (dry run; add --slug <s
 - **Styling**: Tailwind CSS v4 (via PostCSS plugin, dark mode with `dark:` utilities, zinc palette)
 - **Database**: self-hosted PostgreSQL 17 (Docker stack in `infra/db/`) via Drizzle ORM (node-postgres driver, through the pgbouncer transaction pooler on port 6543)
 - **Rate Limiting**: Upstash Redis (sliding window)
-- **AI**: Vercel AI SDK via AI Gateway: chat (`/chat`, `google/gemini-2.5-flash`, tools from the `lens-db-mcp-server` workspace package), plus eBay listing classification, KEH matching and DPReview import dedupe/audit checks (`google/gemini-3.1-flash-lite`; the listing classifiers honour `LISTING_CLASSIFIER_MODEL`). The evaluation-model second opinion in `price-classify-jev.ts` needs AI SDK 7, which is installed alongside 6 under the `ai7` alias so the other call sites stay on 6
+- **AI**: Vercel AI SDK via AI Gateway: chat (`/chat`, `google/gemini-2.5-flash`, tools from the `lens-db-mcp-server` workspace package), plus KEH matching and DPReview import dedupe/audit checks (`google/gemini-3.1-flash-lite`). Every eBay call site, the sold and asking classifiers and the search-keyword writer, uses `openai/gpt-6-luna` through `CLASSIFIER_MODEL`, overridable with `LISTING_CLASSIFIER_MODEL`. The evaluation-model second opinion in `price-classify-jev.ts` needs AI SDK 7, which is installed alongside 6 under the `ai7` alias so the other call sites stay on 6
 - **Email**: Resend (verification, welcome, password reset, edit reviewed, weekly digest)
 - **Image Storage**: Cloudflare R2 (admin uploads, served from R2 public URL)
 - **Analytics**: Vercel Analytics + Speed Insights; custom events in `src/lib/analytics.ts` cover search, filters and the whole membership funnel (signup_prompt_click, register_started, registered, email_verified, signed_in, kit_add, rating_submit, edit_submitted, digest_opt_in)
@@ -95,7 +95,9 @@ src/
     ├── api-utils.ts            # getClientIP, hashIP (SHA-256), rateLimitedResponse
     ├── rate-limit.ts           # Upstash limiters the firewall can't express (per-account, hourly)
     ├── ebay-auth.ts / ebay-browse.ts / ebay-search-query.ts / ebay-affiliate.ts / ebay-types.ts  # eBay Browse API integration and affiliate links
-    ├── price-classify.ts / price-classify-lens.ts  # LLM listing classification (Gemini)
+    ├── price-classify.ts / price-classify-lens.ts  # LLM listing classification; exports CLASSIFIER_MODEL, the model for every eBay LLM call
+    ├── price-classify-relevance.ts  # Asking-price relevance check (CLASSIFIER_MODEL)
+    ├── ebay-search-keywords.ts  # LLM-written eBay search keywords (CLASSIFIER_MODEL)
     ├── price-classify-jev.ts    # Evaluation-model second opinion (ai7), recorded, never decides what is stored
     ├── price-pipeline.ts / prices.ts  # Price history + estimates
     ├── email.ts                # Resend: sendEmail + layout, verification/welcome/reset/edit-reviewed templates
@@ -278,7 +280,7 @@ RESEND_REPLY_TO=       # Optional: inbox that replies to transactional mail shou
 RESEND_FROM_EMAIL=     # From address for emails
 APP_URL=               # Base URL for email links
 AI_GATEWAY_API_KEY=    # Vercel AI Gateway key (/chat, price classification, DPReview dedupe/audit)
-LISTING_CLASSIFIER_MODEL=  # Optional: override the eBay listing classifier model (default google/gemini-3.1-flash-lite)
+LISTING_CLASSIFIER_MODEL=  # Optional: override the model for every eBay LLM call, classifiers and keyword writer (default openai/gpt-6-luna)
 JEV_SHADOW_RATE=       # Optional 0-1: share of entities also judged by the evaluation model as a recorded second opinion (default 0, off)
 JEV_MODEL=             # Optional: the evaluation model used for that shadow (default typesafe-ai/jev)
 CRON_SECRET=           # Bearer token protecting /api/cron/* endpoints
