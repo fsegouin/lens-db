@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
   };
 
   // Validate entity type
-  if (!entityType || !(entityType in entityTables)) {
+  if (!entityType || !Object.hasOwn(entityTables, entityType)) {
     return NextResponse.json({ error: "Invalid entity type" }, { status: 400 });
   }
   const type = entityType as EntityType;
