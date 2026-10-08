@@ -16,12 +16,11 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname postgres <<-EOSQL
 EOSQL
 
 # pg_stat_statements needs a superuser to create; lensdb can read it once
-# it exists. pg_stat_statements_reset() stays superuser-only, which matches
-# Supabase.
+# it exists. pg_stat_statements_reset() stays superuser-only.
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname lensdb <<-EOSQL
   CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
   GRANT pg_read_all_stats TO lensdb;
-  -- The trigram GIN indexes on lenses.name and cameras.name need this. It was
-  -- preinstalled on Supabase, so no migration creates it.
+  -- The trigram GIN indexes on lenses.name and cameras.name need this, and no
+  -- migration creates it.
   CREATE EXTENSION IF NOT EXISTS pg_trgm;
 EOSQL

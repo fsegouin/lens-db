@@ -4,7 +4,7 @@
 # certs/server.crt and certs/server.key to the server next to docker-compose.yml.
 # Keep certs/ca.key off the server: it is only needed to issue a new server cert.
 #
-#   DB_HOST=db.thelensdb.com EXTRA_SANS=DNS:<private-name>,IP:<private-ip> ./gen-certs.sh
+#   DB_HOST=<db-host> EXTRA_SANS=DNS:<other-name>,IP:<other-ip> ./gen-certs.sh
 #
 # Re-running keeps the CA and the issued server cert and only rewrites
 # frontend/src/db/db-ca.ts with the CA bundle the app trusts. REISSUE=1 issues
@@ -15,16 +15,16 @@ set -euo pipefail
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo="$(cd "$here/../.." && pwd)"
 certs="$here/certs"
-host="${DB_HOST:-db.thelensdb.com}"
+host="${DB_HOST:-}"
 extra_sans="${EXTRA_SANS:-}"
-openssl_bin="${OPENSSL:-$(command -v /opt/homebrew/opt/openssl@3/bin/openssl || command -v openssl)}"
+openssl_bin="${OPENSSL:-openssl}"
 
 mkdir -p "$certs"
 chmod 700 "$certs"
 cd "$certs"
 
 if [ ! -f ca.key ]; then
-  "$openssl_bin" req -x509 -newkey ec -pkeyopt ec_paramgen_curve:P-256 -nodes \
+  "$openssl_bin" req -x509 -newkey ec -pkeyopt ec_paramgen_curve:P-256 -pkeyopt ec_param_enc:named_curve -nodes \
     -days 3650 -subj "/CN=The Lens DB Root CA" \
     -addext "basicConstraints=critical,CA:true" \
     -addext "keyUsage=critical,keyCertSign,cRLSign" \
@@ -36,8 +36,9 @@ fi
 # The server cert is issued once; the copy on the server must stay the one the
 # repo knows about. REISSUE=1 makes a new one (new SANs, expiry, or a leak).
 if [ ! -f server.crt ] || [ "${REISSUE:-0}" = "1" ]; then
+  : "${host:?DB_HOST is required to issue the server cert: the hostname the app connects to}"
   san="DNS:${host},DNS:localhost,IP:127.0.0.1${extra_sans:+,${extra_sans}}"
-  "$openssl_bin" req -newkey ec -pkeyopt ec_paramgen_curve:P-256 -nodes \
+  "$openssl_bin" req -newkey ec -pkeyopt ec_paramgen_curve:P-256 -pkeyopt ec_param_enc:named_curve -nodes \
     -subj "/CN=${host}" -keyout server.key -out server.csr
   "$openssl_bin" x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial \
     -days 1825 -out server.crt \
@@ -49,11 +50,9 @@ else
   echo "server cert already issued; REISSUE=1 to replace it"
 fi
 
-# The app pins a CA bundle: ours, plus any other root dropped next to this
-# script as <name>.crt (that is how the Supabase root rode along during the
-# cutover, so DATABASE_URL could point at either side).
+# The app pins this CA. Only the CA goes into the bundle, never the server
+# cert, so reissuing the server cert does not change what the app trusts.
 ts="$repo/frontend/src/db/db-ca.ts"
-supabase_pem="$here/supabase-root-2021.crt"
 {
   cat <<'HEADER'
 /**
@@ -67,15 +66,7 @@ HEADER
   printf 'export const LENSDB_ROOT_CA = `'
   cat ca.crt
   printf '`;\n\n'
-  if [ -f "$supabase_pem" ]; then
-    printf '// Supabase Root 2021 CA, kept while the Supabase project exists.\n'
-    printf 'export const SUPABASE_ROOT_CA = `'
-    cat "$supabase_pem"
-    printf '`;\n\n'
-    printf 'export const DB_ROOT_CAS = [LENSDB_ROOT_CA, SUPABASE_ROOT_CA];\n'
-  else
-    printf 'export const DB_ROOT_CAS = [LENSDB_ROOT_CA];\n'
-  fi
+  printf 'export const DB_ROOT_CAS = [LENSDB_ROOT_CA];\n'
   printf '\nexport const DB_SSL = { ca: DB_ROOT_CAS, rejectUnauthorized: true };\n'
 } > "$ts"
 echo "wrote $ts"

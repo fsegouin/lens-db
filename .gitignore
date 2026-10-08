@@ -48,3 +48,4 @@ infra/db/.env
 infra/db/certs/
 infra/db/backups/
 
+infra/db/docker-compose.override.yml
