@@ -3,10 +3,11 @@
 #   postgres   Postgres 17.6, TLS only, port 5432 (sessions: migrations, dumps, admin)
 #   pgbouncer  transaction pooler, port 6543 (the app's DATABASE_URL)
 #   backup     nightly pg_dump into ./backups, pruned after BACKUP_KEEP_DAYS
-#   ddns       optional (profile "ddns"): keeps db.thelensdb.com on the current public IP
 #
 # First run: cp .env.example .env, fill it in, put server.crt + server.key in
 # ./certs (see gen-certs.sh), then `docker compose up -d --build`.
+# Host-specific services go in docker-compose.override.yml, which is gitignored
+# and merged automatically by docker compose.
 
 name: lens-db
 
@@ -101,29 +102,6 @@ services:
       - ./backups:/backups
       - ./backup.sh:/backup.sh:ro
     entrypoint: ["bash", "/backup.sh"]
-    logging:
-      driver: json-file
-      options: { max-size: "5m", max-file: "3" }
-
-  ddns:
-    image: alpine:3.20
-    container_name: lens-db-ddns
-    profiles: ["ddns"]
-    init: true
-    restart: unless-stopped
-    security_opt:
-      - no-new-privileges:true
-    cap_drop: [ALL]
-    cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, SETGID, SETUID]
-    environment:
-      VERCEL_TOKEN: ${VERCEL_TOKEN:-}
-      VERCEL_TEAM_ID: ${VERCEL_TEAM_ID:-}
-      VERCEL_DNS_RECORD_ID: ${VERCEL_DNS_RECORD_ID:-}
-      DDNS_HOSTNAME: ${DDNS_HOSTNAME:-db.thelensdb.com}
-      DDNS_INTERVAL: ${DDNS_INTERVAL:-300}
-    volumes:
-      - ./ddns.sh:/ddns.sh:ro
-    command: sh -c "apk add --no-cache curl bind-tools >/dev/null && exec sh /ddns.sh"
     logging:
       driver: json-file
       options: { max-size: "5m", max-file: "3" }

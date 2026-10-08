@@ -1,4 +1,4 @@
-# Transaction pooler on 6543, the counterpart of Supabase's pooler port. Built
+# Transaction pooler on 6543. Built
 # on the same postgres image as the server so both containers share the
 # postgres uid and the same certs/ mount works for each.
 FROM postgres:17.6

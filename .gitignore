@@ -59,3 +59,4 @@ infra/db/backups/
 !/scraper/dpreview-audit-cli.mjs
 !/scraper/db-backup.sh
 /infra/scraper/
+infra/db/docker-compose.override.yml

@@ -1,7 +1,7 @@
 #!/bin/bash
 # Nightly pg_dump of lensdb into /backups (custom format, compressed), pruned
 # after BACKUP_KEEP_DAYS. This is the on-box copy; the offsite copy is the
-# weekly GitHub workflow that dumps to R2 (scraper/db-backup.sh).
+# weekly GitHub workflow (scraper/db-backup.sh).
 #
 # Restore one:
 #   pg_restore --list lensdb-YYYY-MM-DD.dump | grep -vE 'pg_stat_statements|pg_trgm' > restore.list
