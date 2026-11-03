@@ -5,6 +5,7 @@ import { asc, desc, eq, and, or, sql, isNull, type AnyColumn } from "drizzle-orm
 import { escapeLikeMetachars, parseMultiValueParam } from "@/lib/api-utils";
 import { buildNameSearch } from "@/lib/search";
 import { normalizeProductionStatus } from "@/lib/vocabularies";
+import { normalizeShutterControl } from "@/lib/shutter";
 
 const PAGE_SIZE = 50;
 
@@ -67,10 +68,12 @@ export const listCameras = unstable_cache(
     if (p.type) {
       conditions.push(eq(cameras.bodyType, p.type));
     }
+    // The "model" parameter predates the shutter_control column: it filtered
+    // on the imported Model spec by prefix, so an old link may carry a whole
+    // Model value ("Mechanical Copal Square"). The vocabulary reads that back
+    // as its control.
     if (p.model) {
-      conditions.push(
-        sql`${cameras.specs}->>'Model' LIKE ${p.model + "%"}`
-      );
+      conditions.push(eq(cameras.shutterControl, normalizeShutterControl(p.model) ?? p.model));
     }
     const filmTypeList = parseMultiValueParam(p.filmType ?? null);
     if (filmTypeList.length > 0) {

@@ -1,5 +1,6 @@
 import { formatMagnification } from "@/lib/format-magnification";
 import { maxApertureLabel } from "@/lib/aperture";
+import { shutterUnit } from "@/lib/shutter";
 
 /**
  * The rows a comparison shows, and the types they read.
@@ -53,11 +54,25 @@ export type ComparableCamera = {
   resolution: string | null;
   yearIntroduced: number | null;
   bodyType: string | null;
+  shutterType: string | null;
+  shutterControl: string | null;
   weightG: number | null;
   specs: Record<string, string> | null;
   images?: unknown;
   frontView?: unknown;
 };
+
+/**
+ * The control, with the unit the imported Model spec names after it
+ * ("Mechanical (Copal Square)"). Without a control column it falls back to the
+ * spec, which says both.
+ */
+export function shutterControlLabel(c: ComparableCamera): string {
+  const model = c.specs?.["Model"];
+  if (!c.shutterControl) return model || EMPTY;
+  const unit = shutterUnit(model);
+  return unit ? `${c.shutterControl} (${unit})` : c.shutterControl;
+}
 
 export type SpecRow<T> = { label: string; getValue: (item: T) => string };
 
@@ -111,8 +126,11 @@ export function cameraSpec(c: ComparableCamera, ...keys: string[]): string {
 }
 
 export const CAMERA_SPEC_ROWS: SpecRow<ComparableCamera>[] = [
-  { label: "Type", getValue: (c) => cameraSpec(c, "Type") },
-  { label: "Model", getValue: (c) => cameraSpec(c, "Model") },
+  // The column, not specs.Type: camera-wiki wrote a sentence about the whole
+  // camera into that spec, and the mechanisms it held were copied into the
+  // column by migration 0072.
+  { label: "Shutter Type", getValue: (c) => c.shutterType || EMPTY },
+  { label: "Shutter Control", getValue: shutterControlLabel },
   { label: "Film Type", getValue: (c) => cameraSpec(c, "Film type") },
   { label: "Imaging Sensor", getValue: (c) => cameraSpec(c, "Imaging sensor", "Imaging plane") },
   { label: "Sensor Size", getValue: (c) => c.sensorSize || cameraSpec(c, "Maximum format") },

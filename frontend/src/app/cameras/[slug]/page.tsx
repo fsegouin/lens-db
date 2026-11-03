@@ -26,6 +26,8 @@ import { getOwnersOf } from "@/lib/kit";
 import KitButton from "@/components/KitButton";
 import OwnersList from "@/components/OwnersList";
 import ProvenanceLine from "@/components/ProvenanceLine";
+import { SHUTTER_CONTROLS, SHUTTER_TYPES, shutterUnit } from "@/lib/shutter";
+import { PRODUCTION_STATUS } from "@/lib/vocabularies";
 import { getProvenance } from "@/lib/provenance";
 import { getImages } from "@/lib/images";
 import type { ImageData } from "@/lib/image-types";
@@ -185,7 +187,10 @@ export default async function CameraDetailPage({
 
   const imagingRows: [string, string | number | null | undefined][] = [
     ["Shutter type", camera.shutterType || shutterFromType(specs["Type"])],
-    ["Shutter control", specs["Model"]],
+    ["Shutter control", camera.shutterControl || specs["Model"]],
+    // The Model spec also names the unit ("Mechanical Copal Square"), which
+    // the control column does not carry.
+    ["Shutter unit", camera.shutterControl ? shutterUnit(specs["Model"]) : undefined],
     ["Film Type", specs["Film type"]],
     ["Imaging Sensor", camera.sensorType || specs["Imaging sensor"] || specs["Imaging plane"]],
     ["Sensor Size", camera.sensorSize || specs["Maximum format"]],
@@ -455,6 +460,8 @@ export default async function CameraDetailPage({
               yearDiscontinued: camera.yearDiscontinued,
               productionStatus: camera.productionStatus,
               bodyType: camera.bodyType,
+              shutterType: camera.shutterType,
+              shutterControl: camera.shutterControl,
               weightG: camera.weightG,
             }}
             fields={[
@@ -468,8 +475,10 @@ export default async function CameraDetailPage({
               { name: "resolution", label: "Resolution", type: "text" },
               { name: "yearIntroduced", label: "Year Introduced", type: "number" },
               { name: "yearDiscontinued", label: "Year Discontinued", type: "number" },
-              { name: "productionStatus", label: "Production Status", type: "text" },
+              { name: "productionStatus", label: "Production Status", type: "select", options: PRODUCTION_STATUS },
               { name: "bodyType", label: "Body Type", type: "text" },
+              { name: "shutterType", label: "Shutter Type", type: "select", options: SHUTTER_TYPES },
+              { name: "shutterControl", label: "Shutter Control", type: "select", options: SHUTTER_CONTROLS },
               { name: "weightG", label: "Weight (g)", type: "number" },
             ]}
           />

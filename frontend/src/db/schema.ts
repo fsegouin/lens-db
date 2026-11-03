@@ -139,6 +139,10 @@ export const cameras = pgTable(
     // cameras had it recorded in body_type, where the page showed it as though
     // it were the body style.
     shutterType: text("shutter_type"),
+    // How the shutter's speeds are timed: Mechanical, Electronically
+    // controlled or Hybrid. Both shutter columns use the closed vocabularies
+    // in lib/shutter.ts.
+    shutterControl: text("shutter_control"),
     weightG: real("weight_g"),
     viewCount: integer("view_count").default(0),
     averageRating: real("average_rating"),

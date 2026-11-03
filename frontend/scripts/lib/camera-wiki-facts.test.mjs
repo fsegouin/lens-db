@@ -204,6 +204,15 @@ describe("shutter mechanism", () => {
   it("does not guess from a bare speed", () => {
     assert.equal(extractShutterType("speeds 1/10 to 1/500 plus B"), null);
   });
+
+  it("reads a Copal Square as the focal-plane unit it is", () => {
+    assert.equal(extractShutterType("Copal Square shutter, 1 to 1/1000"), "Focal-plane");
+  });
+
+  it("returns only labels the shutter_type vocabulary holds", () => {
+    assert.equal(extractShutterType("a guillotine shutter"), "Guillotine");
+    assert.equal(extractShutterType("Programmed electronic shutter, 2 to 1/500"), null);
+  });
 });
 
 describe("the description's wording", () => {

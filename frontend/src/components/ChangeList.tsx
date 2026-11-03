@@ -30,6 +30,8 @@ const FIELD_LABEL: Record<string, string> = {
   sensorSize: "sensor size",
   sensorType: "sensor type",
   bodyType: "body type",
+  shutterType: "shutter type",
+  shutterControl: "shutter control",
   lensType: "lens type",
   productionStatus: "production status",
   imageUrls: "images",

@@ -35,8 +35,8 @@ export const PRODUCTION_STATUS = [
   "Collectible",
 ] as const;
 
-export function normalizeCoverage(value: string | null | undefined): string | null {
-  if (!value) return null;
+export function normalizeCoverage(value: unknown): string | null {
+  if (typeof value !== "string") return null;
   const v = value.trim().toLowerCase();
   if (!v) return null;
   // A list of mounts is not a coverage; it was written to the wrong column.
@@ -62,8 +62,8 @@ export function normalizeCoverage(value: string | null | undefined): string | nu
   return null;
 }
 
-export function normalizeEra(value: string | null | undefined): string | null {
-  if (!value) return null;
+export function normalizeEra(value: unknown): string | null {
+  if (typeof value !== "string") return null;
   const v = value.trim().toLowerCase();
   if (v.startsWith("film") || v === "vintage") return "Film era";
   if (v.startsWith("digital")) return "Digital era";
@@ -71,9 +71,9 @@ export function normalizeEra(value: string | null | undefined): string | null {
 }
 
 export function normalizeProductionStatus(
-  value: string | null | undefined,
+  value: unknown,
 ): string | null {
-  if (!value) return null;
+  if (typeof value !== "string") return null;
   // "Discontinued (Canon EF-M, Canon RF)" says which mounts went, which the
   // lens_systems table already records. The status is the part before it.
   const v = value.trim().replace(/\s*\([^)]*\)\s*$/, "").toLowerCase();
@@ -96,8 +96,8 @@ const LENS_TYPE_FIXES: Record<string, string> = {
   "wide angle prime": "Wide-angle prime lens",
 };
 
-export function normalizeLensType(value: string | null | undefined): string | null {
-  if (!value) return null;
+export function normalizeLensType(value: unknown): string | null {
+  if (typeof value !== "string") return null;
   const trimmed = value.trim();
   if (!trimmed) return null;
   return LENS_TYPE_FIXES[trimmed.toLowerCase()] ?? trimmed;

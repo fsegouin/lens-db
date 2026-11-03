@@ -22,6 +22,8 @@ type FieldConfig = {
   label: string;
   type: "text" | "number" | "textarea" | "boolean" | "select";
   optionsSource?: "systems";
+  // A select over a fixed vocabulary, whose values are the labels themselves.
+  options?: readonly string[];
 };
 
 type SelectOption = { value: string | number; label: string };
@@ -99,7 +101,7 @@ export default function EditButton({
 
   function getOptions(field: FieldConfig): SelectOption[] {
     if (field.optionsSource === "systems") return systemOptions ?? [];
-    return [];
+    return (field.options ?? []).map((o) => ({ value: o, label: o }));
   }
 
   function computeChanges(): Record<string, unknown> {
@@ -234,7 +236,11 @@ export default function EditButton({
                         onChange={(e) =>
                           setValues((v) => ({
                             ...v,
-                            [field.name]: e.target.value ? Number(e.target.value) : null,
+                            [field.name]: !e.target.value
+                              ? null
+                              : field.options
+                                ? e.target.value
+                                : Number(e.target.value),
                           }))
                         }
                         className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"

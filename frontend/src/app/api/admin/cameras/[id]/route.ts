@@ -7,6 +7,7 @@ import { createRevision } from "@/lib/revisions";
 import { revalidateEntity, touchesLists } from "@/lib/revalidate-entity";
 import { normalizeSensorSize } from "@/lib/sensor-size";
 import { normalizeBodyType } from "@/lib/body-type";
+import { normalizeShutterControl, normalizeShutterType } from "@/lib/shutter";
 import { eq } from "drizzle-orm";
 
 export async function GET(
@@ -45,7 +46,7 @@ export async function PUT(
   const {
     name, slug, url, systemId, description, alias,
     sensorType, sensorSize, megapixels, resolution,
-    yearIntroduced, yearDiscontinued, productionStatus, bodyType, weightG, specs, images,
+    yearIntroduced, yearDiscontinued, productionStatus, bodyType, shutterType, shutterControl, weightG, specs, images,
   } = body;
 
   const updates: Record<string, unknown> = {};
@@ -63,6 +64,8 @@ export async function PUT(
   if (yearDiscontinued !== undefined) updates.yearDiscontinued = yearDiscontinued != null ? Number(yearDiscontinued) : null;
   if (productionStatus !== undefined) updates.productionStatus = productionStatus || null;
   if (bodyType !== undefined) updates.bodyType = normalizeBodyType(bodyType, megapixels);
+  if (shutterType !== undefined) updates.shutterType = normalizeShutterType(shutterType);
+  if (shutterControl !== undefined) updates.shutterControl = normalizeShutterControl(shutterControl);
   if (weightG !== undefined) updates.weightG = weightG != null ? Number(weightG) : null;
   if (specs !== undefined) updates.specs = specs;
   if (images !== undefined) updates.images = images;

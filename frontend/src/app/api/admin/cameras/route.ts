@@ -5,6 +5,7 @@ import { requireAdminAPI } from "@/lib/admin-auth";
 import { revalidateEntity } from "@/lib/revalidate-entity";
 import { normalizeSensorSize } from "@/lib/sensor-size";
 import { normalizeBodyType } from "@/lib/body-type";
+import { normalizeShutterControl, normalizeShutterType } from "@/lib/shutter";
 import { and, or, sql, eq, isNull } from "drizzle-orm";
 import { buildNameSearch } from "@/lib/search";
 import { buildOrderBy } from "@/lib/admin-sort";
@@ -95,7 +96,7 @@ export async function POST(request: NextRequest) {
   const {
     name, slug, url, systemId, description, alias,
     sensorType, sensorSize, megapixels, resolution,
-    yearIntroduced, yearDiscontinued, productionStatus, bodyType, weightG, specs, images,
+    yearIntroduced, yearDiscontinued, productionStatus, bodyType, shutterType, shutterControl, weightG, specs, images,
   } = body;
 
   if (!name) {
@@ -122,6 +123,8 @@ export async function POST(request: NextRequest) {
       yearDiscontinued: yearDiscontinued != null ? Number(yearDiscontinued) : null,
       productionStatus: productionStatus || null,
       bodyType: normalizeBodyType(bodyType, megapixels),
+      shutterType: normalizeShutterType(shutterType),
+      shutterControl: normalizeShutterControl(shutterControl),
       weightG: weightG != null ? Number(weightG) : null,
       specs: specs || {},
       images: images || [],

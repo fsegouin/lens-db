@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { pathPrefixes } from "@/lib/pending-edits";
+import { normalizeControlledValue, refusedValueMessage } from "@/lib/controlled-value";
 import { revalidateEntity, touchesLists } from "@/lib/revalidate-entity";
 import { lenses, cameras, systems, collections, lensSeries, pendingEdits } from "@/db/schema";
 import { requireUserAPI } from "@/lib/user-auth";
@@ -38,7 +39,8 @@ const editableFields: Record<EntityType, string[]> = {
     "name", "url", "description", "alias",
     "systemId",
     "sensorType", "sensorSize", "megapixels", "resolution",
-    "yearIntroduced", "yearDiscontinued", "productionStatus", "bodyType", "weightG",
+    "yearIntroduced", "yearDiscontinued", "productionStatus", "bodyType",
+    "shutterType", "shutterControl", "weightG",
   ],
   system: ["name", "manufacturer", "mountType", "description"],
   collection: ["name", "description"],
@@ -48,7 +50,10 @@ const editableFields: Record<EntityType, string[]> = {
 // Text fields that should be normalized (empty string → null)
 const textFieldSets: Record<EntityType, string[]> = {
   lens: ["url", "brand", "description", "lensType", "era", "productionStatus"],
-  camera: ["url", "description", "alias", "sensorType", "sensorSize", "resolution", "bodyType", "productionStatus"],
+  camera: [
+    "url", "description", "alias", "sensorType", "sensorSize", "resolution", "bodyType",
+    "productionStatus", "shutterType", "shutterControl",
+  ],
   system: ["manufacturer", "mountType", "description"],
   collection: ["description"],
   series: ["description"],
@@ -137,6 +142,17 @@ export async function POST(request: NextRequest) {
   const textFields = textFieldSets[type];
   for (const field of textFields) {
     if (updates[field] === "") updates[field] = null;
+  }
+  // The same vocabularies the review queue applies on approval. An edit from
+  // a trusted account is written straight away, so without this it reached
+  // the table verbatim, and these columns are matched with exact equality.
+  for (const [field, val] of Object.entries(updates)) {
+    const normalized = normalizeControlledValue(field, val);
+    if (normalized === undefined) continue;
+    if (normalized === null) {
+      return NextResponse.json({ error: refusedValueMessage(field, val) }, { status: 400 });
+    }
+    updates[field] = normalized;
   }
   if (type === "camera") {
     const megapixels = updates.megapixels !== undefined ? updates.megapixels : currentData.megapixels;

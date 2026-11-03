@@ -303,7 +303,7 @@ export default function CameraList({
       clear: { filmType: filmTypeList.filter((v) => v !== f).join(",") },
     });
   }
-  if (model) chips.push({ key: "model", label: "Shutter", value: model, clear: { model: "" } });
+  if (model) chips.push({ key: "model", label: "Shutter control", value: model, clear: { model: "" } });
   if (sensorType) chips.push({ key: "sensorType", label: "Sensor type", value: sensorType, clear: { sensorType: "" } });
   if (cropFactor) chips.push({ key: "cropFactor", label: "Crop", value: cropFactor, clear: { cropFactor: "" } });
   if (year) chips.push({ key: "year", label: "Year", value: year, clear: { year: "" } });
@@ -430,15 +430,15 @@ export default function CameraList({
       >
         <div className="space-y-1.5">
           <label htmlFor="camera-model" className="block text-xs font-medium text-muted-foreground">
-            Shutter type
+            Shutter control
           </label>
           <select
             id="camera-model"
             value={formModel}
-            onChange={(e) => { setFormModel(e.target.value); applyFilters({ model: e.target.value }); }}
+            onChange={(e) => { setFormModel(e.target.value); trackEvent("camera_filter_apply", { filter: "model", value: e.target.value }); applyFilters({ model: e.target.value }); }}
             className="filter-select h-10 w-full rounded-lg border border-input bg-transparent px-3 text-base text-foreground transition-colors outline-none md:text-sm focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
           >
-            <option value="">All shutter types</option>
+            <option value="">All shutter controls</option>
             {models.map((m) => (
               <option key={m} value={m}>{m}</option>
             ))}
@@ -659,20 +659,13 @@ export default function CameraList({
                     {camera.sensorSize || "\u2014"}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
-                    {specs["Model"] ? (
+                    {camera.shutterControl ? (
                       <button
                         type="button"
-                        onClick={() => {
-                          const prefix = specs["Model"].startsWith("Electronically controlled")
-                            ? "Electronically controlled"
-                            : specs["Model"].startsWith("Mechanical")
-                            ? "Mechanical"
-                            : specs["Model"];
-                          applyFilters({ ...clearAll, model: prefix });
-                        }}
+                        onClick={() => applyFilters({ ...clearAll, model: camera.shutterControl! })}
                         className="text-left hover:text-foreground hover:underline"
                       >
-                        {specs["Model"]}
+                        {camera.shutterControl}
                       </button>
                     ) : "\u2014"}
                   </TableCell>

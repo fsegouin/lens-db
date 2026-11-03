@@ -72,6 +72,8 @@ const FIELD_LABELS: Record<string, string> = {
   megapixels: "Megapixels",
   resolution: "Resolution",
   bodyType: "Body Type",
+  shutterType: "Shutter Type",
+  shutterControl: "Shutter Control",
   alias: "Alias",
   manufacturer: "Manufacturer",
   mountType: "Mount Type",

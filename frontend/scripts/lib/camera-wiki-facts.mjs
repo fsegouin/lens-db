@@ -193,6 +193,8 @@ export function extractMount(text, systemNames) {
  */
 export function extractShutterType(text) {
   if (/\bfocal[- ]plane\b/i.test(text)) return "Focal-plane";
+  // The Copal Square is a metal focal-plane unit, not one of Copal's leaf shutters.
+  if (/\bCopal[- ]Square\b/i.test(text)) return "Focal-plane";
   if (/\b(leaf|between[- ]the[- ]lens|inter[- ]lens)(?:[- ]type)?[, ]+(?:[a-z-]+\s+)?shutter\b/i.test(text)) {
     return "Leaf";
   }
@@ -202,7 +204,8 @@ export function extractShutterType(text) {
   }
   if (/\brotary\s+shutter\b/i.test(text)) return "Rotary";
   if (/\bguillotine\s+shutter\b/i.test(text)) return "Guillotine";
-  if (/\belectronic\s+shutter\b/i.test(text)) return "Electronic";
+  // "An electronic shutter" on a film body says how it is timed, which is
+  // shutter_control, and names no mechanism (src/lib/shutter.ts).
   return null;
 }
 
