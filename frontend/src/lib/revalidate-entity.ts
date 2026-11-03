@@ -27,7 +27,7 @@ const listFields: Record<EntityType, ReadonlySet<string>> = {
   ]),
   camera: new Set([
     "name", "slug", "systemId", "builtInLensId", "mergedIntoId", "alias",
-    "sensorType", "sensorSize", "megapixels", "bodyType", "weightG",
+    "sensorType", "sensorSize", "megapixels", "bodyType", "shutterControl", "weightG",
     "yearIntroduced", "yearDiscontinued",
   ]),
 };

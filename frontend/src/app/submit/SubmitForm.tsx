@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { SHUTTER_CONTROLS, SHUTTER_TYPES } from "@/lib/shutter";
+import { ERA, PRODUCTION_STATUS } from "@/lib/vocabularies";
 
 type SystemOption = { id: number; name: string };
 
@@ -19,8 +21,8 @@ const lensFields = [
   { name: "coverage", label: "Coverage", type: "coverage" },
   { name: "url", label: "Reference URL", type: "text" },
   { name: "lensType", label: "Lens Type", type: "text", placeholder: "e.g. Standard, Wide Angle, Telephoto" },
-  { name: "era", label: "Era", type: "text", placeholder: "e.g. Modern, Vintage" },
-  { name: "productionStatus", label: "Production Status", type: "text", placeholder: "e.g. Current, Discontinued" },
+  { name: "era", label: "Era", type: "choice", options: ERA },
+  { name: "productionStatus", label: "Production Status", type: "choice", options: PRODUCTION_STATUS },
   { name: "focalLengthMin", label: "Focal Length Min (mm)", type: "number" },
   { name: "focalLengthMax", label: "Focal Length Max (mm)", type: "number" },
   { name: "apertureMin", label: "Max Aperture, wide end (f/)", type: "number" },
@@ -53,6 +55,8 @@ const cameraFields = [
   { name: "resolution", label: "Resolution", type: "text", placeholder: "e.g. 6000x4000" },
   { name: "yearIntroduced", label: "Year Introduced", type: "number" },
   { name: "bodyType", label: "Body Type", type: "text", placeholder: "e.g. SLR, Mirrorless, Rangefinder" },
+  { name: "shutterType", label: "Shutter Type", type: "choice", options: SHUTTER_TYPES },
+  { name: "shutterControl", label: "Shutter Control", type: "choice", options: SHUTTER_CONTROLS },
   { name: "weightG", label: "Weight (g)", type: "number" },
 ] as const;
 
@@ -228,6 +232,20 @@ export default function SubmitForm({ systems }: { systems: SystemOption[] }) {
                 {systems.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.name}
+                  </option>
+                ))}
+              </select>
+            ) : field.type === "choice" ? (
+              <select
+                id={field.name}
+                value={(formData[field.name] as string) ?? ""}
+                onChange={(e) => updateField(field.name, e.target.value || null)}
+                className={selectClassName}
+              >
+                <option value="">Select...</option>
+                {field.options.map((o) => (
+                  <option key={o} value={o}>
+                    {o}
                   </option>
                 ))}
               </select>

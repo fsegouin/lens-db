@@ -132,6 +132,7 @@ type CameraRow = {
   resolution: string | null;
   bodyType: string | null;
   shutterType: string | null;
+  shutterControl: string | null;
   weightG: number | null;
   yearIntroduced: number | null;
   yearDiscontinued: number | null;
@@ -155,6 +156,7 @@ export function publicCamera(row: CameraRow, mount: string | null = null) {
           },
     bodyType: row.bodyType,
     shutterType: row.shutterType,
+    shutterControl: row.shutterControl,
     weightG: row.weightG,
     yearIntroduced: row.yearIntroduced,
     yearDiscontinued: row.yearDiscontinued,

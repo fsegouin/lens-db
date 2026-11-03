@@ -12,12 +12,7 @@ import {
   dpreviewCameraCandidates,
 } from "@/db/schema";
 import { createRevision, type EntityType } from "@/lib/revisions";
-import {
-  normalizeCoverage,
-  normalizeEra,
-  normalizeLensType,
-  normalizeProductionStatus,
-} from "@/lib/vocabularies";
+import { normalizeControlledValue } from "@/lib/controlled-value";
 import { normalizeSensorSize } from "@/lib/sensor-size";
 import { normalizeBodyType } from "@/lib/body-type";
 import { sendEditApprovedEmail, sendEditRejectedEmail } from "@/lib/email";
@@ -153,38 +148,6 @@ export async function syncWatcherCandidate(
 }
 
 /**
- * Puts a proposed value into its controlled vocabulary, or refuses it.
- *
- * The allowlist above checks which field may be written, never what may go in
- * it, so until now approving an edit wrote whatever string it carried. Four
- * columns are filtered with exact equality, and `coverage` had already reached
- * 17 spellings for six concepts once before — the Medium Format filter matched
- * nothing at all because every such lens was recorded with a capital F.
- *
- * An edit does not have to be malicious to do that. The DPReview spec audit
- * proposed the raw table's "Four Thirds" over a stored "micro-four-thirds"
- * that already means the same thing, and 18 of those are queued right now.
- *
- * Returns `undefined` for a field with no vocabulary (write it unchanged), the
- * slug for a value that maps, and `null` for one that does not (drop it).
- */
-function normalizeControlledValue(field: string, value: unknown): string | null | undefined {
-  if (typeof value !== "string") return undefined;
-  switch (field) {
-    case "coverage":
-      return normalizeCoverage(value);
-    case "era":
-      return normalizeEra(value);
-    case "productionStatus":
-      return normalizeProductionStatus(value);
-    case "lensType":
-      return normalizeLensType(value);
-    default:
-      return undefined;
-  }
-}
-
-/**
  * Apply one pending edit (the "approve" action): re-validates the changes
  * against the field allowlist, creates or updates the entity, writes the
  * revision, marks the edit approved, and revalidates the public page.
@@ -216,7 +179,8 @@ export async function applyPendingEditApproval(
       "name", "url", "description", "alias",
       "systemId",
       "sensorType", "sensorSize", "megapixels", "resolution",
-      "yearIntroduced", "yearDiscontinued", "productionStatus", "bodyType", "weightG",
+      "yearIntroduced", "yearDiscontinued", "productionStatus", "bodyType",
+      "shutterType", "shutterControl", "weightG",
     ],
     system: ["name", "manufacturer", "mountType", "description"],
     collection: ["name", "description"],
@@ -228,7 +192,7 @@ export async function applyPendingEditApproval(
     if (!allowed.has(key)) continue;
     const normalized = normalizeControlledValue(key, val);
     // A value the vocabulary cannot place is dropped rather than written: these
-    // four columns are filtered with exact equality, so one stray spelling is a
+    // columns are filtered with exact equality, so one stray spelling is a
     // filter that silently returns nothing.
     if (normalized !== undefined) {
       if (normalized !== null) changes[key] = normalized;

@@ -4,6 +4,7 @@ import { asc, eq, isNull } from "drizzle-orm";
 import { unstable_cache } from "next/cache";
 import CameraList from "@/components/CameraList";
 import { listCameras, type CameraListItem } from "@/lib/camera-list";
+import { SHUTTER_CONTROLS } from "@/lib/shutter";
 
 const getCachedDropdownData = unstable_cache(
   async () => {
@@ -14,7 +15,7 @@ const getCachedDropdownData = unstable_cache(
         .innerJoin(cameras, eq(cameras.systemId, systems.id))
         .orderBy(asc(systems.name)),
       db
-        .select({ specs: cameras.specs, sensorType: cameras.sensorType, sensorSize: cameras.sensorSize, bodyType: cameras.bodyType })
+        .select({ specs: cameras.specs, sensorType: cameras.sensorType, sensorSize: cameras.sensorSize, bodyType: cameras.bodyType, shutterControl: cameras.shutterControl })
         .from(cameras)
         .where(isNull(cameras.mergedIntoId)),
     ]);
@@ -29,13 +30,7 @@ const getCachedDropdownData = unstable_cache(
     for (const r of allCameras) {
       const s = (r.specs || {}) as Record<string, string>;
       if (r.bodyType) typeSet.add(r.bodyType);
-      if (s["Model"]) {
-        if (s["Model"].startsWith("Electronically controlled"))
-          modelSet.add("Electronically controlled");
-        else if (s["Model"].startsWith("Mechanical"))
-          modelSet.add("Mechanical");
-        else modelSet.add(s["Model"]);
-      }
+      if (r.shutterControl) modelSet.add(r.shutterControl);
       if (s["Film type"]) {
         for (const part of s["Film type"].split(";")) {
           const v = part.trim();
@@ -50,7 +45,8 @@ const getCachedDropdownData = unstable_cache(
     return {
       systems: systemRows,
       types: [...typeSet].sort(),
-      models: [...modelSet].sort(),
+      // In the vocabulary's order, mechanical to hybrid, not alphabetical.
+      models: SHUTTER_CONTROLS.filter((c) => modelSet.has(c)),
       filmTypes: [...filmTypeSet].sort(),
       cropFactors: [...cropFactorSet].sort(),
       sensorTypes: [...sensorTypeSet].sort(),

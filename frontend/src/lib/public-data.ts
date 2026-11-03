@@ -43,6 +43,7 @@ const CAMERA_FIELDS = {
   resolution: cameras.resolution,
   bodyType: cameras.bodyType,
   shutterType: cameras.shutterType,
+  shutterControl: cameras.shutterControl,
   weightG: cameras.weightG,
   yearIntroduced: cameras.yearIntroduced,
   yearDiscontinued: cameras.yearDiscontinued,

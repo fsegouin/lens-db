@@ -10,6 +10,14 @@ import { getClientIP, hashIP } from "@/lib/api-utils";
 import { createRateLimit } from "@/lib/rate-limit";
 import { normalizeSensorSize } from "@/lib/sensor-size";
 import { normalizeBodyType } from "@/lib/body-type";
+import { normalizeShutterControl, normalizeShutterType } from "@/lib/shutter";
+import { normalizeControlledValue, refusedValueMessage } from "@/lib/controlled-value";
+import {
+  normalizeCoverage,
+  normalizeEra,
+  normalizeLensType,
+  normalizeProductionStatus,
+} from "@/lib/vocabularies";
 
 const submitLimiter = createRateLimit("submissions", 10, "3600 s"); // 10 submissions per hour
 
@@ -36,7 +44,7 @@ const cameraFields = [
   "name", "url", "description", "alias",
   "systemId",
   "sensorType", "sensorSize", "megapixels", "resolution",
-  "yearIntroduced", "bodyType", "weightG",
+  "yearIntroduced", "bodyType", "shutterType", "shutterControl", "weightG",
 ];
 
 const numericFields = new Set([
@@ -132,6 +140,16 @@ export async function POST(request: NextRequest) {
   for (const [key, val] of Object.entries(entityData)) {
     if (val === "" && !numericFields.has(key)) entityData[key] = null;
   }
+  // Refuse a value outside a controlled vocabulary, as /api/edits does, so the
+  // submitter learns which one was dropped instead of losing it unseen.
+  for (const [key, val] of Object.entries(entityData)) {
+    const normalized = normalizeControlledValue(key, val);
+    if (normalized === undefined) continue;
+    if (normalized === null) {
+      return NextResponse.json({ error: refusedValueMessage(key, val) }, { status: 400 });
+    }
+    entityData[key] = normalized;
+  }
 
   entityData.name = name.trim();
   const slug = generateSlug(name.trim());
@@ -176,9 +194,11 @@ export async function POST(request: NextRequest) {
         brand: (entityData.brand as string) || null,
         systemId: (entityData.systemId as number) || null,
         description: (entityData.description as string) || null,
-        lensType: (entityData.lensType as string) || null,
-        era: (entityData.era as string) || null,
-        productionStatus: (entityData.productionStatus as string) || null,
+        // The vocabularies the review queue applies on approval; a trusted
+        // account's submission skips that queue.
+        lensType: normalizeLensType(entityData.lensType),
+        era: normalizeEra(entityData.era),
+        productionStatus: normalizeProductionStatus(entityData.productionStatus),
         focalLengthMin: (entityData.focalLengthMin as number) ?? null,
         focalLengthMax: (entityData.focalLengthMax as number) ?? null,
         apertureMin: (entityData.apertureMin as number) ?? null,
@@ -197,7 +217,7 @@ export async function POST(request: NextRequest) {
         isPrime: (entityData.isPrime as boolean) ?? false,
         hasStabilization: (entityData.hasStabilization as boolean) ?? false,
         hasAutofocus: (entityData.hasAutofocus as boolean) ?? false,
-        coverage: (entityData.coverage as string) || null,
+        coverage: normalizeCoverage(entityData.coverage),
         specs: {},
         images: [],
       })
@@ -219,6 +239,8 @@ export async function POST(request: NextRequest) {
         resolution: (entityData.resolution as string) || null,
         yearIntroduced: (entityData.yearIntroduced as number) ?? null,
         bodyType: normalizeBodyType(entityData.bodyType, entityData.megapixels),
+        shutterType: normalizeShutterType(entityData.shutterType),
+        shutterControl: normalizeShutterControl(entityData.shutterControl),
         weightG: (entityData.weightG as number) ?? null,
         specs: {},
         images: [],

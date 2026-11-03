@@ -505,6 +505,13 @@
       "when": 1790328341533,
       "tag": "0071_camera_front_view",
       "breakpoints": true
+    },
+    {
+      "idx": 72,
+      "version": "7",
+      "when": 1793659878735,
+      "tag": "0072_shutter_control",
+      "breakpoints": true
     }
   ]
 }

@@ -6,6 +6,7 @@ import ImageUploader from "@/components/admin/ImageUploader";
 import type { ImageData } from "@/lib/image-types";
 import { generateSlug } from "./generate-slug";
 import { PRODUCTION_STATUS } from "@/lib/vocabularies";
+import { SHUTTER_CONTROLS, SHUTTER_TYPES } from "@/lib/shutter";
 
 interface CameraData {
   id: number;
@@ -23,6 +24,8 @@ interface CameraData {
   yearDiscontinued?: number | null;
   productionStatus?: string | null;
   bodyType?: string | null;
+  shutterType?: string | null;
+  shutterControl?: string | null;
   weightG?: number | null;
   specs?: unknown;
   images?: unknown;
@@ -58,6 +61,8 @@ export default function CameraForm({ camera, systems }: CameraFormProps) {
   const [yearDiscontinued, setYearDiscontinued] = useState(camera?.yearDiscontinued?.toString() ?? "");
   const [productionStatus, setProductionStatus] = useState(camera?.productionStatus ?? "");
   const [bodyType, setBodyType] = useState(camera?.bodyType ?? "");
+  const [shutterType, setShutterType] = useState(camera?.shutterType ?? "");
+  const [shutterControl, setShutterControl] = useState(camera?.shutterControl ?? "");
   const [weightG, setWeightG] = useState(camera?.weightG?.toString() ?? "");
   const [specsEntries, setSpecsEntries] = useState<[string, string][]>(() => {
     if (!camera?.specs || typeof camera.specs !== "object") return [];
@@ -106,6 +111,8 @@ export default function CameraForm({ camera, systems }: CameraFormProps) {
       yearDiscontinued: yearDiscontinued ? Number(yearDiscontinued) : null,
       productionStatus: productionStatus || null,
       bodyType: bodyType || null,
+      shutterType: shutterType || null,
+      shutterControl: shutterControl || null,
       weightG: weightG ? Number(weightG) : null,
       specs: parsedSpecs,
     };
@@ -209,6 +216,38 @@ export default function CameraForm({ camera, systems }: CameraFormProps) {
               onChange={(e) => setBodyType(e.target.value)}
               className={`w-full ${inputClass}`}
             />
+          </div>
+          <div className="space-y-1">
+            <label htmlFor="camera-shutter-type" className={labelClass}>Shutter Type</label>
+            <select
+              id="camera-shutter-type"
+              value={shutterType}
+              onChange={(e) => setShutterType(e.target.value)}
+              className={`w-full ${inputClass}`}
+            >
+              <option value="">-- None --</option>
+              {SHUTTER_TYPES.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1">
+            <label htmlFor="camera-shutter-control" className={labelClass}>Shutter Control</label>
+            <select
+              id="camera-shutter-control"
+              value={shutterControl}
+              onChange={(e) => setShutterControl(e.target.value)}
+              className={`w-full ${inputClass}`}
+            >
+              <option value="">-- None --</option>
+              {SHUTTER_CONTROLS.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="space-y-1 sm:col-span-2">
             <label className={labelClass}>URL</label>

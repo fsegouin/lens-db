@@ -70,3 +70,16 @@ describe("normalizeLensType is an open taxonomy", () => {
     assert.strictEqual(normalizeLensType("wide angle prime"), "Wide-angle prime lens");
   });
 });
+
+// A request body is untyped JSON, and the submission route passes its values
+// straight in.
+describe("a request-body value that is not a string", () => {
+  test("is refused rather than thrown on", () => {
+    for (const value of [5, true, {}, ["Film era"]]) {
+      assert.strictEqual(normalizeCoverage(value), null);
+      assert.strictEqual(normalizeEra(value), null);
+      assert.strictEqual(normalizeProductionStatus(value), null);
+      assert.strictEqual(normalizeLensType(value), null);
+    }
+  });
+});

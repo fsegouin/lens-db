@@ -32,6 +32,7 @@ import ViewTracker from "@/components/ViewTracker";
 import ImageGallery from "@/components/ImageGallery";
 import RatingWidget from "@/components/RatingWidget";
 import EditButton from "@/components/EditButton";
+import { ERA, PRODUCTION_STATUS } from "@/lib/vocabularies";
 import FlagDuplicateButton from "@/components/FlagDuplicateButton";
 import AdminEditLink from "@/components/AdminEditLink";
 import SpecsTable from "@/components/SpecsTable";
@@ -723,8 +724,8 @@ export default async function LensDetailPage({
               { name: "description", label: "Description", type: "textarea" },
               { name: "systemId", label: "Mount System", type: "select", optionsSource: "systems" },
               { name: "lensType", label: "Lens Type", type: "text" },
-              { name: "era", label: "Era", type: "text" },
-              { name: "productionStatus", label: "Production Status", type: "text" },
+              { name: "era", label: "Era", type: "select", options: ERA },
+              { name: "productionStatus", label: "Production Status", type: "select", options: PRODUCTION_STATUS },
               { name: "focalLengthMin", label: "Focal Length Min (mm)", type: "number" },
               { name: "focalLengthMax", label: "Focal Length Max (mm)", type: "number" },
               { name: "apertureMin", label: "Max Aperture, wide end (f/)", type: "number" },
