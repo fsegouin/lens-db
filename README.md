@@ -11,7 +11,7 @@ The Lens DB is a camera and lens database project built from archived `lens-db.c
   TypeScript MCP server exposing lens/camera search, detail, price, and compatibility tools. Its tool implementations are also consumed by the frontend chat via the `lens-db-mcp-server` workspace dependency.
 
 - `scraper/`
-  Node scripts for the DPReview new-product watchers, run via GitHub Actions in `.github/workflows/` or manually against the `/api/cron/*` endpoints.
+  Node scripts for the DPReview new-product watchers, run weekly on a self-hosted scheduler or manually against the `/api/cron/*` endpoints.
 
 ## Main App
 

@@ -77,7 +77,7 @@ async function syncReviewedCandidates(): Promise<void> {
 }
 
 /**
- * GET: Returns every DPReview slug already processed, so the GitHub Action
+ * GET: Returns every DPReview slug already processed, so the watcher script
  * knows which product pages to skip. Also lazily syncs review outcomes.
  */
 export async function GET(request: NextRequest) {
