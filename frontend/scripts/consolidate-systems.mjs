@@ -30,6 +30,7 @@
  *   B  per-lens variants folded into the parent mount (bellows, cams, inner/outer)
  *   C  manufacturer camera families folded into the shared mount (M42, K, F, LTM, M)
  *   D  cosmetic: renames and manufacturer fixes on surviving rows
+ *   E  merges added after the first run (Topcon into Exakta)
  *
  * Every source is pinned by id AND name; a mismatch aborts before any write.
  * Requires the `system_redirects` table (migration 0021) and DATABASE_URL.
@@ -57,7 +58,11 @@ if (!process.env.DATABASE_URL) {
 const args = process.argv.slice(2);
 const apply = args.includes("--apply");
 const tierArg = args[args.indexOf("--tier") + 1];
-const tiers = args.includes("--tier") ? tierArg.split(",").map((t) => t.trim().toUpperCase()) : ["A", "B", "C", "D"];
+if (args.includes("--tier") && (!tierArg || tierArg.startsWith("--"))) {
+  console.error("--tier needs a comma-separated list, e.g. --tier A,B");
+  process.exit(1);
+}
+const tiers = args.includes("--tier") ? tierArg.split(",").map((t) => t.trim().toUpperCase()) : ["A", "B", "C", "D", "E"];
 
 // ─── Merge map ──────────────────────────────────────────────────────────
 // { tier, into: [id, name], from: [[id, name], ...], why, rename?, manufacturer?, description? }
@@ -204,7 +209,7 @@ const MERGES = [
   { tier: "B", into: [32, "Konica AR"], from: [[78, "Konica AR(Bellows)"]], why: "Bellows variant." },
   { tier: "B", into: [82, "Minolta SR"], from: [[128, "Minolta SR(Bellows)"]], why: "Bellows variant." },
   { tier: "B", into: [3, "Olympus OM"], from: [[65, "Olympus OM(Bellows)"]], why: "Bellows variant." },
-  { tier: "B", into: [124, "Topcon"], from: [[30, "Topcon(Bellows)"]], why: "Bellows variant." },
+  { tier: "B", into: [28, "Exakta"], from: [[30, "Topcon(Bellows)"]], why: "Bellows variant of the Topcon row, which tier E folds into Exakta. The first run merged it into Topcon (#124); its redirect follows Topcon's." },
   { tier: "B", into: [13, "Nikon reflex housing"], from: [[64, "Nikon reflex housing(Bellows)"]], why: "Bellows variant." },
   { tier: "B", into: [116, "Rolleiflex SLX"], from: [[88, "Rolleiflex SLX(Bellows)"]], why: "Bellows variant." },
   { tier: "B", into: [41, "Praktisix (Pentacon Six)"], from: [[125, "Praktisix (Pentacon Six)(Bellows)"]], why: "Bellows variant." },
@@ -339,6 +344,14 @@ const MERGES = [
     into: [41, "Praktisix (Pentacon Six)"],
     from: [[159, "Kiev 6S/60"]],
     why: "Kiev 6S/60 use the Pentacon Six breech-lock mount.",
+  },
+
+  // ── Tier E: added after the first run ───────────────────────────────
+  {
+    tier: "E",
+    into: [28, "Exakta"],
+    from: [[124, "Topcon"]],
+    why: "Topcon's R, RE and Super D bodies and their lenses use the inner Exakta bayonet (44.7mm register, like the Exakta row). Topcon is the maker, Exakta the mount; the row was left alone in the first pass.",
   },
 ];
 
