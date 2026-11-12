@@ -34,7 +34,7 @@ import { buildIndex, lookup } from "./lib/catalogue-match.mjs";
 import { classifyWikiBody, DROPPED_BY_DEFAULT } from "./lib/body-class.mjs";
 
 const API = "https://camera-wiki.org/api.php";
-const USER_AGENT = "thelensdb-catalogue-scan/1.0 (+https://thelensdb.com; florent@segouin.me)";
+const USER_AGENT = "thelensdb-catalogue-scan/1.0 (+https://thelensdb.com; contact@thelensdb.com)";
 
 /**
  * Brands worth scanning, as camera-wiki spells its categories. The default list

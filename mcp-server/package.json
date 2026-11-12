@@ -12,11 +12,11 @@
     "start": "node dist/server.js"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.26.0",
-    "ai": "^6.0.301",
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "ai": "^6.0.325",
     "drizzle-orm": "0.45.2",
     "pg": "^8.23.0",
-    "zod": "^4.3.6"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/node": "^20",

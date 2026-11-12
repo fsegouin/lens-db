@@ -123,7 +123,7 @@ export default function SubmitForm({ systems }: { systems: SystemOption[] }) {
 
   if (result) {
     return (
-      <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-6 dark:border-emerald-800/50 dark:bg-emerald-950/20">
+      <div role="status" className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-6 dark:border-emerald-800/50 dark:bg-emerald-950/20">
         <h2 className="mb-2 text-lg font-semibold text-emerald-800 dark:text-emerald-200">
           {result.pending ? "Submitted for Review" : "Entry Created"}
         </h2>
@@ -167,7 +167,7 @@ export default function SubmitForm({ systems }: { systems: SystemOption[] }) {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Entity type toggle */}
-      <div className="flex gap-1 rounded-lg bg-zinc-100 p-1 dark:bg-zinc-800">
+      <div role="group" aria-label="Entry type" className="flex gap-1 rounded-lg bg-zinc-100 p-1 dark:bg-zinc-800">
         <button
           type="button"
           aria-pressed={entityType === "lens"}
@@ -204,7 +204,7 @@ export default function SubmitForm({ systems }: { systems: SystemOption[] }) {
             >
               {field.label}
               {"required" in field && field.required && (
-                <span className="ml-1 text-red-500">*</span>
+                <span aria-hidden="true" className="ml-1 text-red-500">*</span>
               )}
             </label>
 
@@ -295,17 +295,18 @@ export default function SubmitForm({ systems }: { systems: SystemOption[] }) {
           htmlFor="summary"
           className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
         >
-          Edit Summary <span className="ml-1 text-red-500">*</span>
+          Edit Summary <span aria-hidden="true" className="ml-1 text-red-500">*</span>
         </label>
         <Input
           id="summary"
+          aria-describedby="summary-hint"
           value={summary}
           onChange={(e) => setSummary(e.target.value)}
           placeholder="Brief description of this submission"
           required
           maxLength={500}
         />
-        <p className="mt-1 text-xs text-muted-foreground">
+        <p id="summary-hint" className="mt-1 text-xs text-muted-foreground">
           Briefly describe what you&apos;re adding (3-500 characters)
         </p>
       </div>

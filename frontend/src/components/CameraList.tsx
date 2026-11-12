@@ -16,6 +16,14 @@ import {
 import { TableSkeleton } from "@/components/table-skeleton";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { trackEvent } from "@/lib/analytics";
+import { useTypedFilterTracking } from "@/lib/typed-filter";
+
+/**
+ * How long a failed page waits before infinite scroll may ask for it again.
+ * The sentinel's observer fires the moment loading clears, so without a pause
+ * a 429 or an outage is retried as fast as the network answers.
+ */
+const LOAD_RETRY_DELAY_MS = 5000;
 
 type CameraRow = {
   // Serialised into the page, so the import source and the contributor IP
@@ -168,12 +176,18 @@ export default function CameraList({
     setLoading(true);
     try {
       const res = await fetch(buildApiUrl(nextCursor));
+      // An error response carries no items; spreading its undefined `items`
+      // would throw inside the state update and take the list down.
+      if (!res.ok) throw new Error(`Error ${res.status}`);
       const data = await res.json();
       if (gen !== listGenRef.current) return;
       setItems((prev) => [...prev, ...data.items]);
       setNextCursor(data.nextCursor);
-    } catch {
-      // ignore
+    } catch (err) {
+      console.error("Failed to load more cameras:", err);
+      if (gen === listGenRef.current) {
+        await new Promise((resolve) => setTimeout(resolve, LOAD_RETRY_DELAY_MS));
+      }
     } finally {
       setLoading(false);
     }
@@ -238,6 +252,10 @@ export default function CameraList({
     const qs = params.toString();
     router.push(qs ? `/cameras?${qs}` : "/cameras");
   }
+
+  // Typed filters are counted when the field is left, as the mount catalogue
+  // does: one event per value entered, not one per keystroke.
+  const trackText = useTypedFilterTracking((filter, value) => trackEvent("camera_filter_apply", { filter, value }));
 
   function debouncedApply(overrides: FilterOverrides) {
     clearTimeout(debounceRef.current);
@@ -408,6 +426,7 @@ export default function CameraList({
               aria-label="Minimum price in USD"
               value={formPriceMin}
               onChange={(e) => { setFormPriceMin(e.target.value); debouncedApply({ priceMin: e.target.value }); }}
+              {...trackText("priceMin")}
               className="h-10 w-full"
             />
             <span aria-hidden="true" className="shrink-0 text-muted-foreground">&ndash;</span>
@@ -418,6 +437,7 @@ export default function CameraList({
               aria-label="Maximum price in USD"
               value={formPriceMax}
               onChange={(e) => { setFormPriceMax(e.target.value); debouncedApply({ priceMax: e.target.value }); }}
+              {...trackText("priceMax")}
               className="h-10 w-full"
             />
           </div>
@@ -486,6 +506,7 @@ export default function CameraList({
             placeholder="e.g. 1996"
             value={formYear}
             onChange={(e) => { setFormYear(e.target.value); debouncedApply({ year: e.target.value }); }}
+            {...trackText("year")}
             className="h-10 w-full"
           />
         </div>
@@ -582,7 +603,7 @@ export default function CameraList({
         {/* A 975px table in a 358px viewport scrolled sideways and detached
             every value from its camera. Below xl the same rows are cards. */}
         <div className="hidden xl:block">
-        <Table>
+        <Table aria-label="Cameras">
           <TableHeader>
             <TableRow>
               {[
@@ -648,7 +669,8 @@ export default function CameraList({
                     {sys ? (
                       <button
                         type="button"
-                        onClick={() => applyFilters({ ...clearAll, system: sys.slug })}
+                        aria-label={`Filter by mount ${sys.name}`}
+                            onClick={() => applyFilters({ ...clearAll, system: sys.slug })}
                         className="text-left hover:text-foreground hover:underline"
                       >
                         {sys.name}
@@ -662,7 +684,8 @@ export default function CameraList({
                     {camera.shutterControl ? (
                       <button
                         type="button"
-                        onClick={() => applyFilters({ ...clearAll, model: camera.shutterControl! })}
+                        aria-label={`Filter by shutter control ${camera.shutterControl}`}
+                          onClick={() => applyFilters({ ...clearAll, model: camera.shutterControl! })}
                         className="text-left hover:text-foreground hover:underline"
                       >
                         {camera.shutterControl}
@@ -673,7 +696,8 @@ export default function CameraList({
                     {specs["Film type"] ? (
                       <button
                         type="button"
-                        onClick={() => applyFilters({ ...clearAll, filmType: specs["Film type"] })}
+                        aria-label={`Filter by film type ${specs["Film type"]}`}
+                          onClick={() => applyFilters({ ...clearAll, filmType: specs["Film type"] })}
                         className="text-left hover:text-foreground hover:underline"
                       >
                         {specs["Film type"]}
@@ -684,7 +708,8 @@ export default function CameraList({
                     {camera.yearIntroduced ? (
                       <button
                         type="button"
-                        onClick={() => applyFilters({ ...clearAll, year: String(camera.yearIntroduced) })}
+                        aria-label={`Filter by year ${camera.yearIntroduced}`}
+                          onClick={() => applyFilters({ ...clearAll, year: String(camera.yearIntroduced) })}
                         className="text-left hover:text-foreground hover:underline"
                       >
                         {camera.yearIntroduced}
@@ -765,7 +790,7 @@ export default function CameraList({
         {nextCursor !== null && <div ref={sentinelRef} className="h-px w-full" />}
         </>
       ) : (
-        <div className="rounded-xl border border-dashed border-border p-12 text-center">
+        <div role="status" className="rounded-xl border border-dashed border-border p-12 text-center">
           <p className="text-muted-foreground">
             No cameras found.
           </p>

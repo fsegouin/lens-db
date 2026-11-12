@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useId } from "react";
 
 interface ComboboxInputProps {
   value: string;
@@ -8,6 +8,7 @@ interface ComboboxInputProps {
   options: string[];
   placeholder?: string;
   className?: string;
+  id?: string;
 }
 
 export default function ComboboxInput({
@@ -16,7 +17,10 @@ export default function ComboboxInput({
   options,
   placeholder,
   className = "",
+  id,
 }: ComboboxInputProps) {
+  const autoId = useId();
+  const listId = `${id ?? autoId}-list`;
   const [open, setOpen] = useState(false);
   const [highlightIndex, setHighlightIndex] = useState(-1);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -81,14 +85,23 @@ export default function ComboboxInput({
         }}
         onFocus={() => setOpen(true)}
         onKeyDown={handleKeyDown}
+        id={id}
+        role="combobox"
+        aria-autocomplete="list"
+        aria-expanded={open && (filtered.length > 0 || showNew)}
+        aria-controls={listId}
+        aria-activedescendant={highlightIndex >= 0 ? `${listId}-${highlightIndex}` : undefined}
         placeholder={placeholder}
         className={className}
       />
       {open && (filtered.length > 0 || showNew) && (
-        <ul className="absolute z-50 mt-1 max-h-48 w-full overflow-auto rounded-lg border border-zinc-300 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+        <ul id={listId} role="listbox" className="absolute z-50 mt-1 max-h-48 w-full overflow-auto rounded-lg border border-zinc-300 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
           {filtered.map((option, i) => (
             <li
               key={option}
+              id={`${listId}-${i}`}
+              role="option"
+              aria-selected={i === highlightIndex}
               onMouseDown={(e) => {
                 e.preventDefault();
                 onChange(option);
@@ -106,6 +119,9 @@ export default function ComboboxInput({
           ))}
           {showNew && (
             <li
+              id={`${listId}-${filtered.length}`}
+              role="option"
+              aria-selected={highlightIndex === filtered.length}
               onMouseDown={(e) => {
                 e.preventDefault();
                 setOpen(false);

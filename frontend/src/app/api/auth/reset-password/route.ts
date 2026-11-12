@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { users, passwordResetTokens } from "@/db/schema";
-import { and, eq, gt } from "drizzle-orm";
+import { and, eq, gt, inArray } from "drizzle-orm";
 import { getClientIP, rateLimitedResponse } from "@/lib/api-utils";
 import { createRateLimit } from "@/lib/rate-limit";
 import { hashPassword } from "@/lib/user-auth";
+import { storedForms } from "@/lib/one-shot-token";
 
 const resetLimiter = createRateLimit("auth-reset", 10, "600 s");
 
@@ -26,11 +27,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Password must be 8-128 characters" }, { status: 400 });
     }
 
+    // Consumed by the statement that finds it, so two requests racing on one
+    // link cannot both get through to set a password.
     const [record] = await db
-      .select({ id: passwordResetTokens.id, userId: passwordResetTokens.userId })
-      .from(passwordResetTokens)
-      .where(and(eq(passwordResetTokens.token, token), gt(passwordResetTokens.expiresAt, new Date())))
-      .limit(1);
+      .delete(passwordResetTokens)
+      .where(and(inArray(passwordResetTokens.token, storedForms(token)), gt(passwordResetTokens.expiresAt, new Date())))
+      .returning({ userId: passwordResetTokens.userId });
 
     if (!record) {
       return NextResponse.json(INVALID, { status: 400 });

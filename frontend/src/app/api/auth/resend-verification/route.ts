@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 import { checkBotId } from "botid/server";
 import { db } from "@/db";
 import { users, emailVerificationTokens } from "@/db/schema";
@@ -6,6 +6,7 @@ import { eq } from "drizzle-orm";
 import { getClientIP, rateLimitedResponse } from "@/lib/api-utils";
 import { createRateLimit } from "@/lib/rate-limit";
 import { sendVerificationEmail, maskEmail } from "@/lib/email";
+import { issueToken } from "@/lib/one-shot-token";
 
 const resendLimiter = createRateLimit("auth-resend", 3, "600 s");
 
@@ -49,19 +50,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(GENERIC);
     }
 
-    await db.delete(emailVerificationTokens).where(eq(emailVerificationTokens.userId, user.id));
-    const token = crypto.randomUUID();
-    await db.insert(emailVerificationTokens).values({
-      userId: user.id,
-      token,
-      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-    });
+    // Everything a real account costs runs after the response, so the answer
+    // takes as long whether or not the address has one.
+    const userId = user.id;
+    after(async () => {
+      try {
+        await db.delete(emailVerificationTokens).where(eq(emailVerificationTokens.userId, userId));
+        const { token, tokenHash } = issueToken();
+        await db.insert(emailVerificationTokens).values({
+          userId,
+          token: tokenHash,
+          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        });
 
-    try {
-      await sendVerificationEmail(email, token);
-    } catch (err) {
-      console.error(`[resend-verification] Failed to send to ${maskEmail(email)}:`, err);
-    }
+        try {
+          await sendVerificationEmail(email, token);
+        } catch (err) {
+          console.error(`[resend-verification] Failed to send to ${maskEmail(email)}:`, err);
+        }
+      } catch (error) {
+        console.error("POST /api/auth/resend-verification error:", error);
+      }
+    });
 
     return NextResponse.json(GENERIC);
   } catch (error) {

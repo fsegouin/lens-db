@@ -174,6 +174,7 @@ export default function FlagDuplicateButton({
                   <PopoverContent className="w-[var(--anchor-width)] p-0" align="start">
                     <Command shouldFilter={false}>
                       <CommandInput
+                        aria-label={placeholder}
                         placeholder={placeholder}
                         value={query}
                         onValueChange={handleQueryChange}

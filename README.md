@@ -64,7 +64,7 @@ node scripts/scan-camera-wiki-gaps.mjs --json camera-wiki-gaps.json
 
 | Scanner | Source | Covers |
 |---|---|---|
-| `scan-libraw-gaps.mjs` | [LibRaw](https://github.com/LibRaw/LibRaw)'s `cameralist.cpp` — one plain-text file, no key, no rate limit | Every camera that writes a raw file, so the digital era |
+| `scan-libraw-gaps.mjs` | [LibRaw](https://github.com/LibRaw/LibRaw)'s `cameralist.cpp`: one plain-text file, no key, no rate limit | Every camera that writes a raw file, so the digital era |
 | `scan-camera-wiki-gaps.mjs` | [camera-wiki.org](https://camera-wiki.org) via its MediaWiki `api.php`, by brand category | ~10,000 articles weighted to film-era Western and consumer cameras |
 
 Both share two libraries, each with its own test suite (`pnpm test`):
@@ -79,22 +79,35 @@ A body earns a place by taking interchangeable lenses. Fixed-lens cameras are ou
 | Class | In scope | Why |
 |---|---|---|
 | Interchangeable-lens | yes | the catalogue's reason to exist |
-| Premium 80s/90s film point & shoots | yes | Contax T2, Yashica T4, mju II, TC-1, Minilux, GR1 — collected for the lens on the front |
-| Folding | yes | Ikonta, Billy Record, Bessa — fixed-lens, but a Tessar or Skopar is the point |
+| Premium 80s/90s film point & shoots | yes | Contax T2, Yashica T4, mju II, TC-1, Minilux, GR1, collected for the lens on the front |
+| Folding | yes | Ikonta, Billy Record, Bessa: fixed-lens, but a Tessar or Skopar is the point |
 | Instant | yes | Polaroid, which the catalogue currently lacks entirely |
 | Viewfinder | yes | simple scale-focus film cameras; the premium compacts live in this class too |
 | Box | no | a meniscus lens and one shutter speed |
-| Digital compact | no | including the X100, RX100, GR and Q — good cameras, out of scope |
+| Digital compact | no | including the X100, RX100, GR and Q: good cameras, out of scope |
 | Bridge superzoom | no | fixed lens, no mount |
 | Cartridge snapshot (110/126/disc/APS) | no | formats built so nobody had to focus, unless the body is a real SLR |
 
-Two rules keep the filter honest. It **defaults to keeping**, so only an explicit pattern drops a candidate and an unrecognised body stays visible in the report — the costs are asymmetric, since an unwanted compact wastes a moment's review while a dropped SLR is a camera silently missing from the site. And it **reports every drop by class**, so an over-eager rule shows up as a surprising count rather than a shorter list. Pass `--all` to see everything it would drop.
+Two rules keep the filter honest. It **defaults to keeping**, so only an explicit pattern drops a candidate and an unrecognised body stays visible in the report: the costs are asymmetric, since an unwanted compact wastes a moment's review while a dropped SLR is a camera silently missing from the site. And it **reports every drop by class**, so an over-eager rule shows up as a surprising count rather than a shorter list. Pass `--all` to see everything it would drop.
 
 Model patterns are scoped to the maker, because designations are only unique within a brand: `S1` is a Fujifilm bridge and Panasonic's full-frame flagship, and a bare `T3` is both a Yashica point & shoot and Fujifilm's X-T3.
 
-The notable-compact list is a judgement call and is meant to be edited — adding a line to `MAKER_RULES` is how you disagree with it. Note that every name on it was later reused for a zoom version (the mju II ZOOM, the Minilux Zoom) that shares only the badge; those are classed as ordinary compacts.
+The notable-compact list is a judgement call and is meant to be edited: adding a line to `MAKER_RULES` is how you disagree with it. Note that every name on it was later reused for a zoom version (the mju II ZOOM, the Minilux Zoom) that shares only the badge; those are classed as ordinary compacts.
 
-The scanners deliberately report rather than import. Neither list is clean enough to load unattended: camera-wiki mixes accessories into brand categories (pages it cannot classify are listed separately for review), and LibRaw includes phones, drones and digital backs. camera-wiki is CC BY-SA, so anything taken from it needs attribution.
+The scanners deliberately report rather than import, and the gap pipeline below imports only records both models agreed on or a reviewer approved. Neither list is clean enough to load unattended: camera-wiki mixes accessories into brand categories (pages it cannot classify are listed separately for review), and LibRaw includes phones, drones and digital backs. camera-wiki is CC BY-SA, so anything taken from it needs attribution.
+
+### Gap pipeline for the lens-db.com sitemap
+
+A separate four-step pipeline finds the lenses and cameras that lens-db.com lists in its public sitemaps and we lack, drafts records for them, and imports them. The sitemap gives only a URL, so the entry's name comes from its slug. Run each step from `frontend/`; none has a package script alias. Files go to `../scraper/lensdb-sitemap` (override with `--dir`).
+
+| Step | Command | Does |
+|---|---|---|
+| 1 | `node scripts/lensdb-sitemap-gaps.mjs` | Matches sitemap entries against the catalogue (deterministic pass, then a model verdict with a confidence bar; unsure ones go to `review.json`). Writes `missing.json`. Never touches the database. Add `--no-llm` for the deterministic pass only. |
+| 2 | `node scripts/camera-wiki-gap-lookup.mjs` | Finds camera-wiki.org articles for pending lenses through the MediaWiki `api.php` and extracts figures only, never prose. Writes `camerawiki-lookup.jsonl`, which step 3 reads. |
+| 3 | `node scripts/enrich-lensdb-gaps.mjs` | Drafts each record twice with two models that do not see each other's answer, and keeps a field only where both agree. A figure a camera-wiki article states can settle a field the models disputed or did not know, and is cited to that article. Writes `enriched.json`. Never touches the database. |
+| 4 | `node scripts/import-lensdb-gaps.mjs` | Creates catalogue rows from `enriched.json` and the reviewer's exported decisions. Dry run by default; add `--apply` to write. |
+
+Safeguards in the code: a record is "ready" only when every field a page must carry is agreed (by both models, or settled from a camera-wiki article or the catalogue). Step 4 imports every ready record plus every one a reviewer approved, with their edits, and skips rejected ones. Only agreed values and reviewer edits are written, so a field still in dispute stays blank. Cameras without a mount (fixed-lens bodies) are held back until their lens has a row. A slug must be a clean catalogue slug and the source URL must be on lens-db.com, or the item is skipped, as is any slug already taken or any URL already in the catalogue, so a rerun only adds what has become eligible since. A citation is written only for a figure taken from camera-wiki, never for model recall or reviewer edits.
 
 ## Database Backups
 

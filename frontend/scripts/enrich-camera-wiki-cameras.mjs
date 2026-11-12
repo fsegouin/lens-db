@@ -51,7 +51,7 @@ import {
 } from "./lib/camera-wiki-facts.mjs";
 
 const API = "https://camera-wiki.org/api.php";
-const USER_AGENT = "thelensdb-catalogue-scan/1.0 (+https://thelensdb.com; florent@segouin.me)";
+const USER_AGENT = "thelensdb-catalogue-scan/1.0 (+https://thelensdb.com; contact@thelensdb.com)";
 /** The API accepts 50 titles per query, which is what makes this cheap. */
 const BATCH = 50;
 

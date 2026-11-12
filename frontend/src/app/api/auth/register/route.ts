@@ -8,6 +8,7 @@ import { createRateLimit } from "@/lib/rate-limit";
 import { hashPassword } from "@/lib/user-auth";
 import { sendVerificationEmail, maskEmail } from "@/lib/email";
 import { uniqueHandle } from "@/lib/kit";
+import { issueToken } from "@/lib/one-shot-token";
 
 const registerLimiter = createRateLimit("auth-register", 5, "60 s");
 
@@ -79,11 +80,11 @@ export async function POST(request: NextRequest) {
       .returning({ id: users.id });
 
     // Create verification token
-    const token = crypto.randomUUID();
+    const { token, tokenHash } = issueToken();
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
     await db.insert(emailVerificationTokens).values({
       userId: newUser.id,
-      token,
+      token: tokenHash,
       expiresAt,
     });
 

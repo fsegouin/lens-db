@@ -69,7 +69,7 @@ for (const page of crawl.pages) {
   for (const src of new Set(page.images ?? [])) pageCount.set(src, (pageCount.get(src) ?? 0) + 1);
 }
 
-const UA = "thelensdb-image-ingest/1.0 (+https://thelensdb.com; contact florent@segouin.me)";
+const UA = "thelensdb-image-ingest/1.0 (+https://thelensdb.com; contact contact@thelensdb.com)";
 const MIN_EDGE = 120; // below this it is a button, a bullet or a spacer
 
 /**

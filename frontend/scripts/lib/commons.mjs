@@ -21,7 +21,7 @@
  * attribution alongside the image instead of losing it.
  */
 
-const UA = "lens-db-image-backfill/1.0 (https://thelensdb.com; florent@segouin.me)";
+const UA = "lens-db-image-backfill/1.0 (https://thelensdb.com; contact@thelensdb.com)";
 const API_COMMONS = "https://commons.wikimedia.org/w/api.php";
 const API_WIKIDATA = "https://www.wikidata.org/w/api.php";
 

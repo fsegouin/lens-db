@@ -3,6 +3,9 @@ packages:
   - "mcp-server"
 overrides:
   drizzle-orm: 0.45.2
+  "ip-address@<10.7.4": "^10.7.6"
+  "fast-xml-parser@<5.11.3": "^5.11.3"
+  "postcss-selector-parser@<6.1.5": "^6.1.5"
 peerDependencyRules:
   allowedVersions:
     "drizzle-orm>@types/pg": "*"

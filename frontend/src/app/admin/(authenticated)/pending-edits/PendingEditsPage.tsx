@@ -172,7 +172,7 @@ export default function PendingEditsPage() {
       </div>
 
       {loading ? (
-        <p className="text-sm text-muted-foreground">Loading...</p>
+        <p role="status" className="text-sm text-muted-foreground">Loading...</p>
       ) : edits.length === 0 ? (
         <p className="text-sm text-muted-foreground">No pending edits to review.</p>
       ) : (
@@ -245,6 +245,7 @@ export default function PendingEditsPage() {
                   <Button
                     variant="outline"
                     size="xs"
+                    aria-label={`Approve edit for ${edit.entityName || (edit.changes.name as string) || "new entry"}`}
                     onClick={() => handleAction(edit.id, "approve")}
                     disabled={actionLoading === edit.id}
                   >
@@ -252,6 +253,7 @@ export default function PendingEditsPage() {
                   </Button>
                   <Button
                     variant="destructive"
+                    aria-label={`Reject edit for ${edit.entityName || (edit.changes.name as string) || "new entry"}`}
                     size="xs"
                     onClick={() => {
                       if (confirm("Reject this edit?")) {

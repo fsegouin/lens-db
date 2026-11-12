@@ -12,7 +12,7 @@ import {
   kehProducts,
 } from "@/db/schema";
 import { revalidateEntity } from "@/lib/revalidate-entity";
-import { eq, and, sql, gte, lt, inArray, isNull, desc } from "drizzle-orm";
+import { eq, and, or, sql, gte, lt, inArray, isNull, desc } from "drizzle-orm";
 import { ASKING_TO_SOLD_RATIO } from "@/lib/ebay-browse";
 import { KEH_TO_SOLD_RATIO } from "@/lib/keh";
 import { CLASSIFIER_MODEL, type RawListing } from "@/lib/price-classify";
@@ -26,7 +26,7 @@ const GRADE_MAP: Record<string, string> = {
 
 type NewRow = typeof priceHistory.$inferInsert;
 
-// Minimal structural view of a classified listing — only the fields this
+// Minimal structural view of a classified listing: only the fields this
 // function reads. Both camera (ClassifiedListing) and lens
 // (ClassifiedLensListing) classification results satisfy it.
 export interface ClassifiedSaleInput {
@@ -55,13 +55,6 @@ function listingKey(l: RawListing): string {
   return `d:${digest}`;
 }
 
-/**
- * Record what the classifier decided about every listing it was shown.
- *
- * Deliberately separate from the price_history write and deliberately
- * swallowing its own errors: this is an audit trail, and losing a real sale
- * because the trail could not be written would be the wrong trade every time.
- */
 /** Postgres integer ceiling. A price past it would reject the whole statement. */
 const INT4_MAX = 2147483647;
 
@@ -71,6 +64,13 @@ function storablePrice(price: number): number | null {
   return Math.abs(rounded) <= INT4_MAX ? rounded : null;
 }
 
+/**
+ * Record what the classifier decided about every listing it was shown.
+ *
+ * Deliberately separate from the price_history write, and its callers swallow
+ * its errors: this is an audit trail, and losing a real sale because the trail
+ * could not be written would be the wrong trade every time.
+ */
 async function logSoldVerdicts(
   entityType: string,
   entityId: number,
@@ -171,7 +171,7 @@ export async function storeClassifiedSales(
     const row: NewRow = {
       entityType,
       entityId,
-      saleDate: rawListing.date,
+      saleDate: rawListing.date || null,
       condition: GRADE_MAP[cl.conditionGrade] ?? cl.conditionGrade,
       priceUsd: Math.round(rawListing.price),
       source: "eBay",
@@ -221,9 +221,15 @@ export async function storeClassifiedSales(
           eq(priceHistory.entityId, entityId),
           eq(priceHistory.source, "eBay"),
           isNull(priceHistory.sourceUrl),
-          inArray(
-            priceHistory.saleDate,
-            withoutUrl.map((r) => r.saleDate as string),
+          // A listing whose date could not be read is stored with none, and
+          // `sale_date IN (...)` never matches a null, so those rows are read
+          // back by IS NULL or every run would insert them again.
+          or(
+            isNull(priceHistory.saleDate),
+            inArray(
+              priceHistory.saleDate,
+              withoutUrl.flatMap((r) => (r.saleDate ? [r.saleDate] : [])),
+            ),
           ),
         ),
       );
@@ -268,7 +274,7 @@ function computeRange(prices: number[]): [number | null, number | null] {
  * of them sets what the page says a lens is worth: a Mamiya-Sekor C 127mm
  * read "$2" against a $190 median. 97 of 92,870 recorded lens sales sit here.
  */
-const MIN_PLAUSIBLE_SALE_USD = 5;
+export const MIN_PLAUSIBLE_SALE_USD = 5;
 
 /**
  * Recency windows tried in order, narrowest first, and the sample count a
@@ -575,7 +581,7 @@ export async function recomputePriceEstimates(
     //
     // But only where nothing has sold. A lens usually matches a single KEH
     // product, and often a single grade of it, so this is one dealer holding
-    // one copy — enough to price a lens the marketplace never trades, not
+    // one copy, enough to price a lens the marketplace never trades, not
     // enough to overrule a real sale. Letting it try at one or two sales
     // would have retired a $7,500 sold median for an Olympus 250mm f/2 in
     // favour of $3,429, and a Leitz Super-Angulon-R's $879 for $390.
@@ -615,7 +621,7 @@ export async function recomputePriceEstimates(
     // Sales resolved through the Browse API carry no grade: eBay reports a
     // bare "Used", and the old pipeline only had grades because an LLM read
     // the seller's wording off the sold page. An ungraded sale still counts
-    // toward the median, but bucketing it would invent a condition tier —
+    // toward the median, but bucketing it would invent a condition tier,
     // and the `else` below would quietly file every one of them as Fair.
     if (cond == null || cond === "") continue;
     if (["A", "A+", "A-B"].includes(cond)) {

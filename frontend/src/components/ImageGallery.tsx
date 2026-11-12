@@ -183,7 +183,8 @@ export default function ImageGallery({ images }: { images: ImageData[] }) {
         <button
           type="button"
           aria-haspopup="dialog"
-          onClick={() => setLightboxIdx(0)}
+          aria-label={`View larger: ${safeImages[0].alt || "Image"}`}
+              onClick={() => setLightboxIdx(0)}
           className={`group relative mx-auto block aspect-[4/3] w-full max-w-md overflow-hidden rounded-lg border ${leadPlate.className}`}
           style={leadPlate.style}
         >
@@ -213,7 +214,8 @@ export default function ImageGallery({ images }: { images: ImageData[] }) {
         <button
           type="button"
           aria-haspopup="dialog"
-          onClick={() => setLightboxIdx(currentIdx)}
+          aria-label={`View larger: ${safeImages[currentIdx].alt || "Image"} (${currentIdx + 1} of ${safeImages.length})`}
+              onClick={() => setLightboxIdx(currentIdx)}
           className={`group relative block aspect-[4/3] w-full overflow-hidden rounded-lg border ${currentPlate.className}`}
           style={currentPlate.style}
         >

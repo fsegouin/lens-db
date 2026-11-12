@@ -44,7 +44,7 @@ const includeDigital = args.includes("--digital");
 const reportPath = flag("--report", null);
 const createdSince = flag("--created-since", null);
 
-const UA = "lens-db-image-backfill/1.0 (https://thelensdb.com; florent@segouin.me)";
+const UA = "lens-db-image-backfill/1.0 (https://thelensdb.com; contact@thelensdb.com)";
 
 
 /**

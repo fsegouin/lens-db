@@ -6,6 +6,7 @@ import Link from "next/link";
 import type { lenses, systems } from "@/db/schema";
 import { Input } from "@/components/ui/input";
 import { normalizeLensType } from "@/lib/vocabularies";
+import { focalRange } from "@/lib/focal-length";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
@@ -18,6 +19,7 @@ import {
 import { TableSkeleton } from "@/components/table-skeleton";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { trackEvent } from "@/lib/analytics";
+import { useTypedFilterTracking } from "@/lib/typed-filter";
 
 type SeriesInfo = { name: string; slug: string };
 
@@ -74,6 +76,22 @@ function MountsCell({ mounts, onSelect }: { mounts: SystemOption[]; onSelect: (s
     </span>
   );
 }
+
+function dedupeLensRows(rows: LensRow[]) {
+  const seen = new Set<number>();
+  return rows.filter(({ lens }) => {
+    if (seen.has(lens.id)) return false;
+    seen.add(lens.id);
+    return true;
+  });
+}
+
+/**
+ * How long a failed page waits before infinite scroll may ask for it again.
+ * The sentinel's observer fires the moment loading clears, so without a pause
+ * a 429 or an outage is retried as fast as the network answers.
+ */
+const LOAD_RETRY_DELAY_MS = 5000;
 
 type Props = {
   initialItems: LensRow[];
@@ -142,15 +160,6 @@ export default function LensList({
   const [formPriceMin, setFormPriceMin] = useState(priceMin);
   const [formPriceMax, setFormPriceMax] = useState(priceMax);
 
-  function dedupeLensRows(rows: LensRow[]) {
-    const seen = new Set<number>();
-    return rows.filter(({ lens }) => {
-      if (seen.has(lens.id)) return false;
-      seen.add(lens.id);
-      return true;
-    });
-  }
-
   // Sync form state when URL params change (e.g. back/forward navigation)
   useEffect(() => {
     setFormQ(q);
@@ -215,6 +224,9 @@ export default function LensList({
       setNextCursor(data.nextCursor);
     } catch (err) {
       console.error("Failed to load more lenses:", err);
+      if (gen === listGenRef.current) {
+        await new Promise((resolve) => setTimeout(resolve, LOAD_RETRY_DELAY_MS));
+      }
     } finally {
       setLoading(false);
     }
@@ -287,6 +299,10 @@ export default function LensList({
     const qs = params.toString();
     router.push(qs ? `/lenses?${qs}` : "/lenses");
   }
+
+  // Typed filters are counted when the field is left, as the mount catalogue
+  // does: one event per value entered, not one per keystroke.
+  const trackText = useTypedFilterTracking((filter, value) => trackEvent("lens_filter_apply", { filter, value }));
 
   function debouncedApply(overrides: Parameters<typeof applyFilters>[0]) {
     clearTimeout(debounceRef.current);
@@ -445,6 +461,7 @@ export default function LensList({
                 aria-label="Minimum focal length in mm"
                 value={formMinFocal}
                 onChange={(e) => { setFormMinFocal(e.target.value); debouncedApply({ minFocal: e.target.value }); }}
+                {...trackText("minFocal")}
                 className="h-10 w-full"
               />
               <span aria-hidden="true" className="shrink-0 text-muted-foreground">&ndash;</span>
@@ -455,6 +472,7 @@ export default function LensList({
                 aria-label="Maximum focal length in mm"
                 value={formMaxFocal}
                 onChange={(e) => { setFormMaxFocal(e.target.value); debouncedApply({ maxFocal: e.target.value }); }}
+                {...trackText("maxFocal")}
                 className="h-10 w-full"
               />
             </div>
@@ -471,6 +489,7 @@ export default function LensList({
                 aria-label="Widest maximum aperture"
                 value={formMinAperture}
                 onChange={(e) => { setFormMinAperture(e.target.value); debouncedApply({ minAperture: e.target.value }); }}
+                {...trackText("minAperture")}
                 className="h-10 w-full"
               />
               <span aria-hidden="true" className="shrink-0 text-muted-foreground">&ndash;</span>
@@ -482,6 +501,7 @@ export default function LensList({
                 aria-label="Narrowest maximum aperture"
                 value={formMaxAperture}
                 onChange={(e) => { setFormMaxAperture(e.target.value); debouncedApply({ maxAperture: e.target.value }); }}
+                {...trackText("maxAperture")}
                 className="h-10 w-full"
               />
             </div>
@@ -497,6 +517,7 @@ export default function LensList({
                 aria-label="Minimum price in USD"
                 value={formPriceMin}
                 onChange={(e) => { setFormPriceMin(e.target.value); debouncedApply({ priceMin: e.target.value }); }}
+                {...trackText("priceMin")}
                 className="h-10 w-full"
               />
               <span aria-hidden="true" className="shrink-0 text-muted-foreground">&ndash;</span>
@@ -507,6 +528,7 @@ export default function LensList({
                 aria-label="Maximum price in USD"
                 value={formPriceMax}
                 onChange={(e) => { setFormPriceMax(e.target.value); debouncedApply({ priceMax: e.target.value }); }}
+                {...trackText("priceMax")}
                 className="h-10 w-full"
               />
             </div>
@@ -582,6 +604,7 @@ export default function LensList({
               placeholder="e.g. 1996"
               value={formYear}
               onChange={(e) => { setFormYear(e.target.value); debouncedApply({ year: e.target.value }); }}
+              {...trackText("year")}
               className="h-10 w-full"
             />
           </div>
@@ -635,11 +658,8 @@ export default function LensList({
       {items.length > 0 && (
         <ul className="divide-y divide-border border-y border-border xl:hidden">
           {items.map(({ lens, system, mounts = [], avgPrice }) => {
-            const focal = lens.focalLengthMin
-              ? lens.focalLengthMin === lens.focalLengthMax
-                ? `${lens.focalLengthMin}mm`
-                : `${lens.focalLengthMin}-${lens.focalLengthMax}mm`
-              : null;
+            const focalText = focalRange(lens.focalLengthMin, lens.focalLengthMax);
+            const focal = focalText ? `${focalText}mm` : null;
             const specLine = [
               focal,
               lens.apertureMin ? `f/${lens.apertureMin}` : null,
@@ -695,7 +715,7 @@ export default function LensList({
 
       {items.length > 0 ? (
         <div className="hidden xl:block">
-        <Table className="table-fixed">
+        <Table aria-label="Lenses" className="table-fixed">
           <TableHeader>
             <TableRow>
               {[
@@ -762,7 +782,8 @@ export default function LensList({
                 <TableCell className="text-muted-foreground">
                   {lens.brand ? (
                     <button type="button"
-                      onClick={() => applyFilters({ brand: lens.brand!, system: "", q: "", type: "", minFocal: "", maxFocal: "", minAperture: "", maxAperture: "", year: "", lensType: "", era: "", productionStatus: "", coverage: "" })}
+                      aria-label={`Filter by brand ${lens.brand}`}
+                        onClick={() => applyFilters({ brand: lens.brand!, system: "", q: "", type: "", minFocal: "", maxFocal: "", minAperture: "", maxAperture: "", year: "", lensType: "", era: "", productionStatus: "", coverage: "" })}
                       className="text-left hover:text-foreground hover:underline"
                     >
                       {lens.brand}
@@ -781,16 +802,15 @@ export default function LensList({
                       onClick={() => applyFilters({ minFocal: String(lens.focalLengthMin), maxFocal: String(lens.focalLengthMax ?? lens.focalLengthMin), brand: "", system: "", q: "", type: "", minAperture: "", maxAperture: "", year: "", lensType: "", era: "", productionStatus: "", coverage: "" })}
                       className="text-left hover:text-foreground hover:underline"
                     >
-                      {lens.focalLengthMin === lens.focalLengthMax
-                        ? `${lens.focalLengthMin}mm`
-                        : `${lens.focalLengthMin}-${lens.focalLengthMax}mm`}
+                      {focalRange(lens.focalLengthMin, lens.focalLengthMax)}mm
                     </button>
                   ) : "\u2014"}
                 </TableCell>
                 <TableCell className="text-right font-mono tabular-nums text-muted-foreground">
                   {lens.apertureMin ? (
                     <button type="button"
-                      onClick={() => applyFilters({ minAperture: String(lens.apertureMin), maxAperture: String(lens.apertureMin), brand: "", system: "", q: "", type: "", minFocal: "", maxFocal: "", year: "", coverage: "" })}
+                      aria-label={`Filter by aperture f/${lens.apertureMin}`}
+                        onClick={() => applyFilters({ minAperture: String(lens.apertureMin), maxAperture: String(lens.apertureMin), brand: "", system: "", q: "", type: "", minFocal: "", maxFocal: "", year: "", coverage: "" })}
                       className="text-left hover:text-foreground hover:underline"
                     >
                       f/{lens.apertureMin}
@@ -860,7 +880,8 @@ export default function LensList({
                 <TableCell className="text-right font-mono tabular-nums text-muted-foreground">
                   {lens.yearIntroduced ? (
                     <button type="button"
-                      onClick={() => applyFilters({ year: String(lens.yearIntroduced), brand: "", system: "", q: "", type: "", minFocal: "", maxFocal: "", minAperture: "", maxAperture: "", coverage: "" })}
+                      aria-label={`Filter by year ${lens.yearIntroduced}`}
+                        onClick={() => applyFilters({ year: String(lens.yearIntroduced), brand: "", system: "", q: "", type: "", minFocal: "", maxFocal: "", minAperture: "", maxAperture: "", coverage: "" })}
                       className="text-left hover:text-foreground hover:underline"
                     >
                       {lens.yearIntroduced}
@@ -882,7 +903,7 @@ export default function LensList({
         </Table>
         </div>
       ) : (
-        <div className="rounded-xl border border-dashed border-border p-12 text-center">
+        <div role="status" className="rounded-xl border border-dashed border-border p-12 text-center">
           <p className="text-muted-foreground">
             No lenses found.
           </p>

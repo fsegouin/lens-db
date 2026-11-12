@@ -25,7 +25,7 @@
 import { createSql } from "./lib/db.mjs";
 
 const API = "https://camera-wiki.org/api.php";
-const USER_AGENT = "thelensdb-catalogue-scan/1.0 (+https://thelensdb.com; florent@segouin.me)";
+const USER_AGENT = "thelensdb-catalogue-scan/1.0 (+https://thelensdb.com; contact@thelensdb.com)";
 const BATCH = 50;
 
 const apply = process.argv.slice(2).includes("--apply");

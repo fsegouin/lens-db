@@ -71,7 +71,7 @@ export const lenses = pgTable(
     isPrime: boolean("is_prime").default(false),
     hasStabilization: boolean("has_stabilization").default(false),
     hasAutofocus: boolean("has_autofocus").default(false),
-    coverage: text("coverage"), // "full-frame" | "aps-c" | "micro-four-thirds" | null (unknown)
+    coverage: text("coverage"), // a COVERAGE slug from lib/vocabularies.ts, null = unknown
     // Engagement
     viewCount: integer("view_count").default(0),
     averageRating: real("average_rating"),
@@ -422,6 +422,7 @@ export const emailVerificationTokens = pgTable("email_verification_tokens", {
   userId: integer("user_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
+  // SHA-256 of the emailed token, never the token itself: lib/one-shot-token.ts
   token: text("token").notNull().unique(),
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
@@ -437,6 +438,7 @@ export const passwordResetTokens = pgTable("password_reset_tokens", {
   userId: integer("user_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
+  // SHA-256 of the emailed token, never the token itself: lib/one-shot-token.ts
   token: text("token").notNull().unique(),
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
@@ -520,7 +522,7 @@ export const pendingEdits = pgTable(
     id: serial("id").primaryKey(),
     entityType: text("entity_type").notNull(), // "lens" | "camera" | "system" | "collection" | "series"
     entityId: integer("entity_id").notNull(),
-    changes: jsonb("changes").notNull(), // Record<string, unknown> — only the changed fields
+    changes: jsonb("changes").notNull(), // Record<string, unknown>: only the changed fields
     summary: text("summary").notNull(),
     userId: integer("user_id")
       .notNull()
@@ -610,7 +612,7 @@ export const priceEstimates = pgTable(
     priceVeryGoodHigh: integer("price_very_good_high"),
     priceMintLow: integer("price_mint_low"),
     priceMintHigh: integer("price_mint_high"),
-    medianPrice: integer("median_price"), // median of all sale prices — best single "what you'd pay" number
+    medianPrice: integer("median_price"), // median of all sale prices: best single "what you'd pay" number
     currency: text("currency").default("USD"),
     // What this estimate is actually built from, so the page can say the
     // true thing rather than one label for both. "sold" means real completed
@@ -727,7 +729,7 @@ export const dpreviewLensCandidates = pgTable(
     candidateData: jsonb("candidate_data"),
     llmVerdict: text("llm_verdict"), // "duplicate" | "new_version" | "new_lens"
     // Deprecated: superseded by llmVerdict; kept because migration 0019 already
-    // ran. Nothing writes or reads it — drop in a future consolidation.
+    // ran. Nothing writes or reads it; drop in a future consolidation.
     llmIsDuplicate: boolean("llm_is_duplicate"),
     llmConfidence: real("llm_confidence"),
     llmReasoning: text("llm_reasoning"),
@@ -746,7 +748,7 @@ export const dpreviewLensCandidates = pgTable(
 // There is no camera equivalent of llm_verdict's "new_version": lens
 // generations are modelled with lens_version_groups, whereas a camera
 // generation (an OM-1 Mark II) is simply its own cameras row. So the verdict
-// here is binary — "duplicate" or "new_camera".
+// here is binary: "duplicate" or "new_camera".
 export const dpreviewCameraCandidates = pgTable(
   "dpreview_camera_candidates",
   {
@@ -798,7 +800,7 @@ export const priceHistory = pgTable(
 
 // One row per eBay listing we have seen active, per entity it was found for.
 //
-// eBay's API cannot search sold listings — that capability is gated behind
+// eBay's API cannot search sold listings; that capability is gated behind
 // Marketplace Insights, which our keys are refused. It will, however, resolve
 // any item by id long after it ends and report its final price. So real sale
 // prices are reachable only by noticing a listing while it is live and

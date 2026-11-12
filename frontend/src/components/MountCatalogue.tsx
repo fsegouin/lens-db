@@ -6,6 +6,7 @@ import { ChevronDown, ChevronUp, ChevronsUpDown } from "lucide-react";
 import type { HubCameraRow, HubLensRow } from "@/lib/hub-lists";
 import { maxApertureLabel } from "@/lib/aperture";
 import { trackEvent } from "@/lib/analytics";
+import { useTypedFilterTracking } from "@/lib/typed-filter";
 import {
   CATALOGUE_ORDER,
   EMPTY_CAMERA_FILTERS,
@@ -291,9 +292,7 @@ function LensPanel({
   const update = (patch: Partial<LensFilters>) => onFiltersChange({ ...filters, ...patch });
   const track = (filter: string, value: string) =>
     trackEvent("mount_filter_apply", { filter, value, mount: systemSlug });
-  const trackText = (filter: string) => (e: React.FocusEvent<HTMLInputElement>) => {
-    if (e.target.value.trim()) track(filter, e.target.value.trim());
-  };
+  const trackText = useTypedFilterTracking(track);
   const filtered = hasLensFilters(filters);
   // The button pressed disappears once nothing is filtered, so focus is
   // handed to the search box instead of falling back to the page.
@@ -317,7 +316,7 @@ function LensPanel({
             placeholder={`Search ${lenses.length.toLocaleString()} lenses...`}
             value={q}
             onChange={(e) => update({ q: e.target.value })}
-            onBlur={trackText("q")}
+            {...trackText("q")}
             className="h-11 sm:h-10"
           />
         </div>
@@ -394,7 +393,7 @@ function LensPanel({
                 aria-label="Minimum focal length in mm"
                 value={minFocal}
                 onChange={(e) => update({ minFocal: e.target.value })}
-                onBlur={trackText("minFocal")}
+                {...trackText("minFocal")}
                 className="h-10 w-full"
               />
               <span aria-hidden="true" className="shrink-0 text-muted-foreground">
@@ -408,7 +407,7 @@ function LensPanel({
                 aria-label="Maximum focal length in mm"
                 value={maxFocal}
                 onChange={(e) => update({ maxFocal: e.target.value })}
-                onBlur={trackText("maxFocal")}
+                {...trackText("maxFocal")}
                 className="h-10 w-full"
               />
             </div>
@@ -428,7 +427,7 @@ function LensPanel({
                 aria-label="Widest maximum aperture"
                 value={minAperture}
                 onChange={(e) => update({ minAperture: e.target.value })}
-                onBlur={trackText("minAperture")}
+                {...trackText("minAperture")}
                 className="h-10 w-full"
               />
               <span aria-hidden="true" className="shrink-0 text-muted-foreground">
@@ -443,7 +442,7 @@ function LensPanel({
                 aria-label="Narrowest maximum aperture"
                 value={maxAperture}
                 onChange={(e) => update({ maxAperture: e.target.value })}
-                onBlur={trackText("maxAperture")}
+                {...trackText("maxAperture")}
                 className="h-10 w-full"
               />
             </div>
@@ -546,6 +545,7 @@ function CameraPanel({
   const update = (patch: Partial<CameraFilters>) => onFiltersChange({ ...filters, ...patch });
   const track = (filter: string, value: string) =>
     trackEvent("mount_filter_apply", { filter: `camera_${filter}`, value, mount: systemSlug });
+  const trackText = useTypedFilterTracking(track);
   const searchRef = useRef<HTMLInputElement>(null);
   const clear = () => {
     onFiltersChange(EMPTY_CAMERA_FILTERS);
@@ -568,9 +568,7 @@ function CameraPanel({
               placeholder={`Search ${cameras.length.toLocaleString()} cameras...`}
               value={q}
               onChange={(e) => update({ q: e.target.value })}
-              onBlur={(e) => {
-                if (e.target.value.trim()) track("q", e.target.value.trim());
-              }}
+              {...trackText("q")}
               className="h-11 sm:h-10"
             />
           </div>
@@ -699,7 +697,7 @@ function ResultLine({
         )}
       </p>
       <Link href={moreHref} className="underline underline-offset-2">
-        {moreLabel} →
+        {moreLabel} <span aria-hidden="true">→</span>
       </Link>
     </div>
   );
@@ -707,7 +705,7 @@ function ResultLine({
 
 function NoMatches({ noun, onClear }: { noun: string; onClear: () => void }) {
   return (
-    <p className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
+    <p role="status" className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
       No {noun} match these filters.{" "}
       <button
         type="button"

@@ -412,7 +412,7 @@ sql.unsafe = (text) => client.query(text).then((r) => r.rows);
 try {
   const [{ exists }] = await sql`select to_regclass('public.system_redirects') is not null as exists`;
   if (!exists && apply) {
-    console.error("system_redirects table is missing — apply migration 0021 first (pnpm db:migrate).");
+    console.error("system_redirects table is missing: apply migration 0021 first (pnpm db:migrate).");
     process.exit(1);
   }
   if (!exists) console.log("note: system_redirects table not present yet; --apply needs migration 0021.\n");
@@ -455,12 +455,12 @@ try {
   for (const m of selected) if (seenSources.has(m.into[0])) problems.push(`system ${m.into[0]} is both a target and a source`);
 
   if (problems.length) {
-    console.error("Refusing to run — the database does not match the merge map:");
+    console.error("Refusing to run: the database does not match the merge map:");
     for (const p of problems) console.error("  - " + p);
     process.exit(1);
   }
 
-  console.log(`${apply ? "APPLY" : "DRY RUN"} — tiers ${tiers.join(",")} — ${selected.length} merge groups, ${selected.reduce((n, m) => n + m.from.length, 0)} source systems, ${fixes.length} fixes`);
+  console.log(`${apply ? "APPLY" : "DRY RUN"}, tiers ${tiers.join(",")}: ${selected.length} merge groups, ${selected.reduce((n, m) => n + m.from.length, 0)} source systems, ${fixes.length} fixes`);
   console.log(`systems before: ${before.size}\n`);
 
   let movedLenses = 0, movedCameras = 0, movedLinks = 0, pending = 0;
@@ -550,9 +550,10 @@ try {
 
   const after = await loadSystems(sql);
   console.log(`\nmoved: ${movedLenses} lenses, ${movedCameras} cameras, ${movedLinks} lens_systems links`);
-  console.log(`systems after: ${after.size}${apply ? "" : " (unchanged — dry run)"}`);
-  if (pending === 0) console.log("\nNothing left to do — every merge and fix in the selected tiers is already applied.");
-  else if (!apply) console.log(`\n${pending} pending operation(s). Re-run with --apply to write. ISR pages for /systems refresh on their own schedule.`);
+  console.log(`systems after: ${after.size}${apply ? "" : " (unchanged, dry run)"}`);
+  if (pending === 0) console.log("\nNothing left to do: every merge and fix in the selected tiers is already applied.");
+  else if (!apply) console.log(`\n${pending} pending operation(s). Re-run with --apply to write.`);
+  else console.log(`\nCached lens and camera rows still name the old systems: POST /api/cron/revalidate with {"tags":["lenses","cameras"]}.`);
 } finally {
   client.release();
   await pool.end();

@@ -235,6 +235,7 @@ Role-protected admin at `/admin/*` for CRUD management of all entities. Admins a
 
 ### Auth Flow
 - User accounts: PBKDF2 password hashing, email verification via Resend (`src/lib/user-auth.ts`)
+- Email verification and password reset links carry a one-shot token; the database stores only its SHA-256 (`src/lib/one-shot-token.ts`), so a row read from `email_verification_tokens` or `password_reset_tokens` does not work as a link
 - Session: stateless HMAC-signed token (`userId.expiresAt.keyTag.signature`, signed with `SESSION_SECRET`; `keyTag` is a short digest of the password hash, so a password change or reset ends every session) in HTTP-only cookie `user_session`, 30-day TTL
 - `src/proxy.ts` redirects users without a `user_session` cookie away from `/admin/*` to `/login`; role is validated server-side (`/admin/login` just redirects to `/login`)
 - API routes use `requireAdminAPI()` from `src/lib/admin-auth.ts`; pages use `requireAdmin()`

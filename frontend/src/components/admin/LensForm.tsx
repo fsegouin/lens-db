@@ -244,7 +244,7 @@ export default function LensForm({ lens, systems, tags }: LensFormProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
       {error && (
-        <div className="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
+        <div role="alert" className="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
           {error}
         </div>
       )}
@@ -254,37 +254,41 @@ export default function LensForm({ lens, systems, tags }: LensFormProps) {
         <h3 className={sectionClass}>Basic Info</h3>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1">
-            <label className={labelClass}>Name *</label>
+            <label htmlFor="lens-name" className={labelClass}>Name *</label>
             <input
               type="text"
               required
               value={name}
+              id="lens-name"
               onChange={(e) => handleNameChange(e.target.value)}
               className={`w-full ${inputClass}`}
             />
           </div>
           <div className="space-y-1">
-            <label className={labelClass}>Slug</label>
+            <label htmlFor="lens-slug" className={labelClass}>Slug</label>
             <input
               type="text"
               value={slug}
+              id="lens-slug"
               onChange={(e) => handleSlugChange(e.target.value)}
               className={`w-full ${inputClass}`}
             />
           </div>
           <div className="space-y-1">
-            <label className={labelClass}>Brand</label>
+            <label htmlFor="lens-brand" className={labelClass}>Brand</label>
             <input
               type="text"
               value={brand}
+              id="lens-brand"
               onChange={(e) => setBrand(e.target.value)}
               className={`w-full ${inputClass}`}
             />
           </div>
           <div className="space-y-1">
-            <label className={labelClass}>System</label>
+            <label htmlFor="lens-system" className={labelClass}>System</label>
             <select
               value={systemId}
+              id="lens-system"
               onChange={(e) => setSystemId(e.target.value)}
               className={`w-full ${inputClass}`}
             >
@@ -297,8 +301,8 @@ export default function LensForm({ lens, systems, tags }: LensFormProps) {
             </select>
           </div>
           <div className="space-y-1 sm:col-span-2">
-            <label className={labelClass}>Also available in</label>
-            <div className="max-h-40 overflow-y-auto rounded border border-zinc-300 p-2 dark:border-zinc-700">
+            <span id="lens-extra-systems-label" className={labelClass}>Also available in</span>
+            <div role="group" aria-labelledby="lens-extra-systems-label" className="max-h-40 overflow-y-auto rounded border border-zinc-300 p-2 dark:border-zinc-700">
               <div className="grid grid-cols-2 gap-x-4 gap-y-1 sm:grid-cols-3">
                 {systems
                   .filter((s) => String(s.id) !== systemId)
@@ -323,19 +327,21 @@ export default function LensForm({ lens, systems, tags }: LensFormProps) {
             </p>
           </div>
           <div className="space-y-1 sm:col-span-2">
-            <label className={labelClass}>URL</label>
+            <label htmlFor="lens-url" className={labelClass}>URL</label>
             <input
               type="text"
               value={url}
+              id="lens-url"
               onChange={(e) => setUrl(e.target.value)}
               className={`w-full ${inputClass}`}
             />
           </div>
           <div className="space-y-1 sm:col-span-2">
-            <label className={labelClass}>Description</label>
+            <label htmlFor="lens-description" className={labelClass}>Description</label>
             <textarea
               rows={4}
               value={description}
+              id="lens-description"
               onChange={(e) => setDescription(e.target.value)}
               className={`w-full ${inputClass}`}
             />
@@ -348,36 +354,40 @@ export default function LensForm({ lens, systems, tags }: LensFormProps) {
         <h3 className={sectionClass}>Classification</h3>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="space-y-1">
-            <label className={labelClass}>Lens Type</label>
+            <label htmlFor="lens-type" className={labelClass}>Lens Type</label>
             <ComboboxInput
               value={lensType}
+              id="lens-type"
               onChange={setLensType}
               options={tags?.lensTypes ?? []}
               className={`w-full ${inputClass}`}
             />
           </div>
           <div className="space-y-1">
-            <label className={labelClass}>Era</label>
+            <label htmlFor="lens-era" className={labelClass}>Era</label>
             <ComboboxInput
               value={era}
+              id="lens-era"
               onChange={setEra}
               options={tags?.eras ?? []}
               className={`w-full ${inputClass}`}
             />
           </div>
           <div className="space-y-1">
-            <label className={labelClass}>Production Status</label>
+            <label htmlFor="lens-production-status" className={labelClass}>Production Status</label>
             <ComboboxInput
               value={productionStatus}
+              id="lens-production-status"
               onChange={setProductionStatus}
               options={tags?.productionStatuses ?? []}
               className={`w-full ${inputClass}`}
             />
           </div>
           <div className="space-y-1">
-            <label className={labelClass}>Coverage</label>
+            <label htmlFor="lens-coverage" className={labelClass}>Coverage</label>
             <select
               value={coverage}
+              id="lens-coverage"
               onChange={(e) => setCoverage(e.target.value)}
               className={`w-full ${inputClass}`}
             >
@@ -396,66 +406,73 @@ export default function LensForm({ lens, systems, tags }: LensFormProps) {
         <h3 className={sectionClass}>Optical Specs</h3>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="space-y-1">
-            <label className={labelClass}>Focal Length Min</label>
+            <label htmlFor="lens-focal-min" className={labelClass}>Focal Length Min</label>
             <input
               type="number"
               value={focalLengthMin}
+              id="lens-focal-min"
               onChange={(e) => setFocalLengthMin(e.target.value)}
               className={`w-full ${inputClass}`}
             />
           </div>
           <div className="space-y-1">
-            <label className={labelClass}>Focal Length Max</label>
+            <label htmlFor="lens-focal-max" className={labelClass}>Focal Length Max</label>
             <input
               type="number"
               value={focalLengthMax}
+              id="lens-focal-max"
               onChange={(e) => setFocalLengthMax(e.target.value)}
               className={`w-full ${inputClass}`}
             />
           </div>
           <div className="space-y-1">
-            <label className={labelClass}>Max aperture, wide end</label>
+            <label htmlFor="lens-aperture-wide" className={labelClass}>Max aperture, wide end</label>
             <input
               type="number"
               step="0.1"
               value={apertureMin}
+              id="lens-aperture-wide"
               onChange={(e) => setApertureMin(e.target.value)}
               className={`w-full ${inputClass}`}
             />
           </div>
           <div className="space-y-1">
-            <label className={labelClass}>Max aperture, long end</label>
+            <label htmlFor="lens-aperture-long" className={labelClass}>Max aperture, long end</label>
             <input
               type="number"
               step="0.1"
               value={apertureMax}
+              id="lens-aperture-long"
               onChange={(e) => setApertureMax(e.target.value)}
               className={`w-full ${inputClass}`}
             />
           </div>
           <div className="space-y-1">
-            <label className={labelClass}>Lens Elements</label>
+            <label htmlFor="lens-elements" className={labelClass}>Lens Elements</label>
             <input
               type="number"
               value={lensElements}
+              id="lens-elements"
               onChange={(e) => setLensElements(e.target.value)}
               className={`w-full ${inputClass}`}
             />
           </div>
           <div className="space-y-1">
-            <label className={labelClass}>Lens Groups</label>
+            <label htmlFor="lens-groups" className={labelClass}>Lens Groups</label>
             <input
               type="number"
               value={lensGroups}
+              id="lens-groups"
               onChange={(e) => setLensGroups(e.target.value)}
               className={`w-full ${inputClass}`}
             />
           </div>
           <div className="space-y-1">
-            <label className={labelClass}>Diaphragm Blades</label>
+            <label htmlFor="lens-blades" className={labelClass}>Diaphragm Blades</label>
             <input
               type="number"
               value={diaphragmBlades}
+              id="lens-blades"
               onChange={(e) => setDiaphragmBlades(e.target.value)}
               className={`w-full ${inputClass}`}
             />
@@ -468,39 +485,43 @@ export default function LensForm({ lens, systems, tags }: LensFormProps) {
         <h3 className={sectionClass}>Physical</h3>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="space-y-1">
-            <label className={labelClass}>Weight (g)</label>
+            <label htmlFor="lens-weight" className={labelClass}>Weight (g)</label>
             <input
               type="number"
               value={weightG}
+              id="lens-weight"
               onChange={(e) => setWeightG(e.target.value)}
               className={`w-full ${inputClass}`}
             />
           </div>
           <div className="space-y-1">
-            <label className={labelClass}>Filter Size (mm)</label>
+            <label htmlFor="lens-filter" className={labelClass}>Filter Size (mm)</label>
             <input
               type="number"
               value={filterSizeMm}
+              id="lens-filter"
               onChange={(e) => setFilterSizeMm(e.target.value)}
               className={`w-full ${inputClass}`}
             />
           </div>
           <div className="space-y-1">
-            <label className={labelClass}>Min Focus Distance (m)</label>
+            <label htmlFor="lens-min-focus" className={labelClass}>Min Focus Distance (m)</label>
             <input
               type="number"
               step="0.01"
               value={minFocusDistanceM}
+              id="lens-min-focus"
               onChange={(e) => setMinFocusDistanceM(e.target.value)}
               className={`w-full ${inputClass}`}
             />
           </div>
           <div className="space-y-1">
-            <label className={labelClass}>Max Magnification</label>
+            <label htmlFor="lens-magnification" className={labelClass}>Max Magnification</label>
             <input
               type="number"
               step="0.01"
               value={maxMagnification}
+              id="lens-magnification"
               onChange={(e) => setMaxMagnification(e.target.value)}
               className={`w-full ${inputClass}`}
             />
@@ -513,19 +534,21 @@ export default function LensForm({ lens, systems, tags }: LensFormProps) {
         <h3 className={sectionClass}>Production</h3>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1">
-            <label className={labelClass}>Year Introduced</label>
+            <label htmlFor="lens-year-introduced" className={labelClass}>Year Introduced</label>
             <input
               type="number"
               value={yearIntroduced}
+              id="lens-year-introduced"
               onChange={(e) => setYearIntroduced(e.target.value)}
               className={`w-full ${inputClass}`}
             />
           </div>
           <div className="space-y-1">
-            <label className={labelClass}>Year Discontinued</label>
+            <label htmlFor="lens-year-discontinued" className={labelClass}>Year Discontinued</label>
             <input
               type="number"
               value={yearDiscontinued}
+              id="lens-year-discontinued"
               onChange={(e) => setYearDiscontinued(e.target.value)}
               className={`w-full ${inputClass}`}
             />
@@ -583,6 +606,7 @@ export default function LensForm({ lens, systems, tags }: LensFormProps) {
                     setSpecsEntries(next);
                   }}
                   placeholder="Key"
+                  aria-label={`Spec ${i + 1} key`}
                   className={`w-40 shrink-0 ${inputClass}`}
                 />
                 <input
@@ -594,6 +618,7 @@ export default function LensForm({ lens, systems, tags }: LensFormProps) {
                     setSpecsEntries(next);
                   }}
                   placeholder="Value"
+                  aria-label={`Spec ${i + 1} value`}
                   className={`min-w-0 flex-1 ${inputClass}`}
                 />
                 <button
@@ -603,7 +628,7 @@ export default function LensForm({ lens, systems, tags }: LensFormProps) {
                   }
                   className="cursor-pointer shrink-0 rounded-md p-2 text-zinc-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950 dark:hover:text-red-400"
                   title="Remove"
-                  aria-label="Remove"
+                  aria-label={`Remove spec ${key || i + 1}`}
                 >
                   <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />

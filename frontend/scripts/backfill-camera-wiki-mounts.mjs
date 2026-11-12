@@ -30,7 +30,7 @@
 import { createSql } from "./lib/db.mjs";
 
 const API = "https://camera-wiki.org/api.php";
-const USER_AGENT = "thelensdb-catalogue-scan/1.0 (+https://thelensdb.com; florent@segouin.me)";
+const USER_AGENT = "thelensdb-catalogue-scan/1.0 (+https://thelensdb.com; contact@thelensdb.com)";
 /**
  * Categories are small, so fifty at a time is fine. Article text is not — asking
  * for fifty full articles moves megabytes and the server closes the connection

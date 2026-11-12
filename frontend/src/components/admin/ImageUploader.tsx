@@ -20,6 +20,12 @@ interface Props {
 
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
+const MAX_UPLOAD_MB = 10;
+
+async function responseError(resp: Response): Promise<string> {
+  return (await resp.json().catch(() => ({}))).error || `HTTP ${resp.status}`;
+}
+
 const OTHER_LICENCE = "__other__";
 const EMPTY_PROVENANCE: Required<ImageProvenance> = { credit: "", sourceUrl: "", license: "", licenseUrl: "" };
 
@@ -251,8 +257,8 @@ export default function ImageUploader({
         setError(`Unsupported type ${file.type}`);
         return Promise.resolve();
       }
-      if (file.size > 10 * 1024 * 1024) {
-        setError("File too large (max 10 MB)");
+      if (file.size > MAX_UPLOAD_MB * 1024 * 1024) {
+        setError(`File too large (max ${MAX_UPLOAD_MB} MB)`);
         return Promise.resolve();
       }
       return enqueueUpload(async () => {
@@ -269,7 +275,7 @@ export default function ImageUploader({
             method: "POST",
             body: formData,
           });
-          if (!resp.ok) throw new Error((await resp.json().catch(() => ({}))).error || `HTTP ${resp.status}`);
+          if (!resp.ok) throw new Error(await responseError(resp));
           const data = await resp.json();
           updateImages(data.images);
         } catch (e) {
@@ -293,7 +299,7 @@ export default function ImageUploader({
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ url, ...uploadProvenance }),
           });
-          if (!resp.ok) throw new Error((await resp.json().catch(() => ({}))).error || `HTTP ${resp.status}`);
+          if (!resp.ok) throw new Error(await responseError(resp));
           const data = await resp.json();
           updateImages(data.images);
         } catch (e) {
@@ -352,24 +358,28 @@ export default function ImageUploader({
     [uploadFile, uploadUrl],
   );
 
+  // Queued like uploads: the server rewrites the whole list, so a delete
+  // racing an upload would lose the new image or bring the deleted one back.
   const deleteImage = useCallback(
     async (src: string) => {
       if (!confirm("Remove this image?")) return;
       setError(null);
-      try {
-        const resp = await fetch(`/api/admin/${entityType}/${entityId}/images`, {
-          method: "DELETE",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ src }),
-        });
-        if (!resp.ok) throw new Error((await resp.json().catch(() => ({}))).error || `HTTP ${resp.status}`);
-        const data = await resp.json();
-        updateImages(data.images);
-      } catch (e) {
-        setError((e as Error).message);
-      }
+      await enqueueUpload(async () => {
+        try {
+          const resp = await fetch(`/api/admin/${entityType}/${entityId}/images`, {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ src }),
+          });
+          if (!resp.ok) throw new Error(await responseError(resp));
+          const data = await resp.json();
+          updateImages(data.images);
+        } catch (e) {
+          setError((e as Error).message);
+        }
+      });
     },
-    [entityType, entityId, updateImages],
+    [entityType, entityId, updateImages, enqueueUpload],
   );
 
   const startEditing = useCallback((img: ImageData) => {
@@ -400,7 +410,7 @@ export default function ImageUploader({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
         });
-        if (!resp.ok) throw new Error((await resp.json().catch(() => ({}))).error || `HTTP ${resp.status}`);
+        if (!resp.ok) throw new Error(await responseError(resp));
         const data = await resp.json();
         updateImages(data.images);
         setEditingSrc((current) => (current === src ? null : current));
@@ -491,6 +501,8 @@ export default function ImageUploader({
         onDragOver={(e) => e.preventDefault()}
         onDrop={onDrop}
         onPaste={onPaste}
+        role="group"
+        aria-label="Image upload area. Drop or paste images here."
         tabIndex={0}
         className="rounded-lg border-2 border-dashed border-zinc-300 dark:border-zinc-700 p-6 text-center text-sm text-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-400"
       >
@@ -524,7 +536,7 @@ export default function ImageUploader({
       </div>
 
       {error && !editing && (
-        <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
+        <p role="alert" className="text-xs text-red-600 dark:text-red-400">{error}</p>
       )}
 
       {images.length > 0 && (
@@ -581,7 +593,7 @@ export default function ImageUploader({
               >
                 Cancel
               </button>
-              {error && <span className="text-xs text-red-600 dark:text-red-400">{error}</span>}
+              {error && <span role="alert" className="text-xs text-red-600 dark:text-red-400">{error}</span>}
             </div>
           </div>
         </div>

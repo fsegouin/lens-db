@@ -11,6 +11,7 @@ import {
 import { formatDescription } from "@/lib/format-description";
 import { formatMagnification } from "@/lib/format-magnification";
 import { maxApertureLabel } from "@/lib/aperture";
+import { focalRange } from "@/lib/focal-length";
 import { getImages } from "@/lib/images";
 import type { ImageData } from "@/lib/image-types";
 import { specValue } from "@/lib/spec-value";
@@ -133,6 +134,7 @@ export default async function LensDetailPage({
     provenance,
     rivals,
     owners,
+    citations,
   ] =
     await Promise.all([
       getEntityPriceEstimate("lens", lens.id),
@@ -141,6 +143,8 @@ export default async function LensDetailPage({
       getProvenance("lens", lens.id),
       getRivalsForLens(lens.id),
       getOwnersOf("lens", lens.id),
+      // Which figures have been checked against something other than the import.
+      getCitations("lens", lens.id),
     ]);
 
   const specs = (lens.specs ?? {}) as Record<string, string>;
@@ -184,15 +188,9 @@ export default async function LensDetailPage({
     { name: lens.name },
   ];
 
+  const focal = focalRange(lens.focalLengthMin, lens.focalLengthMax);
   const opticalRows: [string, string | number | null | undefined][] = [
-    [
-      "Focal Length",
-      lens.focalLengthMin
-        ? lens.focalLengthMin === lens.focalLengthMax
-          ? `${lens.focalLengthMin}mm`
-          : `${lens.focalLengthMin}-${lens.focalLengthMax}mm`
-        : null,
-    ],
+    ["Focal Length", focal ? `${focal}mm` : null],
     // One row, the way a maker writes it on the barrel: see maxApertureLabel.
     ["Maximum Aperture", maxApertureLabel(lens.apertureMin, lens.apertureMax)],
     ["Lens Elements", lens.lensElements],
@@ -227,9 +225,6 @@ export default async function LensDetailPage({
     ["Year Discontinued", lens.yearDiscontinued],
   ];
 
-  // Which of these figures has been checked against something other than the
-  // import. Most have not, and those rows stay unmarked.
-  const citations = await getCitations("lens", lens.id);
   /** A fact is sourced when any of the columns behind it is. */
   const citeOf = (...fields: string[]) => {
     for (const f of fields) {
@@ -242,11 +237,7 @@ export default async function LensDetailPage({
   const infoboxFacts: Fact[] = [
     {
       label: "Focal length",
-      value: lens.focalLengthMin
-        ? lens.focalLengthMin === lens.focalLengthMax
-          ? lens.focalLengthMin
-          : `${lens.focalLengthMin}-${lens.focalLengthMax}`
-        : null,
+      value: focal,
       unit: "mm",
       citation: citeOf("focalLengthMin", "focalLengthMax"),
     },

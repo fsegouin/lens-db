@@ -145,7 +145,7 @@ export default function CompatibilityForm() {
       </h1>
 
       {error && (
-        <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400">
+        <div role="alert" className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400">
           {error}
         </div>
       )}
@@ -153,7 +153,7 @@ export default function CompatibilityForm() {
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Lens search */}
         <div>
-          <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+          <label htmlFor="compat-lens" className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
             Lens *
           </label>
           {lens.selected ? (
@@ -176,7 +176,8 @@ export default function CompatibilityForm() {
                 type="text"
                 placeholder="Search lenses..."
                 value={lens.query}
-                onChange={(e) => lens.setQuery(e.target.value)}
+                id="compat-lens"
+              onChange={(e) => lens.setQuery(e.target.value)}
                 onFocus={() => { if (lens.results.length > 0) lens.setShowDropdown(true); }}
                 className={inputClass}
               />
@@ -201,7 +202,7 @@ export default function CompatibilityForm() {
 
         {/* Camera search */}
         <div>
-          <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+          <label htmlFor="compat-camera" className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
             Camera *
           </label>
           {camera.selected ? (
@@ -224,7 +225,8 @@ export default function CompatibilityForm() {
                 type="text"
                 placeholder="Search cameras..."
                 value={camera.query}
-                onChange={(e) => camera.setQuery(e.target.value)}
+                id="compat-camera"
+              onChange={(e) => camera.setQuery(e.target.value)}
                 onFocus={() => { if (camera.results.length > 0) camera.setShowDropdown(true); }}
                 className={inputClass}
               />
@@ -263,11 +265,12 @@ export default function CompatibilityForm() {
 
         {/* Notes */}
         <div>
-          <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+          <label htmlFor="compat-notes" className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
             Notes
           </label>
           <textarea
             value={notes}
+            id="compat-notes"
             onChange={(e) => setNotes(e.target.value)}
             rows={3}
             className={inputClass}

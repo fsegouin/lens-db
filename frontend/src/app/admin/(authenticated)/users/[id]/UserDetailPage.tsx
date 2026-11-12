@@ -104,7 +104,7 @@ export default function UserDetailPage() {
   }
 
   if (loading) {
-    return <div className="p-6 text-sm text-muted-foreground">Loading...</div>;
+    return <div role="status" className="p-6 text-sm text-muted-foreground">Loading...</div>;
   }
 
   if (error || !user) {
@@ -141,11 +141,12 @@ export default function UserDetailPage() {
 
       {/* Role management */}
       <div className="space-y-2 rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
-        <h3 className="text-sm font-semibold">Role</h3>
-        <div className="flex gap-2">
+        <h3 id="user-role-heading" className="text-sm font-semibold">Role</h3>
+        <div role="group" aria-labelledby="user-role-heading" className="flex gap-2">
           {["user", "trusted", "admin"].map((r) => (
             <Button
               key={r}
+              aria-pressed={role === r}
               variant={role === r ? "default" : "outline"}
               size="sm"
               onClick={() => updateRole(r)}

@@ -172,7 +172,7 @@ export default function AdminTable({
 
   function sortIndicator(sortKey: string) {
     if (sort !== sortKey) return null;
-    return <span className="ml-1">{order === "desc" ? "\u2193" : "\u2191"}</span>;
+    return <span aria-hidden="true" className="ml-1">{order === "desc" ? "\u2193" : "\u2191"}</span>;
   }
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
@@ -241,7 +241,7 @@ export default function AdminTable({
           )}
         </div>
 
-        <div className="text-sm text-zinc-500">{total.toLocaleString()} results</div>
+        <div role="status" className="text-sm text-zinc-500">{total.toLocaleString()} results</div>
 
         {hasBulk && selectedIds.size > 0 && (
           <div className="flex items-center gap-3 rounded-lg bg-blue-50 px-4 py-2 dark:bg-blue-950/50">
@@ -271,10 +271,10 @@ export default function AdminTable({
       </div>
 
       {loading ? (
-        <p className="px-6 pt-4 text-zinc-400">Loading...</p>
+        <p role="status" className="px-6 pt-4 text-zinc-400">Loading...</p>
       ) : (
         <div className="overflow-x-clip">
-          <table className="w-full text-sm">
+          <table aria-label={title} className="w-full text-sm">
             <thead className="sticky top-0 z-10">
               <tr className="shadow-[inset_0_-1px_0_theme(colors.zinc.200)] dark:shadow-[inset_0_-1px_0_theme(colors.zinc.800)]">
                 {hasBulk && (
@@ -297,6 +297,7 @@ export default function AdminTable({
                         ? "cursor-pointer select-none hover:text-zinc-900 dark:hover:text-zinc-100"
                         : ""
                     }`}
+                    aria-sort={col.sortKey && sort === col.sortKey ? (order === "desc" ? "descending" : "ascending") : undefined}
                     onClick={col.sortKey ? () => handleSort(col.sortKey!) : undefined}
                   >
                     {col.label}

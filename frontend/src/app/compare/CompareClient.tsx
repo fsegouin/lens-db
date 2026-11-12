@@ -120,6 +120,7 @@ function ItemSearch({
         <PopoverContent className="w-[var(--anchor-width)] p-0" align="start">
           <Command shouldFilter={false}>
             <CommandInput
+              aria-label={placeholder}
               placeholder={placeholder}
               value={query}
               onValueChange={handleQueryChange}
@@ -325,7 +326,7 @@ export default function CompareClient() {
       ) : (
         <div className="flex flex-col items-center gap-3 py-16 text-muted-foreground">
           <ArrowUpDown className="h-10 w-10" />
-          <p>Select two items above to compare specs</p>
+          <p role="status">Select two items above to compare specs</p>
         </div>
       )}
     </div>

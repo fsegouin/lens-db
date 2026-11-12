@@ -16,6 +16,7 @@ import { auditCameraSpecs, auditLensSpecs, type SpecAudit } from "@/lib/dpreview
 import { DPREVIEW_BOT_EMAIL, parseApertureLongEnd } from "@/lib/dpreview-import";
 import { getBotUserId } from "@/lib/dpreview-pipeline";
 import { normalizeCoverage } from "@/lib/vocabularies";
+import { parseSuggestedNumber } from "@/lib/suggested-number";
 
 export const maxDuration = 300;
 
@@ -106,7 +107,7 @@ function coerceSuggestion(kind: EntityKind, field: string, raw: string): unknown
   const value = raw.trim();
   if (!value) return null;
   if (rules.numeric.has(field)) {
-    const n = parseFloat(value.replace(/[^\d.-]/g, ""));
+    const n = parseSuggestedNumber(field, value);
     return Number.isFinite(n) ? n : null;
   }
   if (rules.boolean.has(field)) {
@@ -141,11 +142,11 @@ function isNoiseIssue(
   const field = issue.field;
   const suggested = issue.suggestedValue?.trim() ?? "";
   if (rules.numeric.has(field)) {
-    const s = parseFloat(suggested.replace(/[^\d.-]/g, ""));
+    const s = parseSuggestedNumber(field, suggested);
     if (!Number.isFinite(s)) return true; // no usable correction
     const cur = current[field];
     if (typeof cur === "number") {
-      if (s === cur) return true; // "F/2" vs 2 — same value, different notation
+      if (s === cur) return true; // "F/2" vs 2: same value, different notation
       const rel = Math.abs(s - cur) / Math.max(Math.abs(cur), 1e-9);
       if (rel < 0.05) return true; // rounding disagreement
     }
@@ -155,11 +156,9 @@ function isNoiseIssue(
     // re-open the defect migration 0058 repaired on 527 rows.
     if (field === "apertureMax") {
       // DPReview labels this row both ways across its templates.
-      const stoppedDown = parseFloat(
-        String(rawSpecs["Minimum aperture"] ?? rawSpecs["Min aperture"] ?? "").replace(
-          /[^\d.-]/g,
-          "",
-        ),
+      const stoppedDown = parseSuggestedNumber(
+        "apertureMax",
+        String(rawSpecs["Minimum aperture"] ?? rawSpecs["Min aperture"] ?? ""),
       );
       if (Number.isFinite(stoppedDown) && s === stoppedDown) return true;
       // Migration 0058 took this column from the name, which states the long
@@ -169,7 +168,7 @@ function isNoiseIssue(
       if (fromName !== null && Math.abs(s - fromName) > 0.05) return true;
     }
     // A reproduction ratio above life-size on a lens that is not a macro is
-    // 1:X read upside down — "1:4.6" on a 17-50mm zoom becoming 4.6. Migration
+    // 1:X read upside down: "1:4.6" on a 17-50mm zoom becoming 4.6. Migration
     // 0058 repaired four such rows, and an approved audit edit put two of them
     // back, so the ratio is refused here rather than merely reported.
     if (field === "maxMagnification" && s > 1 && current.isMacro !== true) {
@@ -336,7 +335,7 @@ const TARGETS = {
 };
 
 /**
- * POST: audit one batch. Stateless — the caller pages through.
+ * POST: audit one batch. Stateless: the caller pages through.
  *
  * Body: { target: "lenses" | "cameras" | "pending" | "pending-cameras",
  *         afterId?: number, limit?: number }
@@ -370,7 +369,7 @@ export async function POST(request: NextRequest) {
   const afterId = typeof body?.afterId === "number" ? body.afterId : 0;
   const limit = Math.min(Math.max(typeof body?.limit === "number" ? body.limit : 10, 1), 25);
   const createEdits = body?.createEdits === true;
-  // Scope to candidates first seen (or edits created) in the last N hours —
+  // Scope to candidates first seen (or edits created) in the last N hours:
   // keeps the weekly scheduled audit from re-auditing the whole catalog
   const recentHours = typeof body?.recentHours === "number" && body.recentHours > 0 ? body.recentHours : null;
   const recentCutoff = recentHours ? new Date(Date.now() - recentHours * 3600_000) : undefined;
@@ -392,7 +391,7 @@ export async function POST(request: NextRequest) {
 
         // What a reviewer has already turned down. Rejecting an edit used to
         // leave no trace the audit could see, because the "already filed this"
-        // check below matches only edits still sitting at "pending" — so the
+        // check below matches only edits still sitting at "pending", so the
         // next run re-proposed the very correction a person had just refused.
         // Read those rejections back as a per-entity, per-field memory.
         const refused = await previouslyRejected(kind, ids);

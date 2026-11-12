@@ -155,7 +155,7 @@ export default function CameraForm({ camera, systems }: CameraFormProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
       {error && (
-        <div className="rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
+        <div role="alert" className="rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
           {error}
         </div>
       )}
@@ -165,38 +165,42 @@ export default function CameraForm({ camera, systems }: CameraFormProps) {
         <h3 className={sectionClass}>Basic Info</h3>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1">
-            <label className={labelClass}>Name *</label>
+            <label htmlFor="camera-name" className={labelClass}>Name *</label>
             <input
               type="text"
               required
               value={name}
+              id="camera-name"
               onChange={(e) => handleNameChange(e.target.value)}
               className={`w-full ${inputClass}`}
             />
           </div>
           <div className="space-y-1">
-            <label className={labelClass}>Slug</label>
+            <label htmlFor="camera-slug" className={labelClass}>Slug</label>
             <input
               type="text"
               value={slug}
+              id="camera-slug"
               onChange={(e) => handleSlugChange(e.target.value)}
               className={`w-full ${inputClass}`}
             />
           </div>
           <div className="space-y-1 sm:col-span-2">
-            <label className={labelClass}>Alias (alternative name, e.g. &quot;N90&quot; for &quot;F90&quot;)</label>
+            <label htmlFor="camera-alias" className={labelClass}>Alias (alternative name, e.g. &quot;N90&quot; for &quot;F90&quot;)</label>
             <input
               type="text"
               value={alias}
+              id="camera-alias"
               onChange={(e) => setAlias(e.target.value)}
               placeholder="e.g. Nikon N90"
               className={`w-full ${inputClass}`}
             />
           </div>
           <div className="space-y-1">
-            <label className={labelClass}>System</label>
+            <label htmlFor="camera-system" className={labelClass}>System</label>
             <select
               value={systemId}
+              id="camera-system"
               onChange={(e) => setSystemId(e.target.value ? Number(e.target.value) : "")}
               className={`w-full ${inputClass}`}
             >
@@ -209,10 +213,11 @@ export default function CameraForm({ camera, systems }: CameraFormProps) {
             </select>
           </div>
           <div className="space-y-1">
-            <label className={labelClass}>Body Type</label>
+            <label htmlFor="camera-body-type" className={labelClass}>Body Type</label>
             <input
               type="text"
               value={bodyType}
+              id="camera-body-type"
               onChange={(e) => setBodyType(e.target.value)}
               className={`w-full ${inputClass}`}
             />
@@ -250,18 +255,20 @@ export default function CameraForm({ camera, systems }: CameraFormProps) {
             </select>
           </div>
           <div className="space-y-1 sm:col-span-2">
-            <label className={labelClass}>URL</label>
+            <label htmlFor="camera-url" className={labelClass}>URL</label>
             <input
               type="text"
               value={url}
+              id="camera-url"
               onChange={(e) => setUrl(e.target.value)}
               className={`w-full ${inputClass}`}
             />
           </div>
           <div className="space-y-1 sm:col-span-2">
-            <label className={labelClass}>Description</label>
+            <label htmlFor="camera-description" className={labelClass}>Description</label>
             <textarea
               value={description}
+              id="camera-description"
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
               className={`w-full ${inputClass}`}
@@ -275,38 +282,42 @@ export default function CameraForm({ camera, systems }: CameraFormProps) {
         <h3 className={sectionClass}>Sensor & Image</h3>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="space-y-1">
-            <label className={labelClass}>Sensor Type</label>
+            <label htmlFor="camera-sensor-type" className={labelClass}>Sensor Type</label>
             <input
               type="text"
               value={sensorType}
+              id="camera-sensor-type"
               onChange={(e) => setSensorType(e.target.value)}
               className={`w-full ${inputClass}`}
             />
           </div>
           <div className="space-y-1">
-            <label className={labelClass}>Sensor Size</label>
+            <label htmlFor="camera-sensor-size" className={labelClass}>Sensor Size</label>
             <input
               type="text"
               value={sensorSize}
+              id="camera-sensor-size"
               onChange={(e) => setSensorSize(e.target.value)}
               className={`w-full ${inputClass}`}
             />
           </div>
           <div className="space-y-1">
-            <label className={labelClass}>Megapixels</label>
+            <label htmlFor="camera-megapixels" className={labelClass}>Megapixels</label>
             <input
               type="number"
               step="0.1"
               value={megapixels}
+              id="camera-megapixels"
               onChange={(e) => setMegapixels(e.target.value)}
               className={`w-full ${inputClass}`}
             />
           </div>
           <div className="space-y-1">
-            <label className={labelClass}>Resolution</label>
+            <label htmlFor="camera-resolution" className={labelClass}>Resolution</label>
             <input
               type="text"
               value={resolution}
+              id="camera-resolution"
               onChange={(e) => setResolution(e.target.value)}
               className={`w-full ${inputClass}`}
             />
@@ -319,36 +330,40 @@ export default function CameraForm({ camera, systems }: CameraFormProps) {
         <h3 className={sectionClass}>Physical</h3>
         <div className="grid gap-4 sm:grid-cols-3">
           <div className="space-y-1">
-            <label className={labelClass}>Weight (g)</label>
+            <label htmlFor="camera-weight" className={labelClass}>Weight (g)</label>
             <input
               type="number"
               value={weightG}
+              id="camera-weight"
               onChange={(e) => setWeightG(e.target.value)}
               className={`w-full ${inputClass}`}
             />
           </div>
           <div className="space-y-1">
-            <label className={labelClass}>Year Introduced</label>
+            <label htmlFor="camera-year-introduced" className={labelClass}>Year Introduced</label>
             <input
               type="number"
               value={yearIntroduced}
+              id="camera-year-introduced"
               onChange={(e) => setYearIntroduced(e.target.value)}
               className={`w-full ${inputClass}`}
             />
           </div>
           <div className="space-y-1">
-            <label className={labelClass}>Year Discontinued</label>
+            <label htmlFor="camera-year-discontinued" className={labelClass}>Year Discontinued</label>
             <input
               type="number"
               value={yearDiscontinued}
+              id="camera-year-discontinued"
               onChange={(e) => setYearDiscontinued(e.target.value)}
               className={`w-full ${inputClass}`}
             />
           </div>
           <div className="space-y-1">
-            <label className={labelClass}>Production Status</label>
+            <label htmlFor="camera-production-status" className={labelClass}>Production Status</label>
             <select
               value={productionStatus}
+              id="camera-production-status"
               onChange={(e) => setProductionStatus(e.target.value)}
               className={`w-full ${inputClass}`}
             >
@@ -388,6 +403,7 @@ export default function CameraForm({ camera, systems }: CameraFormProps) {
                     setSpecsEntries(next);
                   }}
                   placeholder="Key"
+                  aria-label={`Spec ${i + 1} key`}
                   className={`w-40 shrink-0 ${inputClass}`}
                 />
                 <input
@@ -399,6 +415,7 @@ export default function CameraForm({ camera, systems }: CameraFormProps) {
                     setSpecsEntries(next);
                   }}
                   placeholder="Value"
+                  aria-label={`Spec ${i + 1} value`}
                   className={`min-w-0 flex-1 ${inputClass}`}
                 />
                 <button
@@ -408,7 +425,7 @@ export default function CameraForm({ camera, systems }: CameraFormProps) {
                   }
                   className="cursor-pointer shrink-0 rounded-md p-2 text-zinc-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950 dark:hover:text-red-400"
                   title="Remove"
-                  aria-label="Remove"
+                  aria-label={`Remove spec ${key || i + 1}`}
                 >
                   <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { users, emailVerificationTokens } from "@/db/schema";
-import { eq, and, gt } from "drizzle-orm";
+import { eq, and, gt, inArray } from "drizzle-orm";
 import { sendWelcomeEmail, maskEmail } from "@/lib/email";
+import { storedForms } from "@/lib/one-shot-token";
 
 // GET: validate token exists and redirect to confirmation page (no side effects)
 export async function GET(request: NextRequest) {
@@ -18,7 +19,7 @@ export async function GET(request: NextRequest) {
       .from(emailVerificationTokens)
       .where(
         and(
-          eq(emailVerificationTokens.token, token),
+          inArray(emailVerificationTokens.token, storedForms(token)),
           gt(emailVerificationTokens.expiresAt, new Date())
         )
       )
@@ -45,19 +46,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Token is required" }, { status: 400 });
     }
 
+    // Consumed by the statement that finds it, so a double submit cannot
+    // verify twice or send two welcome emails.
     const [record] = await db
-      .select({
-        id: emailVerificationTokens.id,
-        userId: emailVerificationTokens.userId,
-      })
-      .from(emailVerificationTokens)
+      .delete(emailVerificationTokens)
       .where(
         and(
-          eq(emailVerificationTokens.token, token),
+          inArray(emailVerificationTokens.token, storedForms(token)),
           gt(emailVerificationTokens.expiresAt, new Date())
         )
       )
-      .limit(1);
+      .returning({ userId: emailVerificationTokens.userId });
 
     if (!record) {
       return NextResponse.json({ error: "Invalid or expired token" }, { status: 400 });
@@ -69,11 +68,6 @@ export async function POST(request: NextRequest) {
       .set({ emailVerifiedAt: new Date() })
       .where(eq(users.id, record.userId))
       .returning({ email: users.email, displayName: users.displayName });
-
-    // Delete used token
-    await db
-      .delete(emailVerificationTokens)
-      .where(eq(emailVerificationTokens.id, record.id));
 
     // The welcome note is the first thing that says what an account is for.
     // It must never make verification fail, so it is awaited only for logging.

@@ -7,8 +7,8 @@
  * 4. POST <endpoint> → server dedupes and queues new products for review
  *
  * Handles both halves of the watcher, selected by ENTITY. The index and
- * product-page markup is identical for lenses and cameras — only the index
- * URL, the category segments in a product link, and the endpoint differ — so
+ * product-page markup is identical for lenses and cameras: only the index
+ * URL, the category segments in a product link, and the endpoint differ, so
  * the extraction heuristics that DPReview's markup drift keeps breaking live
  * in one place rather than two.
  *
@@ -54,7 +54,7 @@ const ENTITIES = {
     //
     // "actioncams" is deliberately absent. DPReview lists GoPro, DJI Osmo
     // and Insta360 bodies in this same index, and the database holds none of
-    // them — every one would arrive as a new-camera pending edit for a
+    // them: every one would arrive as a new-camera pending edit for a
     // product class the site does not cover. Add the segment here to take
     // them.
     categorySegments: ["cameras", "slrs", "compacts"],
@@ -136,7 +136,7 @@ function authHeaders(extra = {}) {
 
 async function getSeenSlugs() {
   if (DRY_RUN) return { seenSlugs: [], stats: { dryRun: true } };
-  const res = await fetch(`${API_URL}${ENTITY.endpoint}`, { headers: authHeaders() });
+  const res = await fetch(`${API_URL}${ENTITY.endpoint}`, { headers: authHeaders(), signal: AbortSignal.timeout(60_000) });
   if (!res.ok) {
     throw new Error(`Failed to get seen slugs: ${res.status} ${await res.text()}`);
   }
@@ -153,6 +153,8 @@ async function submitCandidate(candidate) {
     method: "POST",
     headers: authHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify(candidate),
+    // Just past the route's 300 s maxDuration, so it fires only once the platform has given up.
+    signal: AbortSignal.timeout(330_000),
   });
   if (!res.ok) {
     console.error(`  Failed to submit: ${res.status} ${await res.text()}`);
@@ -279,7 +281,7 @@ async function scrapeIndexPage(page, pageNum) {
   // "domcontentloaded" instead of "load": ad/tracker requests can keep the
   // load event from ever firing on dpreview.com
   const response = await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
-  // Wait for a real product link rather than any /<category>/ href — the site
+  // Wait for a real product link rather than any /<category>/ href: the site
   // nav carries category links that are present immediately, so waiting on
   // those returns before the list itself has rendered.
   await page
@@ -495,7 +497,7 @@ function createSession(browser) {
 
 async function main() {
   if (!CRON_SECRET) {
-    console.warn("Warning: CRON_SECRET not set — requests will be unauthenticated");
+    console.warn("Warning: CRON_SECRET not set; requests will be unauthenticated");
   }
 
   console.log(`Watching DPReview ${ENTITY.nounPlural}`);

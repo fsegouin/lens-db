@@ -138,14 +138,14 @@ function SearchDropdown({
   return (
     <>
       {loading && !results && (
-        <div className="space-y-2 px-4 py-3">
+        <div role="status" aria-label="Loading results" className="space-y-2 px-4 py-3">
           <Skeleton className="h-3.5 w-full" />
           <Skeleton className="h-3.5 w-2/3" />
         </div>
       )}
 
       {results && !hasResults && (
-        <div className="px-4 py-3 text-sm text-muted-foreground">
+        <div role="status" className="px-4 py-3 text-sm text-muted-foreground">
           No results for &ldquo;{query.trim()}&rdquo;
         </div>
       )}

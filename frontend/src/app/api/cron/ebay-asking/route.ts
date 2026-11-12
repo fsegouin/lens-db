@@ -15,7 +15,7 @@ import {
   EbayApiError,
   type ActiveListing,
 } from "@/lib/ebay-browse";
-import { recomputePriceEstimates } from "@/lib/price-pipeline";
+import { MIN_PLAUSIBLE_SALE_USD, recomputePriceEstimates } from "@/lib/price-pipeline";
 import {
   buildEbaySearchQuery,
   buildEbayLensSearchQuery,
@@ -30,12 +30,13 @@ import { mapConcurrent } from "@/lib/concurrent";
  * Daily asking-price ingest over the Browse API.
  *
  * This replaces the scraped sold-listing pipeline that eBay's bot wall closed
- * in July. It costs exactly one API call per entity and runs server-side, so
+ * in July. It costs one API call per entity (up to three when the name finds
+ * little) and runs server-side, so
  * there is no browser, no session, and nothing to be blocked.
  *
  * Two things are written per entity: a one-per-day asking aggregate, and a
  * watch row for a sample of the live listings. The watch rows are what make
- * real sold prices reachable later — see /api/cron/ebay-resolve.
+ * real sold prices reachable later; see /api/cron/ebay-resolve.
  */
 
 const DEFAULT_LIMIT = 50;
@@ -47,9 +48,7 @@ const MAX_LIMIT = 200;
  * An entity is barely any work and almost entirely waiting: one or two eBay
  * searches, a classifier call for the listings no verdict is remembered for,
  * and a dozen round trips to the pooler. Run strictly one at a time that is
- * ~2.5s of wall clock each, so a 1,600-entity sweep held a GitHub runner for
- * over an hour, billed by the minute against a 2,000-minute monthly free
- * allowance.
+ * ~2.5s of wall clock each, so a 1,600-entity sweep ran for over an hour.
  *
  * Eight is set by the narrowest resource rather than by feel. The pg pool
  * allows four clients per instance, and an entity spends roughly a fifth of
@@ -106,13 +105,6 @@ const WATCH_CAP_PER_ENTITY = 30;
  */
 const CLASSIFY_SAMPLE = 20;
 
-/**
- * Mirrors the floor the sold estimator applies. Anything under this is a cap,
- * a box, a filter listed under the lens's name, or a mis-read amount, and one
- * of them at the bottom of a thin sample drags the whole range down.
- */
-const MIN_PLAUSIBLE_USD = 5;
-
 /** Relevant listings below which a camera's alias is worth a second search. */
 const ALIAS_SEARCH_THRESHOLD = 5;
 
@@ -138,8 +130,8 @@ const FALLBACK_BELOW_LISTINGS = 3;
  * end of a year-long chart from being clipped by a sweep that ran late.
  *
  * Without this the table grows forever. Every entity is swept about weekly,
- * so the catalogue produces roughly 600,000 rows a year, and on a 500 MB
- * database that is not something to leave unbounded.
+ * so the catalogue produces roughly 600,000 rows a year, which is not
+ * something to leave unbounded.
  */
 const SNAPSHOT_RETENTION_DAYS = 400;
 
@@ -153,6 +145,13 @@ const SNAPSHOT_RETENTION_DAYS = 400;
  * a day's page views rather than discovering the ceiling by hitting it.
  */
 const QUOTA_RESERVED_FOR_SITE = 400;
+
+/**
+ * Browse searches one entity can cost: its name, then a camera's alias when
+ * the name comes back thin, then the model-written keywords when the searches
+ * so far found almost nothing.
+ */
+const MAX_SEARCHES_PER_ENTITY = 3;
 
 /**
  * How long a classifier verdict is remembered. Listings run for weeks and are
@@ -184,6 +183,8 @@ function percentile(sorted: number[], p: number): number | null {
   if (sorted.length === 0) return null;
   return sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * p))];
 }
+
+const roundOrNull = (v: number | null) => (v == null ? null : Math.round(v));
 
 function spreadSample(listings: ActiveListing[], n: number): ActiveListing[] {
   if (listings.length <= n) return listings;
@@ -273,6 +274,14 @@ interface RelevantListing {
   grade: string | null;
 }
 
+interface RelevanceResult {
+  kept: RelevantListing[];
+  /** Listings answered from the verdict cache, costing nothing. */
+  cached: number;
+  /** Listings that had to be sent to the classifier. */
+  classified: number;
+}
+
 /**
  * Drop everything that is not actually this entity, in working order, sold on
  * its own, judged by the same rules the scraped pipeline used but through a
@@ -283,14 +292,6 @@ interface RelevantListing {
  * "the classifier was down" would otherwise look identical and the entity
  * would be marked done on the strength of a check that never ran.
  */
-interface RelevanceResult {
-  kept: RelevantListing[];
-  /** Listings answered from the verdict cache, costing nothing. */
-  cached: number;
-  /** Listings that had to be sent to the classifier. */
-  classified: number;
-}
-
 async function keepRelevant(
   entityType: "lens" | "camera",
   entityId: number,
@@ -481,7 +482,7 @@ async function ingestOne(
   // The same floor the sold estimator uses: a cap or a box listed under the
   // lens's name would otherwise sit at the bottom of a thin sample and drag
   // the range down with it.
-  relevant = relevant.filter((r) => r.listing.priceUsd >= MIN_PLAUSIBLE_USD);
+  relevant = relevant.filter((r) => r.listing.priceUsd >= MIN_PLAUSIBLE_SALE_USD);
 
   const prices = relevant.map((r) => r.listing.priceUsd).sort((a, b) => a - b);
   const median = percentile(prices, 0.5);
@@ -493,9 +494,9 @@ async function ingestOne(
   const relevantRate = examined > 0 ? relevant.length / examined : 0;
 
   const snapshot = {
-    medianUsd: median == null ? null : Math.round(median),
-    p25Usd: (v => (v == null ? null : Math.round(v)))(percentile(prices, 0.25)),
-    p75Usd: (v => (v == null ? null : Math.round(v)))(percentile(prices, 0.75)),
+    medianUsd: roundOrNull(median),
+    p25Usd: roundOrNull(percentile(prices, 0.25)),
+    p75Usd: roundOrNull(percentile(prices, 0.75)),
     sampleCount: prices.length,
     totalAvailable: Math.round(total * relevantRate),
   };
@@ -659,8 +660,11 @@ export async function GET(request: NextRequest) {
   const quota = await getBrowseQuota();
   const spendable = quota
     ? Math.max(0, quota.remaining - QUOTA_RESERVED_FOR_SITE)
-    : limit;
-  if (spendable === 0) {
+    : limit * MAX_SEARCHES_PER_ENTITY;
+  // Sized by an entity's worst case rather than its usual single search, so a
+  // batch cannot run into the calls held back for the site.
+  const batchLimit = Math.min(limit, Math.floor(spendable / MAX_SEARCHES_PER_ENTITY));
+  if (batchLimit === 0) {
     return NextResponse.json({
       entityType,
       requested: 0,
@@ -673,7 +677,6 @@ export async function GET(request: NextRequest) {
       remainingToday: await countDue(entityType),
     });
   }
-  const batchLimit = Math.min(limit, spendable);
 
   // A single entity can be re-ingested on demand, which is the only way to
   // refresh one without waiting for it to come round in the rotation.

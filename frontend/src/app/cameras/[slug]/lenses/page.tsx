@@ -163,7 +163,7 @@ export default async function CameraLensesPage({
           </ul>
 
           <div className="mt-8 hidden lg:block">
-            <Table>
+            <Table aria-label={`Lenses that fit the ${camera.name}`}>
               <TableHeader>
                 <TableRow>
                   <TableHead scope="col">Name</TableHead>

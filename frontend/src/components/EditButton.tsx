@@ -299,6 +299,7 @@ export default function EditButton({
                   </label>
                   <Input
                     id="edit-summary"
+                    aria-required="true"
                     value={summary}
                     onChange={(e) => setSummary(e.target.value)}
                     placeholder="Briefly describe your changes"

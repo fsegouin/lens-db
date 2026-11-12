@@ -190,7 +190,7 @@ function Thumbs({
 
 function SourceLine({ citation }: { citation: Citation | undefined }) {
   if (!citation) return null;
-  const body = citation.sourceUrl ? (
+  const body = citation.sourceUrl && /^https?:\/\//i.test(citation.sourceUrl) ? (
     <a href={citation.sourceUrl} target="_blank" rel="noreferrer" className="hover:underline">
       {citation.sourceName}
     </a>
@@ -304,7 +304,7 @@ export default function MergeReviewPage({ flagId }: { flagId: number }) {
     return (
       <div className="space-y-4 p-6">
         <BackLink />
-        <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+        <p role="alert" className="text-sm text-red-600 dark:text-red-400">{error}</p>
       </div>
     );
   }
@@ -312,7 +312,7 @@ export default function MergeReviewPage({ flagId }: { flagId: number }) {
     return (
       <div className="space-y-4 p-6">
         <BackLink />
-        <p className="text-sm text-muted-foreground">Loading...</p>
+        <p role="status" className="text-sm text-muted-foreground">Loading...</p>
       </div>
     );
   }
@@ -385,7 +385,7 @@ export default function MergeReviewPage({ flagId }: { flagId: number }) {
               >
                 Swap sides
               </Button>
-              <span className="mx-1 text-zinc-300 dark:text-zinc-700">|</span>
+              <span aria-hidden="true" className="mx-1 text-zinc-300 dark:text-zinc-700">|</span>
               <span className="text-zinc-500 dark:text-zinc-400">From the left, bring:</span>
               <Button variant="outline" size="xs" onClick={resetToDefault} disabled={busy !== null}>
                 What the keeper lacks
