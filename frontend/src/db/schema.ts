@@ -834,7 +834,7 @@ export const ebayListingWatch = pgTable(
     lastCheckedAt: timestamp("last_checked_at", { withTimezone: true }),
     // "sold" | "expired" | "gone" (item no longer resolvable) | "ambiguous" |
     // "seller_ended" (recorded as sold, retracted after the listing page said
-    // the seller ended it; see scripts/verify-ebay-sales.mjs), null = pending
+    // the seller ended it), null = pending
     resolution: text("resolution"),
     soldPriceUsd: integer("sold_price_usd"),
     soldOn: date("sold_on"),

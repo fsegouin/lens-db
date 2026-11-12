@@ -10,6 +10,7 @@ scraper/data.json
 scraper/sample_data.json
 scraper/.progress.json
 dpreview-audit-report.json
+scraper/dpreview-debug/
 __pycache__/
 *.pyc
 .next/
