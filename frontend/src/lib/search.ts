@@ -27,6 +27,16 @@ function foldAccents(value: string): string {
   return out;
 }
 
+/** A brand as a brand filter compares it: accents folded as translate() folds them, case ignored. */
+export function brandKey(value: string): string {
+  return foldAccents(value).toLowerCase();
+}
+
+/** Rows whose brand is `brand` whatever its case or accents, so "revuenon" finds "REVUENON". */
+export function buildBrandMatch(column: AnyColumn, brand: string): SQL {
+  return sql`lower(translate(${column}, ${ACCENTED_CHARS}, ${ASCII_CHARS})) = ${brandKey(brand)}`;
+}
+
 /**
  * "EF 50" should match "EF 50mm", so a one-or-two-letter token followed by a
  * number is matched as one adjacent unit. The reverse (number then letters) is
@@ -147,7 +157,8 @@ export function matchesNormalizedName(
   return matchers.every((m) => m.test(normalized));
 }
 
-export function buildNameSearch(column: AnyColumn, query: string): SQL[] {
+/** `column` may also be an expression, to search several columns as one text. */
+export function buildNameSearch(column: AnyColumn | SQL, query: string): SQL[] {
   return buildPatterns(query).map(
     (pattern) =>
       sql`regexp_replace(translate(${column}, ${ACCENTED_CHARS}, ${ASCII_CHARS}), ${NORMALIZE_NAME_SQL}, ' ', 'g') ~* ${pattern}`,

@@ -4,11 +4,14 @@ import { Suspense, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { trackEvent } from "@/lib/analytics";
+import { nextQuery, safeNextPath, signInPath, utmSource } from "@/lib/safe-next";
 
 function VerifyEmailContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const token = searchParams.get("token");
+  const next = safeNextPath(searchParams.get("next"));
+  const signInHref = signInPath({ verified: "true" }, next);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [email, setEmail] = useState("");
@@ -25,8 +28,8 @@ function VerifyEmailContent() {
         body: JSON.stringify({ token }),
       });
       if (res.ok) {
-        trackEvent("email_verified", { source: "verify_page" });
-        router.push("/login?verified=true");
+        trackEvent("email_verified", { source: "verify_page", utm_source: utmSource(searchParams) });
+        router.push(signInHref);
       } else {
         const data = await res.json();
         setError(data.error || "Verification failed");
@@ -77,7 +80,7 @@ function VerifyEmailContent() {
       const res = await fetch("/api/auth/resend-verification", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, next }),
       });
       if (res.ok) {
         trackEvent("verification_resent", { source: "verify_page" });
@@ -112,7 +115,7 @@ function VerifyEmailContent() {
           spam folder.
         </p>
         <Link
-          href="/login"
+          href={`/login${nextQuery(next)}`}
           className="mt-4 inline-block rounded-lg bg-zinc-900 px-4 py-2 text-white transition-colors hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
         >
           Go to sign in

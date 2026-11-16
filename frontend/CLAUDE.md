@@ -25,7 +25,7 @@ pnpm front-views      # Pick size-comparison front views (dry run; add --slug <s
 - **AI**: Vercel AI SDK via AI Gateway: chat (`/chat`, `google/gemini-2.5-flash`, tools from the `lens-db-mcp-server` workspace package), plus KEH matching and DPReview import dedupe/audit checks (`google/gemini-3.1-flash-lite`). Every eBay call site, the sold and asking classifiers and the search-keyword writer, uses `openai/gpt-6-luna` through `CLASSIFIER_MODEL`, overridable with `LISTING_CLASSIFIER_MODEL`. The evaluation-model second opinion in `price-classify-jev.ts` needs AI SDK 7, which is installed alongside 6 under the `ai7` alias so the other call sites stay on 6
 - **Email**: Resend (verification, welcome, password reset, edit reviewed, weekly digest)
 - **Image Storage**: Cloudflare R2 (admin uploads, served from R2 public URL)
-- **Analytics**: Vercel Analytics + Speed Insights; custom events in `src/lib/analytics.ts` cover search, filters and the whole membership funnel (signup_prompt_click, register_started, registered, email_verified, signed_in, kit_add, rating_submit, edit_submitted, digest_opt_in)
+- **Analytics**: Vercel Analytics + Speed Insights; custom events in `src/lib/analytics.ts` cover search, filters and the whole membership funnel (signup_prompt_click, register_started, registered, email_verified, signed_in, kit_add, rating_submit, edit_submitted, digest_opt_in) and app connections (app_connected, app_connection_refused, app_disconnected). The account pages add `utm_source` to their funnel events when someone arrives from an app
 - **Package Manager**: pnpm (enforced, no npm/yarn)
 
 ## Architecture
@@ -41,6 +41,9 @@ src/
 │   ├── api/
 │   │   ├── auth/               # login, logout, register, me, verify-email, resend-verification, forgot-password, reset-password
 │   │   ├── account/digest      # PATCH: weekly digest opt-in
+│   │   ├── account/apps        # DELETE: disconnect an app from the account
+│   │   ├── oauth/              # authorize (consent given, session), token (code for token, PKCE), revoke
+│   │   ├── partner/v1/         # Bearer-token API for connected apps: search, kit, kit/changes
 │   │   ├── cameras/route.ts    # GET: search/paginate cameras
 │   │   ├── chat/route.ts       # POST: AI chat (streamed, DB tools)
 │   │   ├── comparisons/route.ts # GET: top comparisons, POST: record comparison
@@ -69,6 +72,7 @@ src/
 │   ├── community/              # Public kits, most active editors, [handle] profiles with contributions
 │   ├── submit/                 # Public submission form
 │   ├── login/ register/ verify-email/ forgot-password/ reset-password/  # User account pages
+│   ├── oauth/authorize/        # Consent screen an app sends a member to
 │   ├── robots.ts sitemap.ts    # SEO
 │   └── opengraph-image.tsx twitter-image.tsx  # Social cards
 ├── components/
@@ -92,6 +96,9 @@ src/
 └── lib/
     ├── admin-auth.ts           # Admin helpers on top of user sessions (role checks)
     ├── user-auth.ts            # User accounts: PBKDF2 password hashing, HMAC-signed sessions
+    ├── oauth.ts / oauth-store.ts  # Connected apps: the OAuth rules (client registry, PKCE, request parsing) and the hashed codes and tokens
+    ├── partner-auth.ts / partner-objects.ts / partner-catalogue.ts  # Partner API: token check and limits, the lens and camera objects, catalogue and kit queries
+    ├── safe-next.ts            # The `next` path the account pages pass along, and the utm_source that rides with it
     ├── api-utils.ts            # getClientIP, hashIP (SHA-256), rateLimitedResponse
     ├── rate-limit.ts           # Upstash limiters the firewall can't express (per-account, hourly)
     ├── ebay-auth.ts / ebay-browse.ts / ebay-search-query.ts / ebay-affiliate.ts / ebay-types.ts  # eBay Browse API integration and affiliate links
@@ -118,7 +125,7 @@ Systems: one row per physical mount, not per camera family or per-lens variant (
 Camera brand: `cameras.brand` is the name the camera was sold under, in the spellings `lenses.brand` uses, so a maker's bodies and lenses share one brand. A model line that carries the maker's name folds into it (Rolleiflex is Rollei); a trade name that differs from the manufacturer stands (Zenit, not KMZ). A new camera gets its brand from its name on creation (`lib/camera-brand-infer.ts` in the admin, submission and approval paths, `inferBrand` in `scripts/import-lensdb-gaps.mjs`) and stays null when the name leads with a model line or an unknown maker, to be set on the admin form. `scripts/assign-camera-brands.mjs` filled the catalogue (name prefix checked against a model's answer, doubts sent to a person) and can be re-run for cameras it has not answered; a re-run keeps a brand already set unless `--manual` or `--only` says otherwise.
 Engagement: `lensRatings`, `cameraRatings`, `lensComparisons`, `cameraComparisons`
 Community edits: `revisions`, `pendingEdits`, `duplicateFlags`, `issueReports`, `blockedIps`
-Accounts: `users` (with `digestOptIn`), `emailVerificationTokens`, `passwordResetTokens`, `kitItems`
+Accounts: `users` (with `digestOptIn`), `emailVerificationTokens`, `passwordResetTokens`, `kitItems`, `oauthAuthorizationCodes`, `oauthTokens`
 Prices: `priceEstimates`, `priceHistory` (sold prices) and `ebaySoldVerdicts` (audit log of every sold-listing classifier verdict, accepted or rejected, pruned after 180 days), plus the Browse API pipeline's `ebayAskingSnapshots` (one asking aggregate per entity per day), `ebayListingWatch` (live listings being watched for an ending) and `ebayListingVerdicts` (remembered relevance-classifier verdicts for the asking-price watcher)
 DPReview watcher: `lensVersionGroups` (lens generations via `lenses.versionGroupId`), `dpreviewLensCandidates` and `dpreviewCameraCandidates` (seen-registries, status pending/imported/rejected/matched/review). Cameras have no version-group equivalent: a successor body is its own `cameras` row, so the camera LLM verdict is binary (duplicate / new_camera) where the lens one has three values.
 
@@ -169,6 +176,9 @@ Because they live in Vercel rather than in this repo, this table is a copy — t
 | `/api/auth/forgot-password` | POST | 3/600s (per IP and per email) | app | Password reset link |
 | `/api/auth/reset-password` | POST | 10/600s | app | Consume a reset token |
 | `/api/kit` | POST/DELETE | 60/60s (per user) | app | Add or remove kit items |
+| `/api/oauth/authorize` | POST | 20/60s (per user) | app | A member allows an app |
+| `/api/oauth/token`, `/api/oauth/revoke` | POST | 20/60s each (per IP) | app | An app exchanges a code, or hands a token back |
+| `/api/partner/v1/*` | GET/POST | 60/60s (per account, all calls together), 300/60s per IP before the token is checked | app | Connected apps: search, read and change a kit |
 | `/api/edits` | POST | 30/3600s (per user) | app | User-submitted edits |
 | `/api/submissions` | POST | 10/3600s | app | New entity submissions |
 | `/api/duplicates` | POST | 10/3600s | app | Flag duplicates |
@@ -241,6 +251,13 @@ Role-protected admin at `/admin/*` for CRUD management of all entities. Admins a
 - `src/proxy.ts` redirects users without a `user_session` cookie away from `/admin/*` to `/login`; role is validated server-side (`/admin/login` just redirects to `/login`)
 - API routes use `requireAdminAPI()` from `src/lib/admin-auth.ts`; pages use `requireAdmin()`
 - Login rate limited: 10 req/60s (registration: 5 req/60s)
+
+### Connected apps (OAuth)
+- Another app reaches a member's kit through OAuth 2.0, authorization code with PKCE (S256), as a public client with no secret. Clients are a registry in `src/lib/oauth.ts` (today: `oni`), each tied to a loopback redirect, `http://127.0.0.1:<any port><its path>`
+- `/oauth/authorize` is the consent screen. Signed out, it sends the visitor to `/login` or, with `screen_hint=signup`, `/register`, and `next` brings them back, through the verification email if need be. A request from an unknown client or to an unregistered address is answered on the page and never redirected
+- Codes (2 minutes, single use) and tokens (`tldb_...`, no expiry date) are stored as SHA-256 only. A token ends when the app revokes it, the member disconnects the app on `/kit`, the password is reset, or it goes 12 months unused; `last_used_at` is refreshed at most once a day
+- `/api/partner/v1` is called by an app's own code with `Authorization: Bearer`. A write carrying an `Origin` header is refused, responses are `private, no-store`, a 429 carries `Retry-After`, and `GET /kit` answers `If-None-Match` with 304. The objects are written out by hand in `partner-objects.ts` and never include what a member recorded about their copy (condition, price, serial number, notes). Changing or removing a field needs a `v2`
+- These endpoints are called by programs, not browsers, so the edge firewall needs a rule that lets partner traffic reach `/api/partner/` and `/api/oauth/token|revoke`. Like the other firewall rules it lives in Vercel, not in this repo
 
 ### Admin Routes
 | Route | Purpose |

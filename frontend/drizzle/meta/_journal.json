@@ -519,6 +519,13 @@
       "when": 1794765240477,
       "tag": "0073_camera_brand",
       "breakpoints": true
+    },
+    {
+      "idx": 74,
+      "version": "7",
+      "when": 1794818022992,
+      "tag": "0074_app_connections",
+      "breakpoints": true
     }
   ]
 }

@@ -31,7 +31,7 @@ export function HeaderNav({ chatEnabled = true }: { chatEnabled?: boolean }) {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.15 }}
-          className="hidden gap-1 lg:flex"
+          className="hidden shrink-0 gap-1 lg:flex"
           aria-label="Main navigation"
         >
           {links.map((link) => {
@@ -41,7 +41,7 @@ export function HeaderNav({ chatEnabled = true }: { chatEnabled?: boolean }) {
                 key={link.href}
                 href={link.href}
                 aria-current={isActive ? "page" : undefined}
-                className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                className={`rounded-md px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors ${
                   isActive
                     ? "bg-accent text-accent-foreground"
                     : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"

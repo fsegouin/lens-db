@@ -111,12 +111,12 @@ export default function RootLayout({
                 <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
                   <Link
                     href="/"
-                    className="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100"
+                    className="shrink-0 text-xl font-bold tracking-tight whitespace-nowrap text-zinc-900 dark:text-zinc-100"
                   >
                     THE LENS DB
                   </Link>
                   <HeaderNav chatEnabled={chatOn} />
-                  <div className="flex items-center gap-1">
+                  <div className="flex min-w-0 items-center gap-1">
                     <HeaderSearch />
                     <ThemeToggle />
                     <UserMenu />

@@ -450,6 +450,49 @@ export const passwordResetTokens = pgTable("password_reset_tokens", {
 });
 
 /**
+ * The code an app receives once a member agrees to connect it, to exchange
+ * for a token (lib/oauth.ts). Lives two minutes and is deleted by the
+ * exchange that finds it.
+ */
+export const oauthAuthorizationCodes = pgTable("oauth_authorization_codes", {
+  id: serial("id").primaryKey(),
+  // SHA-256 of the code, never the code itself: lib/one-shot-token.ts
+  codeHash: text("code_hash").notNull().unique(),
+  clientId: text("client_id").notNull(),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  redirectUri: text("redirect_uri").notNull(),
+  scope: text("scope").notNull(),
+  codeChallenge: text("code_challenge").notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+});
+
+/**
+ * What a connected app presents on every call. No expiry date: a token ends
+ * when the app revokes it, when the member disconnects the app or resets
+ * their password, or after twelve months without use (lastUsedAt, which is
+ * refreshed at most once a day so reading a kit is not also a write).
+ */
+export const oauthTokens = pgTable(
+  "oauth_tokens",
+  {
+    id: serial("id").primaryKey(),
+    // SHA-256 of the token, never the token itself: lib/one-shot-token.ts
+    tokenHash: text("token_hash").notNull().unique(),
+    clientId: text("client_id").notNull(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    scope: text("scope").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+  },
+  (table) => [index("idx_oauth_tokens_user").on(table.userId)],
+);
+
+/**
  * Where one field's value came from, when that is not the bulk import.
  *
  * Almost every fact here arrived in one scrape: 8,543 of 9,320 lenses carry a

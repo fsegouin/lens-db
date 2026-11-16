@@ -1,33 +1,39 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { trackEvent } from "@/lib/analytics";
+import { nextQuery, returnsToApp, safeNextPath, utmSource } from "@/lib/safe-next";
 
-export default function RegisterPage() {
+function RegisterForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  // Where the new member was heading, carried through the verification email
+  // so that confirming the address lands them back there.
+  const next = safeNextPath(searchParams.get("next"));
+  const campaign = utmSource(searchParams);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     setLoading(true);
-    trackEvent("register_started", { source: "register_page" });
+    trackEvent("register_started", { source: "register_page", utm_source: campaign });
     try {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, displayName }),
+        body: JSON.stringify({ email, password, displayName, next }),
       });
       const data = await res.json();
       if (res.ok) {
-        trackEvent("registered", { source: "register_page" });
-        router.push("/verify-email");
+        trackEvent("registered", { source: "register_page", utm_source: campaign });
+        router.push(`/verify-email${nextQuery(next)}`);
       } else {
         setError(data.error || "Registration failed");
       }
@@ -44,6 +50,12 @@ export default function RegisterPage() {
         <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
           Create an account
         </h1>
+        {returnsToApp(next) && (
+          <p className="text-sm text-muted-foreground">
+            Your app keeps its gear list in a Lens DB account. Create one here,
+            confirm your email, and the app is connected.
+          </p>
+        )}
         <ul className="space-y-1 text-sm text-muted-foreground">
           <li>Keep a record of what you own and what you paid for it.</li>
           <li>Get credit by name on every page you correct.</li>
@@ -108,11 +120,22 @@ export default function RegisterPage() {
         </button>
         <p className="text-center text-sm text-muted-foreground">
           Already have an account?{" "}
-          <Link href="/login" className="font-medium text-zinc-900 hover:underline dark:text-zinc-100">
+          <Link
+            href={`/login${nextQuery(next)}`}
+            className="font-medium text-zinc-900 hover:underline dark:text-zinc-100"
+          >
             Sign in
           </Link>
         </p>
       </form>
     </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense>
+      <RegisterForm />
+    </Suspense>
   );
 }

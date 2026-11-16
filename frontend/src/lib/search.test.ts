@@ -3,7 +3,14 @@ import assert from "node:assert/strict";
 import { PgDialect } from "drizzle-orm/pg-core";
 import { buildSearchPatterns } from "../../../mcp-server/src/search.ts";
 import { lenses } from "../db/schema.ts";
-import { buildNameMatchers, buildNameSearch, matchesNormalizedName, normalizeName } from "./search.ts";
+import {
+  brandKey,
+  buildBrandMatch,
+  buildNameMatchers,
+  buildNameSearch,
+  matchesNormalizedName,
+  normalizeName,
+} from "./search.ts";
 
 /**
  * What the search bar is expected to do, expressed as queries photographers
@@ -196,4 +203,14 @@ describe("the MCP server's copy of the matcher stays in sync", () => {
       assert.deepEqual(buildSearchPatterns(query), frontend);
     });
   }
+});
+
+describe("the brand filter", () => {
+  it("ignores case and accents on both sides", () => {
+    assert.equal(brandKey("REVUENON"), brandKey("Revuenon"));
+    assert.equal(brandKey("Voigtländer"), "voigtlander");
+    const query = new PgDialect().sqlToQuery(buildBrandMatch(lenses.brand, "Voigtländer"));
+    assert.match(query.sql, /^lower\(translate\(/);
+    assert.equal(query.params.at(-1), "voigtlander");
+  });
 });

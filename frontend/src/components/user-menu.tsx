@@ -56,12 +56,12 @@ export function UserMenu() {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
-        className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-accent hover:text-accent-foreground dark:text-zinc-300"
+        className="flex min-w-0 items-center gap-1.5 rounded-md px-2 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-accent hover:text-accent-foreground dark:text-zinc-300"
         aria-label={`Account menu for ${user.displayName}`}
       >
-        <User className="h-3.5 w-3.5" />
-        <span className="hidden sm:inline">{user.displayName}</span>
-        <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+        <User className="h-3.5 w-3.5 shrink-0" />
+        <span className="hidden max-w-40 min-w-0 truncate sm:block">{user.displayName}</span>
+        <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
       </PopoverTrigger>
       <PopoverContent align="end" className="w-56 p-1">
         <div className="border-b border-border px-2 py-1.5">

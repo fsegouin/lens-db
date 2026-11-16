@@ -426,7 +426,7 @@ export default function KitManager({
             <h2 className="mb-2 text-sm font-semibold tracking-wider text-muted-foreground uppercase">
               {label}
             </h2>
-            <div className="overflow-x-auto">
+            <div className="relative overflow-x-auto">
               <table className="w-full border-collapse text-sm">
                 <thead>
                   <tr>

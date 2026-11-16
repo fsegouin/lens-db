@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useUser } from "@/components/user-context";
 import { trackEvent } from "@/lib/analytics";
+import { nextQuery, returnsToApp, safeNextPath, utmSource } from "@/lib/safe-next";
 
 function LoginForm() {
   const [email, setEmail] = useState("");
@@ -21,12 +22,7 @@ function LoginForm() {
   const tokenError = searchParams.get("error");
   const reset = searchParams.get("reset") === "true";
   const reason = searchParams.get("reason");
-  const rawNext = searchParams.get("next");
-  // Only allow same-origin relative paths to avoid open redirects
-  const next =
-    rawNext && rawNext.startsWith("/") && !rawNext.startsWith("//") && !rawNext.startsWith("/\\")
-      ? rawNext
-      : null;
+  const next = safeNextPath(searchParams.get("next"));
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -41,7 +37,11 @@ function LoginForm() {
       });
       const data = await res.json();
       if (res.ok) {
-        trackEvent("signed_in", { source: "login_page", reason: reason ?? "" });
+        trackEvent("signed_in", {
+          source: "login_page",
+          reason: reason ?? "",
+          utm_source: utmSource(searchParams),
+        });
         await refreshUser();
         router.push(next || "/");
       } else {
@@ -62,7 +62,7 @@ function LoginForm() {
       const res = await fetch("/api/auth/resend-verification", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, next }),
       });
       if (res.ok) {
         trackEvent("verification_resent", { source: "login_page" });
@@ -88,6 +88,11 @@ function LoginForm() {
         {reason === "kit" && (
           <p className="text-sm text-muted-foreground">
             Add this to your kit once you are signed in.
+          </p>
+        )}
+        {returnsToApp(next) && (
+          <p className="text-sm text-muted-foreground">
+            Sign in to finish connecting your app.
           </p>
         )}
         {reset && (
@@ -175,7 +180,10 @@ function LoginForm() {
         </button>
         <p className="text-center text-sm text-muted-foreground">
           Don&apos;t have an account?{" "}
-          <Link href="/register" className="font-medium text-zinc-900 hover:underline dark:text-zinc-100">
+          <Link
+            href={`/register${nextQuery(next)}`}
+            className="font-medium text-zinc-900 hover:underline dark:text-zinc-100"
+          >
             Create one
           </Link>
         </p>

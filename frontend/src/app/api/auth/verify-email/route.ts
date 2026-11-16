@@ -4,14 +4,18 @@ import { users, emailVerificationTokens } from "@/db/schema";
 import { eq, and, gt, inArray } from "drizzle-orm";
 import { sendWelcomeEmail, maskEmail } from "@/lib/email";
 import { storedForms } from "@/lib/one-shot-token";
+import { safeNextPath, signInPath } from "@/lib/safe-next";
 
 // GET: validate token exists and redirect to confirmation page (no side effects)
 export async function GET(request: NextRequest) {
+  // The way back rides on every answer, so a link that expired or was already
+  // used still returns the member to what they were connecting.
+  const next = safeNextPath(request.nextUrl.searchParams.get("next"));
+  const toSignIn = (error: string) =>
+    NextResponse.redirect(new URL(signInPath({ error }, next), request.url));
   try {
     const token = request.nextUrl.searchParams.get("token");
-    if (!token) {
-      return NextResponse.redirect(new URL("/login?error=invalid-token", request.url));
-    }
+    if (!token) return toSignIn("invalid-token");
 
     // Check token exists and is not expired (do NOT consume it)
     const [record] = await db
@@ -25,15 +29,14 @@ export async function GET(request: NextRequest) {
       )
       .limit(1);
 
-    if (!record) {
-      return NextResponse.redirect(new URL("/login?error=invalid-token", request.url));
-    }
+    if (!record) return toSignIn("invalid-token");
 
-    // Token is valid — redirect to confirmation page (user must click to verify)
-    return NextResponse.redirect(new URL(`/verify-email?token=${encodeURIComponent(token)}`, request.url));
+    // Token is valid: redirect to confirmation page (user must click to verify)
+    const query = new URLSearchParams({ token, ...(next ? { next } : {}) });
+    return NextResponse.redirect(new URL(`/verify-email?${query}`, request.url));
   } catch (error) {
     console.error("GET /api/auth/verify-email error:", error);
-    return NextResponse.redirect(new URL("/login?error=server-error", request.url));
+    return toSignIn("server-error");
   }
 }
 

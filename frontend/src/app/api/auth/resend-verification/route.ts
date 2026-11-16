@@ -7,6 +7,7 @@ import { getClientIP, rateLimitedResponse } from "@/lib/api-utils";
 import { createRateLimit } from "@/lib/rate-limit";
 import { sendVerificationEmail, maskEmail } from "@/lib/email";
 import { issueToken } from "@/lib/one-shot-token";
+import { safeNextPath } from "@/lib/safe-next";
 
 const resendLimiter = createRateLimit("auth-resend", 3, "600 s");
 
@@ -53,6 +54,7 @@ export async function POST(request: NextRequest) {
     // Everything a real account costs runs after the response, so the answer
     // takes as long whether or not the address has one.
     const userId = user.id;
+    const next = safeNextPath(body.next);
     after(async () => {
       try {
         await db.delete(emailVerificationTokens).where(eq(emailVerificationTokens.userId, userId));
@@ -64,7 +66,7 @@ export async function POST(request: NextRequest) {
         });
 
         try {
-          await sendVerificationEmail(email, token);
+          await sendVerificationEmail(email, token, next);
         } catch (err) {
           console.error(`[resend-verification] Failed to send to ${maskEmail(email)}:`, err);
         }

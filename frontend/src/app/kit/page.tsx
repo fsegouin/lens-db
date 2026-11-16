@@ -1,11 +1,13 @@
 import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import Breadcrumb from "@/components/Breadcrumb";
+import ConnectedApps from "@/components/ConnectedApps";
 import DigestToggle from "@/components/DigestToggle";
 import KitManager from "@/components/KitManager";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { getKitItems, kitValue } from "@/lib/kit";
+import { listConnectedApps } from "@/lib/oauth-store";
 import { getCurrentUser } from "@/lib/user-auth";
 
 // A person's own kit is theirs alone, so it is rendered per request and never
@@ -22,8 +24,9 @@ export default async function KitPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login?next=/kit");
 
-  const [items, [prefs]] = await Promise.all([
+  const [items, apps, [prefs]] = await Promise.all([
     getKitItems(user.id),
+    listConnectedApps(user.id),
     db
       .select({ digestOptIn: users.digestOptIn, kitShowsPaid: users.kitShowsPaid })
       .from(users)
@@ -52,6 +55,8 @@ export default async function KitPage() {
         </h2>
         <DigestToggle initialOptIn={prefs?.digestOptIn ?? false} />
       </section>
+
+      <ConnectedApps initialApps={apps} />
     </div>
   );
 }

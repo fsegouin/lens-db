@@ -9,6 +9,7 @@ import { hashPassword } from "@/lib/user-auth";
 import { sendVerificationEmail, maskEmail } from "@/lib/email";
 import { uniqueHandle } from "@/lib/kit";
 import { issueToken } from "@/lib/one-shot-token";
+import { safeNextPath } from "@/lib/safe-next";
 
 const registerLimiter = createRateLimit("auth-register", 5, "60 s");
 
@@ -90,7 +91,7 @@ export async function POST(request: NextRequest) {
 
     // Send verification email — await to ensure errors are logged before function exits
     try {
-      await sendVerificationEmail(normalizedEmail, token);
+      await sendVerificationEmail(normalizedEmail, token, safeNextPath(body.next));
     } catch (err) {
       console.error(`[register] Failed to send verification email to ${maskEmail(normalizedEmail)}:`, err);
     }

@@ -50,4 +50,8 @@ export const rateLimiters = {
   // bodies and lenses in a couple of minutes. Only signed-in requests reach
   // this limiter, and it is keyed by account rather than by IP.
   kit: createRateLimit("kit", 60, "60 s"),
+  // Every call a connected app makes for one account, reads and writes alike.
+  // An app reads the kit once per launch and searches when typing stops, so
+  // this is far above honest use and only stops a client stuck in a loop.
+  partner: createRateLimit("partner", 60, "60 s"),
 };

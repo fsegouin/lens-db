@@ -83,8 +83,19 @@ export async function sendEmail({
   }
 }
 
-export async function sendVerificationEmail(email: string, token: string): Promise<void> {
-  const verifyUrl = `${appUrl()}/api/auth/verify-email?token=${token}`;
+/**
+ * `next` is where the new member was heading when they registered (a path on
+ * this site, already checked by safeNextPath). It rides in the link because
+ * the link may open in a different browser from the one that registered.
+ */
+export async function sendVerificationEmail(
+  email: string,
+  token: string,
+  next: string | null = null,
+): Promise<void> {
+  const query = new URLSearchParams({ token, ...(next ? { next } : {}) });
+  // The query now holds an "&", which has to be written as an entity in HTML.
+  const verifyUrl = escapeHtml(`${appUrl()}/api/auth/verify-email?${query}`);
   await sendEmail({
     to: email,
     subject: "Verify your email, The Lens DB",

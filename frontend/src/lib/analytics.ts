@@ -36,7 +36,12 @@ export type EventName =
   | "rating_submit"
   | "rating_kit_nudge_click"
   | "edit_submitted"
-  | "digest_opt_in";
+  | "digest_opt_in"
+  // Another app asking for access to a kit: the consent screen's two answers,
+  // and the member withdrawing it later from the kit page.
+  | "app_connected"
+  | "app_connection_refused"
+  | "app_disconnected";
 
 export function trackEvent(name: EventName, props: Record<string, Primitive>): void {
   try {
