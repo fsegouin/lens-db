@@ -37,6 +37,7 @@ const CAMERA_FIELDS = {
   id: cameras.id,
   slug: cameras.slug,
   name: cameras.name,
+  brand: cameras.brand,
   sensorType: cameras.sensorType,
   sensorSize: cameras.sensorSize,
   megapixels: cameras.megapixels,

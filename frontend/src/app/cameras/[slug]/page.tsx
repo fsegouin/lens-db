@@ -70,14 +70,6 @@ function shutterFromType(value: string | undefined): string | undefined {
   return /shutter|focal-plane|leaf/i.test(value) && value.length <= 40 ? value : undefined;
 }
 
-/** Cameras have no brand column; the name's first token is the best proxy. */
-function cameraBrand(name: string, manufacturer: string | null): string | null {
-  if (manufacturer && name.toLowerCase().startsWith(manufacturer.toLowerCase())) {
-    return manufacturer;
-  }
-  return name.split(" ")[0] || null;
-}
-
 export async function generateMetadata({
   params,
 }: {
@@ -259,7 +251,7 @@ export default async function CameraDetailPage({
             averageRating: camera.averageRating,
             ratingCount: camera.ratingCount,
             systemName: system?.name ?? null,
-            brand: cameraBrand(camera.name, system?.manufacturer ?? null),
+            brand: camera.brand,
           },
           crumbs,
         )}

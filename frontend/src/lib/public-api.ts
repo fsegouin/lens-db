@@ -126,6 +126,7 @@ export function publicLens(row: LensRow, mounts: string[] = []) {
 type CameraRow = {
   slug: string;
   name: string;
+  brand: string | null;
   sensorType: string | null;
   sensorSize: string | null;
   megapixels: number | null;
@@ -144,6 +145,7 @@ export function publicCamera(row: CameraRow, mount: string | null = null) {
     id: row.slug,
     url: `https://thelensdb.com/cameras/${row.slug}`,
     name: row.name,
+    brand: row.brand,
     mount,
     sensor:
       row.sensorType == null && row.sensorSize == null && row.megapixels == null

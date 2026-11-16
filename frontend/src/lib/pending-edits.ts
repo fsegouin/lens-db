@@ -15,6 +15,7 @@ import { createRevision, type EntityType } from "@/lib/revisions";
 import { normalizeControlledValue } from "@/lib/controlled-value";
 import { normalizeSensorSize } from "@/lib/sensor-size";
 import { normalizeBodyType } from "@/lib/body-type";
+import { inferCameraBrand } from "@/lib/camera-brand-infer";
 import { sendEditApprovedEmail, sendEditRejectedEmail } from "@/lib/email";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
@@ -315,6 +316,7 @@ export async function applyPendingEditApproval(
     } else if (entityType === "camera") {
       insertData.specs = insertData.specs ?? {};
       insertData.images = insertData.images ?? [];
+      insertData.brand = await inferCameraBrand(String(changes.name));
     }
 
     const [created] = await db

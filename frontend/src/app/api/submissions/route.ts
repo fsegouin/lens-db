@@ -12,6 +12,7 @@ import { normalizeSensorSize } from "@/lib/sensor-size";
 import { normalizeBodyType } from "@/lib/body-type";
 import { normalizeShutterControl, normalizeShutterType } from "@/lib/shutter";
 import { normalizeControlledValue, refusedValueMessage } from "@/lib/controlled-value";
+import { inferCameraBrand } from "@/lib/camera-brand-infer";
 import {
   normalizeCoverage,
   normalizeEra,
@@ -233,6 +234,7 @@ export async function POST(request: NextRequest) {
         systemId: (entityData.systemId as number) || null,
         description: (entityData.description as string) || null,
         alias: (entityData.alias as string) || null,
+        brand: await inferCameraBrand(entityData.name as string),
         sensorType: (entityData.sensorType as string) || null,
         sensorSize: normalizeSensorSize(entityData.sensorSize, entityData.megapixels),
         megapixels: (entityData.megapixels as number) ?? null,

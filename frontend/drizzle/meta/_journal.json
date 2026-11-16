@@ -512,6 +512,13 @@
       "when": 1793659878735,
       "tag": "0072_shutter_control",
       "breakpoints": true
+    },
+    {
+      "idx": 73,
+      "version": "7",
+      "when": 1794765240477,
+      "tag": "0073_camera_brand",
+      "breakpoints": true
     }
   ]
 }

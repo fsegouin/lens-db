@@ -35,6 +35,7 @@ export const MERGE_FIELDS: Record<MergeEntityType, MergeField[]> = {
   camera: [
     { key: "name", label: "Name", kind: "text" },
     { key: "alias", label: "Alias", kind: "text" },
+    { key: "brand", label: "Brand", kind: "text" },
     { key: "url", label: "Source URL", kind: "text" },
     { key: "systemId", label: "Mount system", kind: "ref" },
     { key: "builtInLensId", label: "Built-in lens", kind: "ref" },

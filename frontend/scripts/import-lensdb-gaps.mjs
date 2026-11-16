@@ -14,6 +14,8 @@
  *   - `url` = its lens-db.com page, the entry it came from;
  *   - revision 1, a snapshot of the new row, with no user, like other scripts;
  *   - every agreed mount in lens_systems (the trigger adds the primary one);
+ *   - for a camera, the brand its name gives against the cameras already branded
+ *     (inferBrand in lib/camera-brand.ts), or none, to be set on the admin form;
  *   - a field_citations row only for a figure taken from an external
  *     published source (camera-wiki). Citations are public and mark a figure
  *     as checked; model recall, catalogue conventions and reviewer edits are
@@ -39,6 +41,7 @@ import { normalizeCoverage, normalizeEra, normalizeProductionStatus, normalizeLe
 import { normalizeSensorSize } from "../src/lib/sensor-size.ts";
 import { normalizeBodyType } from "../src/lib/body-type.ts";
 import { normalizeShutterType } from "../src/lib/shutter.ts";
+import { inferBrand } from "../src/lib/camera-brand.ts";
 import { isCatalogueSlug, isLensDbUrl } from "./lib/lensdb-source.mjs";
 
 const envPath = resolve(process.cwd(), ".env.local");
@@ -203,6 +206,7 @@ async function main() {
   const cameraUrls = new Set((await sql`SELECT url FROM cameras WHERE url IS NOT NULL`).map((r) => r.url));
   const lensSlugs = new Set((await sql`SELECT slug FROM lenses`).map((r) => r.slug));
   const cameraSlugs = new Set((await sql`SELECT slug FROM cameras`).map((r) => r.slug));
+  const brandedCameras = await sql`SELECT name, brand FROM cameras WHERE brand IS NOT NULL AND merged_into_id IS NULL`;
 
   const plan = [];
   const skipped = { rejected: 0, notApproved: 0, exists: 0, slugTaken: [], noSystem: [], fixedLens: [], badSource: [] };
@@ -292,11 +296,11 @@ async function main() {
       if (p.isCamera) {
         [row] = await q(
           `INSERT INTO cameras (name, slug, url, system_id, description, sensor_type, sensor_size, megapixels, year_introduced,
-             year_discontinued, production_status, body_type, shutter_type, weight_g, specs)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15::jsonb) RETURNING *`,
+             year_discontinued, production_status, body_type, shutter_type, weight_g, specs, brand)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15::jsonb,$16) RETURNING *`,
           [p.name, p.slug, rec.url, systemId, p.description, r.sensor_type ?? null, r.sensor_size ?? null, r.megapixels ?? null,
            r.year_introduced ?? null, r.year_discontinued ?? null, r.production_status ?? null, r.body_type ?? null,
-           r.shutter_type ?? null, r.weight_g ?? null, JSON.stringify(built.specs)],
+           r.shutter_type ?? null, r.weight_g ?? null, JSON.stringify(built.specs), inferBrand(p.name, brandedCameras)],
         );
       } else {
         [row] = await q(
@@ -334,6 +338,7 @@ async function main() {
         );
       }
       await q("COMMIT");
+      if (p.isCamera && row.brand) brandedCameras.push({ name: row.name, brand: row.brand });
       created.push({ type, id: row.id, slug: row.slug });
       if (created.length % 50 === 0) console.log(`  ${created.length}/${plan.length}`);
     } catch (e) {

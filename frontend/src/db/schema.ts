@@ -125,6 +125,11 @@ export const cameras = pgTable(
     builtInLensId: integer("built_in_lens_id").references(() => lenses.id),
     description: text("description"),
     alias: text("alias"),
+    // The name the camera was sold under, in the spellings lenses.brand
+    // uses, so a maker's bodies and lenses share one brand. A model line that
+    // carries the maker's name folds into it (Rolleiflex is Rollei); a trade
+    // name that differs from the manufacturer stands (Zenit, not KMZ).
+    brand: text("brand"),
     sensorType: text("sensor_type"),
     sensorSize: text("sensor_size"),
     megapixels: real("megapixels"),

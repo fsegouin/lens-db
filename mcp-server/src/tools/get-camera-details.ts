@@ -14,6 +14,7 @@ export type GetCameraDetailsParams = z.infer<typeof getCameraDetailsSchema>;
 const CAMERA_FIELDS = {
   name: cameras.name,
   slug: cameras.slug,
+  brand: cameras.brand,
   system: systems.name,
   description: cameras.description,
   alias: cameras.alias,

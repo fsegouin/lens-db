@@ -8,7 +8,7 @@ const { cameras, systems, priceEstimates } = schema;
 export const searchCamerasSchema = z.object({
   query: z.string().optional().describe("Free text search on camera name"),
   system: z.string().optional().describe("Mount system name, e.g. 'Nikon F', 'Canon EF'"),
-  brand: z.string().optional().describe("Camera manufacturer/brand name prefix, e.g. 'Nikon', 'Canon'. Filters cameras whose name starts with this value."),
+  brand: z.string().optional().describe("Camera brand, e.g. 'Nikon', 'Canon'. Matches cameras sold under this brand, or whose name starts with this value."),
   yearFrom: z.number().optional().describe("Earliest year introduced"),
   yearTo: z.number().optional().describe("Latest year introduced"),
   sensorSize: z.string().optional().describe("Sensor size, e.g. 'Full Frame', 'APS-C'"),
@@ -44,8 +44,9 @@ export async function searchCameras(params: SearchCamerasParams) {
     );
   }
   if (params.brand) {
+    const brand = escapeLikeMetachars(params.brand);
     conditions.push(
-      sql`${cameras.name} ILIKE ${escapeLikeMetachars(params.brand) + "%"}`
+      sql`(${cameras.brand} ILIKE ${brand} OR ${cameras.name} ILIKE ${brand + "%"})`
     );
   }
   if (params.yearFrom) {
@@ -80,6 +81,7 @@ export async function searchCameras(params: SearchCamerasParams) {
     .select({
       name: cameras.name,
       slug: cameras.slug,
+      brand: cameras.brand,
       system: systems.name,
       yearIntroduced: cameras.yearIntroduced,
       sensorType: cameras.sensorType,

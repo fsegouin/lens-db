@@ -9,6 +9,7 @@ import { normalizeShutterControl, normalizeShutterType } from "@/lib/shutter";
 import { and, or, sql, eq, isNull } from "drizzle-orm";
 import { buildNameSearch } from "@/lib/search";
 import { buildOrderBy } from "@/lib/admin-sort";
+import { inferCameraBrand } from "@/lib/camera-brand-infer";
 
 const PAGE_SIZE = 50;
 
@@ -94,7 +95,7 @@ export async function POST(request: NextRequest) {
 
   const body = await request.json();
   const {
-    name, slug, url, systemId, description, alias,
+    name, slug, url, systemId, description, alias, brand,
     sensorType, sensorSize, megapixels, resolution,
     yearIntroduced, yearDiscontinued, productionStatus, bodyType, shutterType, shutterControl, weightG, specs, images,
   } = body;
@@ -115,6 +116,7 @@ export async function POST(request: NextRequest) {
       systemId: systemId || null,
       description: description || null,
       alias: alias || null,
+      brand: (typeof brand === "string" && brand.trim()) || (await inferCameraBrand(name)),
       sensorType: sensorType || null,
       sensorSize: normalizeSensorSize(sensorSize, megapixels),
       megapixels: megapixels != null ? Number(megapixels) : null,

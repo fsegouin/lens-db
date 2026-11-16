@@ -16,6 +16,7 @@ interface CameraData {
   systemId?: number | null;
   description?: string | null;
   alias?: string | null;
+  brand?: string | null;
   sensorType?: string | null;
   sensorSize?: string | null;
   megapixels?: number | null;
@@ -53,6 +54,7 @@ export default function CameraForm({ camera, systems }: CameraFormProps) {
   const [systemId, setSystemId] = useState<number | "">(camera?.systemId ?? "");
   const [description, setDescription] = useState(camera?.description ?? "");
   const [alias, setAlias] = useState(camera?.alias ?? "");
+  const [brand, setBrand] = useState(camera?.brand ?? "");
   const [sensorType, setSensorType] = useState(camera?.sensorType ?? "");
   const [sensorSize, setSensorSize] = useState(camera?.sensorSize ?? "");
   const [megapixels, setMegapixels] = useState(camera?.megapixels?.toString() ?? "");
@@ -103,6 +105,7 @@ export default function CameraForm({ camera, systems }: CameraFormProps) {
       systemId: systemId || null,
       description: description || null,
       alias: alias || null,
+      brand: brand || null,
       sensorType: sensorType || null,
       sensorSize: sensorSize || null,
       megapixels: megapixels ? Number(megapixels) : null,
@@ -182,6 +185,17 @@ export default function CameraForm({ camera, systems }: CameraFormProps) {
               value={slug}
               id="camera-slug"
               onChange={(e) => handleSlugChange(e.target.value)}
+              className={`w-full ${inputClass}`}
+            />
+          </div>
+          <div className="space-y-1 sm:col-span-2">
+            <label htmlFor="camera-brand" className={labelClass}>Brand (the name it was sold under; left empty on a new camera, it is read from the name)</label>
+            <input
+              type="text"
+              value={brand}
+              id="camera-brand"
+              onChange={(e) => setBrand(e.target.value)}
+              placeholder="e.g. Nikon"
               className={`w-full ${inputClass}`}
             />
           </div>
