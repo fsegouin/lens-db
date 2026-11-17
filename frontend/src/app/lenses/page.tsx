@@ -118,7 +118,7 @@ export default async function LensesPage({
       </h1>
       <p className="mt-2 text-muted-foreground">
         {total > 0
-          ? `${total} lenses found`
+          ? `${total} ${total === 1 ? "lens" : "lenses"} found`
           : "Search and filter 7,400+ camera lenses"}
         {" · "}
         <Link href="/lenses/series" className="text-zinc-900 underline hover:text-zinc-700 dark:text-zinc-100 dark:hover:text-zinc-300">

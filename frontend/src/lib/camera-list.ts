@@ -12,6 +12,7 @@ const PAGE_SIZE = 50;
 export type CameraListParams = {
   q?: string;
   slug?: string;
+  brand?: string;
   system?: string;
   type?: string;
   model?: string;
@@ -61,6 +62,9 @@ export const listCameras = unstable_cache(
     }
     if (p.slug) {
       conditions.push(eq(cameras.slug, p.slug));
+    }
+    if (p.brand) {
+      conditions.push(eq(cameras.brand, p.brand));
     }
     if (p.system) {
       conditions.push(eq(systems.slug, p.system));

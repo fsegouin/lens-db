@@ -141,6 +141,11 @@ export default function RootLayout({
                     As an eBay Partner Network affiliate, The Lens DB earns from
                     qualifying purchases.
                   </p>
+                  <p className="text-xs text-muted-foreground">
+                    <Link href="/privacy" className="-my-1 inline-block py-1 underline underline-offset-2 hover:text-foreground">
+                      Privacy
+                    </Link>
+                  </p>
                 </div>
               </div>
             </footer>

@@ -71,6 +71,7 @@ src/
 │   ├── new/ feed.xml/          # New lenses and cameras (last 90 days) and its RSS feed
 │   ├── community/              # Public kits, most active editors, [handle] profiles with contributions
 │   ├── submit/                 # Public submission form
+│   ├── privacy/                # Privacy statement (linked from the footer)
 │   ├── login/ register/ verify-email/ forgot-password/ reset-password/  # User account pages
 │   ├── oauth/authorize/        # Consent screen an app sends a member to
 │   ├── robots.ts sitemap.ts    # SEO
@@ -205,7 +206,7 @@ All API routes return JSON. Error responses: 400 (validation), 401 (auth), 409 (
 - Entity rows are read through `unstable_cache` (30 days, tags `lenses` / `cameras` / `kit` plus a per-row `lens:<slug>` / `camera:<slug>`), and that cache survives deployments. A row edited by SQL or a script stays invisible until its tag is revalidated: `POST /api/cron/revalidate` with `{"paths":["/lenses/<slug>"]}` and the cron bearer refreshes that row and page. Send `"tags":["lenses"]` only when rows were created, merged or removed, or a name, brand, year or mount changed: the broad tag hangs off every list, hub, brand page and relation, so clearing it makes the next crawl re-render the whole catalogue from Postgres (that was most of a month's database egress allowance in one week). In app code use `revalidateEntity(type, slug, scope)` with `touchesLists()` to pick the scope
 - Hub page tables (`/systems`, `/collections`, `/lenses/series`) read through `src/lib/hub-lists.ts`, which selects only the displayed columns. Never select whole `lenses` rows for a list: the description and specs JSON make each one about 2 KB
 - Filter-heavy pages (`/lenses`, `/cameras`, `/search`) are **dynamic** (per-request)
-- `unstable_cache` used for dropdown data on `/lenses` (brands + systems, 7-day TTL)
+- `unstable_cache` used for dropdown data on `/lenses` and `/cameras` (brands, systems and the other filter options, 1-day TTL)
 
 ### Pagination
 - Cursor-based, 50 items per page, max offset 10,000
@@ -257,7 +258,8 @@ Role-protected admin at `/admin/*` for CRUD management of all entities. Admins a
 - `/oauth/authorize` is the consent screen. Signed out, it sends the visitor to `/login` or, with `screen_hint=signup`, `/register`, and `next` brings them back, through the verification email if need be. A request from an unknown client or to an unregistered address is answered on the page and never redirected
 - Codes (2 minutes, single use) and tokens (`tldb_...`, no expiry date) are stored as SHA-256 only. A token ends when the app revokes it, the member disconnects the app on `/kit`, the password is reset, or it goes 12 months unused; `last_used_at` is refreshed at most once a day
 - `/api/partner/v1` is called by an app's own code with `Authorization: Bearer`. A write carrying an `Origin` header is refused, responses are `private, no-store`, a 429 carries `Retry-After`, and `GET /kit` answers `If-None-Match` with 304. The objects are written out by hand in `partner-objects.ts` and never include what a member recorded about their copy (condition, price, serial number, notes). Changing or removing a field needs a `v2`
-- These endpoints are called by programs, not browsers, so the edge firewall needs a rule that lets partner traffic reach `/api/partner/` and `/api/oauth/token|revoke`. Like the other firewall rules it lives in Vercel, not in this repo
+- These endpoints are called by programs, not browsers, which cannot answer a browser challenge, so the edge firewall lets a registered partner app through on `/api/partner/` and `/api/oauth/token|revoke`. A new partner app has to be added there. Like the other firewall rules it lives in Vercel, not in this repo
+- `/privacy` states what the site stores, who else handles it, how long it is kept and what a connected app receives. A change to any of those (a new stored field, a new outside service, a new field in the partner objects) changes that page and its date in the same commit
 
 ### Admin Routes
 | Route | Purpose |

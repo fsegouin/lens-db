@@ -6,6 +6,7 @@ import { getAdapterMatrix } from "@/lib/adapters";
 import { getComparableLensPairs } from "@/lib/compare";
 import { getPublicKits } from "@/lib/kit";
 import { getBrands } from "@/lib/brands";
+import { SITE_URL } from "@/lib/seo";
 import { and, eq, isNull } from "drizzle-orm";
 
 const getSitemapSlugs = unstable_cache(
@@ -39,7 +40,7 @@ const getSitemapSlugs = unstable_cache(
 );
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = "https://thelensdb.com";
+  const baseUrl = SITE_URL;
 
   // Static pages
   const staticPages: MetadataRoute.Sitemap = [
@@ -53,6 +54,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${baseUrl}/adapters`, changeFrequency: "monthly", priority: 0.8 },
     { url: `${baseUrl}/community`, changeFrequency: "daily", priority: 0.5 },
     { url: `${baseUrl}/new`, changeFrequency: "daily", priority: 0.7 },
+    { url: `${baseUrl}/privacy`, changeFrequency: "yearly", priority: 0.2 },
   ];
 
   const [

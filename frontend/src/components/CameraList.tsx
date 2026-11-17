@@ -39,6 +39,7 @@ type Props = {
   initialItems: CameraRow[];
   initialTotal: number;
   initialNextCursor: number | null;
+  brands?: string[];
   systems?: SystemOption[];
   sensorSizes?: string[];
   types?: string[];
@@ -50,6 +51,7 @@ type Props = {
 
 type FilterOverrides = {
   q?: string;
+  brand?: string;
   system?: string;
   sensorSize?: string;
   type?: string;
@@ -69,6 +71,7 @@ export default function CameraList({
   initialItems,
   initialTotal,
   initialNextCursor,
+  brands = [],
   systems: systemOptions = [],
   sensorSizes = [],
   types = [],
@@ -89,6 +92,7 @@ export default function CameraList({
 
   // Current filter values from URL
   const q = searchParams.get("q") || "";
+  const brand = searchParams.get("brand") || "";
   const system = searchParams.get("system") || "";
   const sensorSize = searchParams.get("sensorSize") || "";
   const type = searchParams.get("type") || "";
@@ -112,6 +116,7 @@ export default function CameraList({
 
   // Form state
   const [formQ, setFormQ] = useState(q);
+  const [formBrand, setFormBrand] = useState(brand);
   const [formSystem, setFormSystem] = useState(system);
   const [formSensorSize, setFormSensorSize] = useState(sensorSize);
   const [formType, setFormType] = useState(type);
@@ -126,6 +131,7 @@ export default function CameraList({
   // Sync form state when URL params change (back/forward navigation)
   useEffect(() => {
     setFormQ(q);
+    setFormBrand(brand);
     setFormSystem(system);
     setFormSensorSize(sensorSize);
     setFormType(type);
@@ -136,7 +142,7 @@ export default function CameraList({
     setFormYear(year);
     setFormPriceMin(priceMin);
     setFormPriceMax(priceMax);
-  }, [q, system, sensorSize, type, model, filmType, sensorType, cropFactor, year, productionStatus, priceMin, priceMax]);
+  }, [q, brand, system, sensorSize, type, model, filmType, sensorType, cropFactor, year, productionStatus, priceMin, priceMax]);
 
   // Reset list when initial data changes (filters applied via server component)
   useEffect(() => {
@@ -149,6 +155,7 @@ export default function CameraList({
     (cursor: number) => {
       const params = new URLSearchParams();
       if (q) params.set("q", q);
+      if (brand) params.set("brand", brand);
       if (system) params.set("system", system);
       if (sensorSize) params.set("sensorSize", sensorSize);
       if (type) params.set("type", type);
@@ -167,7 +174,7 @@ export default function CameraList({
       params.set("cursor", String(cursor));
       return `/api/cameras?${params.toString()}`;
     },
-    [q, system, sensorSize, type, model, filmType, sensorType, cropFactor, year, productionStatus, priceMin, priceMax, sort, order]
+    [q, brand, system, sensorSize, type, model, filmType, sensorType, cropFactor, year, productionStatus, priceMin, priceMax, sort, order]
   );
 
   const loadMore = useCallback(async () => {
@@ -220,6 +227,7 @@ export default function CameraList({
   function applyFilters(overrides: FilterOverrides = {}) {
     const params = new URLSearchParams();
     const qVal = overrides.q ?? formQ;
+    const brandVal = overrides.brand ?? formBrand;
     const systemVal = overrides.system ?? formSystem;
     const sensorSizeVal = overrides.sensorSize ?? formSensorSize;
     const typeVal = overrides.type ?? formType;
@@ -234,6 +242,7 @@ export default function CameraList({
     const sortVal = overrides.sort ?? sort;
     const orderVal = overrides.order ?? order;
     if (qVal) params.set("q", qVal);
+    if (brandVal) params.set("brand", brandVal);
     if (systemVal) params.set("system", systemVal);
     if (sensorSizeVal) params.set("sensorSize", sensorSizeVal);
     if (typeVal) params.set("type", typeVal);
@@ -274,7 +283,7 @@ export default function CameraList({
     debouncedApply({ q: value });
   }
 
-  const clearAll: FilterOverrides = { q: "", system: "", sensorSize: "", type: "", model: "", filmType: "", sensorType: "", cropFactor: "", year: "", productionStatus: "", priceMin: "", priceMax: "" };
+  const clearAll: FilterOverrides = { q: "", brand: "", system: "", sensorSize: "", type: "", model: "", filmType: "", sensorType: "", cropFactor: "", year: "", productionStatus: "", priceMin: "", priceMax: "" };
 
   const [filtersOpen, setFiltersOpen] = useState(false);
 
@@ -295,6 +304,7 @@ export default function CameraList({
    */
   const chips: { key: string; label: string; value: string; clear: FilterOverrides }[] = [];
   if (q) chips.push({ key: "q", label: "Search", value: q, clear: { q: "" } });
+  if (brand) chips.push({ key: "brand", label: "Brand", value: brand, clear: { brand: "" } });
   if (system) chips.push({ key: "system", label: "System", value: systemName, clear: { system: "" } });
   if (sensorSize) chips.push({ key: "sensorSize", label: "Sensor", value: sensorSize, clear: { sensorSize: "" } });
   if (type) chips.push({ key: "type", label: "Body", value: type, clear: { type: "" } });
@@ -362,7 +372,23 @@ export default function CameraList({
         </button>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="space-y-1.5">
+          <label htmlFor="camera-brand" className="block text-xs font-medium text-muted-foreground">
+            Brand
+          </label>
+          <select
+            id="camera-brand"
+            value={formBrand}
+            onChange={(e) => { setFormBrand(e.target.value); trackEvent("camera_filter_apply", { filter: "brand", value: e.target.value }); applyFilters({ brand: e.target.value }); }}
+            className="filter-select h-10 w-full rounded-lg border border-input bg-transparent px-3 text-base text-foreground transition-colors outline-none md:text-sm focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
+          >
+            <option value="">All brands</option>
+            {brands.map((b) => (
+              <option key={b} value={b}>{b}</option>
+            ))}
+          </select>
+        </div>
         <div className="space-y-1.5">
           <label htmlFor="camera-system" className="block text-xs font-medium text-muted-foreground">
             Mount

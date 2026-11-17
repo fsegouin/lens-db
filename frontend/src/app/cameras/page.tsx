@@ -15,11 +15,12 @@ const getCachedDropdownData = unstable_cache(
         .innerJoin(cameras, eq(cameras.systemId, systems.id))
         .orderBy(asc(systems.name)),
       db
-        .select({ specs: cameras.specs, sensorType: cameras.sensorType, sensorSize: cameras.sensorSize, bodyType: cameras.bodyType, shutterControl: cameras.shutterControl })
+        .select({ brand: cameras.brand, specs: cameras.specs, sensorType: cameras.sensorType, sensorSize: cameras.sensorSize, bodyType: cameras.bodyType, shutterControl: cameras.shutterControl })
         .from(cameras)
         .where(isNull(cameras.mergedIntoId)),
     ]);
 
+    const brandSet = new Set<string>();
     const typeSet = new Set<string>();
     const modelSet = new Set<string>();
     const filmTypeSet = new Set<string>();
@@ -29,6 +30,7 @@ const getCachedDropdownData = unstable_cache(
 
     for (const r of allCameras) {
       const s = (r.specs || {}) as Record<string, string>;
+      if (r.brand) brandSet.add(r.brand);
       if (r.bodyType) typeSet.add(r.bodyType);
       if (r.shutterControl) modelSet.add(r.shutterControl);
       if (s["Film type"]) {
@@ -43,6 +45,8 @@ const getCachedDropdownData = unstable_cache(
     }
 
     return {
+      // Case-blind, so a lower-case brand does not sort after every other one.
+      brands: [...brandSet].sort((a, b) => a.localeCompare(b, "en", { sensitivity: "base" })),
       systems: systemRows,
       types: [...typeSet].sort(),
       // In the vocabulary's order, mechanical to hybrid, not alphabetical.
@@ -64,6 +68,7 @@ export const metadata = {
 
 type SearchParams = Promise<{
   q?: string;
+  brand?: string;
   system?: string;
   sensorSize?: string;
   type?: string;
@@ -89,6 +94,7 @@ export default async function CamerasPage({
   let initialItems: CameraListItem[] = [];
   let total = 0;
   let nextCursor: number | null = null;
+  let brands: string[] = [];
   let systemList: { name: string; slug: string }[] = [];
   let types: string[] = [];
   let models: string[] = [];
@@ -99,6 +105,7 @@ export default async function CamerasPage({
 
   try {
     const dropdownData = await getCachedDropdownData();
+    brands = dropdownData.brands;
     systemList = dropdownData.systems;
     types = dropdownData.types;
     models = dropdownData.models;
@@ -109,6 +116,7 @@ export default async function CamerasPage({
 
     const result = await listCameras({
       q: params.q,
+      brand: params.brand,
       system: params.system,
       type: params.type,
       model: params.model,
@@ -138,7 +146,7 @@ export default async function CamerasPage({
         Cameras
       </h1>
       <p className="mt-2 text-muted-foreground">
-        {total > 0 ? `${total} cameras found` : "Browse camera bodies"}
+        {total > 0 ? `${total} ${total === 1 ? "camera" : "cameras"} found` : "Browse camera bodies"}
       </p>
     </div>
 
@@ -146,6 +154,7 @@ export default async function CamerasPage({
       initialItems={initialItems}
       initialTotal={total}
       initialNextCursor={nextCursor}
+      brands={brands}
       systems={systemList}
       sensorSizes={sensorSizes}
       types={types}

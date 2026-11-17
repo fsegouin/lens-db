@@ -15,6 +15,7 @@ export async function GET(request: NextRequest) {
     const result = await listCameras({
       q: searchParams.get("q")?.slice(0, 200) || undefined,
       slug: searchParams.get("slug") || undefined,
+      brand: searchParams.get("brand") || undefined,
       system: searchParams.get("system") || undefined,
       type: searchParams.get("type") || undefined,
       model: searchParams.get("model") || undefined,
